@@ -24,17 +24,19 @@ extern "C" {
 /*============================================================================*
  *                        Header Files
  *============================================================================*/
-#include "utils/rtl_utils.h"
-#include "lcdc/inc/rtl_lcdc_dma.h"
-#if defined (CONFIG_SOC_SERIES_RTL87X2G)
-#include "lcdc/src/rtl87x2g/rtl_lcdc_handler_def.h"
-#include "lcdc/src/rtl87x2g/rtl_lcdc_dma_ll_def.h"
-#endif
+
+#include "lcdc/device/inc/rtl_lcdc_dma.h"
+#include "lcdc/device/src/rtl87x2g/rtl_lcdc_handler_def.h"
+#include "lcdc/device/src/rtl87x2g/rtl_lcdc_dma_ll_def.h"
+//#if defined (CONFIG_SOC_SERIES_RTL87X2G)
+//#include "lcdc/device/src/rtl87x2g/rtl_lcdc_handler_def.h"
+//#include "lcdc/device/src/rtl87x2g/rtl_lcdc_dma_ll_def.h"
+//#endif
 
 /*============================================================================*
  *                          Private Macros
  *============================================================================*/
-#undef  DISPLAY_CTRL_REG_BASE
+#define DISPLAY_CTRL_REG_BASE                0x40017000UL
 
 #if defined (CONFIG_SOC_SERIES_RTL87X2G)
 
@@ -1615,6 +1617,28 @@ void LCDC_DMA_LinkList_Init(LCDC_DMALLI_InitTypeDef *LCDC_DMA_LLIConfig, void *L
  * \endcode
  */
 void LCDC_Clock_Cfg(FunctionalState state);
+/**
+ * rtl_lcdc.h
+ *
+ * \brief  Force DMA to transmit data in a burst, when data left is less than burst size.
+ *
+ * \param[in] new_state: Force DMA to transmit data in a burst.
+ *            This parameter can be one of the following values:
+ *            \arg ENABLE: Enable the function that force DMA to transmit data in a burst.
+ *            \arg DISABLE: Disable the function that force DMA to transmit data in a burst.
+ *
+ * \return None.
+ *
+ * <b>Example usage</b>
+ * \code{.c}
+ *
+ * void driver_lcdc_init(void)
+ * {
+ *     LCDC_ForceBurst(ENABLE);
+ * }
+ * \endcode
+ */
+void LCDC_ForceBurst(FunctionalState new_state);
 
 /** End of LCDC_Exported_Functions
   * \}

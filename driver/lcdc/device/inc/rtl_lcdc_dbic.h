@@ -24,10 +24,9 @@ extern "C" {
 /*============================================================================*
  *                        Header Files
  *============================================================================*/
-#include "lcdc/inc/rtl_lcdc.h"
-#if defined (CONFIG_SOC_SERIES_RTL87X2G)
-#include "lcdc/src/rtl87x2g/rtl_lcdc_dbic_def.h"
-#endif
+#include "lcdc/device/inc/rtl_lcdc.h"
+#include "rtl_lcdc_dbic_def.h"
+
 
 /** \defgroup LCDC        LCDC
   * \brief

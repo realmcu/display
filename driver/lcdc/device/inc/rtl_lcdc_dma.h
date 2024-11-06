@@ -24,10 +24,13 @@ extern "C" {
 /*============================================================================*
  *                        Header Files
  *============================================================================*/
-#include "utils/rtl_utils.h"
-#if defined (CONFIG_SOC_SERIES_RTL87X2G)
-#include "lcdc/src/rtl87x2g/rtl_lcdc_dma_def.h"
-#endif
+
+#include "rtl876x.h"
+//#include "rtl_lcdc_dma_reg.h"
+#include "rtl_lcdc_dma_def.h"
+//#if defined (CONFIG_SOC_SERIES_RTL87X2G)
+//#include "lcdc/src/rtl87x2g/rtl_lcdc_dma_def.h"
+//#endif
 
 /** \defgroup LCDC        LCDC
   * \brief
@@ -97,9 +100,11 @@ typedef enum
     LCDC_DMA_DestinationInc_Fix = 0x2,
 } LCDC_DMA_DEST_INC_T;
 
+#ifndef IS_GDMA_DestinationInc
 #define IS_GDMA_DestinationInc(STATE) (((STATE) == DMA_DestinationInc_Inc) || \
                                        ((STATE) == DMA_DestinationInc_Dec) || \
                                        ((STATE) == DMA_DestinationInc_Fix))
+#endif
 
 /** End of LCDC_DMA_Destination_Incremented_Mode
   * \}
