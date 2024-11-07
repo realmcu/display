@@ -100,10 +100,10 @@ typedef enum
     LCDC_DMA_DestinationInc_Fix = 0x2,
 } LCDC_DMA_DEST_INC_T;
 
-#ifndef IS_GDMA_DestinationInc
-#define IS_GDMA_DestinationInc(STATE) (((STATE) == DMA_DestinationInc_Inc) || \
-                                       ((STATE) == DMA_DestinationInc_Dec) || \
-                                       ((STATE) == DMA_DestinationInc_Fix))
+#ifndef IS_LCDC_DMA_DestinationInc
+#define IS_LCDC_DMA_DestinationInc(STATE) (((STATE) == DMA_DestinationInc_Inc) || \
+                                           ((STATE) == DMA_DestinationInc_Dec) || \
+                                           ((STATE) == DMA_DestinationInc_Fix))
 #endif
 
 /** End of LCDC_DMA_Destination_Incremented_Mode
