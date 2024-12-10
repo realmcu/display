@@ -17,7 +17,6 @@
 #include "stdio.h"
 #include "rtl_idu.h"
 #include "rtl_idu_int.h"
-#include "display_st7789v.h"
 
 /*============================================================================*
  *                           Public Functions
