@@ -4,32 +4,28 @@
 cmake_minimum_required(VERSION 3.10)
 
 # Define a variable for the library name
-set(LIBRARY_NAME reaktek_display_driver_library)
 
 file(GLOB SOURCES "*.c" "*.cpp")
 file(GLOB HEADERS "*.h" "*.hpp")
 
-# Determine if we should create a library
-if(SOURCES OR (HEADERS AND NOT SOURCES))
-    if(TARGET ${LIBRARY_NAME})
-        message(STATUS "Adding sources/headers to existing ${LIBRARY_NAME}.")
-        # Only add sources if they exist
-        if(SOURCES)
-            target_sources(${LIBRARY_NAME} PRIVATE ${SOURCES})
-        endif()
-    else()
-        if(SOURCES)
-            message(STATUS "Creating ${LIBRARY_NAME} with found sources.")
-            add_library(${LIBRARY_NAME} ${SOURCES})
-        else()
-            message(STATUS "Creating an interface library for ${LIBRARY_NAME} with found headers.")
-            add_library(${LIBRARY_NAME} INTERFACE)
-        endif()
-    endif()
+set(LIBRARY_NAME reaktek_display_driver_library)
 
-    target_include_directories(${LIBRARY_NAME} INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
-else()
-    message(STATUS "No source or header files found in ${CMAKE_CURRENT_SOURCE_DIR}, skipping library creation.")
+# Determine if we should create a library
+if((NOT HEADERS) AND (NOT SOURCES))
+	message(STATUS "No source or header files found in ${CMAKE_CURRENT_SOURCE_DIR}.")
+endif()
+
+if(HEADERS AND (NOT SOURCES))
+	target_include_directories(${LIBRARY_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+endif()
+
+if(SOURCES AND (NOT HEADERS))
+	target_sources(${LIBRARY_NAME} PRIVATE ${SOURCES})
+endif()
+
+if(SOURCES AND HEADERS)
+	target_sources(${LIBRARY_NAME} PRIVATE ${SOURCES})
+	target_include_directories(${LIBRARY_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 endif()
 
 # Process subdirectories regardless
