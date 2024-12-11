@@ -1651,6 +1651,27 @@ void LCDC_ForceBurst(FunctionalState new_state);
  */
 void LCDC_Clock_Cfg(FunctionalState state);
 
+/**
+ * rtl_lcdc.h
+ *
+ * \brief  Update source address for group 1 and group 2 in infinite mode.
+ *
+ * \param[in] G1_SAR_buf: Source address for group 1.
+ * \param[in] G2_SAR_buf: Source address for group 2.
+ *
+ * \return None.
+ *
+ * <b>Example usage</b>
+ * \code{.c}
+ *
+ * void driver_lcdc_init(void)
+ * {
+ *     LCDC_DMA_Infinite_Buf_Update(0x4002000, 0x4002000 + 0x2000);
+ * }
+ * \endcode
+ */
+void LCDC_DMA_Infinite_Buf_Update(uint8_t *G1_SAR_buf, uint8_t *G2_SAR_buf);
+
 /** End of LCDC_Exported_Functions
   * \}
   */
