@@ -276,7 +276,7 @@ typedef enum
 {
     LCDC_SPI_PHASE_SHIFT_0_DEGREE = 0,
     LCDC_SPI_PHASE_SHIFT_90_DEGREE = 2,
-	LCDC_SPI_PHASE_SHIFT_180_DEGREE = 3,
+    LCDC_SPI_PHASE_SHIFT_180_DEGREE = 3,
 } LCDC_CLK_PHASE_SHIFT_T;
 
 /** End of LCDC_Operate_Direction
@@ -549,7 +549,7 @@ typedef struct
     uint32_t LCDC_TxLen;            /*!< Tx length */
     uint32_t LCDC_InfiniteModeEn;   /*!< Enable or disable infinite mode. */
     uint32_t LCDC_PhaseShift;       /*!< Phase shift in DBIC mode. */
-    uint32_t LCDC_DelayCell;		/*!< Select delay cell after phase shift in DBIC mode. */
+    uint32_t LCDC_DelayCell;        /*!< Select delay cell after phase shift in DBIC mode. */
 } LCDC_InitTypeDef;
 
 /**
@@ -608,6 +608,18 @@ typedef struct
  * }
  * \endcode
  */
+#ifndef __STATIC_INLINE
+#if   defined ( __CC_ARM )
+#define __STATIC_INLINE  static __inline
+#elif defined(__ARMCC_VERSION) && (__ARMCC_VERSION >= 6010050)
+#define __STATIC_INLINE  static __inline
+#elif defined ( __GNUC__ )
+#define __STATIC_INLINE  static inline
+#else
+#error Unknown compiler
+#endif
+#endif
+
 __STATIC_INLINE void LCDC_LCD_SET_RST(bool reset)
 {
     LCDC_HANDLER_INTERFACE_SELECT_TypeDef handler_reg_0x00 = {.d32 = LCDC_HANDLER->INTERFACE_SELECT};
