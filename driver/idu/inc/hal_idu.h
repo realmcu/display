@@ -1,3 +1,5 @@
+#ifndef HAL_IDU_H
+#define HAL_IDU_H
 #include "stdint.h"
 #include "stdbool.h"
 typedef struct
@@ -23,3 +25,4 @@ void hal_dma_copy(hal_idu_dma_info *info, uint8_t *src, uint8_t *dst);
 bool hal_idu_decompress(hal_idu_decompress_info *info, uint8_t *dst);
 bool hal_idu_decompress_rect(hal_idu_decompress_info *info, uint8_t *dst);
 void hal_dma_channel_init(uint8_t *high_speed_channel, uint8_t *low_speed_channel);
+#endif // HAL_IDU_H
