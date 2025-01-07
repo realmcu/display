@@ -272,6 +272,7 @@ typedef enum
     PPE_RGBA6668,
     PPE_BGRX6668,
     PPE_RGBX6668,
+    PPE_FORMAT_NOT_SUPPORT = 0xFF,
 } PPE_PIXEL_FORMAT;
 
 typedef enum
@@ -438,6 +439,7 @@ typedef struct
     uint32_t address;
     uint16_t width;
     uint16_t height;
+    uint16_t stride;
     uint32_t const_color;
     uint16_t win_x_min;
     uint16_t win_x_max;
@@ -468,14 +470,14 @@ void PPE_Init(PPE_Init_Typedef *PPE_Init_Struct);
 void PPE_ResultLayer_Init(PPE_ResultLayer_Init_Typedef *PPE_ResultLyaer_Init_Struct);
 
 void PPE_InputLayer_Init(PPE_INPUT_LAYER_INDEX intput_layer_index,
-                           PPE_InputLayer_Init_Typedef *PPE_InputLayer_Init_Struct);
+                         PPE_InputLayer_Init_Typedef *PPE_InputLayer_Init_Struct);
 
 void PPE_StructInit(PPE_Init_Typedef *PPE_Init_Struct);
 
 void PPE_ResultLayer_StructInit(PPE_ResultLayer_Init_Typedef *PPE_ResultLyaer_Init_Struct);
 
 void PPE_InputLayer_StructInit(PPE_INPUT_LAYER_INDEX intput_layer_index,
-                                 PPE_InputLayer_Init_Typedef *PPE_InputLayer_Init_Struct);
+                               PPE_InputLayer_Init_Typedef *PPE_InputLayer_Init_Struct);
 
 void PPE_Cmd(FunctionalState NewState);
 
@@ -492,9 +494,9 @@ void PPE_Mask_Interrupt(PPE_INTERRUPT PPE_int, FunctionalState NewState);
 void PPE_Mask_All_Interrupt(FunctionalState NewState);
 
 PPE_err PPE_Blit(ppe_buffer_t *target, ppe_buffer_t *image, ppe_matrix_t *matrix,
-                     PPE_BLEND_MODE mode);
+                 PPE_BLEND_MODE mode);
 PPE_err PPE_Blit_Inverse(ppe_buffer_t *dst, ppe_buffer_t *src, ppe_matrix_t *inverse,
-                             ppe_rect_t *rect, PPE_BLEND_MODE mode);
+                         ppe_rect_t *rect, PPE_BLEND_MODE mode);
 PPE_err PPE_Blend_Handshake(ppe_buffer_t *dst, ppe_buffer_t *src, ppe_rect_t *rect);
 
 void PPE_CLK_ENABLE(FunctionalState NewState);
@@ -504,6 +506,7 @@ void ppe_get_identity(ppe_matrix_t *matrix);
 void ppe_translate(float x, float y, ppe_matrix_t *matrix);
 void ppe_scale(float scale_x, float scale_y, ppe_matrix_t *matrix);
 void ppe_rotate(float degrees, ppe_matrix_t *matrix);
+void ppe_skew(float skew_x, float skew_y, ppe_matrix_t *matrix);
 void ppe_perspective(float px, float py, ppe_matrix_t *matrix);
 int  ppe_get_transform_matrix(ppe_point4_t src, ppe_point4_t dst, ppe_matrix_t *mat);
 void ppe_matrix_inverse(ppe_matrix_t *matrix);
@@ -511,7 +514,7 @@ void ppe_mat_multiply(ppe_matrix_t *matrix, ppe_matrix_t *mult);
 bool ppe_get_area(ppe_rect_t *result_rect, ppe_rect_t *source_rect, ppe_matrix_t *matrix,
                   ppe_buffer_t *buffer);
 PPE_err PPE_Blend_Multi(ppe_buffer_t *dst, ppe_buffer_t *src_1,
-                            ppe_buffer_t *src_2, ppe_buffer_t *src_3, PPE_BLEND_MODE mode);
+                        ppe_buffer_t *src_2, ppe_buffer_t *src_3, PPE_BLEND_MODE mode);
 PPE_err PPE_Mask(ppe_buffer_t *dst, uint32_t color, ppe_rect_t *rect);
 /** End of PPE_Exported_Functions
   * \}

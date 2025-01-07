@@ -164,7 +164,7 @@ void PPE_ResultLayer_Init(PPE_ResultLayer_Init_Typedef *PPE_ResultLyaer_Init_Str
 }
 
 void PPE_InputLayer_Init(PPE_INPUT_LAYER_INDEX intput_layer_index, \
-                           PPE_InputLayer_Init_Typedef *PPE_InputLayer_Init_Struct)
+                         PPE_InputLayer_Init_Typedef *PPE_InputLayer_Init_Struct)
 {
     PPE_Input_Layer_Typedef *input_layer;
     switch (intput_layer_index)
@@ -271,13 +271,13 @@ void PPE_InputLayer_Init(PPE_INPUT_LAYER_INDEX intput_layer_index, \
     PPE_REG_LD_CFG_TypeDef ppe_reg_ld_cfg_0x08 = {.d32 = PPE->REG_LD_CFG};
     ppe_reg_ld_cfg_0x08.b.reload_en       &= ~BIT(intput_layer_index);
     ppe_reg_ld_cfg_0x08.b.reload_en       |= (PPE_InputLayer_Init_Struct->MultiFrame_Reload_En <<
-                                                intput_layer_index);
+                                              intput_layer_index);
     PPE->REG_LD_CFG                        = ppe_reg_ld_cfg_0x08.d32;
 
     PPE_REG_LL_CFG_TypeDef ppe_reg_ll_cfg_0x0c = {.d32 = PPE->REG_LL_CFG};
     ppe_reg_ll_cfg_0x0c.b.ll_en           &= ~BIT(intput_layer_index);
     ppe_reg_ll_cfg_0x0c.b.ll_en           |= (PPE_InputLayer_Init_Struct->MultiFrame_LLP_En <<
-                                                intput_layer_index);
+                                              intput_layer_index);
     PPE->REG_LL_CFG                        = ppe_reg_ll_cfg_0x0c.d32;
 }
 
@@ -325,9 +325,9 @@ void PPE_ResultLayer_StructInit(PPE_ResultLayer_Init_Typedef *PPE_ResultLyaer_In
     PPE_ResultLyaer_Init_Struct->LayerBus_Inc                     =
         (PPE_AWBURST)ppe_reg_lyr0_bus_cfg_0x74.b.incr;
     PPE_ResultLyaer_Init_Struct->MultiFrame_Reload_En             = (FunctionalState)
-                                                                      ppe_reg_ld_cfg_0x08.b.reload_en;
+                                                                    ppe_reg_ld_cfg_0x08.b.reload_en;
     PPE_ResultLyaer_Init_Struct->MultiFrame_LLP_En                = (FunctionalState)
-                                                                      ppe_reg_ll_cfg_0x0c.b.ll_en;
+                                                                    ppe_reg_ll_cfg_0x0c.b.ll_en;
     PPE_ResultLyaer_Init_Struct->Layer_HW_Handshake_En            =
         (PPE_HW_HS)ppe_reg_lyr0_hs_cfg_0x78.b.hs_en;
     PPE_ResultLyaer_Init_Struct->Layer_HW_Handshake_Index         =
@@ -339,7 +339,7 @@ void PPE_ResultLayer_StructInit(PPE_ResultLayer_Init_Typedef *PPE_ResultLyaer_In
 }
 
 void PPE_InputLayer_StructInit(PPE_INPUT_LAYER_INDEX intput_layer_index, \
-                                 PPE_InputLayer_Init_Typedef *PPE_InputLayer_Init_Struct)
+                               PPE_InputLayer_Init_Typedef *PPE_InputLayer_Init_Struct)
 {
     PPE_Input_Layer_Typedef *input_layer;
     switch (intput_layer_index)
@@ -397,28 +397,28 @@ void PPE_InputLayer_StructInit(PPE_INPUT_LAYER_INDEX intput_layer_index, \
 
     PPE_InputLayer_Init_Struct->Line_Length           =    ppe_reg_lyrx_pic_cfg_t.b.line_length;
     PPE_InputLayer_Init_Struct->Color_Key_Mode        = (PPE_COLOR_KEY_MODE)
-                                                          ppe_reg_lyrx_pic_cfg_t.b.color_key_mode;
+                                                        ppe_reg_lyrx_pic_cfg_t.b.color_key_mode;
     PPE_InputLayer_Init_Struct->Pixel_Source          = (PPE_PIXEL_SOURCE)
-                                                          ppe_reg_lyrx_pic_cfg_t.b.pic_src;
+                                                        ppe_reg_lyrx_pic_cfg_t.b.pic_src;
     PPE_InputLayer_Init_Struct->Pixel_Color_Format    = (PPE_PIXEL_FORMAT)
-                                                          ppe_reg_lyrx_pic_cfg_t.b.format;
+                                                        ppe_reg_lyrx_pic_cfg_t.b.format;
     PPE_InputLayer_Init_Struct->Read_Matrix_Size      =
         (PPE_READ_MATRIX_SIZE)ppe_reg_lyrx_pic_cfg_t.b.input_lyr_read_matrix_size;
 
     PPE_InputLayer_Init_Struct->Const_Pixel           =    ppe_reg_lyrx_fixed_color_t.b.const_pixel;
 
     PPE_InputLayer_Init_Struct->LayerBus_Inc          = (PPE_AWBURST)
-                                                          ppe_reg_lyrx_bus_cfg_t.b.incr;
+                                                        ppe_reg_lyrx_bus_cfg_t.b.incr;
 
     PPE_InputLayer_Init_Struct->Layer_HW_Handshake_En = (PPE_HW_HS)ppe_reg_lyrx_hs_cfg_t.b.hs_en;
     PPE_InputLayer_Init_Struct->Layer_HW_Handshake_Index      = (PPE_HW_HANDSHAKE_INDEX)
-                                                                  ppe_reg_lyrx_hs_cfg_t.b.hw_index;
+                                                                ppe_reg_lyrx_hs_cfg_t.b.hw_index;
     PPE_InputLayer_Init_Struct->Layer_HW_Handshake_MsizeLog   =
         (PPE_MSIZE_LOG)ppe_reg_lyrx_hs_cfg_t.b.msize_log;
     PPE_InputLayer_Init_Struct->Max_Axlen                     = (PPE_MAX_AXLEN)
-                                                                  ppe_reg_lyrx_hs_cfg_t.b.msize_log;
+                                                                ppe_reg_lyrx_hs_cfg_t.b.msize_log;
     PPE_InputLayer_Init_Struct->Layer_HW_Handshake_Polarity   = (PPE_HW_HS_POL)
-                                                                  ppe_reg_lyrx_hs_cfg_t.b.polar;
+                                                                ppe_reg_lyrx_hs_cfg_t.b.polar;
 
     PPE_InputLayer_Init_Struct->Layer_Window_Xmin             =
         ppe_reg_lyrx_win_min_t.b.win_x_min;
@@ -447,11 +447,11 @@ void PPE_InputLayer_StructInit(PPE_INPUT_LAYER_INDEX intput_layer_index, \
     PPE_InputLayer_Init_Struct->Transfer_Matrix_E33 = ppe_reg_lyrx_trans_matrix_e33_t.b.matrix_e33;
 
     PPE_InputLayer_Init_Struct->MultiFrame_Reload_En = (FunctionalState)((
-                                                                               ppe_reg_ld_cfg_0x08.b.reload_en & BIT(
-                                                                                   intput_layer_index)) >> intput_layer_index);
+                                                                             ppe_reg_ld_cfg_0x08.b.reload_en & BIT(
+                                                                                 intput_layer_index)) >> intput_layer_index);
     PPE_InputLayer_Init_Struct->MultiFrame_LLP_En    = (FunctionalState)((
-                                                                               ppe_reg_ll_cfg_0x0c.b.ll_en & BIT(
-                                                                                   intput_layer_index)) >> intput_layer_index);
+                                                                             ppe_reg_ll_cfg_0x0c.b.ll_en & BIT(
+                                                                                 intput_layer_index)) >> intput_layer_index);
 }
 
 void PPE_InputLayer_enable(PPE_INPUT_LAYER_INDEX intput_layer_index, FunctionalState NewState)
@@ -516,26 +516,26 @@ void PPE_Mask_All_Interrupt(FunctionalState NewState)
     if (NewState != ENABLE)
     {
         PPE->REG_INTR_MASK |= (BIT(PPE_ALL_OVER_INT) \
-                                 | BIT(PPE_FRAME_OVER_INT) \
-                                 | BIT(PPE_LOAD_OVER_INT) \
-                                 | BIT(PPE_LINE_OVER_INT) \
-                                 | BIT(PPE_SUSPEND_IACTIVE_INT) \
-                                 | BIT(PPE_SECURE_ERROR_INT) \
-                                 | BIT(PPE_BUS_ERROR_INT) \
-                                 | BIT(PPE_DIV0_ERR_INT) \
-                                );
+                               | BIT(PPE_FRAME_OVER_INT) \
+                               | BIT(PPE_LOAD_OVER_INT) \
+                               | BIT(PPE_LINE_OVER_INT) \
+                               | BIT(PPE_SUSPEND_IACTIVE_INT) \
+                               | BIT(PPE_SECURE_ERROR_INT) \
+                               | BIT(PPE_BUS_ERROR_INT) \
+                               | BIT(PPE_DIV0_ERR_INT) \
+                              );
     }
     else
     {
         PPE->REG_INTR_MASK &= ~(BIT(PPE_ALL_OVER_INT) \
-                                  | BIT(PPE_FRAME_OVER_INT) \
-                                  | BIT(PPE_LOAD_OVER_INT) \
-                                  | BIT(PPE_LINE_OVER_INT) \
-                                  | BIT(PPE_SUSPEND_IACTIVE_INT) \
-                                  | BIT(PPE_SECURE_ERROR_INT) \
-                                  | BIT(PPE_BUS_ERROR_INT) \
-                                  | BIT(PPE_DIV0_ERR_INT) \
-                                 );
+                                | BIT(PPE_FRAME_OVER_INT) \
+                                | BIT(PPE_LOAD_OVER_INT) \
+                                | BIT(PPE_LINE_OVER_INT) \
+                                | BIT(PPE_SUSPEND_IACTIVE_INT) \
+                                | BIT(PPE_SECURE_ERROR_INT) \
+                                | BIT(PPE_BUS_ERROR_INT) \
+                                | BIT(PPE_DIV0_ERR_INT) \
+                               );
     }
 }
 
@@ -585,7 +585,7 @@ void PPE_Finish(void)
 }
 
 PPE_err PPE_Blit(ppe_buffer_t *target, ppe_buffer_t *image, ppe_matrix_t *matrix,
-                     PPE_BLEND_MODE mode)
+                 PPE_BLEND_MODE mode)
 {
     if (image->opacity == 0)
     {
@@ -677,10 +677,10 @@ PPE_err PPE_Blit(ppe_buffer_t *target, ppe_buffer_t *image, ppe_matrix_t *matrix
     PPE_InputLayer_Init_Typedef PPE_input_layer2_init;
     PPE_InputLayer_StructInit(PPE_INPUT_2, &PPE_input_layer2_init);
     PPE_input_layer2_init.Layer_Address                   = (uint32_t)image->address;
-    PPE_input_layer2_init.Pic_Height                      = (uint32_t)image->height;
-    PPE_input_layer2_init.Pic_Width                       = (uint32_t)image->width;
-    PPE_input_layer2_init.Line_Length                     = PPE_input_layer2_init.Pic_Width *
-                                                              PPE_Get_Pixel_Size(image->format);
+    PPE_input_layer2_init.Pic_Height                      = image->height;
+    PPE_input_layer2_init.Pic_Width                       = image->width;
+    PPE_input_layer2_init.Line_Length                     = image->stride *
+                                                            PPE_Get_Pixel_Size(image->format);
     PPE_input_layer2_init.Pixel_Source                    = PPE_LAYER_SRC_FROM_DMA;
     PPE_input_layer2_init.Pixel_Color_Format              = image->format;
     PPE_input_layer2_init.Const_Pixel                     = color;
@@ -735,11 +735,11 @@ PPE_err PPE_Blit(ppe_buffer_t *target, ppe_buffer_t *image, ppe_matrix_t *matrix
         PPE_InputLayer_Init_Typedef PPE_input_layer1_init;
         PPE_InputLayer_StructInit(PPE_INPUT_1, &PPE_input_layer1_init);
         PPE_input_layer1_init.Layer_Address                   = target->address +
-                                                                  (rect.y * target->width + rect.x) * PPE_Get_Pixel_Size(target->format);
+                                                                (rect.y * target->stride + rect.x) * PPE_Get_Pixel_Size(target->format);
         PPE_input_layer1_init.Pic_Height                      = (uint32_t)rect.h;
         PPE_input_layer1_init.Pic_Width                       = (uint32_t)rect.w;
-        PPE_input_layer1_init.Line_Length                     = target->width * PPE_Get_Pixel_Size(
-                                                                      target->format);
+        PPE_input_layer1_init.Line_Length                     = target->stride * PPE_Get_Pixel_Size(
+                                                                    target->format);
         PPE_input_layer1_init.Pixel_Source                    = PPE_LAYER_SRC_FROM_DMA;
         PPE_input_layer1_init.Pixel_Color_Format              = target->format;
         PPE_input_layer1_init.Const_Pixel                     = 0xFFFFFFFF;
@@ -775,8 +775,8 @@ PPE_err PPE_Blit(ppe_buffer_t *target, ppe_buffer_t *image, ppe_matrix_t *matrix
         PPE_input_layer1_init.Layer_Address                   = NULL;
         PPE_input_layer1_init.Pic_Height                      = (uint32_t)rect.h;
         PPE_input_layer1_init.Pic_Width                       = (uint32_t)rect.w;
-        PPE_input_layer1_init.Line_Length                     = target->width * PPE_Get_Pixel_Size(
-                                                                      target->format);
+        PPE_input_layer1_init.Line_Length                     = target->stride * PPE_Get_Pixel_Size(
+                                                                    target->format);
         PPE_input_layer1_init.Pixel_Source                    = PPE_LAYER_SRC_CONST;
         PPE_input_layer1_init.Pixel_Color_Format              = target->format;
         PPE_input_layer1_init.Const_Pixel                     = 0x0;
@@ -815,11 +815,11 @@ PPE_err PPE_Blit(ppe_buffer_t *target, ppe_buffer_t *image, ppe_matrix_t *matrix
     PPE_ResultLayer_Init_Typedef PPE_ResultLayer0_Init;
     PPE_ResultLayer_StructInit(&PPE_ResultLayer0_Init);
     PPE_ResultLayer0_Init.Layer_Address                   = target->address +
-                                                              (rect.y * target->width + rect.x) * PPE_Get_Pixel_Size(target->format);
+                                                            (rect.y * target->stride + rect.x) * PPE_Get_Pixel_Size(target->format);
     PPE_ResultLayer0_Init.Canvas_Height                   = rect.h;
     PPE_ResultLayer0_Init.Canvas_Width                    = rect.w;
-    PPE_ResultLayer0_Init.Line_Length                     = target->width * PPE_Get_Pixel_Size(
-                                                                  target->format);
+    PPE_ResultLayer0_Init.Line_Length                     = target->stride * PPE_Get_Pixel_Size(
+                                                                target->format);
     PPE_ResultLayer0_Init.Color_Format                    = target->format;
     PPE_ResultLayer0_Init.BackGround                      = target->const_color;
     PPE_ResultLayer0_Init.LayerBus_Inc                    = PPE_AWBURST_INC;
@@ -833,7 +833,7 @@ PPE_err PPE_Blit(ppe_buffer_t *target, ppe_buffer_t *image, ppe_matrix_t *matrix
 }
 
 PPE_err PPE_Blit_Inverse(ppe_buffer_t *dst, ppe_buffer_t *src, ppe_matrix_t *inverse,
-                             ppe_rect_t *rect, PPE_BLEND_MODE mode)
+                         ppe_rect_t *rect, PPE_BLEND_MODE mode)
 {
     if (dst->address == NULL)
     {
@@ -901,8 +901,8 @@ PPE_err PPE_Blit_Inverse(ppe_buffer_t *dst, ppe_buffer_t *src, ppe_matrix_t *inv
     PPE_input_layer2_init.Layer_Address                   = (uint32_t)src->address;
     PPE_input_layer2_init.Pic_Height                      = (uint32_t)src->height;
     PPE_input_layer2_init.Pic_Width                       = (uint32_t)src->width;
-    PPE_input_layer2_init.Line_Length                     = PPE_input_layer2_init.Pic_Width *
-                                                              PPE_Get_Pixel_Size(src->format);
+    PPE_input_layer2_init.Line_Length                     = src->stride *
+                                                            PPE_Get_Pixel_Size(src->format);
     if (mode != PPE_CONST_MASK_MODE)
     {
         PPE_input_layer2_init.Pixel_Source                = PPE_LAYER_SRC_FROM_DMA;
@@ -959,18 +959,18 @@ PPE_err PPE_Blit_Inverse(ppe_buffer_t *dst, ppe_buffer_t *src, ppe_matrix_t *inv
     PPE_InputLayer_Init(PPE_INPUT_2, &PPE_input_layer2_init);
 
     if (mode == PPE_SRC_OVER_MODE || (mode == PPE_CONST_MASK_MODE &&
-                                        (src->const_color >> 24) < 0xFF))
+                                      (src->const_color >> 24) < 0xFF))
     {
         /*input layer 1 initilization*/
         PPE_InputLayer_enable(PPE_INPUT_1, ENABLE);           // logic enable of layer
         PPE_InputLayer_Init_Typedef PPE_input_layer1_init;
         PPE_InputLayer_StructInit(PPE_INPUT_1, &PPE_input_layer1_init);
         PPE_input_layer1_init.Layer_Address                   = dst->address +
-                                                                  (rect->y * dst->width + rect->x) * PPE_Get_Pixel_Size(dst->format);
+                                                                (rect->y * dst->stride + rect->x) * PPE_Get_Pixel_Size(dst->format);
         PPE_input_layer1_init.Pic_Height                      = (uint32_t)rect->h;
         PPE_input_layer1_init.Pic_Width                       = (uint32_t)rect->w;
-        PPE_input_layer1_init.Line_Length                     = dst->width * PPE_Get_Pixel_Size(
-                                                                      dst->format);
+        PPE_input_layer1_init.Line_Length                     = dst->stride * PPE_Get_Pixel_Size(
+                                                                    dst->format);
         PPE_input_layer1_init.Pixel_Source                    = PPE_LAYER_SRC_FROM_DMA;
         PPE_input_layer1_init.Pixel_Color_Format              = dst->format;
         PPE_input_layer1_init.Const_Pixel                     = 0xFFFFFFFF;
@@ -999,7 +999,7 @@ PPE_err PPE_Blit_Inverse(ppe_buffer_t *dst, ppe_buffer_t *src, ppe_matrix_t *inv
         PPE_InputLayer_Init(PPE_INPUT_1, &PPE_input_layer1_init);
     }
     else if (mode == PPE_BYPASS_MODE || (mode == PPE_CONST_MASK_MODE &&
-                                           (src->const_color >> 24) == 0xFF))
+                                         (src->const_color >> 24) == 0xFF))
     {
         PPE_InputLayer_enable(PPE_INPUT_1, ENABLE);           // logic enable of layer
         PPE_InputLayer_Init_Typedef PPE_input_layer1_init;
@@ -1007,8 +1007,8 @@ PPE_err PPE_Blit_Inverse(ppe_buffer_t *dst, ppe_buffer_t *src, ppe_matrix_t *inv
         PPE_input_layer1_init.Layer_Address                   = NULL;
         PPE_input_layer1_init.Pic_Height                      = (uint32_t)rect->h;
         PPE_input_layer1_init.Pic_Width                       = (uint32_t)rect->w;
-        PPE_input_layer1_init.Line_Length                     = dst->width * PPE_Get_Pixel_Size(
-                                                                      dst->format);
+        PPE_input_layer1_init.Line_Length                     = dst->stride * PPE_Get_Pixel_Size(
+                                                                    dst->format);
         PPE_input_layer1_init.Pixel_Source                    = PPE_LAYER_SRC_CONST;
         PPE_input_layer1_init.Pixel_Color_Format              = dst->format;
         PPE_input_layer1_init.Const_Pixel                     = 0x0;
@@ -1047,11 +1047,11 @@ PPE_err PPE_Blit_Inverse(ppe_buffer_t *dst, ppe_buffer_t *src, ppe_matrix_t *inv
     PPE_ResultLayer_Init_Typedef PPE_ResultLayer0_Init;
     PPE_ResultLayer_StructInit(&PPE_ResultLayer0_Init);
     PPE_ResultLayer0_Init.Layer_Address                   = dst->address +
-                                                              (rect->y * dst->width + rect->x) * PPE_Get_Pixel_Size(dst->format);
+                                                            (rect->y * dst->stride + rect->x) * PPE_Get_Pixel_Size(dst->format);
     PPE_ResultLayer0_Init.Canvas_Height                   = rect->h;
     PPE_ResultLayer0_Init.Canvas_Width                    = rect->w;
-    PPE_ResultLayer0_Init.Line_Length                     = dst->width * PPE_Get_Pixel_Size(
-                                                                  dst->format);
+    PPE_ResultLayer0_Init.Line_Length                     = dst->stride * PPE_Get_Pixel_Size(
+                                                                dst->format);
     PPE_ResultLayer0_Init.Color_Format                    = dst->format;
     PPE_ResultLayer0_Init.BackGround                      = dst->const_color;
     PPE_ResultLayer0_Init.LayerBus_Inc                    = PPE_AWBURST_INC;
@@ -1090,7 +1090,7 @@ PPE_err PPE_Mask(ppe_buffer_t *dst, uint32_t color, ppe_rect_t *rect)
     PPE_Global.Secure_En = PPE_NON_SECURE_MODE;
     PPE_Init(&PPE_Global);
 
-    uint32_t mask_color = (((color >> 24) * dst->opacity / 255) << 24) + (color & 0xFFFFFF);
+    uint32_t mask_color = color;
 
     /*input layer 2 initilization*/
     PPE_InputLayer_enable(PPE_INPUT_2, ENABLE);           // logic enable of layer
@@ -1136,11 +1136,11 @@ PPE_err PPE_Mask(ppe_buffer_t *dst, uint32_t color, ppe_rect_t *rect)
         PPE_InputLayer_Init_Typedef PPE_input_layer1_init;
         PPE_InputLayer_StructInit(PPE_INPUT_1, &PPE_input_layer1_init);
         PPE_input_layer1_init.Layer_Address                   = dst->address +
-                                                                  (rect->y * dst->width + rect->x) * PPE_Get_Pixel_Size(dst->format);
+                                                                (rect->y * dst->stride + rect->x) * PPE_Get_Pixel_Size(dst->format);
         PPE_input_layer1_init.Pic_Height                      = (uint32_t)rect->h;
         PPE_input_layer1_init.Pic_Width                       = (uint32_t)rect->w;
-        PPE_input_layer1_init.Line_Length                     = dst->width * PPE_Get_Pixel_Size(
-                                                                      dst->format);
+        PPE_input_layer1_init.Line_Length                     = dst->stride * PPE_Get_Pixel_Size(
+                                                                    dst->format);
         PPE_input_layer1_init.Pixel_Source                    = PPE_LAYER_SRC_FROM_DMA;
         PPE_input_layer1_init.Pixel_Color_Format              = dst->format;
         PPE_input_layer1_init.Const_Pixel                     = 0xFFFFFFFF;
@@ -1176,8 +1176,8 @@ PPE_err PPE_Mask(ppe_buffer_t *dst, uint32_t color, ppe_rect_t *rect)
         PPE_input_layer1_init.Layer_Address                   = NULL;
         PPE_input_layer1_init.Pic_Height                      = (uint32_t)rect->h;
         PPE_input_layer1_init.Pic_Width                       = (uint32_t)rect->w;
-        PPE_input_layer1_init.Line_Length                     = dst->width * PPE_Get_Pixel_Size(
-                                                                      dst->format);
+        PPE_input_layer1_init.Line_Length                     = dst->stride * PPE_Get_Pixel_Size(
+                                                                    dst->format);
         PPE_input_layer1_init.Pixel_Source                    = PPE_LAYER_SRC_CONST;
         PPE_input_layer1_init.Pixel_Color_Format              = dst->format;
         PPE_input_layer1_init.Const_Pixel                     = 0x0;
@@ -1212,11 +1212,11 @@ PPE_err PPE_Mask(ppe_buffer_t *dst, uint32_t color, ppe_rect_t *rect)
     PPE_ResultLayer_Init_Typedef PPE_ResultLayer0_Init;
     PPE_ResultLayer_StructInit(&PPE_ResultLayer0_Init);
     PPE_ResultLayer0_Init.Layer_Address                   = dst->address +
-                                                              (rect->y * dst->width + rect->x) * PPE_Get_Pixel_Size(dst->format);
+                                                            (rect->y * dst->stride + rect->x) * PPE_Get_Pixel_Size(dst->format);
     PPE_ResultLayer0_Init.Canvas_Height                   = rect->h;
     PPE_ResultLayer0_Init.Canvas_Width                    = rect->w;
-    PPE_ResultLayer0_Init.Line_Length                     = dst->width * PPE_Get_Pixel_Size(
-                                                                  dst->format);
+    PPE_ResultLayer0_Init.Line_Length                     = dst->stride * PPE_Get_Pixel_Size(
+                                                                dst->format);
     PPE_ResultLayer0_Init.Color_Format                    = dst->format;
     PPE_ResultLayer0_Init.BackGround                      = dst->const_color;
     PPE_ResultLayer0_Init.LayerBus_Inc                    = PPE_AWBURST_INC;
@@ -1230,7 +1230,7 @@ PPE_err PPE_Mask(ppe_buffer_t *dst, uint32_t color, ppe_rect_t *rect)
 }
 
 PPE_err PPE_Blend_Multi(ppe_buffer_t *dst, ppe_buffer_t *src_1,
-                            ppe_buffer_t *src_2, ppe_buffer_t *src_3, PPE_BLEND_MODE mode)
+                        ppe_buffer_t *src_2, ppe_buffer_t *src_3, PPE_BLEND_MODE mode)
 {
     if (dst->address == NULL)
     {
@@ -1265,8 +1265,8 @@ PPE_err PPE_Blend_Multi(ppe_buffer_t *dst, ppe_buffer_t *src_1,
         PPE_input_layer2_init.Layer_Address                   = (uint32_t)src_1->address;
         PPE_input_layer2_init.Pic_Height                      = (uint32_t)src_1->height;
         PPE_input_layer2_init.Pic_Width                       = (uint32_t)src_1->width;
-        PPE_input_layer2_init.Line_Length                     = PPE_input_layer2_init.Pic_Width *
-                                                                  PPE_Get_Pixel_Size(src_1->format);
+        PPE_input_layer2_init.Line_Length                     = (uint32_t)src_1->stride *
+                                                                PPE_Get_Pixel_Size(src_1->format);
         PPE_input_layer2_init.Pixel_Source                    = PPE_LAYER_SRC_FROM_DMA;
         PPE_input_layer2_init.Pixel_Color_Format              = src_1->format;
         PPE_input_layer2_init.Const_Pixel                     = color;
@@ -1339,8 +1339,8 @@ PPE_err PPE_Blend_Multi(ppe_buffer_t *dst, ppe_buffer_t *src_1,
         PPE_input_layer2_init.Layer_Address                   = (uint32_t)src_2->address;
         PPE_input_layer2_init.Pic_Height                      = (uint32_t)src_2->height;
         PPE_input_layer2_init.Pic_Width                       = (uint32_t)src_2->width;
-        PPE_input_layer2_init.Line_Length                     = PPE_input_layer2_init.Pic_Width *
-                                                                  PPE_Get_Pixel_Size(src_2->format);
+        PPE_input_layer2_init.Line_Length                     = (uint32_t)src_2->stride *
+                                                                PPE_Get_Pixel_Size(src_2->format);
         PPE_input_layer2_init.Pixel_Source                    = PPE_LAYER_SRC_FROM_DMA;
         PPE_input_layer2_init.Pixel_Color_Format              = src_2->format;
         PPE_input_layer2_init.Const_Pixel                     = color;
@@ -1413,8 +1413,8 @@ PPE_err PPE_Blend_Multi(ppe_buffer_t *dst, ppe_buffer_t *src_1,
         PPE_input_layer2_init.Layer_Address                   = (uint32_t)src_3->address;
         PPE_input_layer2_init.Pic_Height                      = (uint32_t)src_3->height;
         PPE_input_layer2_init.Pic_Width                       = (uint32_t)src_3->width;
-        PPE_input_layer2_init.Line_Length                     = PPE_input_layer2_init.Pic_Width *
-                                                                  PPE_Get_Pixel_Size(src_3->format);
+        PPE_input_layer2_init.Line_Length                     = (uint32_t)src_3->stride *
+                                                                PPE_Get_Pixel_Size(src_3->format);
         PPE_input_layer2_init.Pixel_Source                    = PPE_LAYER_SRC_FROM_DMA;
         PPE_input_layer2_init.Pixel_Color_Format              = src_3->format;
         PPE_input_layer2_init.Const_Pixel                     = color;
@@ -1476,8 +1476,8 @@ PPE_err PPE_Blend_Multi(ppe_buffer_t *dst, ppe_buffer_t *src_1,
         PPE_input_layer1_init.Layer_Address                   = dst->address;
         PPE_input_layer1_init.Pic_Height                      = (uint32_t)dst->height;
         PPE_input_layer1_init.Pic_Width                       = (uint32_t)dst->width;
-        PPE_input_layer1_init.Line_Length                     = dst->width * PPE_Get_Pixel_Size(
-                                                                      dst->format);
+        PPE_input_layer1_init.Line_Length                     = dst->stride * PPE_Get_Pixel_Size(
+                                                                    dst->format);
         PPE_input_layer1_init.Pixel_Source                    = PPE_LAYER_SRC_FROM_DMA;
         PPE_input_layer1_init.Pixel_Color_Format              = dst->format;
         PPE_input_layer1_init.Const_Pixel                     = 0xFFFFFFFF;
@@ -1513,8 +1513,8 @@ PPE_err PPE_Blend_Multi(ppe_buffer_t *dst, ppe_buffer_t *src_1,
         PPE_input_layer1_init.Layer_Address                   = NULL;
         PPE_input_layer1_init.Pic_Height                      = dst->height;
         PPE_input_layer1_init.Pic_Width                       = dst->width;
-        PPE_input_layer1_init.Line_Length                     = dst->width * PPE_Get_Pixel_Size(
-                                                                      dst->format);
+        PPE_input_layer1_init.Line_Length                     = dst->stride * PPE_Get_Pixel_Size(
+                                                                    dst->format);
         PPE_input_layer1_init.Pixel_Source                    = PPE_LAYER_SRC_CONST;
         PPE_input_layer1_init.Pixel_Color_Format              = dst->format;
         PPE_input_layer1_init.Const_Pixel                     = 0x0;
@@ -1552,8 +1552,8 @@ PPE_err PPE_Blend_Multi(ppe_buffer_t *dst, ppe_buffer_t *src_1,
     PPE_ResultLayer0_Init.Layer_Address                   = dst->address;
     PPE_ResultLayer0_Init.Canvas_Height                   = dst->height;
     PPE_ResultLayer0_Init.Canvas_Width                    = dst->width;
-    PPE_ResultLayer0_Init.Line_Length                     = dst->width * PPE_Get_Pixel_Size(
-                                                                  dst->format);
+    PPE_ResultLayer0_Init.Line_Length                     = dst->stride * PPE_Get_Pixel_Size(
+                                                                dst->format);
     PPE_ResultLayer0_Init.Color_Format                    = dst->format;
     PPE_ResultLayer0_Init.BackGround                      = dst->const_color;
     PPE_ResultLayer0_Init.LayerBus_Inc                    = PPE_AWBURST_INC;
@@ -1611,8 +1611,8 @@ PPE_err PPE_Blend_Handshake(ppe_buffer_t *dst, ppe_buffer_t *src, ppe_rect_t *re
     PPE_input_layer2_init.Layer_Address                   = (uint32_t)&IDU->TX_FIFO;
     PPE_input_layer2_init.Pic_Height                      = (uint32_t)src->height;
     PPE_input_layer2_init.Pic_Width                       = (uint32_t)src->width;
-    PPE_input_layer2_init.Line_Length                     = PPE_input_layer2_init.Pic_Width *
-                                                              PPE_Get_Pixel_Size(src->format);
+    PPE_input_layer2_init.Line_Length                     = (uint32_t)src->stride *
+                                                            PPE_Get_Pixel_Size(src->format);
     PPE_input_layer2_init.Pixel_Source                    = PPE_LAYER_SRC_FROM_DMA;
     PPE_input_layer2_init.Pixel_Color_Format              = src->format;
     PPE_input_layer2_init.Const_Pixel                     = color;
@@ -1661,11 +1661,11 @@ PPE_err PPE_Blend_Handshake(ppe_buffer_t *dst, ppe_buffer_t *src, ppe_rect_t *re
         PPE_InputLayer_Init_Typedef PPE_input_layer1_init;
         PPE_InputLayer_StructInit(PPE_INPUT_1, &PPE_input_layer1_init);
         PPE_input_layer1_init.Layer_Address                   = dst->address +
-                                                                  (rect->y * dst->width + rect->x) * PPE_Get_Pixel_Size(dst->format);
+                                                                (rect->y * dst->width + rect->x) * PPE_Get_Pixel_Size(dst->format);
         PPE_input_layer1_init.Pic_Height                      = (uint32_t)rect->h;
         PPE_input_layer1_init.Pic_Width                       = (uint32_t)rect->w;
-        PPE_input_layer1_init.Line_Length                     = dst->width * PPE_Get_Pixel_Size(
-                                                                      dst->format);
+        PPE_input_layer1_init.Line_Length                     = dst->stride * PPE_Get_Pixel_Size(
+                                                                    dst->format);
         PPE_input_layer1_init.Pixel_Source                    = PPE_LAYER_SRC_FROM_DMA;
         PPE_input_layer1_init.Pixel_Color_Format              = dst->format;
         PPE_input_layer1_init.Const_Pixel                     = 0xFFFFFFFF;
@@ -1699,11 +1699,11 @@ PPE_err PPE_Blend_Handshake(ppe_buffer_t *dst, ppe_buffer_t *src, ppe_rect_t *re
     PPE_ResultLayer_Init_Typedef PPE_ResultLayer0_Init;
     PPE_ResultLayer_StructInit(&PPE_ResultLayer0_Init);
     PPE_ResultLayer0_Init.Layer_Address                   = dst->address +
-                                                              (rect->y * dst->width + rect->x) * PPE_Get_Pixel_Size(dst->format);
+                                                            (rect->y * dst->width + rect->x) * PPE_Get_Pixel_Size(dst->format);
     PPE_ResultLayer0_Init.Canvas_Height                   = rect->h;
     PPE_ResultLayer0_Init.Canvas_Width                    = rect->w;
-    PPE_ResultLayer0_Init.Line_Length                     = dst->width * PPE_Get_Pixel_Size(
-                                                                  dst->format);
+    PPE_ResultLayer0_Init.Line_Length                     = dst->stride * PPE_Get_Pixel_Size(
+                                                                dst->format);
     PPE_ResultLayer0_Init.Color_Format                    = dst->format;
     PPE_ResultLayer0_Init.BackGround                      = dst->const_color;
     PPE_ResultLayer0_Init.LayerBus_Inc                    = PPE_AWBURST_INC;
@@ -1847,11 +1847,11 @@ void ppe_scale(float scale_x, float scale_y, ppe_matrix_t *matrix)
     ppe_mat_multiply(matrix, &s);
 }
 
-void ppe_rotate(float degrees, ppe_matrix_t *matrix)
-{
 #ifndef M_PI
 #define M_PI 3.1415926535898f
 #endif
+void ppe_rotate(float degrees, ppe_matrix_t *matrix)
+{
     /* Convert degrees into radians. */
     int16_t angle = (int)degrees;
 
@@ -1868,6 +1868,23 @@ void ppe_rotate(float degrees, ppe_matrix_t *matrix)
 
     /* Multiply with current matrix. */
     ppe_mat_multiply(matrix, &r);
+}
+
+void ppe_skew(float skew_x, float skew_y, ppe_matrix_t *matrix)
+{
+    float rskew_x = skew_x / 180.0f * (float)M_PI;
+    float rskew_y = skew_y / 180.0f * (float)M_PI;
+    float tan_x = tanf(rskew_x);
+    float tan_y = tanf(rskew_y);
+
+    ppe_matrix_t s = {{
+            {1.0f, tan_x, 0.0f},
+            {tan_y, 1.0f, 0.0f},
+            {0.0f, 0.0f, 1.0f},
+        }
+    };
+
+    ppe_mat_multiply(matrix, &s);
 }
 
 void ppe_perspective(float px, float py, ppe_matrix_t *matrix)
