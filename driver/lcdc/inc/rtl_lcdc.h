@@ -267,6 +267,10 @@ typedef enum
 
 #define IS_LCDC_DIR(DIR) ((DIR) == LCDC_TX_MODE) || ((DIR) == LCDC_RX_MODE)
 
+/** End of LCDC_Operate_Direction
+  * \}
+  */
+
 /**
  * \defgroup    LCDC_Clock_Phase_Shift LCDC Clock Phase Shift
  * \{
@@ -279,7 +283,7 @@ typedef enum
     LCDC_SPI_PHASE_SHIFT_180_DEGREE = 3,
 } LCDC_CLK_PHASE_SHIFT_T;
 
-/** End of LCDC_Operate_Direction
+/** End of LCDC_Clock_Phase_Shift
   * \}
   */
 
