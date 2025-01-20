@@ -838,6 +838,42 @@ __STATIC_INLINE void LCDC_TeCmd(FunctionalState NewState)
 /**
  * rtl_lcdc.h
  *
+ * \brief  Enable or disable the function of automatically turn on DMA when the valid edge of the tear signal arrives.
+ *
+ * \param[in] NewState: Enable or disable the function of automatically turning on DMA when the valid edge of the tear signal arrives.
+ *            This parameter can be one of the following values:
+ *            \arg ENABLE: Enable the function of automatically turning on DMA when the valid edge of the tear signal arrives.
+ *            \arg DISABLE: Disable the function of automatically turning on DMA when the valid edge of the tear signal arrives.
+ *
+ * \return None.
+ *
+ * <b>Example usage</b>
+ * \code{.c}
+ *
+ * void driver_lcdc_init(void)
+ * {
+ *     LCDC_TeEnableDMA(ENABLE);
+ * }
+ * \endcode
+ */
+__STATIC_INLINE void LCDC_TeEnableDMA(FunctionalState NewState)
+{
+    assert_param(IS_FUNCTIONAL_STATE(NewState));
+    LCDC_HANDLER_TEAR_CTR_TypeDef handler_reg_0x10 = {.d32 = LCDC_HANDLER->TEAR_CTR};
+    if (NewState == ENABLE)
+    {
+        handler_reg_0x10.b.tear_auto_turn_on_dma_en = 1;
+    }
+    else
+    {
+        handler_reg_0x10.b.tear_auto_turn_on_dma_en = 0;
+    }
+    LCDC_HANDLER->TEAR_CTR = handler_reg_0x10.d32;
+}
+
+/**
+ * rtl_lcdc.h
+ *
  * \brief  Start or stop write data in auto mode.
  *
  * \param[in] NewState: Start or stop write data.
