@@ -47,9 +47,24 @@ void rtl_idu_fill_hw_hs_reg_int(IDU_CTL1_TypeDef *reg, IDU_InitTypeDef *IDU_init
     return;
 }
 
+uint8_t rtl_idu_get_dma_depth(uint8_t channel_num)
+{
+    if (channel_num <= 1)
+    {
+        return 16;
+    }
+    else if (channel_num <= 9)
+    {
+        return 8;
+    }
+    else
+    {
+        return 0xFF;
+    }
+}
 
 IDU_ERROR rtl_idu_decode_direct_int(uint8_t *file, IDU_decode_range *range,
-                                      IDU_DMA_config *dma_cfg, GDMA_LLIDef *RX_LLI)
+                                    IDU_DMA_config *dma_cfg, GDMA_LLIDef *RX_LLI)
 {
     return IDU_ERROR_INVALID_PARAM;
 }

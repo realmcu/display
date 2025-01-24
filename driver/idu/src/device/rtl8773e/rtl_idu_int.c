@@ -12,7 +12,7 @@ void rtl_idu_channel_init_int(uint8_t *high_speed_channel, uint8_t *low_speed_ch
         assert_param(*high_speed_channel != 0xA5);
         return;
     }
-    if (!GDMA_channel_request(low_speed_channel, NULL, false))
+    if (!GDMA_channel_request(low_speed_channel, NULL, true))
     {
         assert_param(*low_speed_channel != 0xA5);
         return;
@@ -60,8 +60,28 @@ void rtl_idu_fill_hw_hs_reg_int(IDU_CTL1_TypeDef *reg, IDU_InitTypeDef *IDU_init
     reg->b.hw_handshake_mux = IDU_init_struct->hw_handshake;
 }
 
+uint8_t rtl_idu_get_dma_depth(uint8_t channel_num)
+{
+    if (channel_num <= 1)
+    {
+        return 16;
+    }
+    else if (channel_num <= 5)
+    {
+        return 8;
+    }
+    else if (channel_num <= 11)
+    {
+        return 4;
+    }
+    else
+    {
+        return 0xFF;
+    }
+}
+
 IDU_ERROR rtl_idu_decode_direct_int(uint8_t *file, IDU_decode_range *range,
-                                      IDU_DMA_config *dma_cfg, GDMA_LLIDef *RX_LLI)
+                                    IDU_DMA_config *dma_cfg, GDMA_LLIDef *RX_LLI)
 {
     uint32_t decompress_start_line;
     uint32_t decompress_end_line;
@@ -111,9 +131,9 @@ IDU_ERROR rtl_idu_decode_direct_int(uint8_t *file, IDU_decode_range *range,
     }
 
     uint32_t start_line_address = IDU_Get_Line_Start_Address(compressed_data_start_address,
-                                                              decompress_start_line);
+                                                             decompress_start_line);
     uint32_t compressed_data_size = IDU_Get_Line_Start_Address(compressed_data_start_address,
-                                                                decompress_end_line + 1) - start_line_address;
+                                                               decompress_end_line + 1) - start_line_address;
 
     IDU_InitTypeDef IDU_struct_init;
     IDU_struct_init.algorithm_type            = (IDU_ALGORITHM)header->algorithm_type.algorithm;
@@ -125,12 +145,12 @@ IDU_ERROR rtl_idu_decode_direct_int(uint8_t *file, IDU_decode_range *range,
     IDU_struct_init.tx_column_end             = decompress_end_column ;
     IDU_struct_init.compressed_data_size      = compressed_data_size;
     IDU_struct_init.pic_length2_size          = (IDU_RLE_RUNLENGTH_SIZE)
-                                                 header->algorithm_type.feature_2;
+                                                header->algorithm_type.feature_2;
     IDU_struct_init.pic_length1_size          = (IDU_RLE_RUNLENGTH_SIZE)
-                                                 header->algorithm_type.feature_1;
+                                                header->algorithm_type.feature_1;
     IDU_struct_init.yuv_blur_bit              = (IDU_YUV_BLUR_BIT)header->algorithm_type.feature_2;
     IDU_struct_init.yuv_sample_type           = (IDU_YUV_SAMPLE_TYPE)
-                                                 header->algorithm_type.feature_1;
+                                                header->algorithm_type.feature_1;
     IDU_struct_init.rx_fifo_dma_enable        = (uint32_t)ENABLE;
     IDU_struct_init.tx_fifo_dma_enable        = (uint32_t)ENABLE;
     IDU_struct_init.rx_fifo_dma_threshold     = IDU_RX_FIFO_DEPTH / 2;

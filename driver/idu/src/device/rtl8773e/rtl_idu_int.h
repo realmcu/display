@@ -21,5 +21,7 @@ void rtl_idu_hw_handshake_init(IDU_InitTypeDef *init_struct);
 
 void rtl_idu_fill_hw_hs_reg_int(IDU_CTL1_TypeDef *reg, IDU_InitTypeDef *IDU_init_struct);
 
+uint8_t rtl_idu_get_dma_depth(uint8_t channel_num);
+
 IDU_ERROR rtl_idu_decode_direct_int(uint8_t *file, IDU_decode_range *range,
-                                      IDU_DMA_config *dma_cfg, GDMA_LLIDef *RX_LLI);
+                                    IDU_DMA_config *dma_cfg, GDMA_LLIDef *RX_LLI);

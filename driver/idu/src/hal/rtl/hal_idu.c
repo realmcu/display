@@ -14,23 +14,45 @@ void hal_dma_copy(hal_idu_dma_info *info, uint8_t *src, uint8_t *dst)
         use_LLI = false;
     }
     uint32_t dma_height = info->height;
-    uint32_t buffer_size, total_size = 0;
+    uint32_t buffer_size = 0;
+    uint32_t total_size = info->length * info->height / 4;;
     uint8_t m_size = 0, data_size = 0;
-    if (info->length % 4 == 0 || use_LLI == false)
+    uint8_t dma_depth = rtl_idu_get_dma_depth(high_speed_dma);
+    if (info->length % 4 == 0)
     {
         data_size = GDMA_DataSize_Word;
-        m_size = GDMA_Msize_16;
-        if (use_LLI)
+        if (dma_depth == 4)
         {
-            buffer_size = info->length / 4;
+            m_size = GDMA_Msize_4;
+        }
+        else if (dma_depth == 8)
+        {
+            m_size = GDMA_Msize_8;
+        }
+        else if (dma_depth == 16)
+        {
+            m_size = GDMA_Msize_16;
         }
         else
         {
-            buffer_size = info->length * info->height / 4;
-            if (info->length % 4)
+            return;
+        }
+        buffer_size = info->length / 4;
+        if (!use_LLI)
+        {
+            if (info->length % 4 == 2)
             {
-                buffer_size += 1;
+                buffer_size = total_size / 2;
+                data_size = GDMA_DataSize_HalfWord;
+                m_size += 1;
             }
+            else if (info->length % 2 == 1)
+            {
+                buffer_size = total_size;
+                data_size = GDMA_DataSize_Byte;
+                m_size += 2;
+            }
+            buffer_size = total_size;
             if (buffer_size > 65535)
             {
                 use_LLI = true;
@@ -39,21 +61,50 @@ void hal_dma_copy(hal_idu_dma_info *info, uint8_t *src, uint8_t *dst)
                 {
                     dma_height += 1;
                 }
-                total_size = buffer_size;
                 buffer_size = 65535;
             }
         }
     }
     else if (info->length % 2 == 0)
     {
+        if (dma_depth == 4)
+        {
+            m_size = GDMA_Msize_8;
+        }
+        else if (dma_depth == 8)
+        {
+            m_size = GDMA_Msize_16;
+        }
+        else if (dma_depth == 16)
+        {
+            m_size = GDMA_Msize_32;
+        }
+        else
+        {
+            return;
+        }
         data_size = GDMA_DataSize_HalfWord;
-        m_size = GDMA_Msize_32;
         buffer_size = info->length / 2;
     }
     else
     {
         data_size = GDMA_DataSize_Byte;
-        m_size = GDMA_Msize_64;
+        if (dma_depth == 4)
+        {
+            m_size = GDMA_Msize_16;
+        }
+        else if (dma_depth == 8)
+        {
+            m_size = GDMA_Msize_32;
+        }
+        else if (dma_depth == 16)
+        {
+            m_size = GDMA_Msize_64;
+        }
+        else
+        {
+            return;
+        }
         buffer_size = info->length;
     }
 
@@ -85,9 +136,9 @@ void hal_dma_copy(hal_idu_dma_info *info, uint8_t *src, uint8_t *dst)
     RX_GDMA_InitStruct.GDMA_SourceMsize         =
         m_size;                         // 8 msize for source msize
     RX_GDMA_InitStruct.GDMA_DestinationMsize    =
-        GDMA_Msize_32;                         // 8 msize for destiantion msize
+        m_size;                         // 8 msize for destiantion msize
     RX_GDMA_InitStruct.GDMA_DestinationDataSize =
-        GDMA_DataSize_HalfWord;                   // 32 bit width for destination transaction
+        data_size;                   // 32 bit width for destination transaction
     RX_GDMA_InitStruct.GDMA_SourceDataSize      =
         data_size;                   // 32 bit width for source transaction
     RX_GDMA_InitStruct.GDMA_SourceAddr          = (uint32_t)start_address;
@@ -197,9 +248,15 @@ bool hal_idu_decompress_rect(hal_idu_decompress_info *info, uint8_t *dst)
     uint32_t decompress_end_column = info->end_column;
     uint32_t buffer_size = info->length / 4;
     uint32_t start_line_address = IDU_Get_Line_Start_Address(compressed_data_start_address,
-                                                              decompress_start_line);
+                                                             decompress_start_line);
     uint32_t compressed_data_size = IDU_Get_Line_Start_Address(compressed_data_start_address,
-                                                                decompress_end_line + 1) - start_line_address;
+                                                               decompress_end_line + 1) - start_line_address;
+    uint8_t rx_dma_depth = rtl_idu_get_dma_depth(dma_cfg->RX_DMA_channel_num);
+    uint8_t tx_dma_depth = rtl_idu_get_dma_depth(dma_cfg->TX_DMA_channel_num);
+    if (tx_dma_depth == 0xFF || rx_dma_depth == 0xFF)
+    {
+        return false;
+    }
     IDU_ERROR err = IDU_SUCCESS;
     IDU_InitTypeDef IDU_struct_init;
     IDU_struct_init.algorithm_type            = (IDU_ALGORITHM)header->algorithm_type.algorithm;
@@ -211,15 +268,22 @@ bool hal_idu_decompress_rect(hal_idu_decompress_info *info, uint8_t *dst)
     IDU_struct_init.tx_column_end             = decompress_end_column ;
     IDU_struct_init.compressed_data_size      = compressed_data_size;
     IDU_struct_init.pic_length2_size          = (IDU_RLE_RUNLENGTH_SIZE)
-                                                 header->algorithm_type.feature_2;
+                                                header->algorithm_type.feature_2;
     IDU_struct_init.pic_length1_size          = (IDU_RLE_RUNLENGTH_SIZE)
-                                                 header->algorithm_type.feature_1;
+                                                header->algorithm_type.feature_1;
     IDU_struct_init.yuv_blur_bit              = (IDU_YUV_BLUR_BIT)header->algorithm_type.feature_2;
     IDU_struct_init.yuv_sample_type           = (IDU_YUV_SAMPLE_TYPE)
-                                                 header->algorithm_type.feature_1;
+                                                header->algorithm_type.feature_1;
     IDU_struct_init.rx_fifo_dma_enable        = (uint32_t)ENABLE;
     IDU_struct_init.tx_fifo_dma_enable        = (uint32_t)ENABLE;
-    IDU_struct_init.rx_fifo_dma_threshold     = IDU_RX_FIFO_DEPTH / 2;
+    if (rx_dma_depth == 4)
+    {
+        IDU_struct_init.rx_fifo_dma_threshold     = 12;
+    }
+    else
+    {
+        IDU_struct_init.rx_fifo_dma_threshold     = 8;
+    }
     IDU_struct_init.tx_fifo_dma_threshold     = IDU_TX_FIFO_DEPTH / 2;
     IDU_struct_init.rx_fifo_int_threshold     = dma_cfg->RX_FIFO_INT_threshold;
     IDU_struct_init.tx_fifo_int_threshold     = dma_cfg->TX_FIFO_INT_threshold;
@@ -252,10 +316,27 @@ bool hal_idu_decompress_rect(hal_idu_decompress_info *info, uint8_t *dst)
     RX_GDMA_InitStruct.GDMA_DIR                 = GDMA_DIR_MemoryToPeripheral;
     RX_GDMA_InitStruct.GDMA_SourceInc           = DMA_SourceInc_Inc;
     RX_GDMA_InitStruct.GDMA_DestinationInc      = DMA_DestinationInc_Fix;
-    RX_GDMA_InitStruct.GDMA_SourceMsize         =
-        GDMA_Msize_16;                         // 8 msize for source msize
-    RX_GDMA_InitStruct.GDMA_DestinationMsize    =
-        GDMA_Msize_8;                         // 8 msize for destiantion msize
+    if (rx_dma_depth == 16)
+    {
+        RX_GDMA_InitStruct.GDMA_SourceMsize         =
+            GDMA_Msize_16;                         // 16 msize for source msize
+        RX_GDMA_InitStruct.GDMA_DestinationMsize    =
+            GDMA_Msize_8;                         // 8 msize for destiantion msize
+    }
+    else if (rx_dma_depth == 8)
+    {
+        RX_GDMA_InitStruct.GDMA_SourceMsize         =
+            GDMA_Msize_8;                         // 8 msize for source msize
+        RX_GDMA_InitStruct.GDMA_DestinationMsize    =
+            GDMA_Msize_8;                         // 8 msize for destiantion msize
+    }
+    else
+    {
+        RX_GDMA_InitStruct.GDMA_SourceMsize         =
+            GDMA_Msize_4;                         // 4 msize for source msize
+        RX_GDMA_InitStruct.GDMA_DestinationMsize    =
+            GDMA_Msize_4;                         // 4 msize for destiantion msize
+    }
     RX_GDMA_InitStruct.GDMA_DestinationDataSize =
         GDMA_DataSize_Word;                   // 32 bit width for destination transaction
     RX_GDMA_InitStruct.GDMA_SourceDataSize      =
@@ -316,14 +397,33 @@ bool hal_idu_decompress_rect(hal_idu_decompress_info *info, uint8_t *dst)
     TX_GDMA_InitStruct.GDMA_DIR                 = GDMA_DIR_PeripheralToMemory;
     TX_GDMA_InitStruct.GDMA_SourceInc           = DMA_SourceInc_Fix;
     TX_GDMA_InitStruct.GDMA_DestinationInc      = DMA_DestinationInc_Inc;
-    TX_GDMA_InitStruct.GDMA_SourceMsize         =
-        GDMA_Msize_8;                         // 8 msize for source msize
-    TX_GDMA_InitStruct.GDMA_DestinationMsize    =
-        GDMA_Msize_8;                         // 8 msize for destiantion msize
     TX_GDMA_InitStruct.GDMA_DestinationDataSize =
         GDMA_DataSize_Word;                   // 32 bit width for destination transaction
     TX_GDMA_InitStruct.GDMA_SourceDataSize      =
         GDMA_DataSize_Word;                   // 32 bit width for source transaction
+    if (tx_dma_depth == 16)
+    {
+        TX_GDMA_InitStruct.GDMA_SourceMsize         =
+            GDMA_Msize_8;                         // 16 msize for source msize
+        TX_GDMA_InitStruct.GDMA_DestinationMsize    =
+            GDMA_Msize_8;                         // 8 msize for destiantion msize
+    }
+    else if (tx_dma_depth == 8)
+    {
+        TX_GDMA_InitStruct.GDMA_SourceMsize         =
+            GDMA_Msize_8;                         // 8 msize for source msize
+        TX_GDMA_InitStruct.GDMA_DestinationMsize    =
+            GDMA_Msize_4;                         // 4 msize for destiantion msize
+    }
+    else
+    {
+        TX_GDMA_InitStruct.GDMA_SourceMsize         =
+            GDMA_Msize_8;                         // 4 msize for source msize
+        TX_GDMA_InitStruct.GDMA_DestinationMsize    =
+            GDMA_Msize_4;                         // 4 msize for destiantion msize
+        TX_GDMA_InitStruct.GDMA_DestinationDataSize =
+            GDMA_DataSize_HalfWord;                   // 32 bit width for destination transaction
+    }
     TX_GDMA_InitStruct.GDMA_SourceAddr          = (uint32_t)(&IDU->TX_FIFO);
     TX_GDMA_InitStruct.GDMA_DestinationAddr     = (uint32_t)dma_cfg->output_buf;
     rtl_idu_tx_handshake_init(&TX_GDMA_InitStruct);
