@@ -398,7 +398,10 @@ PPE_ERR PPE_Scale(ppe_buffer_t *image, ppe_buffer_t *buffer, float x_ratio, floa
     PPE->SCA_RATIO_Y = (uint32_t)(65536 / y_ratio);
     buffer->width   = (uint32_t)PPE_Input_Layer.width * x_ratio;
     buffer->height  = (uint32_t)PPE_Input_Layer.height * y_ratio;
-
+    if (buffer->width == 0 || buffer->height == 0)
+    {
+        return PPE_SUCCESS_NOT_CHANGE;
+    }
     PPE_Result_Layer.src_addr               = (uint32_t)buffer->memory;
     PPE_Result_Layer.width                  = buffer->width;
     PPE_Result_Layer.height                 = buffer->height;
@@ -516,7 +519,7 @@ PPE_ERR PPE_Scale_Rect(ppe_buffer_t *image, ppe_buffer_t *buffer, float x_ratio,
     PPE->SCA_RATIO_Y = (uint32_t)(65536 / y_ratio);
     buffer->width   = (uint32_t)PPE_Input_Layer.width * x_ratio;
     buffer->height  = (uint32_t)PPE_Input_Layer.height * y_ratio;
-    if (buffer->height == 0 || buffer->height == 0)
+    if (buffer->width == 0 || buffer->height == 0)
     {
         return PPE_SUCCESS_NOT_CHANGE;
     }
@@ -613,7 +616,10 @@ PPE_ERR PPE_Scale_Rect_Cover(ppe_buffer_t *image, ppe_buffer_t *buffer, ppe_tran
     PPE->SCA_RATIO_Y = (uint32_t)(65536 / y_ratio);
     uint32_t width   = (uint32_t)PPE_Input_Layer.width * x_ratio;
     uint32_t height  = (uint32_t)PPE_Input_Layer.height * y_ratio;
-
+    if (width == 0 || height == 0)
+    {
+        return PPE_SUCCESS_NOT_CHANGE;
+    }
     ppe_rect_t source_rect = {.left = trans->x, .right = trans->x + width - 1, \
                               .top = trans->y, .bottom = trans->y + height - 1
                              };
@@ -625,10 +631,6 @@ PPE_ERR PPE_Scale_Rect_Cover(ppe_buffer_t *image, ppe_buffer_t *buffer, ppe_tran
         return PPE_SUCCESS;
     }
 
-    if (height == 0 || height == 0)
-    {
-        return PPE_SUCCESS_NOT_CHANGE;
-    }
     PPE_Result_Layer.src_addr               = (uint32_t)buffer->memory +
                                               (result_rect.left + result_rect.top * buffer->width) * ppe_get_format_data_len(buffer->format);
     PPE_Result_Layer.width                          = result_rect.right - result_rect.left + 1;
