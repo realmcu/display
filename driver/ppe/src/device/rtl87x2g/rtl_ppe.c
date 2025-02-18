@@ -379,7 +379,7 @@ PPE_ERR PPE_Scale(ppe_buffer_t *image, ppe_buffer_t *buffer, float x_ratio, floa
     PPE_Input_Layer.format                  = image->format;
     PPE_Input_Layer.src                     = PPE_LAYER_SRC_FROM_DMA;
     PPE_Input_Layer.color_key_en            = DISABLE;
-    PPE_Input_Layer.line_len                = PPE_Input_Layer.width;
+    PPE_Input_Layer.line_len                = image->stride;
     PPE_Input_Layer.key_color_value         = 0x0;
     PPE_Input_Layer.AXSIZE                  = 2; // 32bit bandwidth;
     PPE_Input_Layer.INCR                    = PPE_ARBURST_INCR;
@@ -492,7 +492,7 @@ PPE_ERR PPE_Scale_Rect(ppe_buffer_t *image, ppe_buffer_t *buffer, float x_ratio,
     RCC_PeriphClockCmd(APBPeriph_PPE, APBPeriph_PPE_CLOCK, ENABLE);
 
     PPE_Input_Layer.src_addr                = (uint32_t)(image->address +
-                                                         (rect->left + image->width * rect->top) * format_len);
+                                                         (rect->left + image->stride * rect->top) * format_len);
     PPE_Input_Layer.start_x                 = 0;
     PPE_Input_Layer.start_y                 = 0;
     PPE_Input_Layer.width                   = rect->right - rect->left + 1;
@@ -501,7 +501,7 @@ PPE_ERR PPE_Scale_Rect(ppe_buffer_t *image, ppe_buffer_t *buffer, float x_ratio,
     PPE_Input_Layer.format                  = image->format;
     PPE_Input_Layer.src                     = PPE_LAYER_SRC_FROM_DMA;
     PPE_Input_Layer.color_key_en            = DISABLE;
-    PPE_Input_Layer.line_len                = image->width;
+    PPE_Input_Layer.line_len                = image->stride;
     PPE_Input_Layer.key_color_value         = 0x000000;
     PPE_Input_Layer.AXSIZE                  = 2; // 32bit bandwidth;
     PPE_Input_Layer.INCR                    = PPE_ARBURST_INCR;
@@ -519,6 +519,7 @@ PPE_ERR PPE_Scale_Rect(ppe_buffer_t *image, ppe_buffer_t *buffer, float x_ratio,
     PPE->SCA_RATIO_Y = (uint32_t)(65536 / y_ratio);
     buffer->width   = (uint32_t)PPE_Input_Layer.width * x_ratio;
     buffer->height  = (uint32_t)PPE_Input_Layer.height * y_ratio;
+    buffer->stride  = buffer->width;
     if (buffer->width == 0 || buffer->height == 0)
     {
         return PPE_SUCCESS_NOT_CHANGE;
@@ -589,7 +590,7 @@ PPE_ERR PPE_Scale_Rect_Cover(ppe_buffer_t *image, ppe_buffer_t *buffer, ppe_tran
     RCC_PeriphClockCmd(APBPeriph_PPE, APBPeriph_PPE_CLOCK, ENABLE);
 
     PPE_Input_Layer.src_addr                = (uint32_t)(image->address +
-                                                         (rect->left + image->width * rect->top) * format_len);
+                                                         (rect->left + image->stride * rect->top) * format_len);
     PPE_Input_Layer.start_x                 = 0;
     PPE_Input_Layer.start_y                 = 0;
     PPE_Input_Layer.width                   = rect->right - rect->left + 1;
@@ -598,7 +599,7 @@ PPE_ERR PPE_Scale_Rect_Cover(ppe_buffer_t *image, ppe_buffer_t *buffer, ppe_tran
     PPE_Input_Layer.format                  = image->format;
     PPE_Input_Layer.src                     = PPE_LAYER_SRC_FROM_DMA;
     PPE_Input_Layer.color_key_en            = DISABLE;
-    PPE_Input_Layer.line_len                = image->width;
+    PPE_Input_Layer.line_len                = image->stride;
     PPE_Input_Layer.key_color_value         = 0x000000;
     PPE_Input_Layer.AXSIZE                  = 2; // 32bit bandwidth;
     PPE_Input_Layer.INCR                    = PPE_ARBURST_INCR;
@@ -632,10 +633,10 @@ PPE_ERR PPE_Scale_Rect_Cover(ppe_buffer_t *image, ppe_buffer_t *buffer, ppe_tran
     }
 
     PPE_Result_Layer.src_addr               = (uint32_t)buffer->memory +
-                                              (result_rect.left + result_rect.top * buffer->width) * ppe_get_format_data_len(buffer->format);
+                                              (result_rect.left + result_rect.top * buffer->stride) * ppe_get_format_data_len(buffer->format);
     PPE_Result_Layer.width                          = result_rect.right - result_rect.left + 1;
     PPE_Result_Layer.height                         = result_rect.bottom - result_rect.top + 1;;
-    PPE_Result_Layer.line_len               = buffer->width;
+    PPE_Result_Layer.line_len               = buffer->stride;
     PPE_Result_Layer.format                 = buffer->format;
     PPE_Result_Layer.AXSIZE                 = 2;    // 32bit bandwidth
     PPE_Result_Layer.INCR                   = PPE_ARBURST_INCR;
@@ -972,7 +973,7 @@ PPE_ERR PPE_blend(ppe_buffer_t *image, ppe_buffer_t *buffer, ppe_translate_t *tr
         PPE_Input_Layer2.color_key_en                   = DISABLE;
         PPE_Input_Layer2.key_color_value                = 0;
     }
-    PPE_Input_Layer2.line_len                       = image->width;
+    PPE_Input_Layer2.line_len                       = image->stride;
     PPE_Input_Layer2.AXSIZE                         = 2;// 32bit bandwidth;
     PPE_Input_Layer2.INCR                           = PPE_ARBURST_INCR;
     PPE_Input_Layer2.AXCACHE                        = 1;
@@ -1127,14 +1128,13 @@ PPE_ERR PPE_blend_rect(ppe_buffer_t *image, ppe_buffer_t *buffer, ppe_translate_
     source_rect.top = blend_area.y1 - trans->y;
     source_rect.right = blend_area.x2 - trans->x;
     source_rect.bottom = blend_area.y2 - trans->y;
-
     RCC_PeriphClockCmd(APBPeriph_PPE, APBPeriph_PPE_CLOCK, ENABLE);
 
     /*initial input layer2*/
     PPE_Input_Layer2.start_x = 0;
     PPE_Input_Layer2.start_y = 0;
     PPE_Input_Layer2.src_addr                = (uint32_t)image->memory +
-                                               (source_rect.left + image->width * source_rect.top) * format_len;
+                                               (source_rect.left + image->stride * source_rect.top) * format_len;
     PPE_Input_Layer2.width                          = source_rect.right - source_rect.left + 1;
     PPE_Input_Layer2.height                         = source_rect.bottom - source_rect.top + 1;
     if (image->global_alpha_en)
@@ -1157,7 +1157,7 @@ PPE_ERR PPE_blend_rect(ppe_buffer_t *image, ppe_buffer_t *buffer, ppe_translate_
         PPE_Input_Layer2.color_key_en                   = DISABLE;
         PPE_Input_Layer2.key_color_value                = 0;
     }
-    PPE_Input_Layer2.line_len                       = image->width;
+    PPE_Input_Layer2.line_len                       = image->stride;
     PPE_Input_Layer2.AXSIZE                         = 2;// 32bit bandwidth;
     PPE_Input_Layer2.INCR                           = PPE_ARBURST_INCR;
     PPE_Input_Layer2.AXCACHE                        = 1;

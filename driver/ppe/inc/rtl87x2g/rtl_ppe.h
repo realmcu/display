@@ -106,6 +106,7 @@ typedef enum
     PPE_RGBA6668,
     PPE_BGRX6668,
     PPE_RGBX6668,
+    PPE_FORMAT_NOT_SUPPORT = 0xFF,
 } PPE_PIXEL_FORMAT;
 
 typedef enum
