@@ -21,8 +21,6 @@
 /*============================================================================*
  *                           Public Functions
  *============================================================================*/
-GDMA_LLIDef RX_GDMA_LLIStruct[20];
-GDMA_LLIDef TX_GDMA_LLIStruct[20];
 
 void IDU_TxFifoClear(void)
 {
@@ -329,7 +327,9 @@ IDU_ERROR IDU_Decode(uint8_t *file, IDU_decode_range *range, IDU_DMA_config *dma
     GDMA_InitTypeDef RX_GDMA_InitStruct;
     GDMA_ChannelTypeDef *RX_DMA = rtl_idu_get_dma_channel_int(dma_cfg->RX_DMA_channel_num);
     GDMA_ChannelTypeDef *TX_DMA = rtl_idu_get_dma_channel_int(dma_cfg->TX_DMA_channel_num);
+
     uint32_t rx_block_num = 0;
+    GDMA_LLIDef *RX_GDMA_LLIStruct = NULL;
     if (DMA_compressed_data_size_word >= 65535)
     {
         rx_block_num = DMA_compressed_data_size_word / 65535;
@@ -376,13 +376,14 @@ IDU_ERROR IDU_Decode(uint8_t *file, IDU_decode_range *range, IDU_DMA_config *dma
 
     if (rx_block_num)
     {
+        RX_GDMA_LLIStruct = (GDMA_LLIDef *)rtl_idu_malloc_int(rx_block_num * sizeof(GDMA_LLIDef));
         RX_GDMA_InitStruct.GDMA_BufferSize = 65535;
         RX_GDMA_InitStruct.GDMA_Multi_Block_Mode = LLI_TRANSFER;
         RX_GDMA_InitStruct.GDMA_Multi_Block_En = 1;
         RX_GDMA_InitStruct.GDMA_Multi_Block_Struct = (uint32_t)RX_GDMA_LLIStruct;
     }
     GDMA_Init(RX_DMA, &RX_GDMA_InitStruct);
-    if (rx_block_num)
+    if (rx_block_num && RX_GDMA_LLIStruct != NULL)
     {
         for (int i = 0; i < rx_block_num; i++)
         {
@@ -416,8 +417,10 @@ IDU_ERROR IDU_Decode(uint8_t *file, IDU_decode_range *range, IDU_DMA_config *dma
             }
         }
     }
+
     GDMA_InitTypeDef TX_GDMA_InitStruct;
     uint32_t tx_block_num = 0;
+    GDMA_LLIDef *TX_GDMA_LLIStruct = NULL;
     if (DMA_decompressed_data_size_word >= 65535)
     {
         tx_block_num = DMA_decompressed_data_size_word / 65535;
@@ -465,13 +468,14 @@ IDU_ERROR IDU_Decode(uint8_t *file, IDU_decode_range *range, IDU_DMA_config *dma
     rtl_idu_tx_handshake_init(&TX_GDMA_InitStruct);
     if (tx_block_num)
     {
+        TX_GDMA_LLIStruct = (GDMA_LLIDef *)rtl_idu_malloc_int(tx_block_num * sizeof(GDMA_LLIDef));
         TX_GDMA_InitStruct.GDMA_BufferSize = 65535;
         TX_GDMA_InitStruct.GDMA_Multi_Block_Mode = LLI_TRANSFER;
         TX_GDMA_InitStruct.GDMA_Multi_Block_En = 1;
         TX_GDMA_InitStruct.GDMA_Multi_Block_Struct = (uint32_t)TX_GDMA_LLIStruct;
     }
     GDMA_Init(TX_DMA, &TX_GDMA_InitStruct);
-    if (tx_block_num)
+    if (tx_block_num && TX_GDMA_LLIStruct != NULL)
     {
         for (int i = 0; i < tx_block_num; i++)
         {
@@ -524,8 +528,6 @@ IDU_ERROR IDU_Decode(uint8_t *file, IDU_decode_range *range, IDU_DMA_config *dma
     }
     if (rtl_idu_get_dma_busy_state(dma_cfg->RX_DMA_channel_num))
     {
-        GDMA_SuspendCmd(TX_DMA, ENABLE);
-        GDMA_SuspendCmd(RX_DMA, ENABLE);
         rtl_idu_wait_dma_idle(RX_DMA);
         rtl_idu_wait_dma_idle(TX_DMA);
         GDMA_Cmd(dma_cfg->RX_DMA_channel_num, DISABLE);
@@ -643,6 +645,7 @@ IDU_ERROR IDU_Decode_Ex(uint8_t *file, IDU_decode_range *range, IDU_DMA_config *
     GDMA_ChannelTypeDef *RX_DMA = rtl_idu_get_dma_channel_int(dma_cfg->RX_DMA_channel_num);
     GDMA_ChannelTypeDef *TX_DMA = rtl_idu_get_dma_channel_int(dma_cfg->TX_DMA_channel_num);
     uint32_t rx_block_num = 0;
+    GDMA_LLIDef *RX_GDMA_LLIStruct = NULL;
     if (DMA_compressed_data_size_word >= 65535)
     {
         rx_block_num = DMA_compressed_data_size_word / 65535;
@@ -688,13 +691,14 @@ IDU_ERROR IDU_Decode_Ex(uint8_t *file, IDU_decode_range *range, IDU_DMA_config *
     rtl_idu_rx_handshake_init(&RX_GDMA_InitStruct);
     if (rx_block_num)
     {
+        RX_GDMA_LLIStruct = (GDMA_LLIDef *)rtl_idu_malloc_int(rx_block_num * sizeof(GDMA_LLIDef));
         RX_GDMA_InitStruct.GDMA_BufferSize = 65535;
         RX_GDMA_InitStruct.GDMA_Multi_Block_Mode = LLI_TRANSFER;
         RX_GDMA_InitStruct.GDMA_Multi_Block_En = 1;
         RX_GDMA_InitStruct.GDMA_Multi_Block_Struct = (uint32_t)RX_GDMA_LLIStruct;
     }
     GDMA_Init(RX_DMA, &RX_GDMA_InitStruct);
-    if (rx_block_num)
+    if (rx_block_num && RX_GDMA_LLIStruct != NULL)
     {
         for (int i = 0; i < rx_block_num; i++)
         {
@@ -731,6 +735,7 @@ IDU_ERROR IDU_Decode_Ex(uint8_t *file, IDU_decode_range *range, IDU_DMA_config *
 
     GDMA_InitTypeDef TX_GDMA_InitStruct;
     uint32_t tx_block_num = 0;
+    GDMA_LLIDef *TX_GDMA_LLIStruct = NULL;
     if (DMA_decompressed_data_size_word >= 65535)
     {
         tx_block_num = DMA_decompressed_data_size_word / 65535;
@@ -746,6 +751,10 @@ IDU_ERROR IDU_Decode_Ex(uint8_t *file, IDU_decode_range *range, IDU_DMA_config *
     TX_GDMA_InitStruct.GDMA_DIR                 = GDMA_DIR_PeripheralToMemory;
     TX_GDMA_InitStruct.GDMA_SourceInc           = DMA_SourceInc_Fix;
     TX_GDMA_InitStruct.GDMA_DestinationInc      = DMA_DestinationInc_Inc;
+    TX_GDMA_InitStruct.GDMA_SourceMsize         =
+        GDMA_Msize_8;                         // 8 msize for source msize
+    TX_GDMA_InitStruct.GDMA_DestinationMsize    =
+        GDMA_Msize_8;                         // 8 msize for destiantion msize
     TX_GDMA_InitStruct.GDMA_DestinationDataSize =
         GDMA_DataSize_Word;                   // 32 bit width for destination transaction
 
@@ -777,13 +786,14 @@ IDU_ERROR IDU_Decode_Ex(uint8_t *file, IDU_decode_range *range, IDU_DMA_config *
     rtl_idu_tx_handshake_init(&TX_GDMA_InitStruct);
     if (tx_block_num)
     {
+        TX_GDMA_LLIStruct = (GDMA_LLIDef *)rtl_idu_malloc_int(tx_block_num * sizeof(GDMA_LLIDef));
         TX_GDMA_InitStruct.GDMA_BufferSize = 65535;
         TX_GDMA_InitStruct.GDMA_Multi_Block_Mode = LLI_TRANSFER;
         TX_GDMA_InitStruct.GDMA_Multi_Block_En = 1;
         TX_GDMA_InitStruct.GDMA_Multi_Block_Struct = (uint32_t)TX_GDMA_LLIStruct;
     }
     GDMA_Init(TX_DMA, &TX_GDMA_InitStruct);
-    if (tx_block_num)
+    if (tx_block_num && TX_GDMA_LLIStruct != NULL)
     {
         for (int i = 0; i < tx_block_num; i++)
         {
@@ -878,6 +888,7 @@ IDU_ERROR IDU_Decode_Ex(uint8_t *file, IDU_decode_range *range, IDU_DMA_config *
 
 IDU_ERROR IDU_Decode_Direct(uint8_t *file, IDU_decode_range *range, IDU_DMA_config *dma_cfg)
 {
+    GDMA_LLIDef *RX_GDMA_LLIStruct = NULL;
     return rtl_idu_decode_direct_int(file, range, dma_cfg, RX_GDMA_LLIStruct);
 }
 /******************* (C) COPYRIGHT 2023 Realtek Semiconductor Corporation *****END OF FILE****/

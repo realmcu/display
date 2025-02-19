@@ -1,4 +1,5 @@
 #include "rtl_idu_int.h"
+#include "os_mem.h"
 
 void rtl_idu_channel_init_int(uint8_t *high_speed_channel, uint8_t *low_speed_channel)
 {
@@ -12,7 +13,7 @@ GDMA_ChannelTypeDef *rtl_idu_get_dma_channel_int(uint8_t channel_num)
 
 uint32_t rtl_idu_get_dma_ctl_low_int(GDMA_ChannelTypeDef *dma)
 {
-    return dma->GDMA_CTLx_L;
+    return dma->GDMA_CTL_LOWx;
 }
 
 bool rtl_idu_get_dma_busy_state(uint8_t channel_num)
@@ -22,18 +23,16 @@ bool rtl_idu_get_dma_busy_state(uint8_t channel_num)
 
 void rtl_idu_wait_dma_idle(GDMA_ChannelTypeDef *dma)
 {
-    while (!GDMA_GetSuspendChannelStatus(dma));
+    GDMA_SafeSuspend(dma);
 }
 
 void rtl_idu_rx_handshake_init(GDMA_InitTypeDef *init_struct)
 {
-    init_struct->GDMA_Secure_En = ENABLE;
     init_struct->GDMA_DestHandshake = GDMA_Handshake_IDU_RX;
 }
 
 void rtl_idu_tx_handshake_init(GDMA_InitTypeDef *init_struct)
 {
-    init_struct->GDMA_Secure_En = ENABLE;
     init_struct->GDMA_SourceHandshake = GDMA_Handshake_IDU_TX;
 }
 
@@ -47,9 +46,20 @@ void rtl_idu_fill_hw_hs_reg_int(IDU_CTL1_TypeDef *reg, IDU_InitTypeDef *IDU_init
     return;
 }
 
-
 IDU_ERROR rtl_idu_decode_direct_int(uint8_t *file, IDU_decode_range *range,
-                                      IDU_DMA_config *dma_cfg, GDMA_LLIDef *RX_LLI)
+                                    IDU_DMA_config *dma_cfg, GDMA_LLIDef *RX_LLI)
 {
     return IDU_ERROR_INVALID_PARAM;
+}
+
+uint8_t *rtl_idu_malloc_int(uint32_t size)
+{
+    if (size == 0)
+    {
+        return NULL;
+    }
+#if 1
+    return os_mem_alloc(OS_MEM_TYPE_DATA, size);
+#else
+#endif
 }

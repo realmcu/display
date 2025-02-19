@@ -78,7 +78,7 @@ typedef enum
 
 typedef enum
 {
-#ifdef RTL87x3EU
+#ifdef TARGET_RTL87X3EU
     PIXEL_SIZE_8BIT = 0x00,
     PIXEL_SIZE_16BIT = 0x01,
     PIXEL_SIZE_24BIT = 0x02,
@@ -231,12 +231,12 @@ typedef union
 #define IDU_DECOMPRESS_ERROR_INT                                  ((uint32_t)BIT(0))
 
 #define IS_IDU_INT(INT)              (((INT) == IDU_DECOMPRESS_FINISH_INT)         || \
-                                       ((INT) == IDU_LINE_DECOMPRESS_FINISH_INT)  || \
-                                       ((INT) == IDU_RX_FIFO_THRESHOLD_INT)         || \
-                                       ((INT) == IDU_RX_FIFO_OVERFLOW_INT)  || \
-                                       ((INT) == IDU_TX_FIFO_THRESHOLD_INT)      || \
-                                       ((INT) == IDU_TX_FIFO_UNDERFLOW_INT)         || \
-                                       ((INT) == IDU_DECOMPRESS_ERROR_INT)
+                                      ((INT) == IDU_LINE_DECOMPRESS_FINISH_INT)  || \
+                                      ((INT) == IDU_RX_FIFO_THRESHOLD_INT)         || \
+                                      ((INT) == IDU_RX_FIFO_OVERFLOW_INT)  || \
+                                      ((INT) == IDU_TX_FIFO_THRESHOLD_INT)      || \
+                                      ((INT) == IDU_TX_FIFO_UNDERFLOW_INT)         || \
+                                      ((INT) == IDU_DECOMPRESS_ERROR_INT)
 
 /** End of IDU_Interrupts_Definition
   * \}
@@ -252,7 +252,7 @@ typedef union
 #define IDU_ALGO_YUV_BLUR_FASTLZ          (BIT(1))
 #define IDU_ALGO_YUV_BLUR                 (BIT(1)|BIT(0))
 #define IS_IDU_ALGORITHM(ALGO)             (((ALGO) == IDU_ALGO_RLE) || ((ALGO) == IDU_ALGO_FASTLZ)      ||\
-                                             ((ALGO) == IDU_ALGO_YUV_BLUR_FASTLZ) || ((ALGO) == IDU_ALGO_YUV_BLUR))
+                                            ((ALGO) == IDU_ALGO_YUV_BLUR_FASTLZ) || ((ALGO) == IDU_ALGO_YUV_BLUR))
 
 /** End of IDU_ALGO
   * \}
@@ -263,7 +263,7 @@ typedef union
  * \{
  * \ingroup     IDU_Exported_Constants
  */
-#ifdef RTL87x3EU
+#ifdef TARGET_RTL87X3EU
 #define IDU_PIXEL_8BIT                    (0)
 #define IDU_PIXEL_16BIT                   (1)
 #define IDU_PIXEL_24BIT                   (2)
@@ -304,7 +304,7 @@ typedef union
 #define IDU_YUV_BLUR_4BIT                 (BIT(0)|BIT(1))
 
 #define IS_IDU_YUB_BLUR_BIT(NUM)          (((NUM) == IDU_YUV_BLUR_0BIT) || ((NUM) == IDU_YUV_BLUR_1BIT)      ||\
-                                            ((NUM) == IDU_YUV_BLUR_2BIT) || ((NUM) == IDU_YUV_BLUR_4BIT))
+                                           ((NUM) == IDU_YUV_BLUR_2BIT) || ((NUM) == IDU_YUV_BLUR_4BIT))
 
 /** End of IDU_YUV_BLUR_SIZE
   * \}
@@ -550,7 +550,7 @@ IDU_ERROR IDU_Decode(uint8_t *file, IDU_decode_range *range, IDU_DMA_config *dma
  * \endcode
  */
 IDU_ERROR IDU_Decode_Ex(uint8_t *file, IDU_decode_range *range, IDU_DMA_config *dma_cfg,
-                          IDU_INT_CFG_t int_cfg);
+                        IDU_INT_CFG_t int_cfg);
 
 /**
  * \brief  Enable IDU
@@ -637,7 +637,7 @@ void IDU_Init(IDU_InitTypeDef *IDU_init_struct);
  * \endcode
  */
 IDU_ERROR IDU_Decode_Direct(uint8_t *file, IDU_decode_range *range,
-                              IDU_DMA_config *dma_cfg);
+                            IDU_DMA_config *dma_cfg);
 
 /**
  * \brief  Get the start address of certain line in compressed file
@@ -656,7 +656,7 @@ IDU_ERROR IDU_Decode_Direct(uint8_t *file, IDU_decode_range *range,
  * \endcode
  */
 uint32_t IDU_Get_Line_Start_Address(uint32_t compressed_start_address,
-                                     uint32_t line_number);
+                                    uint32_t line_number);
 
 /** End of IDU_Exported_Functions
   * \}

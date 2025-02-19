@@ -25,3 +25,6 @@ uint8_t rtl_idu_get_dma_depth(uint8_t channel_num);
 
 IDU_ERROR rtl_idu_decode_direct_int(uint8_t *file, IDU_decode_range *range,
                                     IDU_DMA_config *dma_cfg, GDMA_LLIDef *RX_LLI);
+
+uint8_t *rtl_idu_malloc_int(uint32_t size);
+

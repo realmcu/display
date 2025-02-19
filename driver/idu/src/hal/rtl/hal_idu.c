@@ -52,7 +52,6 @@ void hal_dma_copy(hal_idu_dma_info *info, uint8_t *src, uint8_t *dst)
                 data_size = GDMA_DataSize_Byte;
                 m_size += 2;
             }
-            buffer_size = total_size;
             if (buffer_size > 65535)
             {
                 use_LLI = true;
@@ -111,7 +110,7 @@ void hal_dma_copy(hal_idu_dma_info *info, uint8_t *src, uint8_t *dst)
     GDMA_LLIDef *GDMA_LLIStruct;
     if (use_LLI)
     {
-        GDMA_LLIStruct = os_mem_alloc(RAM_TYPE_DATA_ON, dma_height * sizeof(GDMA_LLIDef));
+        GDMA_LLIStruct = (GDMA_LLIDef *)rtl_idu_malloc_int(dma_height * sizeof(GDMA_LLIDef));
         if (GDMA_LLIStruct == NULL)
         {
             assert_param(GDMA_LLIStruct != NULL);
@@ -346,7 +345,7 @@ bool hal_idu_decompress_rect(hal_idu_decompress_info *info, uint8_t *dst)
     rtl_idu_rx_handshake_init(&RX_GDMA_InitStruct);
     if (rx_block_num)
     {
-        RX_GDMA_LLIStruct = os_mem_alloc(RAM_TYPE_DATA_ON, sizeof(GDMA_LLIDef) * rx_block_num);
+        RX_GDMA_LLIStruct = (GDMA_LLIDef *)rtl_idu_malloc_int(sizeof(GDMA_LLIDef) * rx_block_num);
         RX_GDMA_InitStruct.GDMA_BufferSize = 65535;
         RX_GDMA_InitStruct.GDMA_Multi_Block_Mode = LLI_TRANSFER;
         RX_GDMA_InitStruct.GDMA_Multi_Block_En = 1;
@@ -429,7 +428,7 @@ bool hal_idu_decompress_rect(hal_idu_decompress_info *info, uint8_t *dst)
     rtl_idu_tx_handshake_init(&TX_GDMA_InitStruct);
     if (tx_block_num)
     {
-        TX_GDMA_LLIStruct = os_mem_alloc(RAM_TYPE_DATA_ON, sizeof(GDMA_LLIDef) * tx_block_num);
+        TX_GDMA_LLIStruct = (GDMA_LLIDef *)rtl_idu_malloc_int(sizeof(GDMA_LLIDef) * tx_block_num);
         TX_GDMA_InitStruct.GDMA_BufferSize = buffer_size;
         TX_GDMA_InitStruct.GDMA_Multi_Block_Mode = LLI_TRANSFER;
         TX_GDMA_InitStruct.GDMA_Multi_Block_En = 1;
@@ -490,8 +489,6 @@ bool hal_idu_decompress_rect(hal_idu_decompress_info *info, uint8_t *dst)
 
     if (rtl_idu_get_dma_busy_state(dma_cfg->RX_DMA_channel_num))
     {
-        GDMA_SuspendCmd(TX_DMA, ENABLE);
-        GDMA_SuspendCmd(RX_DMA, ENABLE);
         rtl_idu_wait_dma_idle(RX_DMA);
         rtl_idu_wait_dma_idle(TX_DMA);
         GDMA_Cmd(dma_cfg->RX_DMA_channel_num, DISABLE);

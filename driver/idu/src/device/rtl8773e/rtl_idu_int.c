@@ -2,6 +2,7 @@
 #include "rtl_idu_int.h"
 #include "stdio.h"
 #include "dma_channel.h"
+#include "os_mem.h"
 
 void rtl_idu_channel_init_int(uint8_t *high_speed_channel, uint8_t *low_speed_channel)
 {
@@ -12,7 +13,7 @@ void rtl_idu_channel_init_int(uint8_t *high_speed_channel, uint8_t *low_speed_ch
         assert_param(*high_speed_channel != 0xA5);
         return;
     }
-    if (!GDMA_channel_request(low_speed_channel, NULL, true))
+    if (!GDMA_channel_request(low_speed_channel, NULL, false))
     {
         assert_param(*low_speed_channel != 0xA5);
         return;
@@ -37,6 +38,7 @@ bool rtl_idu_get_dma_busy_state(uint8_t channel_num)
 
 void rtl_idu_wait_dma_idle(GDMA_ChannelTypeDef *dma)
 {
+    GDMA_SuspendCmd(dma, ENABLE);
     while (!(dma->CFG_LOW & BIT0));
 }
 
@@ -248,4 +250,16 @@ IDU_ERROR rtl_idu_decode_direct_int(uint8_t *file, IDU_decode_range *range,
     IDU_INTConfig(IDU_DECOMPRESS_ERROR_INT, ENABLE);
     IDU_MaskINTConfig(IDU_DECOMPRESS_ERROR_INT, DISABLE);
     return IDU_SUCCESS;
+}
+
+uint8_t *rtl_idu_malloc_int(uint32_t size)
+{
+    if (size == 0)
+    {
+        return NULL;
+    }
+#if 1
+    return os_mem_alloc(RAM_TYPE_DATA_ON, size);
+#else
+#endif
 }
