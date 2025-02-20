@@ -78,20 +78,6 @@ typedef enum
 
 typedef enum
 {
-#ifdef TARGET_RTL87X3EU
-    PIXEL_SIZE_8BIT = 0x00,
-    PIXEL_SIZE_16BIT = 0x01,
-    PIXEL_SIZE_24BIT = 0x02,
-    PIXEL_SIZE_32BIT = 0x03,
-#else
-    PIXEL_SIZE_16BIT = 0x00,
-    PIXEL_SIZE_24BIT = 0x01,
-    PIXEL_SIZE_32BIT = 0x02,
-#endif
-} IDU_PIXEL_SIZE;
-
-typedef enum
-{
     THROW_AWAY_0BYTE = 0x00,
     THROW_AWAY_1BYTE = 0x01,
     THROW_AWAY_2BYTE = 0x02,
@@ -114,6 +100,7 @@ typedef enum
     IDU_ERROR_END_EXCEED_BOUNDARY,
     IDU_ERROR_START_LARGER_THAN_END,
     IDU_ERROR_INVALID_PARAM,
+    IDU_ERROR_FILE_INVALID,
 } IDU_ERROR;
 
 typedef enum
@@ -157,7 +144,7 @@ typedef struct
 {
     IDU_ALGORITHM algorithm_type;
     IDU_THROW_AWAY_SIZE head_throw_away_byte_num;
-    IDU_PIXEL_SIZE pic_pixel_size;
+    uint8_t pic_pixel_size;
     IDU_RLE_RUNLENGTH_SIZE pic_length2_size;
     IDU_RLE_RUNLENGTH_SIZE pic_length1_size;
     IDU_YUV_BLUR_BIT yuv_blur_bit;

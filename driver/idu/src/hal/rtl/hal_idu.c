@@ -260,7 +260,8 @@ bool hal_idu_decompress_rect(hal_idu_decompress_info *info, uint8_t *dst)
     IDU_InitTypeDef IDU_struct_init;
     IDU_struct_init.algorithm_type            = (IDU_ALGORITHM)header->algorithm_type.algorithm;
     IDU_struct_init.head_throw_away_byte_num  = THROW_AWAY_0BYTE;
-    IDU_struct_init.pic_pixel_size            = (IDU_PIXEL_SIZE)header->algorithm_type.pixel_bytes;
+    IDU_struct_init.pic_pixel_size            = rtl_idu_get_decode_pixel_length(
+                                                    header->algorithm_type.pixel_bytes);
     IDU_struct_init.pic_decompress_height     = (decompress_end_line - decompress_start_line + 1);
     IDU_struct_init.pic_raw_width             = header->raw_pic_width;
     IDU_struct_init.tx_column_start           = decompress_start_column;

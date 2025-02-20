@@ -271,13 +271,17 @@ IDU_ERROR IDU_Decode(uint8_t *file, IDU_decode_range *range, IDU_DMA_config *dma
     {
         return IDU_ERROR_INVALID_PARAM;
     }
+    uint8_t pixel_size = rtl_idu_get_actual_pixel_length(header->algorithm_type.pixel_bytes);
+    if (pixel_size == 0xFF)
+    {
+        return IDU_ERROR_FILE_INVALID;
+    }
     uint32_t start_line_address = IDU_Get_Line_Start_Address(compressed_data_start_address,
                                                              decompress_start_line);
     uint32_t compressed_data_size = IDU_Get_Line_Start_Address(compressed_data_start_address,
                                                                decompress_end_line + 1) - start_line_address;
-    uint32_t decompressed_data_size = (decompress_end_line - decompress_start_line + 1) *
-                                      (decompress_end_column - decompress_start_column + 1)\
-                                      * (header->algorithm_type.pixel_bytes + 2);
+    uint32_t decompressed_data_size = (decompress_end_line - decompress_start_line + 1) * \
+                                      (decompress_end_column - decompress_start_column + 1) * pixel_size;
     uint8_t rx_dma_depth = rtl_idu_get_dma_depth(dma_cfg->RX_DMA_channel_num);
     uint8_t tx_dma_depth = rtl_idu_get_dma_depth(dma_cfg->TX_DMA_channel_num);
     if (tx_dma_depth == 0xFF || rx_dma_depth == 0xFF)
@@ -288,7 +292,8 @@ IDU_ERROR IDU_Decode(uint8_t *file, IDU_decode_range *range, IDU_DMA_config *dma
     IDU_InitTypeDef IDU_struct_init;
     IDU_struct_init.algorithm_type            = (IDU_ALGORITHM)header->algorithm_type.algorithm;
     IDU_struct_init.head_throw_away_byte_num  = THROW_AWAY_0BYTE;
-    IDU_struct_init.pic_pixel_size            = (IDU_PIXEL_SIZE)header->algorithm_type.pixel_bytes;
+    IDU_struct_init.pic_pixel_size            = rtl_idu_get_decode_pixel_length(
+                                                    header->algorithm_type.pixel_bytes);
     IDU_struct_init.pic_decompress_height     = (decompress_end_line - decompress_start_line + 1);
     IDU_struct_init.pic_raw_width             = header->raw_pic_width;
     IDU_struct_init.tx_column_start           = decompress_start_column;
@@ -589,13 +594,17 @@ IDU_ERROR IDU_Decode_Ex(uint8_t *file, IDU_decode_range *range, IDU_DMA_config *
     {
         return IDU_ERROR_INVALID_PARAM;
     }
+    uint8_t pixel_size = rtl_idu_get_actual_pixel_length(header->algorithm_type.pixel_bytes);
+    if (pixel_size == 0xFF)
+    {
+        return IDU_ERROR_FILE_INVALID;
+    }
     uint32_t start_line_address = IDU_Get_Line_Start_Address(compressed_data_start_address,
                                                              decompress_start_line);
     uint32_t compressed_data_size = IDU_Get_Line_Start_Address(compressed_data_start_address,
                                                                decompress_end_line + 1) - start_line_address;
-    uint32_t decompressed_data_size = (decompress_end_line - decompress_start_line + 1) *
-                                      (decompress_end_column - decompress_start_column + 1)\
-                                      * (header->algorithm_type.pixel_bytes + 2);
+    uint32_t decompressed_data_size = (decompress_end_line - decompress_start_line + 1) *\
+                                      (decompress_end_column - decompress_start_column + 1) * pixel_size;
     uint8_t rx_dma_depth = rtl_idu_get_dma_depth(dma_cfg->RX_DMA_channel_num);
     uint8_t tx_dma_depth = rtl_idu_get_dma_depth(dma_cfg->TX_DMA_channel_num);
     if (tx_dma_depth == 0xFF || rx_dma_depth == 0xFF)
@@ -605,7 +614,8 @@ IDU_ERROR IDU_Decode_Ex(uint8_t *file, IDU_decode_range *range, IDU_DMA_config *
     IDU_InitTypeDef IDU_struct_init;
     IDU_struct_init.algorithm_type            = (IDU_ALGORITHM)header->algorithm_type.algorithm;
     IDU_struct_init.head_throw_away_byte_num  = THROW_AWAY_0BYTE;
-    IDU_struct_init.pic_pixel_size            = (IDU_PIXEL_SIZE)header->algorithm_type.pixel_bytes;
+    IDU_struct_init.pic_pixel_size            = rtl_idu_get_decode_pixel_length(
+                                                    header->algorithm_type.pixel_bytes);
     IDU_struct_init.pic_decompress_height     = (decompress_end_line - decompress_start_line + 1);
     IDU_struct_init.pic_raw_width             = header->raw_pic_width;
     IDU_struct_init.tx_column_start           = decompress_start_column;

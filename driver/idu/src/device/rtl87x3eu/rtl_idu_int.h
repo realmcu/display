@@ -5,11 +5,19 @@
 
 #define IDU_REG_BASE        IDU_BASE
 
+typedef enum
+{
+    PIXEL_SIZE_8BIT = 0x00,
+    PIXEL_SIZE_16BIT = 0x01,
+    PIXEL_SIZE_24BIT = 0x02,
+    PIXEL_SIZE_32BIT = 0x03,
+} IDU_PIXEL_SIZE_INT;
+
 void rtl_idu_channel_init_int(uint8_t *high_speed_channel, uint8_t *low_speed_channel);
 
-uint32_t rtl_idu_get_dma_ctl_low_int(GDMA_ChannelTypeDef *dma);
-
 GDMA_ChannelTypeDef *rtl_idu_get_dma_channel_int(uint8_t channel_num);
+
+uint32_t rtl_idu_get_dma_ctl_low_int(GDMA_ChannelTypeDef *dma);
 
 bool rtl_idu_get_dma_busy_state(uint8_t channel_num);
 
@@ -23,8 +31,13 @@ void rtl_idu_hw_handshake_init(IDU_InitTypeDef *init_struct);
 
 void rtl_idu_fill_hw_hs_reg_int(IDU_CTL1_TypeDef *reg, IDU_InitTypeDef *IDU_init_struct);
 
+uint8_t rtl_idu_get_dma_depth(uint8_t channel_num);
+
 IDU_ERROR rtl_idu_decode_direct_int(uint8_t *file, IDU_decode_range *range,
                                     IDU_DMA_config *dma_cfg, GDMA_LLIDef *RX_LLI);
 
 uint8_t *rtl_idu_malloc_int(uint32_t size);
 
+uint8_t rtl_idu_get_pixel_length(IDU_PIXEL_SIZE_INT pixel_size);
+
+uint8_t rtl_idu_get_actual_pixel_length(IDU_PIXEL_SIZE_INT pixel_size);

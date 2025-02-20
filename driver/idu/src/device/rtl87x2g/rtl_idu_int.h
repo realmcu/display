@@ -4,6 +4,13 @@
 #include "rtl_idu.h"
 #include "utils/rtl_utils.h"
 
+typedef enum
+{
+    PIXEL_SIZE_16BIT = 0x00,
+    PIXEL_SIZE_24BIT = 0x01,
+    PIXEL_SIZE_32BIT = 0x02,
+} IDU_PIXEL_SIZE_INT;
+
 void rtl_idu_channel_init_int(uint8_t *high_speed_channel, uint8_t *low_speed_channel);
 
 uint32_t rtl_idu_get_dma_ctl_low_int(GDMA_ChannelTypeDef *dma);
@@ -28,3 +35,7 @@ IDU_ERROR rtl_idu_decode_direct_int(uint8_t *file, IDU_decode_range *range,
                                     IDU_DMA_config *dma_cfg, GDMA_LLIDef *RX_LLI);
 
 uint8_t *rtl_idu_malloc_int(uint32_t size);
+
+uint8_t rtl_idu_get_decode_pixel_length(IDU_PIXEL_SIZE_INT pixel_size);
+
+uint8_t rtl_idu_get_actual_pixel_length(IDU_PIXEL_SIZE_INT pixel_size);

@@ -1,5 +1,7 @@
 #include "rtl_idu_int.h"
+#if 1
 #include "os_mem.h"
+#endif
 
 void rtl_idu_channel_init_int(uint8_t *high_speed_channel, uint8_t *low_speed_channel)
 {
@@ -82,4 +84,26 @@ uint8_t *rtl_idu_malloc_int(uint32_t size)
     return os_mem_alloc(RAM_TYPE_DATA_ON, size);
 #else
 #endif
+}
+
+uint8_t rtl_idu_get_decode_pixel_length(IDU_PIXEL_SIZE_INT pixel_size)
+{
+    switch (pixel_size)
+    {
+    case PIXEL_SIZE_16BIT: return 0;
+    case PIXEL_SIZE_24BIT: return 1;
+    case PIXEL_SIZE_32BIT: return 2;
+    default: return 0xFF;
+    }
+}
+
+uint8_t rtl_idu_get_actual_pixel_length(IDU_PIXEL_SIZE_INT pixel_size)
+{
+    switch (pixel_size)
+    {
+    case PIXEL_SIZE_16BIT: return 2;
+    case PIXEL_SIZE_24BIT: return 3;
+    case PIXEL_SIZE_32BIT: return 4;
+    default: return 0xFF;
+    }
 }
