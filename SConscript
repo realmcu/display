@@ -18,39 +18,38 @@ include_path = []
 libs = ['']
 
 if GetDepend(['CONFIG_REALTEK_LCDC_DBIB']):
-    src += ['driver/lcdc/src/device/rtl_common/rtl_lcdc_dbib.c']
+    src += ['hardware/lcdc/src/device/rtl_common/rtl_lcdc_dbib.c']
 if GetDepend(['CONFIG_REALTEK_LCDC_DBIC']):
-    src += ['driver/lcdc/src/device/rtl_common/rtl_lcdc_dbic.c']
+    src += ['hardware/lcdc/src/device/rtl_common/rtl_lcdc_dbic.c']
 if GetDepend(['CONFIG_REALTEK_LCDC_DSI']):
-    src += ['driver/mipi/src/device/rtl_common/rtl_lcdc_dsi.c']
+    src += ['hardware/mipi/src/device/rtl_common/rtl_lcdc_dsi.c']
 if GetDepend(['CONFIG_REALTEK_LCDC_EDPI']) :
-    src += ['driver/lcdc/src/device/rtl_common/rtl_lcdc_edpi.c']
+    src += ['hardware/lcdc/src/device/rtl_common/rtl_lcdc_edpi.c']
 if GetDepend(['CONFIG_REALTEK_LCDC']):
-    src += ['driver/lcdc/src/device/rtl_common/rtl_lcdc.c']
+    src += ['hardware/lcdc/src/device/rtl_common/rtl_lcdc.c']
 if GetDepend(['CONFIG_REALTEK_PPE']):
-    src += ['driver/ppe/src/device/' + RTK_IC_TYPE + '/rtl_ppe.c']
+    src += ['hardware/ppe/src/device/' + RTK_IC_TYPE + '/rtl_ppe.c']
 if GetDepend(['CONFIG_REALTEK_RAMLESS_QSPI']):
-    src += ['driver/lcdc/src/device/rtl_common/rtl_ramless_qspi.c']
+    src += ['hardware/lcdc/src/device/rtl_common/rtl_ramless_qspi.c']
 
 if  GetDepend(['CONFIG_REALTEK_IDU']) :
-    src += ['driver/idu/src/device/rtl_common/rtl_idu.c']
-    src += ['driver/idu/src/hal/rtl/hal_idu.c']
-    src += ['driver/idu/src/device/' + RTK_IC_TYPE + '/rtl_idu_int.c']
+    src += ['hardware/idu/src/device/rtl_common/rtl_idu.c']
+    src += ['hardware/idu/src/hal/rtl/hal_idu.c']
 
 if GetDepend(['CONFIG_REALTEK_SEGCOM']):
-    src += ['driver/segcom/device/src/rtl_common/rtl876x_segcom.c']
+    src += ['hardware/segcom/device/src/rtl_common/rtl876x_segcom.c']
 
 
 include_path += [cwd,
-        cwd + '/driver/lcdc/inc',
-        cwd + '/driver/lcdc/src/device/' + RTK_IC_TYPE,
-        cwd + '/driver/idu/inc',
-        cwd + '/driver/idu/src/device/' + RTK_IC_TYPE,
-        cwd + '/driver/idu/inc',
-        cwd + '/driver/mipi/inc',
-        cwd + '/driver/ppe/inc/' + RTK_IC_TYPE,
-        cwd + '/driver/ppe/src/device/' + RTK_IC_TYPE,
-        cwd + '/driver/segcom/inc']
+        cwd + '/hardware/lcdc/inc',
+        cwd + '/hardware/lcdc/src/device/' + RTK_IC_TYPE,
+        cwd + '/hardware/idu/inc',
+        cwd + '/hardware/idu/src/device/' + RTK_IC_TYPE,
+        cwd + '/hardware/idu/inc',
+        cwd + '/hardware/mipi/inc',
+        cwd + '/hardware/ppe/inc/' + RTK_IC_TYPE,
+        cwd + '/hardware/ppe/src/device/' + RTK_IC_TYPE,
+        cwd + '/hardware/segcom/inc']
 
 
 group = DefineGroup('peripheral', src, depend = [''], CPPPATH = include_path,LIBS = [''], LIBPATH = [''])
