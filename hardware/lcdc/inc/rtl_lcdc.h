@@ -827,6 +827,7 @@ __STATIC_INLINE void LCDC_TeCmd(FunctionalState NewState)
     if (NewState == ENABLE)
     {
         handler_reg_0x10.b.tear_auto_turn_on_autowritestart = 1;
+        handler_reg_0x10.b.tear_auto_turn_on_dma_en = 0;
     }
     else
     {
