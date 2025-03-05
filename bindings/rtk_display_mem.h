@@ -6,7 +6,7 @@
 * \brief    This file provides display repo bindings API.
 * \details
 * \author   realmcu
-* \date     2024-12-77
+* \date     2025-03-05
 * \version  v1.0
 *********************************************************************************************************
 */
