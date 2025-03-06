@@ -10,7 +10,8 @@ extern "C" {
 #endif /* __cplusplus */
 
 #define JDI_REG_BASE      0x40019400
-
+#define __IO volatile
+#define __I  volatile
 /*============================================================================*
  *                         JDI Registers Memory Map
  *============================================================================*/

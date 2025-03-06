@@ -61,7 +61,7 @@ void JDI_Init(JDI_SrtuctInit_TypeDef *JDI_InitStruct)
     {
         jdi_reg_0x414.b.refresh_line_addr_incr_num = JDI_InitStruct->JDI_Gate_Line_Address_Incr_Num;
     }
-    jdi_reg_0x414.b.refresh_line_num = JDI_InitStruct->JDI_LCD_Height;
+    jdi_reg_0x414.b.refresh_line_num = JDI_InitStruct->JDI_Refresh_Line_Num;
     jdi_reg_0x414.b.refresh_start_line_addr = JDI_InitStruct->JDI_Start_Gate_Line_Address;
     JDI->DATA_WRITTEN_VERTICAL = jdi_reg_0x414.d32;
 
@@ -76,11 +76,11 @@ void JDI_Init(JDI_SrtuctInit_TypeDef *JDI_InitStruct)
     JDI->TX_FIFO_DMA_THRESHOLD = jdi_reg_0x434.d32;
 
     JDI_RX_FIFO_INT_THRESHOLD_TypeDef jdi_reg_0x438 = {.d32 = JDI->RX_FIFO_INT_THRESHOLD};
-    jdi_reg_0x438.b.rx_fifo_int_threshold = JDI->RX_FIFO_INT_THRESHOLD;
+    jdi_reg_0x438.b.rx_fifo_int_threshold = JDI_InitStruct->RX_FIFO_Int_Threshold;
     JDI->RX_FIFO_INT_THRESHOLD = jdi_reg_0x438.d32;
 
     JDI_TX_FIFO_INT_THRESHOLD_TypeDef jdi_reg_0x43c = {.d32 = JDI->TX_FIFO_INT_THRESHOLD};
-    jdi_reg_0x43c.b.tx_fifo_int_threshold = JDI->TX_FIFO_INT_THRESHOLD;
+    jdi_reg_0x43c.b.tx_fifo_int_threshold = JDI_InitStruct->TX_FIFO_Int_Threshold;
     JDI->TX_FIFO_INT_THRESHOLD = jdi_reg_0x43c.d32;
 }
 
@@ -91,7 +91,7 @@ void JDI_Structure_Init(JDI_SrtuctInit_TypeDef *JDI_InitStruct)
     JDI_InitStruct->JDI_Dummy_Value_Tail = 0;
     JDI_InitStruct->JDI_Gate_Line_Address_Incr = JDI_LINE_ADDR_FIXED;
     JDI_InitStruct->JDI_Gate_Line_Address_Incr_Num = 0;
-    JDI_InitStruct->JDI_Refresh_Line_num = 0;
+    JDI_InitStruct->JDI_Refresh_Line_Num = 0;
     JDI_InitStruct->JDI_Input_Pixel_Format = JDI_IN_RGB565;
     JDI_InitStruct->JDI_Output_Pixel_Format = JDI_OUT_3BIT;
     JDI_InitStruct->JDI_LCD_Width = 0;
@@ -151,15 +151,16 @@ void JDI_Interrupt_Enable(JDI_INTERRUPT_TYPE Interrupt, FunctionalState NewState
         jdi_reg_0x440.b.tx_fifo_threshold_int_en = new_value;
         break;
     case JDI_RX_FIFO_OVERFLOW_INT:
-        jdi_reg_0x440.b.tx_fifo_threshold_int_en = new_value;
+        jdi_reg_0x440.b.rx_fifo_overflow_int_en = new_value;
         break;
     case JDI_RX_FIFO_THRESHOLD_INT:
-        jdi_reg_0x440.b.tx_fifo_threshold_int_en = new_value;
+        jdi_reg_0x440.b.rx_fifo_threshold_int_en = new_value;
         break;
     case JDI_OUTPUT_FINISH_INT:
-        jdi_reg_0x440.b.tx_fifo_threshold_int_en = new_value;
+        jdi_reg_0x440.b.output_finish_int_en = new_value;
         break;
     }
+    JDI->INT_ENABLE = jdi_reg_0x440.d32;
 }
 
 void JDI_Interrupt_Mask(JDI_INTERRUPT_TYPE Interrupt, FunctionalState NewState)
@@ -184,15 +185,16 @@ void JDI_Interrupt_Mask(JDI_INTERRUPT_TYPE Interrupt, FunctionalState NewState)
         jdi_reg_0x444.b.tx_fifo_threshold_int_msk = new_value;
         break;
     case JDI_RX_FIFO_OVERFLOW_INT:
-        jdi_reg_0x444.b.tx_fifo_threshold_int_msk = new_value;
+        jdi_reg_0x444.b.rx_fifo_overflow_int_msk = new_value;
         break;
     case JDI_RX_FIFO_THRESHOLD_INT:
-        jdi_reg_0x444.b.tx_fifo_threshold_int_msk = new_value;
+        jdi_reg_0x444.b.rx_fifo_threshold_int_msk = new_value;
         break;
     case JDI_OUTPUT_FINISH_INT:
-        jdi_reg_0x444.b.tx_fifo_threshold_int_msk = new_value;
+        jdi_reg_0x444.b.output_finish_int_msk = new_value;
         break;
     }
+    JDI->INT_MASK = jdi_reg_0x444.d32;
 }
 
 void JDI_Interrupt_Clear(JDI_INTERRUPT_TYPE Interrupt)
@@ -208,15 +210,16 @@ void JDI_Interrupt_Clear(JDI_INTERRUPT_TYPE Interrupt)
         jdi_reg_0x450.b.tx_fifo_threshold_int_clr = 1;
         break;
     case JDI_RX_FIFO_OVERFLOW_INT:
-        jdi_reg_0x450.b.tx_fifo_threshold_int_clr = 1;
+        jdi_reg_0x450.b.rx_fifo_overflow_int_clr = 1;
         break;
     case JDI_RX_FIFO_THRESHOLD_INT:
-        jdi_reg_0x450.b.tx_fifo_threshold_int_clr = 1;
+        jdi_reg_0x450.b.rx_fifo_threshold_int_clr = 1;
         break;
     case JDI_OUTPUT_FINISH_INT:
-        jdi_reg_0x450.b.tx_fifo_threshold_int_clr = 1;
+        jdi_reg_0x450.b.output_finish_int_clr = 1;
         break;
     }
+    JDI->INT_CLEAR = jdi_reg_0x450.d32;
 }
 
 ITStatus JDI_Get_Interrupt_Status(JDI_INTERRUPT_TYPE Interrupt)
@@ -233,13 +236,13 @@ ITStatus JDI_Get_Interrupt_Status(JDI_INTERRUPT_TYPE Interrupt)
         value = jdi_reg_0x44c.b.tx_fifo_threshold_int_status;
         break;
     case JDI_RX_FIFO_OVERFLOW_INT:
-        value = jdi_reg_0x44c.b.tx_fifo_threshold_int_status;
+        value = jdi_reg_0x44c.b.rx_fifo_overflow_int_status;
         break;
     case JDI_RX_FIFO_THRESHOLD_INT:
-        value = jdi_reg_0x44c.b.tx_fifo_threshold_int_status;
+        value = jdi_reg_0x44c.b.rx_fifo_threshold_int_status;
         break;
     case JDI_OUTPUT_FINISH_INT:
-        value = jdi_reg_0x44c.b.tx_fifo_threshold_int_status;
+        value = jdi_reg_0x44c.b.output_finish_int_status;
         break;
     }
     if (value)
@@ -266,13 +269,13 @@ ITStatus JDI_Get_Interrupt_Raw_Status(JDI_INTERRUPT_TYPE Interrupt)
         value = jdi_reg_0x448.b.tx_fifo_threshold_int_raw_status;
         break;
     case JDI_RX_FIFO_OVERFLOW_INT:
-        value = jdi_reg_0x448.b.tx_fifo_threshold_int_raw_status;
+        value = jdi_reg_0x448.b.rx_fifo_overflow_int_raw_status;
         break;
     case JDI_RX_FIFO_THRESHOLD_INT:
-        value = jdi_reg_0x448.b.tx_fifo_threshold_int_raw_status;
+        value = jdi_reg_0x448.b.rx_fifo_threshold_int_raw_status;
         break;
     case JDI_OUTPUT_FINISH_INT:
-        value = jdi_reg_0x448.b.tx_fifo_threshold_int_raw_status;
+        value = jdi_reg_0x448.b.output_finish_int_raw_status;
         break;
     }
     if (value)

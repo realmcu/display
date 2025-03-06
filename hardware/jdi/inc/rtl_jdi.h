@@ -28,18 +28,19 @@ extern "C" {
 #include "rtl_jdi_reg.h"
 
 /** \defgroup JDI       JDI
-  * \brief
+  * \brief    JDI (Japan Display Inc.) LCD Controller Interface
   * \{
   */
 /*============================================================================*
  *                             Constants
  *============================================================================*/
-#define JDI_TX_FIFO_WIDTH       8
-#define JDI_RX_FIFO_WIDTH       8
-#define JDI_TX_FIFO_DEPTH       8
-#define JDI_RX_FIFO_DEPTH       64
+/*!< JDI FIFO configuration parameters */
+#define JDI_TX_FIFO_WIDTH       8    /*!< Width of TX FIFO in bits */
+#define JDI_RX_FIFO_WIDTH       8    /*!< Width of RX FIFO in bits */
+#define JDI_TX_FIFO_DEPTH       8    /*!< Depth of TX FIFO */
+#define JDI_RX_FIFO_DEPTH       64   /*!< Depth of RX FIFO */
 /** \defgroup JDI_Exported_Constants JDI Exported Constants
-  * \brief
+  * \brief    Constants and macros used by the JDI module
   * \{
   */
 
@@ -126,16 +127,14 @@ typedef enum
 /** End of JDI_INTERRUPT_TYPE
   * \}
   */
-
 /** End of JDI_Exported_Constants
   * \}
   */
-
 /*============================================================================*
  *                             Types
  *============================================================================*/
 /** \defgroup JDI_Exported_Types JDI Exported Types
-  * \brief
+  * \brief    Data structures and enumerations used by the JDI module
   * \{
   */
 
@@ -146,46 +145,38 @@ typedef enum
  */
 typedef struct
 {
-    JDI_INPUT_PIXEL_FORMAT
-    JDI_Input_Pixel_Format;     /*!< Determine input pixel format sent to JDI.
-                                        This parameter can be a value of @ref JDI_INPUT_PIXEL_FORMAT */
+    JDI_INPUT_PIXEL_FORMAT JDI_Input_Pixel_Format;      /*!< Determine input pixel format sent to JDI.
+                                                             This parameter can be a value of @ref JDI_INPUT_PIXEL_FORMAT */
     JDI_OUTPUT_PIXEL_FORMAT
-    JDI_Output_Pixel_Format;    /*!< Determine out pixel format received from JDI.
-                                        This parameter can be a value of @ref JDI_OUTPUT_PIXEL_FORMAT */
+    JDI_Output_Pixel_Format;    /*!< Determine output pixel format received from JDI.
+                                                             This parameter can be a value of @ref JDI_OUTPUT_PIXEL_FORMAT */
     JDI_LINE_ADDRESS_INCR_TYPE
     JDI_Gate_Line_Address_Incr; /*!< Determine line address is increased for fixed.
-                                        This parameter can be a value of @ref JDI_LINE_ADDRESS_INCR_TYPE */
-    uint32_t    JDI_Gate_Line_Address_Incr_Num; /*!< Line increase, should be less than 7 . */
-    uint32_t
-    JDI_Mode_Select;                /*!< Select JDI screen working mode, such as update and blink, referring to screen specification. */
-    uint32_t
-    JDI_Dummy_Bit_For_4bit_Output;  /*!< The value of top bit of 4-bit pixel output, can be 0 or 1. */
-    uint32_t    JDI_LCD_Width;                  /*!< Width of each line. */
-    uint32_t    JDI_LCD_Height;                 /*!< Height of LCD panel. */
-    uint32_t    JDI_Start_Gate_Line_Address;    /*!< Start line address for data transmission. */
-    uint32_t    JDI_Refresh_Line_num;           /*!< Number of lines to be refreshed. */
-    uint32_t    JDI_Dummy_Value_Mid;            /*!< Value of 6-bit dummy data between lines. */
-    uint32_t
-    JDI_Dummy_Value_Tail;           /*!< value of 16-bit dummy data at the end of transmission. */
-    uint32_t    RX_DMA_Enable;                  /*!< Enable/Disable RX DMA. */
-    uint32_t    TX_DMA_Enable;                  /*!< Enable/Disable TX DMA. */
-    uint32_t    RX_FIFO_DMA_Threshold;          /*!< RX FIFO threshold that triggers data receiving. */
-    uint32_t
-    TX_FIFO_DMA_Threshold;          /*!< TX FIFO threshold that triggers data transmitting. */
-    uint32_t
-    RX_FIFO_Int_Threshold;          /*!< RX FIFO threshold that triggers RX FIFO threshold interrupt. */
-    uint32_t
-    TX_FIFO_Int_Threshold;          /*!< TX FIFO threshold that triggers TX FIFO threshold interrupt. */
+                                                                This parameter can be a value of @ref JDI_LINE_ADDRESS_INCR_TYPE */
+    uint32_t JDI_Gate_Line_Address_Incr_Num;            /*!< Line increase, should be less than 7. */
+    uint32_t JDI_Mode_Select;                           /*!< Select JDI screen working mode, such as update and blink, referring to screen specification. */
+    uint32_t JDI_Dummy_Bit_For_4bit_Output;             /*!< The value of top bit of 4-bit pixel output, can be 0 or 1. */
+    uint32_t JDI_LCD_Width;                             /*!< Width of each line. */
+    uint32_t JDI_LCD_Height;                            /*!< Height of LCD panel. */
+    uint32_t JDI_Start_Gate_Line_Address;               /*!< Start line address for data transmission. */
+    uint32_t JDI_Refresh_Line_Num;                      /*!< Number of lines to be refreshed. */
+    uint32_t JDI_Dummy_Value_Mid;                       /*!< Value of 6-bit dummy data between lines. */
+    uint32_t JDI_Dummy_Value_Tail;                      /*!< Value of 16-bit dummy data at the end of transmission. */
+    uint32_t RX_DMA_Enable;                             /*!< Enable/Disable RX DMA. */
+    uint32_t TX_DMA_Enable;                             /*!< Enable/Disable TX DMA. */
+    uint32_t RX_FIFO_DMA_Threshold;                     /*!< RX FIFO threshold that triggers data receiving. */
+    uint32_t TX_FIFO_DMA_Threshold;                     /*!< TX FIFO threshold that triggers data transmitting. */
+    uint32_t RX_FIFO_Int_Threshold;                     /*!< RX FIFO threshold that triggers RX FIFO threshold interrupt. */
+    uint32_t TX_FIFO_Int_Threshold;                     /*!< TX FIFO threshold that triggers TX FIFO threshold interrupt. */
 } JDI_SrtuctInit_TypeDef;
 /** End of JDI_Exported_Types
   * \}
   */
-
 /*============================================================================*
  *                            Functions
  *============================================================================*/
 /** \defgroup JDI_Exported_Functions JDI Exported Functions
-  * \brief
+  * \brief    API functions for controlling JDI LCD interface
   * \{
   */
 
@@ -193,8 +184,6 @@ typedef struct
 * \brief   Initialize JDI according to the specified parameters in JDI_InitStruct.
 *
 * \param[in] JDI_InitStruct: Pointer to a JDI_SrtuctInit_TypeDef structure which has been initialized.
-*
-* \return  None.
 *
 * <b>Example usage</b>
 * \code{.c}
@@ -208,17 +197,17 @@ typedef struct
 *     JDI_InitStruct.LCD_Width = 256;
 *     JDI_InitStruct.LCD_Height = 200;
 *     JDI_InitStruct.JDI_Dummy_Bit_For_4bit_Output = 0;
-*     JDI_InitStruct->JDI_Dummy_Value_Mid = 0x0;
-*     JDI_InitStruct->JDI_Dummy_Value_Tail = 0xFF;
-*     JDI_InitStruct->JDI_Gate_Line_Address_Incr = JDI_LINE_ADDR_INCREASED;
-*     JDI_InitStruct->JDI_Gate_Line_Address_Incr_Num = 1;
-*     JDI_InitStruct->JDI_Input_Pixel_Format = JDI_IN_RGB565;
-*     JDI_InitStruct->JDI_Output_Pixel_Format = JDI_OUT_3BIT;
-*     JDI_InitStruct->JDI_Mode_Select = 0;
-*     JDI_InitStruct->JDI_Start_Gate_Line_Address = 0;
-*     JDI_InitStruct->RX_DMA_Enable = 1;
-*     JDI_InitStruct->TX_DMA_Enable = 1;
-*     JDI_InitStruct->JDI_Refresh_Line_Num = 200;
+*     JDI_InitStruct.JDI_Dummy_Value_Mid = 0x0;
+*     JDI_InitStruct.JDI_Dummy_Value_Tail = 0xFF;
+*     JDI_InitStruct.JDI_Gate_Line_Address_Incr = JDI_LINE_ADDR_INCREASED;
+*     JDI_InitStruct.JDI_Gate_Line_Address_Incr_Num = 1;
+*     JDI_InitStruct.JDI_Input_Pixel_Format = JDI_IN_RGB565;
+*     JDI_InitStruct.JDI_Output_Pixel_Format = JDI_OUT_3BIT;
+*     JDI_InitStruct.JDI_Mode_Select = 0;
+*     JDI_InitStruct.JDI_Start_Gate_Line_Address = 0;
+*     JDI_InitStruct.RX_DMA_Enable = 1;
+*     JDI_InitStruct.TX_DMA_Enable = 1;
+*     JDI_InitStruct.JDI_Refresh_Line_Num = 200;
 *     JDI_Init(&JDI_InitStruct);
 * }
 * \endcode
@@ -240,7 +229,7 @@ void JDI_Init(JDI_SrtuctInit_TypeDef *JDI_InitStruct);
  *       | JDI_LCD_Width                   | 0                                    |
  *       | JDI_LCD_Height                  | 0                                    |
  *       | JDI_Start_Gate_Line_Address     | 0                                    |
- *       | JDI_Refresh_Line_num            | 0                                    |
+ *       | JDI_Refresh_Line_Num            | 0                                    |
  *       | JDI_Dummy_Value_Mid             | 0                                    |
  *       | JDI_Dummy_Value_Tail            | 0                                    |
  *       | RX_DMA_Enable                   | 0                                    |
@@ -252,8 +241,6 @@ void JDI_Init(JDI_SrtuctInit_TypeDef *JDI_InitStruct);
  *
  * \param[in] JDI_InitStruct: Pointer to a JDI_SrtuctInit_TypeDef structure which will be initialized.
  *
- * \return  None.
- *
  * <b>Example usage</b>
  * \code{.c}
  *
@@ -265,17 +252,18 @@ void JDI_Init(JDI_SrtuctInit_TypeDef *JDI_InitStruct);
  *     JDI_Structure_Init(&JDI_InitStruct);
  *     JDI_InitStruct.LCD_Width = 256;
  *     JDI_InitStruct.LCD_Height = 200;
- *     JDI_InitStruct->JDI_Gate_Line_Address_Incr = JDI_LINE_ADDR_INCREASED;
- *     JDI_InitStruct->JDI_Gate_Line_Address_Incr_Num = 1;
- *     JDI_InitStruct->JDI_Input_Pixel_Format = JDI_IN_RGB888;
- *     JDI_InitStruct->JDI_Output_Pixel_Format = JDI_OUT_1BIT;
- *     JDI_InitStruct->RX_DMA_Enable = 1;
- *     JDI_InitStruct->TX_DMA_Enable = 1;
- *     JDI_InitStruct->JDI_Refresh_Line_Num = 200;
+ *     JDI_InitStruct.JDI_Gate_Line_Address_Incr = JDI_LINE_ADDR_INCREASED;
+ *     JDI_InitStruct.JDI_Gate_Line_Address_Incr_Num = 1;
+ *     JDI_InitStruct.JDI_Input_Pixel_Format = JDI_IN_RGB888;
+ *     JDI_InitStruct.JDI_Output_Pixel_Format = JDI_OUT_1BIT;
+ *     JDI_InitStruct.RX_DMA_Enable = 1;
+ *     JDI_InitStruct.TX_DMA_Enable = 1;
+ *     JDI_InitStruct.JDI_Refresh_Line_Num = 200;
  *     JDI_Init(&JDI_InitStruct);
  * }
  * \endcode
  */
+void JDI_Structure_Init(JDI_SrtuctInit_TypeDef *JDI_InitStruct);
 
 /**
  * \brief   Enable or disable the JDI peripheral.
@@ -283,8 +271,6 @@ void JDI_Init(JDI_SrtuctInit_TypeDef *JDI_InitStruct);
  * \param[in] NewState: New state of the JDI peripheral.
  *            This parameter can be: ENABLE or DISABLE.
  *
- * \return  None.
- *
  * <b>Example usage</b>
  * \code{.c}
  *
@@ -296,13 +282,13 @@ void JDI_Init(JDI_SrtuctInit_TypeDef *JDI_InitStruct);
  *     JDI_Structure_Init(&JDI_InitStruct);
  *     JDI_InitStruct.LCD_Width = 256;
  *     JDI_InitStruct.LCD_Height = 200;
- *     JDI_InitStruct->JDI_Gate_Line_Address_Incr = JDI_LINE_ADDR_INCREASED;
- *     JDI_InitStruct->JDI_Gate_Line_Address_Incr_Num = 1;
- *     JDI_InitStruct->JDI_Input_Pixel_Format = JDI_IN_RGB888;
- *     JDI_InitStruct->JDI_Output_Pixel_Format = JDI_OUT_1BIT;
- *     JDI_InitStruct->RX_DMA_Enable = 1;
- *     JDI_InitStruct->TX_DMA_Enable = 1;
- *     JDI_InitStruct->JDI_Refresh_Line_Num = 200;
+ *     JDI_InitStruct.JDI_Gate_Line_Address_Incr = JDI_LINE_ADDR_INCREASED;
+ *     JDI_InitStruct.JDI_Gate_Line_Address_Incr_Num = 1;
+ *     JDI_InitStruct.JDI_Input_Pixel_Format = JDI_IN_RGB888;
+ *     JDI_InitStruct.JDI_Output_Pixel_Format = JDI_OUT_1BIT;
+ *     JDI_InitStruct.RX_DMA_Enable = 1;
+ *     JDI_InitStruct.TX_DMA_Enable = 1;
+ *     JDI_InitStruct.JDI_Refresh_Line_Num = 200;
  *     JDI_Init(&JDI_InitStruct);
  *     JDI_Cmd(ENABLE);
  * }
@@ -312,8 +298,6 @@ void JDI_Cmd(FunctionalState NewState);
 
 /**
  * \brief   Wait till the peripheral is in idle state.
- *
- * \return  None.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -332,10 +316,8 @@ void JDI_Wait_Idle(void);
  * \brief   Enable or disable certain JDI interrupt.
  *
  * \param[in] Interrupt: Specified interrupt type from @ref JDI_INTERRUPT_TYPE
- * \param[in] NewState: New state of the JDI peripheral.
+ * \param[in] NewState: New state of the JDI interrupt type.
  *            This parameter can be: ENABLE or DISABLE.
- *
- * \return  None.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -353,10 +335,8 @@ void JDI_Interrupt_Enable(JDI_INTERRUPT_TYPE Interrupt, FunctionalState NewState
  * \brief   Mask or unmask certain JDI interrupt.
  *
  * \param[in] Interrupt: Specified interrupt type from @ref JDI_INTERRUPT_TYPE
- * \param[in] NewState: New state of the JDI peripheral.
+ * \param[in] NewState: New state of the JDI interrupt type.
  *            This parameter can be: ENABLE or DISABLE.
- *
- * \return  None.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -402,9 +382,9 @@ ITStatus JDI_Get_Interrupt_Status(JDI_INTERRUPT_TYPE Interrupt);
  * <b>Example usage</b>
  * \code{.c}
  *
- * void jdi_interrupt_get(void)
+ * void jdi_interrupt_get_raw(void)
  * {
- *     ITStatus status = JDI_Get_Interrupt_Status(JDI_RX_FIFO_THRESHOLD_INT);
+ *     ITStatus status = JDI_Get_Interrupt_Raw_Status(JDI_RX_FIFO_THRESHOLD_INT);
  * }
  * \endcode
  */
@@ -414,8 +394,6 @@ ITStatus JDI_Get_Interrupt_Raw_Status(JDI_INTERRUPT_TYPE Interrupt);
  * \brief   Clear specified interrupt status.
  *
  * \param[in] Interrupt: Specified interrupt type from @ref JDI_INTERRUPT_TYPE
- *
- * \return  None
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -435,6 +413,7 @@ void JDI_Interrupt_Clear(JDI_INTERRUPT_TYPE Interrupt);
 /** End of JDI
   * \}
   */
+
 
 
 #ifdef __cplusplus
