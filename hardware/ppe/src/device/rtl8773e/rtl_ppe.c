@@ -859,6 +859,7 @@ PPE_err PPE_Blit_Inverse(ppe_buffer_t *dst, ppe_buffer_t *src, ppe_matrix_t *inv
     ppe_get_identity(&matrix);
     memcpy(&matrix, inverse, sizeof(ppe_matrix_t));
     ppe_translate(rect->x, rect->y, &matrix);
+    bool is_identity = ppe_is_identity_or_translate(&matrix);
     uint32_t comp[9];
     if (!check_inverse(inverse))
     {
@@ -958,8 +959,8 @@ PPE_err PPE_Blit_Inverse(ppe_buffer_t *dst, ppe_buffer_t *src, ppe_matrix_t *inv
     PPE_input_layer2_init.Transfer_Matrix_E33             = comp[ct++];
     PPE_InputLayer_Init(PPE_INPUT_2, &PPE_input_layer2_init);
 
-    if (mode == PPE_SRC_OVER_MODE || (mode == PPE_CONST_MASK_MODE &&
-                                      (src->const_color >> 24) < 0xFF))
+    if (mode == PPE_SRC_OVER_MODE || !is_identity || \
+        (mode == PPE_CONST_MASK_MODE && (src->const_color >> 24) < 0xFF))
     {
         /*input layer 1 initilization*/
         PPE_InputLayer_enable(PPE_INPUT_1, ENABLE);           // logic enable of layer
@@ -999,7 +1000,7 @@ PPE_err PPE_Blit_Inverse(ppe_buffer_t *dst, ppe_buffer_t *src, ppe_matrix_t *inv
         PPE_InputLayer_Init(PPE_INPUT_1, &PPE_input_layer1_init);
     }
     else if (mode == PPE_BYPASS_MODE || (mode == PPE_CONST_MASK_MODE &&
-                                         (src->const_color >> 24) == 0xFF))
+                                         is_identity && (src->const_color >> 24) == 0xFF))
     {
         PPE_InputLayer_enable(PPE_INPUT_1, ENABLE);           // logic enable of layer
         PPE_InputLayer_Init_Typedef PPE_input_layer1_init;
@@ -1730,6 +1731,17 @@ void ppe_get_identity(ppe_matrix_t *matrix)
     matrix->m[2][0] = 0.0f;
     matrix->m[2][1] = 0.0f;
     matrix->m[2][2] = 1.0f;
+}
+
+bool ppe_is_identity_or_translate(ppe_matrix_t *matrix)
+{
+    return (matrix->m[0][0] == 1.0f && \
+            matrix->m[0][1] = 0.0f && \
+                              matrix->m[1][0] = 0.0f && \
+                                                matrix->m[1][1] = 1.0f && \
+                                                                  matrix->m[2][0] = 0.0f && \
+                                                                                    matrix->m[2][1] = 0.0f && \
+                                                                                            matrix->m[2][2] = 1.0f);
 }
 
 #if USE_PPE_MAT

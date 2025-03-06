@@ -516,6 +516,7 @@ bool ppe_get_area(ppe_rect_t *result_rect, ppe_rect_t *source_rect, ppe_matrix_t
 PPE_err PPE_Blend_Multi(ppe_buffer_t *dst, ppe_buffer_t *src_1,
                         ppe_buffer_t *src_2, ppe_buffer_t *src_3, PPE_BLEND_MODE mode);
 PPE_err PPE_Mask(ppe_buffer_t *dst, uint32_t color, ppe_rect_t *rect);
+bool ppe_is_identity_or_translate(ppe_matrix_t *matrix);
 /** End of PPE_Exported_Functions
   * \}
   */
