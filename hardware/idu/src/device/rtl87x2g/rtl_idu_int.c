@@ -3,11 +3,6 @@
 #include "os_mem.h"
 #endif
 
-void rtl_idu_channel_init_int(uint8_t *high_speed_channel, uint8_t *low_speed_channel)
-{
-    return;
-}
-
 GDMA_ChannelTypeDef *rtl_idu_get_dma_channel_int(uint8_t channel_num)
 {
     return GDMA_GetGDMAChannelx(channel_num);
@@ -25,8 +20,7 @@ bool rtl_idu_get_dma_busy_state(uint8_t channel_num)
 
 void rtl_idu_wait_dma_idle(GDMA_ChannelTypeDef *dma)
 {
-    GDMA_SuspendCmd(dma, ENABLE);
-    while (!GDMA_GetSuspendChannelStatus(dma));
+    GDMA_SafeSuspend(dma);
 }
 
 void rtl_idu_rx_handshake_init(GDMA_InitTypeDef *init_struct)
@@ -85,6 +79,19 @@ uint8_t *rtl_idu_malloc_int(uint32_t size)
 #else
 #endif
 }
+
+void rtl_idu_free_int(void *p_mem)
+{
+    if (p_mem == NULL)
+    {
+        return;
+    }
+#if 1
+    os_mem_free(p_mem);
+#else
+#endif
+}
+
 
 uint8_t rtl_idu_get_decode_pixel_length(IDU_PIXEL_SIZE_INT pixel_size)
 {

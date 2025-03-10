@@ -15,6 +15,7 @@
  *                        Header Files
  *============================================================================*/
 #include "rtl_ppe.h"
+#include "rtl_ppe_int.h"
 #include "rtl_rcc.h"
 #include "stddef.h"
 
@@ -85,12 +86,12 @@ void PPE_Abort(void)
     }
 }
 
-ITStatus PPE_ChannelInactiveCheck(uint8_t chn_id)
+ITStatus PPE_ChannelInactiveCheck(void)
 {
     assert_param(IS_PPE_CHN_INDEX(chn_id));
     ITStatus rv = RESET;
     PPE_GLB_CTL_TypeDef ppe_reg_0x400 = {.d32 = PPE->GLB_CTL};
-    if (ppe_reg_0x400.b.chn_inact & (BIT0 << chn_id))
+    if (ppe_reg_0x400.b.chn_inact == 0x1FFFF)
     {
         rv = SET;
     }
@@ -528,116 +529,7 @@ PPE_ERR PPE_Scale_Rect(ppe_buffer_t *image, ppe_buffer_t *buffer, float x_ratio,
     PPE_Result_Layer.width                  = buffer->width;
     PPE_Result_Layer.height                 = buffer->height;
     PPE_Result_Layer.format                 = buffer->format;
-    PPE_Result_Layer.line_len               = PPE_Result_Layer.width;
-    PPE_Result_Layer.AXSIZE                 = 2;    // 32bit bandwidth
-    PPE_Result_Layer.INCR                   = PPE_ARBURST_INCR;
-    PPE_Result_Layer.AXCACHE                = 1;
-    PPE_Result_Layer.MAX_AXLEN_LOG          = PPE_MAX_AXLEN_127;
-    PPE_Result_Layer.PRIOR                  = 0;
-    PPE_Result_Layer.byte_swap              = PPE_NO_SWAP;
-    PPE_Result_Layer.handshake_mode         = PPE_DMA_SW_HANDSHAKE;
-    PPE_Result_Layer.polarity               = PPE_POLARITY_HIGH;
-    PPE_Result_Layer.handshake_en           = DISABLE;
-    PPE_Result_Layer.handshake_msize        = PPE_MSIZE_2;
-    PPE_Result_Layer.hw_index               = 0;
-    PPE_InitResultLayer(&PPE_Result_Layer);
-
-    PPE_Init_User.function          =   PPE_FUNCTION_SCALE;
-    PPE_Init(&PPE_Init_User);
-
-    PPE_Secure(ENABLE);
-    PPE_Cmd(ENABLE);
-    while (PPE->GLB_CTL & BIT0);
-
-    return PPE_SUCCESS;
-}
-
-PPE_ERR PPE_Scale_Rect_Cover(ppe_buffer_t *image, ppe_buffer_t *buffer, ppe_translate_t *trans,
-                             float x_ratio, float y_ratio,
-                             ppe_rect_t *rect)
-{
-    if (buffer == NULL)
-    {
-        return PPE_ERROR_NULL_TARGET;
-    }
-    if (image == NULL)
-    {
-        return PPE_ERROR_NULL_SOURCE;
-    }
-
-    PPE_InputLayer_InitTypeDef PPE_Input_Layer;
-    PPE_ResultLayer_InitTypeDef PPE_Result_Layer;
-    PPE_InitTypeDef PPE_Init_User;
-
-    PPE_InputLayer_StructInit(&PPE_Input_Layer);
-    PPE_ResultLayer_StructInit(&PPE_Result_Layer);
-    PPE_structInit(&PPE_Init_User);
-    if ((image->address % 4) || (buffer->address % 4))
-    {
-        return PPE_ERROR_ADDR_NOT_ALIGNED;
-    }
-    if ((rect == NULL) || (rect->top > rect->bottom) || (rect->left > rect->right)
-        || (rect->right >= image->width) || (rect->bottom >= image->height))
-    {
-        return PPE_ERROR_INVALID_PARAM;
-    }
-    uint8_t format_len = ppe_get_format_data_len(image->format);
-    if (!format_len)
-    {
-        return PPE_ERROR_UNKNOWN_FORMAT;
-    }
-
-    RCC_PeriphClockCmd(APBPeriph_PPE, APBPeriph_PPE_CLOCK, ENABLE);
-
-    PPE_Input_Layer.src_addr                = (uint32_t)(image->address +
-                                                         (rect->left + image->stride * rect->top) * format_len);
-    PPE_Input_Layer.start_x                 = 0;
-    PPE_Input_Layer.start_y                 = 0;
-    PPE_Input_Layer.width                   = rect->right - rect->left + 1;
-    PPE_Input_Layer.height                  = rect->bottom - rect->top + 1;
-    PPE_Input_Layer.const_ABGR8888_value    = 0XFFFFFFFF;
-    PPE_Input_Layer.format                  = image->format;
-    PPE_Input_Layer.src                     = PPE_LAYER_SRC_FROM_DMA;
-    PPE_Input_Layer.color_key_en            = DISABLE;
-    PPE_Input_Layer.line_len                = image->stride;
-    PPE_Input_Layer.key_color_value         = 0x000000;
-    PPE_Input_Layer.AXSIZE                  = 2; // 32bit bandwidth;
-    PPE_Input_Layer.INCR                    = PPE_ARBURST_INCR;
-    PPE_Input_Layer.AXCACHE                 = 1;
-    PPE_Input_Layer.MAX_AXLEN_LOG           = PPE_MAX_AXLEN_127;
-    PPE_Input_Layer.PRIOR                   = 0;
-    PPE_Input_Layer.byte_swap               = PPE_NO_SWAP;
-    PPE_Input_Layer.handshake_mode          = PPE_DMA_SW_HANDSHAKE;
-    PPE_Input_Layer.polarity                = PPE_POLARITY_HIGH;
-    PPE_Input_Layer.handshake_en            = DISABLE;
-    PPE_Input_Layer.handshake_msize         = PPE_MSIZE_2;
-    PPE_Input_Layer.hw_index                = 0;
-    PPE_InitInputLayer(1, &PPE_Input_Layer);
-    PPE->SCA_RATIO_X = (uint32_t)(65536 / x_ratio); // 65536/ratio_x,ratio = 2
-    PPE->SCA_RATIO_Y = (uint32_t)(65536 / y_ratio);
-    uint32_t width   = (uint32_t)PPE_Input_Layer.width * x_ratio;
-    uint32_t height  = (uint32_t)PPE_Input_Layer.height * y_ratio;
-    if (width == 0 || height == 0)
-    {
-        return PPE_SUCCESS_NOT_CHANGE;
-    }
-    ppe_rect_t source_rect = {.left = trans->x, .right = trans->x + width - 1, \
-                              .top = trans->y, .bottom = trans->y + height - 1
-                             };
-    /*initial input layer1*/
-    ppe_rect_t target_rect = {.left = 0, .top = 0, .right = buffer->width - 1, .bottom = buffer->height - 1};
-    ppe_rect_t result_rect = {.left = 0, .top = 0, .right = 0, .bottom = 0};
-    if (!ppe_rect_intersect(&result_rect, &target_rect, &source_rect))
-    {
-        return PPE_SUCCESS;
-    }
-
-    PPE_Result_Layer.src_addr               = (uint32_t)buffer->memory +
-                                              (result_rect.left + result_rect.top * buffer->stride) * ppe_get_format_data_len(buffer->format);
-    PPE_Result_Layer.width                          = result_rect.right - result_rect.left + 1;
-    PPE_Result_Layer.height                         = result_rect.bottom - result_rect.top + 1;;
     PPE_Result_Layer.line_len               = buffer->stride;
-    PPE_Result_Layer.format                 = buffer->format;
     PPE_Result_Layer.AXSIZE                 = 2;    // 32bit bandwidth
     PPE_Result_Layer.INCR                   = PPE_ARBURST_INCR;
     PPE_Result_Layer.AXCACHE                = 1;
@@ -1684,6 +1576,121 @@ PPE_ERR PPE_blend_multi(ppe_input_list_t list)
 
     /*initial PPE global*/
     PPE_Init_User.function                          =   PPE_FUNCTION_ALPHA_BLEND;
+    PPE_Init(&PPE_Init_User);
+    PPE_Secure(ENABLE);  /*secure for all channel*/
+    /*enable PPE*/
+    PPE_Cmd(ENABLE);
+    while (PPE->GLB_CTL & BIT0);
+    return PPE_SUCCESS;
+}
+
+PPE_ERR PPE_Mask(ppe_buffer_t *src, ppe_buffer_t *target, ppe_rect_t *rect, uint32_t color)
+{
+    if (target == NULL)
+    {
+        return PPE_ERROR_NULL_TARGET;
+    }
+    if (src == NULL)
+    {
+        return PPE_ERROR_NULL_SOURCE;
+    }
+    uint8_t format_len = ppe_get_format_data_len(src->format);
+    if (format_len == 0)
+    {
+        return PPE_ERROR_UNKNOWN_FORMAT;
+    }
+
+    RCC_PeriphClockCmd(APBPeriph_PPE, APBPeriph_PPE_CLOCK, ENABLE);
+    /*declaration of input/result layer initialization struct*/
+    PPE_InputLayer_InitTypeDef      PPE_Input_Layer1;
+    PPE_InputLayer_InitTypeDef      PPE_Input_Layer2;
+    PPE_ResultLayer_InitTypeDef     PPE_Result_Layer;
+    PPE_InitTypeDef                 PPE_Init_User;
+
+    PPE_InputLayer_StructInit(&PPE_Input_Layer1);
+    PPE_InputLayer_StructInit(&PPE_Input_Layer2);
+    PPE_ResultLayer_StructInit(&PPE_Result_Layer);
+    PPE_structInit(&PPE_Init_User);
+
+    /*initial input layer2*/
+    PPE_Input_Layer2.start_x = 0;
+    PPE_Input_Layer2.start_y = 0;
+    PPE_Input_Layer2.src_addr                       = NULL;
+    PPE_Input_Layer2.width                          = rect->right - rect->left + 1;
+    PPE_Input_Layer2.height                         = rect->bottom - rect->top + 1;
+    PPE_Input_Layer2.const_ABGR8888_value           = color;
+    PPE_Input_Layer2.format                         = PPE_ABGR8888;
+    PPE_Input_Layer2.src                            = PPE_LAYER_SRC_CONST;
+    PPE_Input_Layer2.line_len                       = src->stride;
+    PPE_Input_Layer2.AXSIZE                         = 2;// 32bit bandwidth;
+    PPE_Input_Layer2.INCR                           = PPE_ARBURST_INCR;
+    PPE_Input_Layer2.AXCACHE                        = 1;
+    PPE_Input_Layer2.MAX_AXLEN_LOG                  = PPE_MAX_AXLEN_127;
+    PPE_Input_Layer2.PRIOR                          = 0;
+    PPE_Input_Layer2.byte_swap                      = PPE_NO_SWAP;
+    PPE_Input_Layer2.handshake_mode                 = PPE_DMA_SW_HANDSHAKE;
+    PPE_Input_Layer2.polarity                       = PPE_POLARITY_HIGH;
+    PPE_Input_Layer2.handshake_en                   = DISABLE;
+    PPE_Input_Layer2.handshake_msize                = PPE_MSIZE_1024;
+    PPE_Input_Layer2.hw_index                       = 0;
+    PPE_InitInputLayer(2, &PPE_Input_Layer2);
+
+    /*initial input layer1*/
+    PPE_Input_Layer1.start_x                        = 0;
+    PPE_Input_Layer1.start_y                        = 0;
+    PPE_Input_Layer1.src_addr                       = (uint32_t)src->memory +
+                                                      (rect->top * src->width + rect->left) * ppe_get_format_data_len(src->format);
+    PPE_Input_Layer1.width                          = rect->right - rect->left + 1;
+    PPE_Input_Layer1.height                         = rect->bottom - rect->top + 1;
+    PPE_Input_Layer1.const_ABGR8888_value           = 0XFFAABBCC;
+    PPE_Input_Layer1.format                         = src->format;
+    PPE_Input_Layer1.src                            = PPE_LAYER_SRC_FROM_DMA;
+    if (src->color_key_en)
+    {
+        PPE_Input_Layer1.color_key_en                   = ENABLE;
+        PPE_Input_Layer1.key_color_value                = src->color_key_value;
+    }
+    else
+    {
+        PPE_Input_Layer1.color_key_en                   = DISABLE;
+        PPE_Input_Layer1.key_color_value                = 0;
+    }
+    PPE_Input_Layer1.line_len                       = src->width;
+    PPE_Input_Layer1.AXSIZE                         = 2;// 32bit bandwidth;
+    PPE_Input_Layer1.INCR                           = PPE_ARBURST_INCR;
+    PPE_Input_Layer1.AXCACHE                        = 1;
+    PPE_Input_Layer1.MAX_AXLEN_LOG                  = PPE_MAX_AXLEN_127;
+    PPE_Input_Layer1.PRIOR                          = 0;
+    PPE_Input_Layer1.byte_swap                      = PPE_NO_SWAP;
+    PPE_Input_Layer1.handshake_mode                 = PPE_DMA_SW_HANDSHAKE;
+    PPE_Input_Layer1.polarity                       = PPE_POLARITY_HIGH;
+    PPE_Input_Layer1.handshake_en                   = DISABLE;
+    PPE_Input_Layer1.handshake_msize                = PPE_MSIZE_1024;
+    PPE_Input_Layer1.hw_index                       = 0;
+    PPE_InitInputLayer(1, &PPE_Input_Layer1);
+
+    /*initial result layer*/
+    PPE_Result_Layer.src_addr                       = (uint32_t)target->memory;
+    PPE_Result_Layer.width                          = PPE_Input_Layer1.width;
+    PPE_Result_Layer.height                         = PPE_Input_Layer1.height;
+    PPE_Result_Layer.format                         = target->format;
+    PPE_Result_Layer.line_len                       = PPE_Input_Layer1.width;
+    PPE_Result_Layer.AXSIZE                         = 2;// 32bit bandwidth
+    PPE_Result_Layer.INCR                           = PPE_ARBURST_INCR;
+    PPE_Result_Layer.AXCACHE                        = 1;
+    PPE_Result_Layer.MAX_AXLEN_LOG                  = PPE_MAX_AXLEN_127;
+    PPE_Result_Layer.PRIOR                          = 0;
+    PPE_Result_Layer.byte_swap                      = PPE_NO_SWAP;
+    PPE_Result_Layer.handshake_mode                 = PPE_DMA_SW_HANDSHAKE;
+    PPE_Result_Layer.polarity                       = PPE_POLARITY_HIGH;
+    PPE_Result_Layer.handshake_en                   = DISABLE;
+    PPE_Result_Layer.handshake_msize                = PPE_MSIZE_1024;
+    PPE_Result_Layer.hw_index                       = 0;
+    PPE_InitResultLayer(&PPE_Result_Layer);
+
+    /*initial PPE global*/
+    PPE_Init_User.function                          =   PPE_FUNCTION_ALPHA_BLEND;
+    PPE_Init_User.blend_layer_num                   = 2;
     PPE_Init(&PPE_Init_User);
     PPE_Secure(ENABLE);  /*secure for all channel*/
     /*enable PPE*/

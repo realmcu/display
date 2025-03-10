@@ -34,12 +34,14 @@ if GetDepend(['CONFIG_REALTEK_RAMLESS_QSPI']):
 
 if  GetDepend(['CONFIG_REALTEK_IDU']) :
     src += ['hardware/idu/src/device/rtl_common/rtl_idu.c']
-    src += ['hardware/idu/src/hal/rtl/hal_idu.c']
     src += ['hardware/idu/src/device/' + RTK_IC_TYPE + '/rtl_idu_int.c']
 
 if GetDepend(['CONFIG_REALTEK_SEGCOM']):
     src += ['hardware/segcom/device/src/rtl_common/rtl876x_segcom.c']
 
+
+if GetDepend(['CONFIG_REALTEK_BUILD_PPE']):
+    src += ['bindings/honeygui/hardware_engine/PPE/' + RTK_IC_TYPE + '/acc_ppe.c']
 
 include_path += [cwd,
         cwd + '/hardware/lcdc/inc',
