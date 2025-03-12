@@ -4,8 +4,39 @@
 menu "Realtek Display Driver"
 
 config REALTEK_DISPLAY
-	bool "Enable Realtek Display Driver" 
-	default y
-	help
-		This config for realtek display driver
+    bool "Enable Realtek Display Driver"
+    default n
+    help
+        This config for realtek display driver
+
+config REALTEK_DISPLAY_ENABLE_IDU
+    bool "Enable Realtek IDU"
+    depends on REALTEK_DISPLAY
+    default n
+
+config REALTEK_DISPLAY_ENABLE_JDI
+    bool "Enable Realtek JDI"
+    depends on REALTEK_DISPLAY
+    default n
+
+config REALTEK_DISPLAY_ENABLE_LCDC
+    bool "Enable Realtek LCDC"
+    depends on REALTEK_DISPLAY
+    default n
+
+config REALTEK_DISPLAY_ENABLE_MIPI
+    bool "Enable Realtek MIPI"
+    depends on REALTEK_DISPLAY
+    default n
+
+config REALTEK_DISPLAY_ENABLE_PPE
+    bool "Enable Realtek PPE"
+    depends on REALTEK_DISPLAY
+    default n
+
+config REALTEK_DISPLAY_ENABLE_SEGCOM
+    bool "Enable Realtek SEGCOM"
+    depends on REALTEK_DISPLAY
+    default n
+
 endmenu
