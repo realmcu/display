@@ -640,7 +640,7 @@ IDU_ERROR IDU_Decode(uint8_t *file, IDU_decode_range *range, IDU_DMA_config *dma
 }
 
 IDU_ERROR IDU_Decode_With_Interrupt(uint8_t *file, IDU_decode_range *range, IDU_DMA_config *dma_cfg,
-                                    IDU_INT_CFG_t int_cfg)
+                                    IDU_interrupt_config int_cfg)
 {
     IDU_ERROR err = IDU_SUCCESS;
     uint32_t decompress_start_line;
@@ -946,7 +946,7 @@ IDU_ERROR IDU_Decode_With_Interrupt(uint8_t *file, IDU_decode_range *range, IDU_
     GDMA_Cmd(dma_cfg->RX_DMA_channel_num, ENABLE);
     GDMA_Cmd(dma_cfg->TX_DMA_channel_num, ENABLE);
 
-    if (int_cfg.b.idu_decompress_finish_int)
+    if (int_cfg.idu_decompress_finish_int)
     {
         IDU_ClearINTPendingBit(IDU_DECOMPRESS_FINISH_INT);
         IDU_INTConfig(IDU_DECOMPRESS_FINISH_INT, ENABLE);
@@ -958,7 +958,7 @@ IDU_ERROR IDU_Decode_With_Interrupt(uint8_t *file, IDU_decode_range *range, IDU_
         IDU_INTConfig(IDU_DECOMPRESS_FINISH_INT, DISABLE);
         IDU_MaskINTConfig(IDU_DECOMPRESS_FINISH_INT, ENABLE);
     }
-    if (int_cfg.b.idu_decompress_error_int)
+    if (int_cfg.idu_decompress_error_int)
     {
         IDU_ClearINTPendingBit(IDU_DECOMPRESS_ERROR_INT);
         IDU_INTConfig(IDU_DECOMPRESS_ERROR_INT, ENABLE);
@@ -969,31 +969,31 @@ IDU_ERROR IDU_Decode_With_Interrupt(uint8_t *file, IDU_decode_range *range, IDU_
         IDU_INTConfig(IDU_DECOMPRESS_ERROR_INT, DISABLE);
         IDU_MaskINTConfig(IDU_DECOMPRESS_ERROR_INT, ENABLE);
     }
-    if (int_cfg.b.line_decompress_finish_int)
+    if (int_cfg.line_decompress_finish_int)
     {
         IDU_ClearINTPendingBit(IDU_LINE_DECOMPRESS_FINISH_INT);
         IDU_INTConfig(IDU_LINE_DECOMPRESS_FINISH_INT, ENABLE);
         IDU_MaskINTConfig(IDU_LINE_DECOMPRESS_FINISH_INT, DISABLE);
     }
-    if (int_cfg.b.rx_fifo_overflow_int)
+    if (int_cfg.rx_fifo_overflow_int)
     {
         IDU_ClearINTPendingBit(IDU_RX_FIFO_OVERFLOW_INT);
         IDU_INTConfig(IDU_RX_FIFO_OVERFLOW_INT, ENABLE);
         IDU_MaskINTConfig(IDU_RX_FIFO_OVERFLOW_INT, DISABLE);
     }
-    if (int_cfg.b.rx_fifo_threshold_int)
+    if (int_cfg.rx_fifo_threshold_int)
     {
         IDU_ClearINTPendingBit(IDU_RX_FIFO_THRESHOLD_INT);
         IDU_INTConfig(IDU_RX_FIFO_THRESHOLD_INT, ENABLE);
         IDU_MaskINTConfig(IDU_RX_FIFO_THRESHOLD_INT, DISABLE);
     }
-    if (int_cfg.b.tx_fifo_threshold_int)
+    if (int_cfg.tx_fifo_threshold_int)
     {
         IDU_ClearINTPendingBit(IDU_TX_FIFO_THRESHOLD_INT);
         IDU_INTConfig(IDU_TX_FIFO_THRESHOLD_INT, ENABLE);
         IDU_MaskINTConfig(IDU_TX_FIFO_THRESHOLD_INT, DISABLE);
     }
-    if (int_cfg.b.tx_fifo_underflow_int)
+    if (int_cfg.tx_fifo_underflow_int)
     {
         IDU_ClearINTPendingBit(IDU_TX_FIFO_UNDERFLOW_INT);
         IDU_INTConfig(IDU_TX_FIFO_UNDERFLOW_INT, ENABLE);

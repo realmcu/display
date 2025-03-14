@@ -55,25 +55,27 @@ extern "C" {
 /*============================================================================*
  *                         Constants
  *============================================================================*/
-/** \defgroup IDU_ALGORITHM Supported algorithms in IDU
+/** \defgroup IDU_ALGORITHM IDU Compress Algorithm
   * \{
   * \ingroup  IDU_Exported_Constants
   */
 typedef enum
 {
-    IDU_RLE = 0x00,                         /*!< The encoded image uses Run Length Encode algorithm. */
-    IDU_FASTLZ = 0x01,                      /*!< The encoded image uses FastLZ compression algorithm. */
-    IDU_YUV_SAMPLE_BLUR_FASTLZ = 0x02,      /*!< The image is sampled in the YUV color space with a 0-3 bit blur, and then encoded using the FastLZ compression algorithm. */
+    IDU_RLE = 0x00,                         /*!< The compressed image uses Run Length Encode algorithm. */
+    IDU_FASTLZ = 0x01,                      /*!< The compressed image uses FastLZ compression algorithm. */
+    IDU_YUV_SAMPLE_BLUR_FASTLZ = 0x02,      /*!< The image is sampled in the YUV color space with a 0-3 bit blur, and then compressed using the FastLZ compression algorithm. */
     IDU_YUV_SAMPLE_BLUR = 0x03,             /*!< The image is sampled in the YUV color space with a 0-3 bit blur. */
 } IDU_ALGORITHM;
 
-#define IS_IDU_ALGORITHM(ALGO)             (((ALGO) == IDU_RLE) || ((ALGO) == IDU_FASTLZ)      ||\
-                                            ((ALGO) == IDU_YUV_SAMPLE_BLUR_FASTLZ) || ((ALGO) == IDU_YUV_SAMPLE_BLUR))
+#define IS_IDU_ALGORITHM(ALGO)       (((ALGO) == IDU_RLE) || \
+                                      ((ALGO) == IDU_FASTLZ) || \
+                                      ((ALGO) == IDU_YUV_SAMPLE_BLUR_FASTLZ) || \
+                                      ((ALGO) == IDU_YUV_SAMPLE_BLUR))
 /** End of IDU_ALGORITHM
   * \}
   */
 
-/** \defgroup IDU_YUV_SAMPLE_TYPE Supported YUV sample methods in IDU
+/** \defgroup IDU_YUV_SAMPLE_TYPE IDU YUV Sample Type
   * \{
   * \ingroup  IDU_Exported_Constants
   */
@@ -84,32 +86,35 @@ typedef enum
     IDU_YUV411_SAMPLE = 0x02,       /*!< YUV411 sampling, data storing format: [Y0 U0 Y1 Y2 V2 Y3]. */
 } IDU_YUV_SAMPLE_TYPE;
 
-#define IS_IDU_YUV_TYPE(TYPE)             (((TYPE) == IDU_YUV444_SAMPLE) || ((TYPE) == IDU_YUV422_SAMPLE) ||\
-                                           ((TYPE) == IDU_YUV411_SAMPLE))
+#define IS_IDU_YUV_TYPE(TYPE)        (((TYPE) == IDU_YUV444_SAMPLE) || \
+                                      ((TYPE) == IDU_YUV422_SAMPLE) || \
+                                      ((TYPE) == IDU_YUV411_SAMPLE))
 
 /** End of IDU_YUV_SAMPLE_TYPE
   * \}
   */
 
-/** \defgroup IDU_YUV_BLUR_BIT Throw away 0-3 bits after YUV sampling.
+/** \defgroup IDU_YUV_BLUR_BIT IDU Blur Bit
   * \{
   * \ingroup  IDU_Exported_Constants
   */
 typedef enum
 {
-    IDU_YUV_BLUR_0BIT = 0x00,       /*!< The encoded image keeps all data after YUV sampling. */
-    IDU_YUV_BLUR_1BIT = 0x01,       /*!< The encoded image throws away 1 least significant bit of each byte after YUV sampling. */
-    IDU_YUV_BLUR_2BIT = 0x02,       /*!< The encoded image throws away 2 least significant bit of each byte after YUV sampling. */
-    IDU_YUV_BLUR_4BIT = 0x03,       /*!< The encoded image throws away 3 least significant bit of each byte after YUV sampling. */
+    IDU_YUV_BLUR_0BIT = 0x00,       /*!< The compressed image keeps all data after YUV sampling. */
+    IDU_YUV_BLUR_1BIT = 0x01,       /*!< The compressed image throws away 1 least significant bit of each byte after YUV sampling. */
+    IDU_YUV_BLUR_2BIT = 0x02,       /*!< The compressed image throws away 2 least significant bits of each byte after YUV sampling. */
+    IDU_YUV_BLUR_4BIT = 0x03,       /*!< The compressed image throws away 4 least significant bits of each byte after YUV sampling. */
 } IDU_YUV_BLUR_BIT;
 
-#define IS_IDU_YUB_BLUR_BIT(NUM)          (((NUM) == IDU_YUV_BLUR_0BIT) || ((NUM) == IDU_YUV_BLUR_1BIT) ||\
-                                           ((NUM) == IDU_YUV_BLUR_2BIT) || ((NUM) == IDU_YUV_BLUR_4BIT))
+#define IS_IDU_YUB_BLUR_BIT(NUM)     (((NUM) == IDU_YUV_BLUR_0BIT) || \
+                                      ((NUM) == IDU_YUV_BLUR_1BIT) || \
+                                      ((NUM) == IDU_YUV_BLUR_2BIT) || \
+                                      ((NUM) == IDU_YUV_BLUR_4BIT))
 /** End of IDU_YUV_BLUR_BIT
   * \}
   */
 
-/** \defgroup IDU_THROW_AWAY_SIZE IDU throws away 0-3 bytes at the head of input data.
+/** \defgroup IDU_THROW_AWAY_SIZE IDU Throw Away Byte
   * \{
   * \ingroup  IDU_Exported_Constants
   */
@@ -121,13 +126,15 @@ typedef enum
     IDU_THROW_AWAY_3BYTE = 0x03,    /*!< IDU throws away 3 bytes at the head of input data. */
 } IDU_THROW_AWAY_SIZE;
 
-#define IS_IDU_THROW_AWAY_SIZE(SIZE)     (SIZE == IDU_THROW_AWAY_0BYTE || SIZE == IDU_THROW_AWAY_1BYTE||\
-                                          SIZE == IDU_THROW_AWAY_2BYTE || SIZE == IDU_THROW_AWAY_3BYTE)
+#define IS_IDU_THROW_AWAY_SIZE(SIZE) (((SIZE) == IDU_THROW_AWAY_0BYTE) || \
+                                      ((SIZE) == IDU_THROW_AWAY_1BYTE) || \
+                                      ((SIZE) == IDU_THROW_AWAY_2BYTE) || \
+                                      ((SIZE) == IDU_THROW_AWAY_3BYTE))
 /** End of IDU_THROW_AWAY_SIZE
   * \}
   */
 
-/** \defgroup IDU_RLE_RUNLENGTH_SIZE Run length size in RLE compress.
+/** \defgroup IDU_RLE_RUNLENGTH_SIZE IDU RLE Run Length
   * \{
   * \ingroup  IDU_Exported_Constants
   */
@@ -144,7 +151,7 @@ typedef enum
   * \}
   */
 
-/** \defgroup IDU_ERROR Error code reported from IDU driver.
+/** \defgroup IDU_ERROR IDU Error Code
   * \{
   * \ingroup  IDU_Exported_Constants
   */
@@ -157,7 +164,7 @@ typedef enum
     IDU_ERROR_END_EXCEED_BOUNDARY,      /*!< Decode end line or column exceeds boundary. */
     IDU_ERROR_START_LARGER_THAN_END,    /*!< Decode start line or column exceeds end line or column. */
     IDU_ERROR_INVALID_PARAM,            /*!< Parameters in DMA setting are invalid. */
-    IDU_ERROR_FILE_INVALID,             /*!< Parameters in input encoded file setting are invalid. */
+    IDU_ERROR_FILE_INVALID,             /*!< Parameters in input compressed file setting are invalid. */
     IDU_ERROR_LINE_NOT_ALIGNED,         /*!< Line width in bytes must be 4-byte aligned when target stride is larger than line width. */
 } IDU_ERROR;
 /** End of IDU_ERROR
@@ -165,7 +172,7 @@ typedef enum
   */
 
 /**
- * \defgroup    IDU_Interrupts_Definition IDU Interrupts Definition
+ * \defgroup    IDU_Interrupts_Definition IDU Interrupt
  * \{
  * \ingroup     IDU_Exported_Constants
  */
@@ -180,12 +187,12 @@ typedef enum
     IDU_DECOMPRESS_ERROR_INT,           /*!< Triggered when input data error is detected. */
 } IDU_INTERRUPT_TYPE;
 
-#define IS_IDU_INT(INT)              (((INT) == IDU_DECOMPRESS_FINISH_INT)         || \
-                                      ((INT) == IDU_LINE_DECOMPRESS_FINISH_INT)  || \
-                                      ((INT) == IDU_RX_FIFO_THRESHOLD_INT)         || \
-                                      ((INT) == IDU_RX_FIFO_OVERFLOW_INT)  || \
-                                      ((INT) == IDU_TX_FIFO_THRESHOLD_INT)      || \
-                                      ((INT) == IDU_TX_FIFO_UNDERFLOW_INT)         || \
+#define IS_IDU_INT(INT)              (((INT) == IDU_DECOMPRESS_FINISH_INT) || \
+                                      ((INT) == IDU_LINE_DECOMPRESS_FINISH_INT) || \
+                                      ((INT) == IDU_RX_FIFO_THRESHOLD_INT) || \
+                                      ((INT) == IDU_RX_FIFO_OVERFLOW_INT) || \
+                                      ((INT) == IDU_TX_FIFO_THRESHOLD_INT) || \
+                                      ((INT) == IDU_TX_FIFO_UNDERFLOW_INT) || \
                                       ((INT) == IDU_DECOMPRESS_ERROR_INT))
 /** End of IDU_Interrupts_Definition
   * \}
@@ -204,7 +211,7 @@ typedef enum
   */
 
 /**
- * \defgroup    IDU_FILE_HEADER Structure of IDU encoded file header
+ * \defgroup    IDU_FILE_HEADER IDU_file_header
  * \{
  * \ingroup     IDU_Exported_Types
  */
@@ -212,26 +219,24 @@ typedef struct
 {
     struct
     {
-        uint8_t algorithm: 2;       /*!< Encoded algorithm of input file,
-                                        This parameter can be a value of @ref IDU_ALGORITHM . */
-uint8_t feature_1:
-        2;       /*!< When input file is RLE encoded, this parameter can be a value of @ref IDU_RLE_RUNLENGTH_SIZE .
-                                        When input file is YUV sampled, this parameter can be a value of @ref IDU_YUV_SAMPLE_TYPE . */
-uint8_t feature_2:
-        2;       /*!< When input file is RLE encoded, this parameter can be a value of @ref IDU_RLE_RUNLENGTH_SIZE .
-                                        When input file is YUV sampled, this parameter can be a value of @ref IDU_YUV_BLUR_BIT . */
-        uint8_t pixel_bytes: 2;     /*!< Length of decode pixel, can be 1-4 bytes. */
-    } algorithm_type;
+        uint8_t algorithm: 2;       /*!< Compression algorithm of input file,
+                                        This parameter can be a value of @ref IDU_ALGORITHM. */
+        uint8_t feature_1: 2;       /*!< For RLE: Run length size, value of @ref IDU_RLE_RUNLENGTH_SIZE.
+                                        For YUV: Sample type, value of @ref IDU_YUV_SAMPLE_TYPE. */
+        uint8_t feature_2: 2;       /*!< For RLE: Run length size, value of @ref IDU_RLE_RUNLENGTH_SIZE.
+                                        For YUV: Blur bit, value of @ref IDU_YUV_BLUR_BIT. */
+        uint8_t pixel_bytes: 2;     /*!< Size of pixel, can be 1-4 bytes. */
+    } algorithm_type;               /*!< Compressing information. */
     uint8_t reserved[3];            /*!< Reserved for future use. */
-    uint32_t raw_pic_width;         /*!< Width of encoded picture in pixel. */
-    uint32_t raw_pic_height;        /*!< Height of encoded picture in pixel. */
+    uint32_t raw_pic_width;         /*!< Width of compressed picture in pixel. */
+    uint32_t raw_pic_height;        /*!< Height of compressed picture in pixel. */
 } IDU_file_header;
 /** End of IDU_FILE_HEADER
   * \}
   */
 
 /**
- * \defgroup    IDU_DECODE_RANGE Structure that stores information of decode range
+ * \defgroup    IDU_DECODE_RANGE IDU_decode_range
  * \{
  * \ingroup     IDU_Exported_Types
  */
@@ -248,7 +253,7 @@ typedef struct
   */
 
 /**
- * \defgroup    IDU_DMA_CONFIG Structure that stores information of decode range
+ * \defgroup    IDU_DMA_CONFIG IDU_DMA_config
  * \{
  * \ingroup     IDU_Exported_Types
  */
@@ -265,26 +270,20 @@ typedef struct
   */
 
 /**
- * \defgroup    IDU_INT_CONFIG Stores selected interrupt
+ * \defgroup    IDU_INT_CONFIG IDU_interrupt_config
  * \{
  * \ingroup     IDU_Exported_Types
  */
-typedef union
+typedef struct
 {
-    uint32_t d32;
-    uint8_t d8[4];
-    struct
-    {
-        __IO uint32_t idu_decompress_error_int: 1;   /*!< Operate on \ref IDU_DECOMPRESS_ERROR_INT. */
-        __IO uint32_t tx_fifo_underflow_int: 1;      /*!< Operate on \ref IDU_TX_FIFO_UNDERFLOW_INT. */
-        __IO uint32_t tx_fifo_threshold_int: 1;      /*!< Operate on \ref IDU_TX_FIFO_THRESHOLD_INT. */
-        __IO uint32_t rx_fifo_overflow_int: 1;       /*!< Operate on \ref IDU_RX_FIFO_OVERFLOW_INT. */
-        __IO uint32_t rx_fifo_threshold_int: 1;      /*!< Operate on \ref IDU_RX_FIFO_THRESHOLD_INT. */
-        __IO uint32_t line_decompress_finish_int: 1; /*!< Operate on \ref IDU_LINE_DECOMPRESS_FINISH_INT. */
-        __IO uint32_t idu_decompress_finish_int: 1;  /*!< Operate on \ref IDU_DECOMPRESS_FINISH_INT. */
-        __I uint32_t reserved_0: 25;                 /*!< Reserved field. */
-    } b;
-} IDU_INT_CFG_t;
+    uint32_t idu_decompress_error_int: 1;   /*!< Operate on \ref IDU_DECOMPRESS_ERROR_INT. */
+    uint32_t tx_fifo_underflow_int: 1;      /*!< Operate on \ref IDU_TX_FIFO_UNDERFLOW_INT. */
+    uint32_t tx_fifo_threshold_int: 1;      /*!< Operate on \ref IDU_TX_FIFO_THRESHOLD_INT. */
+    uint32_t rx_fifo_overflow_int: 1;       /*!< Operate on \ref IDU_RX_FIFO_OVERFLOW_INT. */
+    uint32_t rx_fifo_threshold_int: 1;      /*!< Operate on \ref IDU_RX_FIFO_THRESHOLD_INT. */
+    uint32_t line_decompress_finish_int: 1; /*!< Operate on \ref IDU_LINE_DECOMPRESS_FINISH_INT. */
+    uint32_t idu_decompress_finish_int: 1;  /*!< Operate on \ref IDU_DECOMPRESS_FINISH_INT. */
+} IDU_interrupt_config;
 /** End of IDU_INT_CONFIG
   * \}
   */
@@ -294,8 +293,8 @@ typedef union
  * \{
  * \ingroup     IDU_Exported_Constants
  */
-#define IDU_TX_FIFO_WIDTH             32
-#define IDU_RX_FIFO_WIDTH             32
+#define IDU_TX_FIFO_WIDTH             32      /*!< Width of IDU TX FIFO in bits */
+#define IDU_RX_FIFO_WIDTH             32      /*!< Width of IDU RX FIFO in bits */
 
 /** End of IDU_FIFO_Width
   * \}
@@ -306,8 +305,8 @@ typedef union
  * \{
  * \ingroup     IDU_Exported_Constants
  */
-#define IDU_TX_FIFO_DEPTH             16
-#define IDU_RX_FIFO_DEPTH             16
+#define IDU_TX_FIFO_DEPTH             16       /*!< Depth of IDU TX FIFO in words */
+#define IDU_RX_FIFO_DEPTH             16       /*!< Depth of IDU RX FIFO in words */
 
 /** End of IDU_FIFO_Depth
   * \}
@@ -322,15 +321,16 @@ typedef union
  *                         Functions
  *============================================================================*/
 /** \defgroup IDU_Exported_Functions IDU Exported Functions
-  * \brief
+  * \brief    Functions for IDU initialization, configuration and operation
   * \{
   */
 
 /**
- * \brief  Enable/Disable IDU interrupt
- * \param[in] Interrupt          Specified interrupt type from @ref IDU_INTERRUPT_TYPE.
- * \param[in] state              NewState: New state of the IDU interrupt.
- *            This parameter can be: ENABLE or DISABLE.
+ * \brief  Enable/Disable IDU interrupt.
+ * \param[in] Interrupt: Specified interrupt type from @ref IDU_INTERRUPT_TYPE.
+ * \param[in] NewState: New state of the IDU interrupt.
+ *            \arg ENABLE: Enable specified interrupt.
+ *            \arg DISABLE: Disable specified interrupt.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -342,9 +342,11 @@ typedef union
 void IDU_INTConfig(IDU_INTERRUPT_TYPE Interrupt, FunctionalState NewState);
 
 /**
- * \brief  Get interrupt status of IDU
- * \param[in] Interrupt          Specified interrupt type from @ref IDU_INTERRUPT_TYPE.
- *
+ * \brief  Get interrupt status of IDU.
+ * \param[in] Interrupt: Specified interrupt type from @ref IDU_INTERRUPT_TYPE.
+ * \return Interrupt status
+ * \retval - SET: Interrupt has been triggered.
+ * \retval - RESET: Interrupt has not been triggered yet.
  * <b>Example usage</b>
  * \code{.c}
     void demo_code(void){
@@ -355,10 +357,11 @@ void IDU_INTConfig(IDU_INTERRUPT_TYPE Interrupt, FunctionalState NewState);
 ITStatus IDU_GetINTStatus(IDU_INTERRUPT_TYPE Interrupt);
 
 /**
- * \brief  Mask or unmask specified IDU interrupt
- * \param[in] Interrupt          Specified interrupt type from @ref IDU_INTERRUPT_TYPE.
- * \param[in] state              NewState: Mask or unmask the IDU interrupt.
- *            This parameter can be: ENABLE or DISABLE.
+ * \brief  Mask or unmask specified IDU interrupt.
+ * \param[in] Interrupt: Specified interrupt type from @ref IDU_INTERRUPT_TYPE.
+ * \param[in] NewState: Mask or unmask the IDU interrupt.
+ *            \arg ENABLE: Mask specified interrupt.
+ *            \arg DISABLE: Unmask specified interrupt.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -371,8 +374,8 @@ ITStatus IDU_GetINTStatus(IDU_INTERRUPT_TYPE Interrupt);
 void IDU_MaskINTConfig(IDU_INTERRUPT_TYPE Interrupt, FunctionalState NewState);
 
 /**
- * \brief  Clear status of specified IDU interrupt
- * \param[in] Interrupt          Specified interrupt type from @ref IDU_INTERRUPT_TYPE.
+ * \brief  Clear status of specified IDU interrupt.
+ * \param[in] Interrupt: Specified interrupt type from @ref IDU_INTERRUPT_TYPE.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -384,87 +387,78 @@ void IDU_MaskINTConfig(IDU_INTERRUPT_TYPE Interrupt, FunctionalState NewState);
 void IDU_ClearINTPendingBit(IDU_INTERRUPT_TYPE Interrupt);
 
 /**
- * \brief  IDU decode function, decode file from memory/flash
- * \param[in] file          address of source.
- * \param[in] range         decode range, refer to @ref IDU_DECODE_RANGE.
- * \param[in] dma_cfg       determine which DMA channel is selected, refer to @ref IDU_DMA_CONFIG.
- * \return operation result
- * \retval IDU_SUCCESS    Operation success.
- * \retval others           Operation failure.
+ * \brief  IDU decode function, decode file from memory/flash.
+ * \param[in] file: Pointer to header of compressed image.
+ * \param[in] range: Decompress range, refer to @ref IDU_DECODE_RANGE.
+ * \param[in] dma_cfg: Determine which DMA channel is selected, refer to @ref IDU_DMA_CONFIG.
+ * \return Operation result
+ * \retval - IDU_SUCCESS: Operation success.
+ * \retval - Others: Operation failure, cause refers to @ref IDU_ERROR.
  *
  * <b>Example usage</b>
  * \code{.c}
     void demo_code(void){
         RCC_PeriphClockCmd(APBPeriph_IDU, APBPeriph_IDU_CLOCK, ENABLE);
-        IDU_file_header* header = ( IDU_file_header*)file_data;
-        IDU_decode_range range = {0, header->raw_pic_height - 1, 0, header->raw_pic_width - 1};
-        range.stride = 204;
+        IDU_file_header* header = (IDU_file_header*)file_data;
+        IDU_decode_range range = {0, header->raw_pic_height - 1, 0, header->raw_pic_width - 1, 204};
         IDU_DMA_config dma_cfg;
         dma_cfg.output_buf = (uint32_t*)buf;
         dma_cfg.RX_DMA_channel_num = 0;
         dma_cfg.TX_DMA_channel_num = 1;
-        IDU_Decode(file_data, range, dma_cfg);
+        IDU_ERROR err = IDU_Decode(file_data, &range, &dma_cfg);
     }
  * \endcode
  */
 IDU_ERROR IDU_Decode(uint8_t *file, IDU_decode_range *range, IDU_DMA_config *dma_cfg);
 
 /**
- * \brief  IDU decode function with interrupt, decode file from memory/flash
- * \param[in] file          address of source.
- * \param[in] range         decode range, refer to @ref IDU_DECODE_RANGE.
- * \param[in] dma_cfg       determine which DMA channel is selected, refer to @ref IDU_DMA_CONFIG.
- * \param[in] int_cfg       determine which DMA channel is selected, refer to @ref IDU_DMA_CONFIG.
- * \return operation result
- * \retval IDU_SUCCESS    Operation started.
- * \retval others           Operation aborted.
+ * \brief  IDU decode function with interrupt, decode file from memory/flash.
+ * \param[in] file: Pointer to header of compressed image.
+ * \param[in] range: Decompress range, refer to @ref IDU_DECODE_RANGE.
+ * \param[in] dma_cfg: Determine which DMA channel is selected, refer to @ref IDU_DMA_CONFIG.
+ * \param[in] int_cfg: Determine which interrupts are enabled, refer to @ref IDU_INT_CONFIG.
+ * \return Operation result
+ * \retval - IDU_SUCCESS: Operation success.
+ * \retval - Others: Operation failure, cause refers to @ref IDU_ERROR.
  *
  * <b>Example usage</b>
  * \code{.c}
     void IDU_Handler(void){
-        if(IDU_GetINTStatus(IDU_LINE_DECOMPRESS_FINISH_INT) == SET){
-            IDU_ClearINTPendingBit(IDU_LINE_DECOMPRESS_FINISH_INT);
-            DBG_DIRECT("IDU_IRQHandler line = %d\n",__LINE__);
-            for(int i = 0; i < sizeof(decode_file_data); i++){
-                if(decode_file_data[i] != buf[i]){
-
-                    DBG_DIRECT("Decode Error at raw[%d] %x || out[%d] %x ",i, decode_file_data[i], i ,buf[i]);
-                }
-            }
-            DBG_DIRECT("Decompress start bit is : %d", IDU->IDU_CTL0 & BIT0);
+        if(IDU_GetINTStatus(IDU_DECOMPRESS_FINISH_INT) == SET){
+            IDU_ClearINTPendingBit(IDU_DECOMPRESS_FINISH_INT);
+            //User operation
         }
         if(IDU_GetINTStatus(IDU_DECOMPRESS_ERROR_INT) == SET){
             IDU_ClearINTPendingBit(IDU_DECOMPRESS_ERROR_INT);
-            DBG_DIRECT("IDU_IRQHandler line = %d\n",__LINE__);
+            //User operation
         }
     }
     void demo_code(void){
         RCC_PeriphClockCmd(APBPeriph_IDU, APBPeriph_IDU_CLOCK, ENABLE);
-        IDU_file_header* header = ( IDU_file_header*)file_data;
-        DBG_DIRECT("algo = %d, blur %d, YUV %d", header->algorithm_type.algorithm, header->algorithm_type.feature_2, header->algorithm_type.feature_1);
-        IDU_decode_range range = {0, header->raw_pic_height - 1, 0, header->raw_pic_width - 1};
+        IDU_file_header* header = (IDU_file_header*)file_data;
+        IDU_decode_range range = {0, header->raw_pic_height - 1, 0, header->raw_pic_width - 1, 0};
         IDU_DMA_config dma_cfg;
         dma_cfg.output_buf = (uint32_t*)buf;
         dma_cfg.RX_DMA_channel_num = 0;
         dma_cfg.TX_DMA_channel_num = 1;
-        IDU_INT_CFG_t int_cfg = {.d32 = 0};
-        int_cfg.b.idu_decompress_finish_int = 1;
-        int_cfg.b.idu_decompress_error_int = 1;
-        IDU_Decode_With_Interrupt(file_data, range, dma_cfg, int_cfg);
+        IDU_interrupt_config int_cfg = {0};
+        int_cfg.idu_decompress_finish_int = 1;
+        int_cfg.idu_decompress_error_int = 1;
+        IDU_ERROR err = IDU_Decode_With_Interrupt(file_data, &range, &dma_cfg, int_cfg);
     }
  * \endcode
  */
 IDU_ERROR IDU_Decode_With_Interrupt(uint8_t *file, IDU_decode_range *range, IDU_DMA_config *dma_cfg,
-                                    IDU_INT_CFG_t int_cfg);
+                                    IDU_interrupt_config int_cfg);
 
 
 /**
- * \brief  Get the start address of certain line in compressed file
- * \param[in] compressed_start_address          start address of entire compressed file.
- * \param[in] line_number                       specified line number
+ * \brief  Get the start address of certain line in compressed file.
+ * \param[in] compressed_start_address: start address of entire compressed file.
+ * \param[in] line_number: specified line number
  * \return start address of specified line
- * \retval 0                Invalid line number.
- * \retval others           Valid address.
+ * \retval - 0: Invalid line number.
+ * \retval - others: Valid address.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -478,16 +472,16 @@ uint32_t IDU_Get_Line_Start_Address(uint32_t compressed_start_address,
                                     uint32_t line_number);
 
 /**
- * \brief  Get the pixel size of compressed image
- * \param[in] file                            pointer to compressed data.
- * \return pixel size of compressed image
- * \retval 0xFF             Invalid header.
- * \retval others           Actual pixel size.
+ * \brief  Get the pixel size of compressed image.
+ * \param[in] file: Pointer to header of compressed image.
+ * \return Pixel size of compressed image
+ * \retval - 0xFF: Invalid header.
+ * \retval - Others: Actual pixel size.
  *
  * <b>Example usage</b>
  * \code{.c}
     void demo_code(void){
-        IDU_file_header* file = (IDU_file_header)SAMPLE_FILE;
+        IDU_file_header* file = (IDU_file_header*)SAMPLE_FILE;
         uint8_t pixel_size = IDU_Get_Pixel_Size(file);
         uint32_t decompressed_image_size = file->raw_pic_width * file->raw_pic_height * pixel_size;
     }
