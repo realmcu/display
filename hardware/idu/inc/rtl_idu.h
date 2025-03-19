@@ -55,10 +55,34 @@ extern "C" {
 /*============================================================================*
  *                         Constants
  *============================================================================*/
-/** \defgroup IDU_ALGORITHM IDU Compress Algorithm
-  * \{
-  * \ingroup  IDU_Exported_Constants
+/**
+ * \defgroup    IDU_FIFO_Width IDU FIFO Width
+ * \{
+ * \ingroup     IDU_Exported_Constants
+ */
+#define IDU_TX_FIFO_WIDTH             32      /*!< Width of IDU TX FIFO in bits */
+#define IDU_RX_FIFO_WIDTH             32      /*!< Width of IDU RX FIFO in bits */
+
+/** End of IDU_FIFO_Width
+  * \}
   */
+
+/**
+ * \defgroup    IDU_FIFO_Depth IDU FIFO Depth
+ * \{
+ * \ingroup     IDU_Exported_Constants
+ */
+#define IDU_TX_FIFO_DEPTH             16       /*!< Depth of IDU TX FIFO in words */
+#define IDU_RX_FIFO_DEPTH             16       /*!< Depth of IDU RX FIFO in words */
+
+/** End of IDU_FIFO_Depth
+  * \}
+  */
+
+/** \defgroup IDU_ALGORITHM IDU Compress Algorithm
+ * \{
+ * \ingroup  IDU_Exported_Constants
+ */
 typedef enum
 {
     IDU_RLE = 0x00,                         /*!< The compressed image uses Run Length Encode algorithm. */
@@ -285,30 +309,6 @@ typedef struct
     uint32_t idu_decompress_finish_int: 1;  /*!< Operate on \ref IDU_DECOMPRESS_FINISH_INT. */
 } IDU_interrupt_config;
 /** End of IDU_INT_CONFIG
-  * \}
-  */
-
-/**
- * \defgroup    IDU_FIFO_Width IDU FIFO Width
- * \{
- * \ingroup     IDU_Exported_Constants
- */
-#define IDU_TX_FIFO_WIDTH             32      /*!< Width of IDU TX FIFO in bits */
-#define IDU_RX_FIFO_WIDTH             32      /*!< Width of IDU RX FIFO in bits */
-
-/** End of IDU_FIFO_Width
-  * \}
-  */
-
-/**
- * \defgroup    IDU_FIFO_Depth IDU FIFO Depth
- * \{
- * \ingroup     IDU_Exported_Constants
- */
-#define IDU_TX_FIFO_DEPTH             16       /*!< Depth of IDU TX FIFO in words */
-#define IDU_RX_FIFO_DEPTH             16       /*!< Depth of IDU RX FIFO in words */
-
-/** End of IDU_FIFO_Depth
   * \}
   */
 

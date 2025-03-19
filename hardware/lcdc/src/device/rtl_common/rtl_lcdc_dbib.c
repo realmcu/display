@@ -22,7 +22,6 @@
 void DBIB_Init(LCDC_DBIBCfgTypeDef *DBIBCfg)
 {
     /* Check the parameters */
-    assert_param(IS_DBIB_CLOCK_DIV(DBIBCfg->DBIB_SPEED_SEL));
     assert_param(IS_DBIB_GUARD_TIME_CMD(DBIBCfg->DBIB_InitGuardTimeCmd));
     assert_param(IS_DBIB_GUARD_TIME(DBIBCfg->DBIB_InitGuardTime));
     assert_param(IS_DBIB_GUARD_TIME_CMD(DBIBCfg->DBIB_CmdGuardTimeCmd));
@@ -33,7 +32,7 @@ void DBIB_Init(LCDC_DBIBCfgTypeDef *DBIBCfg)
 
     /* Configure clock divider, bypass guard time*/
     DBIB_CTRL0_TypeDef dbib_reg_0x00 = {.d32 = DBIB->DBIB_CTRL0};
-    dbib_reg_0x00.b.speed_sel = DBIBCfg->DBIB_SPEED_SEL;
+    dbib_reg_0x00.b.speed_sel = DBIBCfg->DBIB_Clock_Divider - 1;
     dbib_reg_0x00.b.init_guard_time = DBIBCfg->DBIB_InitGuardTimeCmd;
     dbib_reg_0x00.b.cmd_guard_time = DBIBCfg->DBIB_CmdGuardTime;
     dbib_reg_0x00.b.guard_time = DBIBCfg->DBIB_GuardTime;
@@ -248,6 +247,22 @@ FlagStatus LCDC_DBIB_SetCmdSequence(uint8_t *pCmdBuf, uint8_t len)
         }
     }
     return SET;
+}
+
+void DBIB_StructInit(LCDC_DBIBCfgTypeDef *DBIBCfg)
+{
+    /* Check the parameters */
+    assert_param(DBIBCfg != NULL);
+
+    /*-------------- Reset DBIB init structure parameters values ------------------*/
+    DBIBCfg->DBIB_Clock_Divider = 2;
+    DBIBCfg->DBIB_InitGuardTimeCmd = DBIB_INIT_GUARD_TIME_DISABLE;
+    DBIBCfg->DBIB_InitGuardTime = DBIB_GUARD_TIME_1T;
+    DBIBCfg->DBIB_CmdGuardTimeCmd = DBIB_CMD_GUARD_TIME_DISABLE;
+    DBIBCfg->DBIB_CmdGuardTime = DBIB_GUARD_TIME_1T;
+    DBIBCfg->DBIB_GuardTimeCmd = DBIB_GUARD_TIME_DISABLE;
+    DBIBCfg->DBIB_GuardTime = DBIB_GUARD_TIME_1T;
+    DBIBCfg->DBIB_WRDelay = DBIB_WR_HALF_DELAY;
 }
 
 /******************* (C) COPYRIGHT 2023 Realtek Semiconductor Corporation *****END OF FILE****/

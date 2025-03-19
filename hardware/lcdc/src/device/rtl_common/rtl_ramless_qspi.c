@@ -19,53 +19,51 @@
 /*============================================================================*
  *                           Public Functions
  *============================================================================*/
-void RLSPI_StructInit(LCDC_RLSPI_initTypeDef *init_struct)
+void RLSPI_StructInit(LCDC_RLSPI_initTypeDef *RLSPI_InitStruct)
 {
-    assert_param(obj);
-    init_struct->VBP = 0;
-    init_struct->VFP = 0;
-    init_struct->VSA = 0;
+    assert_param(RLSPI_InitStruct);
+    RLSPI_InitStruct->VSA = 0;
+    RLSPI_InitStruct->VBP = 0;
+    RLSPI_InitStruct->VFP = 0;
+    RLSPI_InitStruct->VSYNC_CMD = 0;
+    RLSPI_InitStruct->VSYNC_CMD_ADDR = 0;
+    RLSPI_InitStruct->HSYNC_CMD_VBP = 0;
+    RLSPI_InitStruct->HSYNC_CMD_VBP_ADDR = 0;
+    RLSPI_InitStruct->HSYNC_CMD_VACTIVE = 0;
+    RLSPI_InitStruct->HSYNC_CMD_VACTIVE_ADDR = 0;
+    RLSPI_InitStruct->HSYNC_CMD_VFP = 0;
+    RLSPI_InitStruct->HSYNC_CMD_VFP_ADDR = 0;
+    RLSPI_InitStruct->DUMMY_CMD = 0;
+    RLSPI_InitStruct->width = 0;
+    RLSPI_InitStruct->height = 0;
+    RLSPI_InitStruct->line_delay_in_vactive = 0;
+    RLSPI_InitStruct->line_delay_out_vactive = 0;
+    RLSPI_InitStruct->frame_delay = 0;
 }
 
-void RLSPI_Init(LCDC_RLSPI_initTypeDef *init_struct)
+void RLSPI_Init(LCDC_RLSPI_initTypeDef *RLSPI_InitStruct)
 {
-    assert_param(init_struct);
-    assert_param((init_struct->VSA & RLSPI_VERTICAL_SYNC_WIDTH_CLR) == 0);
-    assert_param((init_struct->VBP & RLSPI_VERTICAL_ABACK_PORCH_CLR) == 0);
-    RAMLESS_QSPI->RLSPI_VERTICAL_SYNC_WIDTH = init_struct->VSA;
-    RAMLESS_QSPI->RLSPI_VERTICAL_ABACK_PORCH = init_struct->VSA + init_struct->VBP;
-    RAMLESS_QSPI->RLSPI_VERTICAL_AACTIVE = init_struct->VSA + init_struct->VBP + init_struct->height;
-    RAMLESS_QSPI->RLSPI_VERTICAL_TOTAL_HEIGHT = init_struct->VSA + init_struct->VBP +
-                                                init_struct->height + init_struct->VFP;
-    RAMLESS_QSPI->RLSPI_HORIZONTAL_WIDTH = init_struct->width;
-    RAMLESS_QSPI->RLSPI_VSYNC_CMD = init_struct->VSYNC_CMD;
-    RAMLESS_QSPI->RLSPI_VSYNC_CMD_ADDR = init_struct->VSYNC_CMD_ADDR;
-    RAMLESS_QSPI->RLSPI_HSYNC_CMD_VFP = init_struct->HSYNC_CMD_VFP;
-    RAMLESS_QSPI->RLSPI_HSYNC_CMD_ADDR_VFP = init_struct->HSYNC_CMD_VFP_ADDR;
-    RAMLESS_QSPI->RLSPI_HSYNC_CMD_VBPORCH = init_struct->HSYNC_CMD_VBP;
-    RAMLESS_QSPI->RLSPI_HSYNC_CMD_ADDR_VBPORCH = init_struct->HSYNC_CMD_VBP_ADDR;
-    RAMLESS_QSPI->RLSPI_HSYNC_CMD_VACTIVE = init_struct->HSYNC_CMD_VACTIVE;
-    RAMLESS_QSPI->RLSPI_HSYNC_CMD_ADDR_VACTIVE = init_struct->HSYNC_CMD_VACTIVE_ADDR;
-//    LCDC_HANDLER->TEAR_CTR = ((LCDC_HANDLER->TEAR_CTR & LCDC_TEAR_INPUT_MUX_CLR) | init_struct->tear_input_mux);
-}
-
-void RLSPI_Cmd(FunctionalState state)
-{
-
-    if (state == ENABLE)
-    {
-        LCDC_HANDLER_TEAR_CTR_TypeDef lcdc_reg_0x10 = {.d32 = LCDC_HANDLER->TEAR_CTR};
-        lcdc_reg_0x10.b.tear_auto_turn_on_dma_en = 1;
-        lcdc_reg_0x10.b.tear_auto_turn_on_autowritestart = 1;
-        LCDC_HANDLER->TEAR_CTR = lcdc_reg_0x10.d32;
-    }
-    else
-    {
-        LCDC_HANDLER_TEAR_CTR_TypeDef lcdc_reg_0x10 = {.d32 = LCDC_HANDLER->TEAR_CTR};
-        lcdc_reg_0x10.b.tear_auto_turn_on_dma_en = 0;
-        lcdc_reg_0x10.b.tear_auto_turn_on_autowritestart = 0;
-        LCDC_HANDLER->TEAR_CTR = lcdc_reg_0x10.d32;
-    }
+    assert_param(RLSPI_InitStruct);
+    assert_param((RLSPI_InitStruct->VSA & RLSPI_VERTICAL_SYNC_WIDTH_CLR) == 0);
+    assert_param((RLSPI_InitStruct->VBP & RLSPI_VERTICAL_ABACK_PORCH_CLR) == 0);
+    RAMLESS_QSPI->RLSPI_VERTICAL_SYNC_WIDTH = RLSPI_InitStruct->VSA;
+    RAMLESS_QSPI->RLSPI_VERTICAL_ABACK_PORCH = RLSPI_InitStruct->VSA + RLSPI_InitStruct->VBP;
+    RAMLESS_QSPI->RLSPI_VERTICAL_AACTIVE = RLSPI_InitStruct->VSA + RLSPI_InitStruct->VBP +
+                                           RLSPI_InitStruct->height;
+    RAMLESS_QSPI->RLSPI_VERTICAL_TOTAL_HEIGHT = RLSPI_InitStruct->VSA + RLSPI_InitStruct->VBP +
+                                                RLSPI_InitStruct->height + RLSPI_InitStruct->VFP;
+    RAMLESS_QSPI->RLSPI_HORIZONTAL_WIDTH = RLSPI_InitStruct->width;
+    RAMLESS_QSPI->RLSPI_VSYNC_CMD = RLSPI_InitStruct->VSYNC_CMD;
+    RAMLESS_QSPI->RLSPI_VSYNC_CMD_ADDR = RLSPI_InitStruct->VSYNC_CMD_ADDR;
+    RAMLESS_QSPI->RLSPI_HSYNC_CMD_VFP = RLSPI_InitStruct->HSYNC_CMD_VFP;
+    RAMLESS_QSPI->RLSPI_HSYNC_CMD_ADDR_VFP = RLSPI_InitStruct->HSYNC_CMD_VFP_ADDR;
+    RAMLESS_QSPI->RLSPI_HSYNC_CMD_VBPORCH = RLSPI_InitStruct->HSYNC_CMD_VBP;
+    RAMLESS_QSPI->RLSPI_HSYNC_CMD_ADDR_VBPORCH = RLSPI_InitStruct->HSYNC_CMD_VBP_ADDR;
+    RAMLESS_QSPI->RLSPI_HSYNC_CMD_VACTIVE = RLSPI_InitStruct->HSYNC_CMD_VACTIVE;
+    RAMLESS_QSPI->RLSPI_HSYNC_CMD_ADDR_VACTIVE = RLSPI_InitStruct->HSYNC_CMD_VACTIVE_ADDR;
+    RAMLESS_QSPI->RLSPI_LINE_DELAY_IN_VACTIVE = RLSPI_InitStruct->line_delay_in_vactive;
+    RAMLESS_QSPI->RLSPI_LINE_DELAY_OUT_VACTIVE = RLSPI_InitStruct->line_delay_out_vactive;
+    RAMLESS_QSPI->RLSPI_FRAME_DELAY_INFINITE = RLSPI_InitStruct->frame_delay;
 }
 
 /******************* (C) COPYRIGHT 2023 Realtek Semiconductor Corporation *****END OF FILE****/

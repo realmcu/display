@@ -29,6 +29,35 @@ void EDPI_Cmdcfg()
 
 }
 
+void EDPI_StructInit(LCDC_eDPICfgTypeDef *eDPICfg)
+{
+    eDPICfg->eDPI_ClockDiv = EDPI_CLOCKDIV2;
+    eDPICfg->eDPI_HoriSyncWidth = 0;
+    eDPICfg->eDPI_VeriSyncHeight = 0;
+    eDPICfg->eDPI_AccumulatedHBP = 0;
+    eDPICfg->eDPI_AccumulatedVBP = 0;
+    eDPICfg->eDPI_AccumulatedActiveW = 0;
+    eDPICfg->eDPI_AccumulatedActiveH = 0;
+    eDPICfg->eDPI_TotalWidth = 0;
+    eDPICfg->eDPI_TotalHeight = 0;
+    eDPICfg->eDPI_HoriSyncPolarity = EDPI_HSPOL_AL;
+    eDPICfg->eDPI_VeriSyncPolarity = EDPI_VSPOL_AL;
+    eDPICfg->eDPI_DataEnPolarity = EDPI_DEPOL_AL;
+    eDPICfg->eDPI_LineIntMask = ENABLE;
+    eDPICfg->eDPI_ColorMap = EDPI_PIXELFORMAT_RGB888;
+    eDPICfg->eDPI_OperateMode = EDPI_STANDARD_VIDEO_MODE;
+    eDPICfg->eDPI_LcdArc = EDPI_LCD_ARC_TYPE123;
+    eDPICfg->eDPI_ShutdnPolarity = EDPI_SDPOL_AL;
+    eDPICfg->eDPI_ColorModePolarity = EDPI_CLMPOL_AL;
+    eDPICfg->eDPI_ShutdnEn = EDPI_SD_DISABLE;
+    eDPICfg->eDPI_ColorModeEn = EDPI_CLM_DISABLE;
+    eDPICfg->eDPI_UpdateCfgEn = EDPI_UPEN_DISABLE;
+    eDPICfg->eDPI_TearReq = EDPI_TEARREQ_AL;
+    eDPICfg->eDPI_Halt = EDPI_HALT_AL;
+    eDPICfg->eDPI_CmdMaxLatency = 0;
+    eDPICfg->eDPI_LineBufferPixelThreshold = 0;
+}
+
 void EDPI_Init(LCDC_eDPICfgTypeDef *eDPICfg)
 {
     /* Check the parameters */
@@ -114,7 +143,7 @@ ITStatus EDPI_GetLineINTStatus(void)
     return  bit_status;
 }
 
-ITStatus EDPI_GetSyncStatus(EDPI_SIGNAL_t signal)
+ITStatus EDPI_GetSyncStatus(EDPI_SIGNAL signal)
 {
     ITStatus bit_status = RESET;
     EDPI_SYNC_STATUS_TypeDef edpi_reg_0x2c = {.d32 = EDPI->EDPI_SYNC_STATUS};
@@ -165,7 +194,7 @@ void EDPI_MaskLineINTConfig(FunctionalState state)
     EDPI->EDPI_INT_MASK = edpi_reg_0x18.d32;
 }
 
-void LCDC_ClearLineINTPendingBit(void)
+void EDPI_ClearLineINTPendingBit(void)
 {
     EDPI_INT_CLR_TypeDef edpi_reg_0x20 = {.d32 = EDPI->EDPI_INT_CLR};
     edpi_reg_0x20.b.clif = 0;

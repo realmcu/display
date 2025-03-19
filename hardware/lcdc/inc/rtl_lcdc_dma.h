@@ -3,8 +3,8 @@
 *               Copyright(c) 2023, Realtek Semiconductor Corporation. All rights reserved.
 *********************************************************************************************************
 * \file     rtl_lcdc_dma.h
-* \brief    The header file of the peripheral GDMA driver.
-* \details  This file provides all GDMA firmware functions.
+* \brief    The header file of the peripheral driver for DMA inside LCDC.
+* \details  This file provides all LCDC DMA firmware functions.
 * \author   HOWIE
 * \date     2023-10-17
 * \version  v1.0
@@ -27,12 +27,12 @@ extern "C" {
 #include "rtl_lcdc_dma_def.h"
 
 /** \defgroup LCDC        LCDC
-  * \brief
+  * \brief    LCD Controller driver module
   * \{
   */
 
 /** \defgroup LCDC_DMA          LCDC_DMA
-  * \brief
+  * \brief    LCD Controller internal DMA driver
   * \{
   */
 
@@ -40,7 +40,7 @@ extern "C" {
  *                         Constants
  *============================================================================*/
 /** \defgroup LCDC_DMA_Exported_Constants LCDC DMA Exported Constants
-  * \brief
+  * \brief    Constants used by the LCDC DMA driver
   * \{
   */
 
@@ -51,12 +51,12 @@ extern "C" {
  */
 typedef enum
 {
-    LCDC_DMA_DIR_PeripheralToMemory = 0x4,
-    LCDC_DMA_DIR_PeripheralToPeripheral = 0x6,
+    LCDC_DMA_DIR_PeripheralToMemory = 0x4,        /*!< Data transmission from peripheral to memory. */
+    LCDC_DMA_DIR_PeripheralToPeripheral = 0x6,    /*!< Data transmission from peripheral to peripheral. */
 } LCDC_DMA_DIRECTION_T;
 
-#define IS_LCDC_DMA_DIR(DIR)  ((DIR) == LCDC_DMA_DIR_PeripheralToMemory) || \
-    ((DIR) == LCDC_DMA_DIR_PeripheralToPeripheral))
+#define IS_LCDC_DMA_DIR(DIR)  (((DIR) == LCDC_DMA_DIR_PeripheralToMemory) || \
+                               ((DIR) == LCDC_DMA_DIR_PeripheralToPeripheral))
 
 /** End of LCDC_DMA_Data_Transfer_Direction
   * \}
@@ -69,9 +69,9 @@ typedef enum
  */
 typedef enum
 {
-    LCDC_DMA_SourceInc_Inc = 0x0,
-    LCDC_DMA_SourceInc_Dec = 0x1,
-    LCDC_DMA_SourceInc_Fix = 0x2,
+    LCDC_DMA_SourceInc_Inc = 0x0,    /*!< Source address increases. */
+    LCDC_DMA_SourceInc_Dec = 0x1,    /*!< Source address decreases. */
+    LCDC_DMA_SourceInc_Fix = 0x2,    /*!< Source address is fixed. */
 } LCDC_DMA_SRC_INC_T;
 
 #define IS_LCDC_DMA_SourceInc(STATE) (((STATE) == LCDC_DMA_SourceInc_Inc) || \
@@ -89,14 +89,10 @@ typedef enum
  */
 typedef enum
 {
-    LCDC_DMA_DestinationInc_Inc = 0x0,
-    LCDC_DMA_DestinationInc_Dec = 0x1,
-    LCDC_DMA_DestinationInc_Fix = 0x2,
+    LCDC_DMA_DestinationInc_Fix = 0x2,   /*!< Destination address is fixed. */
 } LCDC_DMA_DEST_INC_T;
 
-#define IS_LCDC_GDMA_DestinationInc(STATE) (((STATE) == LCDC_DMA_DestinationInc_Inc) || \
-                                            ((STATE) == LCDC_DMA_DestinationInc_Dec) || \
-                                            ((STATE) == LCDC_DMA_DestinationInc_Fix))
+#define IS_LCDC_DMA_DestinationInc(STATE) (((STATE) == LCDC_DMA_DestinationInc_Fix))
 
 /** End of LCDC_DMA_Destination_Incremented_Mode
   * \}
@@ -109,55 +105,68 @@ typedef enum
  */
 typedef enum
 {
-    LCDC_DMA_DataSize_Byte     = 0x0,
-    LCDC_DMA_DataSize_HalfWord = 0x1,
-    LCDC_DMA_DataSize_Word     = 0x2,
+    LCDC_DMA_DataSize_Byte     = 0x0,    /*!< 8 bits */
+    LCDC_DMA_DataSize_HalfWord = 0x1,    /*!< 16 bits */
+    LCDC_DMA_DataSize_Word     = 0x2,    /*!< 32 bits */
 } LCDC_DMA_DATASIZE_T;
 
-#define IS_GDMA_DATA_SIZE(SIZE) (((SIZE) == GDMA_DataSize_Byte) || \
-                                 ((SIZE) == GDMA_DataSize_HalfWord) || \
-                                 ((SIZE) == GDMA_DataSize_Word))
+#define IS_LCDC_DMA_DATA_SIZE(SIZE) (((SIZE) == LCDC_DMA_DataSize_Byte) || \
+                                     ((SIZE) == LCDC_DMA_DataSize_HalfWord) || \
+                                     ((SIZE) == LCDC_DMA_DataSize_Word))
 
 /** End of LCDC_DMA_Data_Size
   * \}
   */
 
 /**
- * \brief       LCDC_DMA_Msize LCDC DMA Msize
+ * \defgroup    LCDC_DMA_Msize LCDC DMA Msize
  *
  * \ingroup     LCDC_DMA_Exported_Constants
  */
 typedef enum
 {
-    LCDC_DMA_Msize_1   = 0x0,
-    LCDC_DMA_Msize_4   = 0x1,
-    LCDC_DMA_Msize_8   = 0x2,
-    LCDC_DMA_Msize_16  = 0x3,
-    LCDC_DMA_Msize_32  = 0x4,
-    LCDC_DMA_Msize_64  = 0x5,
-    LCDC_DMA_Msize_128 = 0x6,
-    LCDC_DMA_Msize_256 = 0x7,
+    LCDC_DMA_Msize_1   = 0x0,    /*!< 1 item in a burst */
+    LCDC_DMA_Msize_4   = 0x1,    /*!< 4 items in a burst */
+    LCDC_DMA_Msize_8   = 0x2,    /*!< 8 items in a burst */
+    LCDC_DMA_Msize_16  = 0x3,    /*!< 16 items in a burst */
+    LCDC_DMA_Msize_32  = 0x4,    /*!< 32 items in a burst */
+    LCDC_DMA_Msize_64  = 0x5,    /*!< 64 items in a burst */
+    LCDC_DMA_Msize_128 = 0x6,    /*!< 128 items in a burst */
 } LCDC_DMA_MSIZE_T;
 
+#define IS_LCDC_DMA_Msize(SIZE) (((SIZE) == LCDC_DMA_Msize_1) || \
+                                 ((SIZE) == LCDC_DMA_Msize_4) || \
+                                 ((SIZE) == LCDC_DMA_Msize_8) || \
+                                 ((SIZE) == LCDC_DMA_Msize_16) || \
+                                 ((SIZE) == LCDC_DMA_Msize_32) || \
+                                 ((SIZE) == LCDC_DMA_Msize_64) || \
+                                 ((SIZE) == LCDC_DMA_Msize_128))
 /** End of LCDC_DMA_Msize
   * \}
   */
 
 /**
- * \defgroup    LCDC_DMA_SELECTED LCDC DMA SELECTED
+ * \defgroup    LCDC_DMA_Multiblock_Mode LCDC DMA Multi-block Mode
  * \{
  * \ingroup     LCDC_DMA_Exported_Constants
  */
-#define LCDC_DMA_AUTO_RELOAD_SELECTED_BIT        (BIT30 | BIT31)
-#define LCDC_DMA_LLP_SELECTED_BIT                (BIT27 | BIT28)
+#define AUTO_RELOAD_WITH_CONTIGUOUS_SAR     (BIT31)              /*!< The DARx register can be automatically reloaded from its initial value at the end of every block for multi-block transfers. */
+#define AUTO_RELOAD_TRANSFER                (BIT30 | BIT31)      /*!< Both DARx and SARx registers can be automatically reloaded from its initial value at the end of every block for multi-block transfers. */
+#define LLI_TRANSFER                        (BIT27 | BIT28)      /*!< Multi-block with Linklist module. */
 
-/** End of LCDC_DMA_SELECTED
+#define IS_DMA_MULTIBLOCKMODE(MODE) (((MODE) == AUTO_RELOAD_WITH_CONTIGUOUS_SAR) || ((MODE) == LLI_TRANSFER)\
+                                     ||((MODE) == AUTO_RELOAD_TRANSFER))
+
+/** End of LCDC_DMA_Multiblock_Mode
   * \}
   */
 
 /** End of LCDC_DMA_Exported_Constants
   * \}
   */
+
+#define LCDC_DMA_AUTO_RELOAD_SELECTED_BIT        (BIT30 | BIT31)  /*!< SARx and DARx are auto reloaded. */
+#define LCDC_DMA_LLP_SELECTED_BIT                (BIT27 | BIT28)  /*!< Use internal Linklist module. */
 
 /*============================================================================*
  *                         Types
@@ -201,17 +210,7 @@ typedef struct
                                                  This parameter can be a value of \ref LCDC_DMA_Multiblock_Mode. */
     uint32_t LCDC_DMA_Multi_Block_Struct;       /*!< Pointer to the first struct of LLI. */
     uint8_t  LCDC_DMA_Multi_Block_En;           /*!< Enable or disable multi-block function. */
-    uint8_t  LCDC_DMA_SourceHandshake;          /*!< Specifies the handshake index in source. */
-    uint8_t  LCDC_DMA_DestHandshake;            /*!< Specifies the handshake index in Destination. */
-    uint8_t  LCDC_DMA_Gather_En;                /*!< Enable or disable Gather function. NOTE:4 bytes ALIGN.*/
-    uint32_t LCDC_DMA_GatherCount;              /*!< Specifies the GatherCount.NOTE:4 bytes ALIGN.*/
-    uint32_t LCDC_DMA_GatherInterval;           /*!< Specifies the GatherInterval. */
-    uint8_t  LCDC_DMA_Scatter_En;               /*!< Enable or disable Scatter function. */
-    uint32_t LCDC_DMA_ScatterCount;             /*!< Specifies the ScatterCount. */
-    uint32_t LCDC_DMA_ScatterInterval;          /*!< Specifies the ScatterInterval. */
-    uint32_t LCDC_DMA_GatherCircularStreamingNum;  /*!< Specifies the GatherCircularStreamingNum. */
-    uint32_t LCDC_DMA_ScatterCircularStreamingNum; /*!< Specifies the ScatterCircularStreamingNum. */
-    uint8_t  LCDC_DMA_Secure_En;                /*!< Enable or disable Secure function. */
+    uint8_t  LCDC_DMA_Secure_En;                /*!< Enable or disable Secure DMA function. */
 } LCDC_DMA_InitTypeDef;
 
 /** End of LCDC_DMA_Exported_Types
@@ -227,14 +226,10 @@ typedef struct
   */
 
 /**
- * rtl_lcdc_dma.h
- *
  * \brief  Initializes the LCDC DMA Channelx according to the specified parameters in the LCDC_DMA_InitStruct.
  *
  * \param[in] LCDC_DMA_Channelx: Where x can be 0 to select the LCDC DMA Channel.
  * \param[in] LCDC_DMA_InitStruct: Pointer to a LCDC_DMA_InitTypeDef structure that contains the configuration information for the specified LCDC DMA Channel.
- *
- * \return None.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -260,13 +255,27 @@ void LCDC_DMA_Init(LCDC_DMA_ChannelTypeDef *LCDC_DMA_Channelx,
                    LCDC_DMA_InitTypeDef *LCDC_DMA_InitStruct);
 
 /**
- * rtl_lcdc_dma.h
- *
  * \brief  Fills each LCDC_DMA_InitStruct member with its default value.
  *
  * \param[in] LCDC_DMA_InitStruct: pointer to a LCDC_DMA_InitTypeDef structure which will be initialized.
  *
- * \return None.
+ * \note The default settings for the LCDC_DMA_InitStruct member are shown in the following table:
+ *       | LCDC_DMA_InitStruct member     | Default value                        |
+ *       |:------------------------------:|:------------------------------------:|
+ *       | LCDC_DMA_ChannelNum            | 0                                    |
+ *       | LCDC_DMA_DIR                   | \ref LCDC_DMA_DIR_PeripheralToMemory |
+ *       | LCDC_DMA_BufferSize            | 0                                    |
+ *       | LCDC_DMA_SourceInc             | \ref LCDC_DMA_SourceInc_Fix          |
+ *       | LCDC_DMA_DestinationInc        | \ref LCDC_DMA_DestinationInc_Fix     |
+ *       | LCDC_DMA_SourceDataSize        | \ref LCDC_DMA_DataSize_Byte          |
+ *       | LCDC_DMA_DestinationDataSize   | \ref LCDC_DMA_DataSize_Byte          |
+ *       | LCDC_DMA_SourceMsize           | \ref LCDC_DMA_Msize_1                |
+ *       | LCDC_DMA_DestinationMsize      | \ref LCDC_DMA_Msize_1                |
+ *       | LCDC_DMA_SourceAddr            | 0                                    |
+ *       | LCDC_DMA_DestinationAddr       | 0                                    |
+ *       | LCDC_DMA_Multi_Block_En        | DISABLE                              |
+ *       | LCDC_DMA_Multi_Block_Mode      | \ref LLI_TRANSFER                    |
+ *       | LCDC_DMA_Multi_Block_Struct    | 0                                    |
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -291,8 +300,6 @@ void LCDC_DMA_Init(LCDC_DMA_ChannelTypeDef *LCDC_DMA_Channelx,
 void LCDC_DMA_StructInit(LCDC_DMA_InitTypeDef *LCDC_DMA_InitStruct);
 
 /**
- * rtl_lcdc_dma.h
- *
  * \brief  Enable or disable the selected LCDC DMA channel.
  *
  * \param[in]  LCDC_DMA_Channel_Num: LCDC DMA channel number, which can be 0.
@@ -300,8 +307,6 @@ void LCDC_DMA_StructInit(LCDC_DMA_InitTypeDef *LCDC_DMA_InitStruct);
  *             This parameter can be one of the following values:
  *             \arg ENABLE: Enable the selected LCDC DMA channel.
  *             \arg DISABLE: Disable the selected LCDC DMA channel.
- *
- * \return None.
  *
  * <b>Example usage</b>
  * \code{.c}

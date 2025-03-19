@@ -28,12 +28,12 @@ extern "C" {
 #include "rtl_lcdc_edpi_def.h"
 
 /** \defgroup LCDC        LCDC
-  * \brief
+  * \brief    LCD Controller driver module
   * \{
   */
 
 /** \defgroup LCDC_EDPI        LCDC EDPI
-  * \brief
+  * \brief    LCD Controller Enhanced Display Pixel Interface driver
   * \{
   */
 
@@ -41,7 +41,7 @@ extern "C" {
  *                         Types
  *============================================================================*/
 /** \defgroup LCDC_EDPI_Exported_Types LCDC EDPI Exported Types
-  * \brief
+  * \brief    Types used by the LCDC EDPI driver
   * \{
   */
 
@@ -68,10 +68,7 @@ typedef struct
                                               This parameter can be a value of @ref LCDC_EDPI_VS_POLARITY */
     uint32_t eDPI_DataEnPolarity;      /*!< Data enable polarity.
                                               This parameter can be a value of @ref LCDC_EDPI_DE_POLARITY */
-    uint32_t eDPI_LineIntMask;         /*!< Determines if line interrupt is masked.
-                                              This parameter can be a value of @ref LCDC_EDPI_Line_INT_MASK */
-    uint32_t eDPI_LineIntFlag;         /*!< Line interrupt generated when a programmed line is reached. */
-    uint32_t eDPI_LineIntClr;          /*!< Clears the line interrupt flag. */
+    uint32_t eDPI_LineIntMask;         /*!< Determines if line interrupt is masked. */
     uint32_t eDPI_ColorMap;            /*!< The pixel color map.
                                               This parameter can be a value of @ref LCDC_EDPI_Pixel_Format */
     uint32_t eDPI_OperateMode;         /*!< Operating mode of eDPI.
@@ -104,7 +101,7 @@ typedef struct
  *                         Constants
  *============================================================================*/
 /** \defgroup LCDC_EDPI_Exported_Constants LCDC EDPI Exported Constants
-  * \brief
+  * \brief    Constants used by the LCDC EDPI driver
   * \{
   */
 
@@ -113,13 +110,13 @@ typedef struct
  * \{
  * \ingroup     LCDC_EDPI_Exported_Constants
  */
-#define EDPI_CLOCKDIV2                             ((uint32_t)0x1)
-#define EDPI_CLOCKDIV3                             ((uint32_t)0x2)
-#define EDPI_CLOCKDIV4                             ((uint32_t)0x3)
-#define EDPI_CLOCKDIV5                             ((uint32_t)0x4)
-#define EDPI_CLOCKDIV6                             ((uint32_t)0x5)
-#define EDPI_CLOCKDIV7                             ((uint32_t)0x6)
-#define EDPI_CLOCKDIV8                             ((uint32_t)0x7)
+#define EDPI_CLOCKDIV2          ((uint32_t)0x1)  /*!< Frequency division factor of eDPI clock is 2*/
+#define EDPI_CLOCKDIV3          ((uint32_t)0x2)  /*!< Frequency division factor of eDPI clock is 3*/
+#define EDPI_CLOCKDIV4          ((uint32_t)0x3)  /*!< Frequency division factor of eDPI clock is 4*/
+#define EDPI_CLOCKDIV5          ((uint32_t)0x4)  /*!< Frequency division factor of eDPI clock is 5*/
+#define EDPI_CLOCKDIV6          ((uint32_t)0x5)  /*!< Frequency division factor of eDPI clock is 6*/
+#define EDPI_CLOCKDIV7          ((uint32_t)0x6)  /*!< Frequency division factor of eDPI clock is 7*/
+#define EDPI_CLOCKDIV8          ((uint32_t)0x7)  /*!< Frequency division factor of eDPI clock is 8*/
 
 #define IS_EDPI_CLOCKDIV(DIV)   (((DIV) == EDPI_CLOCKDIV2) || ((DIV) == EDPI_CLOCKDIV3) || \
                                  ((DIV) == EDPI_CLOCKDIV4) || ((DIV) == EDPI_CLOCKDIV5) || \
@@ -138,7 +135,7 @@ typedef struct
 #define EDPI_HSPOL_AL                (0)            /*!< Horizontal synchronization polarity is active low. */
 #define EDPI_HSPOL_AH                (1)            /*!< Horizontal synchronization polarity is active high. */
 
-#define IS_EDPI_HSPOL(POLARITY)   ((POLARITY) == EDPI_HSPOL_AL) || ((POLARITY) == EDPI_HSPOL_AH)
+#define IS_EDPI_HSPOL(POLARITY)   (((POLARITY) == EDPI_HSPOL_AL) || ((POLARITY) == EDPI_HSPOL_AH))
 
 /** End of LCDC_EDPI_HS_POLARITY
   * \}
@@ -152,7 +149,7 @@ typedef struct
 #define EDPI_VSPOL_AL                (0)            /*!< Vertical Synchronization is active low. */
 #define EDPI_VSPOL_AH                (1)            /*!< Vertical Synchronization is active high. */
 
-#define IS_EDPI_VSPOL(POLARITY)   ((POLARITY) == EDPI_VSPOL_AL) || ((POLARITY) == EDPI_VSPOL_AH)
+#define IS_EDPI_VSPOL(POLARITY)   (((POLARITY) == EDPI_VSPOL_AL) || ((POLARITY) == EDPI_VSPOL_AH))
 
 /** End of LCDC_EDPI_VS_POLARITY
   * \}
@@ -166,23 +163,9 @@ typedef struct
 #define EDPI_DEPOL_AL                (0)            /*!< Data enable polarity is active low. */
 #define EDPI_DEPOL_AH                (1)            /*!< Data enable polarity is active high. */
 
-#define IS_EDPI_DEPOL(POLARITY)   ((POLARITY) == EDPI_DEPOL_AL) || ((POLARITY) == EDPI_DEPOL_AH)
+#define IS_EDPI_DEPOL(POLARITY)   (((POLARITY) == EDPI_DEPOL_AL) || ((POLARITY) == EDPI_DEPOL_AH))
 
 /** End of LCDC_EDPI_DE_POLARITY
-  * \}
-  */
-
-/**
- * \defgroup    LCDC_EDPI_Line_INT_MASK LCDC EDPI Line Interrupt Mask
- * \{
- * \ingroup     LCDC_EDPI_Exported_Constants
- */
-#define EDPI_LIM_UNMASK            (0)              /*!< Line interrupt is unmasked */
-#define EDPI_LIM_MASK              (1)              /*!< Line interrupt is masked */
-
-#define IS_EDPI_LIM(LIM)   ((LIM) == EDPI_LIM_UNMASK) || ((LIM) == EDPI_LIM_MASK)
-
-/** End of LCDC_EDPI_Line_INT_MASK
   * \}
   */
 
@@ -192,9 +175,9 @@ typedef struct
  * \ingroup     LCDC_EDPI_Exported_Constants
  */
 #define EDPI_PIXELFORMAT_RGB888            (0)               /*!< RGB888 */
-#define EDPI_PIXELFORMAT_RGB565_1          ((uint32_t)0x1)   /*!<RGB565_3(R[D15:D11]G[D10:D5]B[D4:D0])*/
-#define EDPI_PIXELFORMAT_RGB565_2          ((uint32_t)0x2)   /*!<RGB565_2(R[D20:D16]G[D13:D8]B[D4:D0])*/
-#define EDPI_PIXELFORMAT_RGB565_3          ((uint32_t)0x3)   /*!<RGB565_1(R[D21:D17]G[D13:D8]B[D5:D1])*/
+#define EDPI_PIXELFORMAT_RGB565_1          ((uint32_t)0x1)   /*!< RGB565_3(R[D15:D11]G[D10:D5]B[D4:D0])*/
+#define EDPI_PIXELFORMAT_RGB565_2          ((uint32_t)0x2)   /*!< RGB565_2(R[D20:D16]G[D13:D8]B[D4:D0])*/
+#define EDPI_PIXELFORMAT_RGB565_3          ((uint32_t)0x3)   /*!< RGB565_1(R[D21:D17]G[D13:D8]B[D5:D1])*/
 
 #define IS_EDPI_PIXELFORMAT(FORMAT)   (((FORMAT) == EDPI_PIXELFORMAT_RGB888) || ((FORMAT) == EDPI_PIXELFORMAT_RGB565_1) || \
                                        ((FORMAT) == EDPI_PIXELFORMAT_RGB565_2) || ((FORMAT) == EDPI_PIXELFORMAT_RGB565_3))
@@ -211,7 +194,7 @@ typedef struct
 #define EDPI_STANDARD_VIDEO_MODE            (0)             /*!< Standard Video mode. */
 #define EDPI_ADAPTED_COMMAND_MODE           (1)             /*!< Adapted Command mode. */
 
-#define IS_EDPI_OP_MODE(MDOE)   ((MODE) == EDPI_STANDARD_VIDEO_MODE) || ((MODE) == EDPI_ADAPTED_COMMAND_MODE)
+#define IS_EDPI_OP_MODE(MODE)   (((MODE) == EDPI_STANDARD_VIDEO_MODE) || ((MODE) == EDPI_ADAPTED_COMMAND_MODE))
 
 /** End of LCDC_EDPI_OP_MODE
   * \}
@@ -222,10 +205,10 @@ typedef struct
  * \{
  * \ingroup     LCDC_EDPI_Exported_Constants
  */
-#define EDPI_LCD_ARC_TYPE123            (0)             /*!< LCD Display Driver is of Type 1 or 2 or 3. */
-#define EDPI_LCD_ARC_TYPE4              (1)             /*!< LCD Display Driver is of Type 4. */
+#define EDPI_LCD_ARC_TYPE123            (0)             /*!< LCD Display Driver architecture is of Type 1 or 2 or 3. */
+#define EDPI_LCD_ARC_TYPE4              (1)             /*!< LCD Display Driver architecture is of Type 4. */
 
-#define IS_EDPI_LCD_ARC_TYPE(TYPE)   ((TYPE) == EDPI_LCD_ARC_TYPE123) || ((TYPE) == EDPI_LCD_ARC_TYPE4)
+#define IS_EDPI_LCD_ARC_TYPE(TYPE)   (((TYPE) == EDPI_LCD_ARC_TYPE123) || ((TYPE) == EDPI_LCD_ARC_TYPE4))
 
 /** End of LCDC_EDPI_LCD_ARC
   * \}
@@ -236,8 +219,8 @@ typedef struct
  * \{
  * \ingroup     LCDC_EDPI_Exported_Constants
  */
-#define EDPI_SD_EN_FCOLOR_BLACK            (0)   /*!< this bit defines the color of the 4 frames is black. */
-#define EDPI_SD_EN_FCOLOR_WHITE            (1)   /*!< this bit defines the color of the 4 frames is white. */
+#define EDPI_SD_EN_FCOLOR_BLACK            (0)   /*!< This bit defines the color of the 4 frames is black. */
+#define EDPI_SD_EN_FCOLOR_WHITE            (1)   /*!< This bit defines the color of the 4 frames is white. */
 
 #define IS_EDPI_SD_EN_FCOLOR(FCOLOR)   ((FCOLOR) == EDPI_SD_EN_FCOLOR_BLACK) || ((FCOLOR) == EDPI_SD_EN_FCOLOR_WHITE)
 
@@ -250,8 +233,8 @@ typedef struct
  * \{
  * \ingroup     LCDC_EDPI_Exported_Constants
  */
-#define EDPI_SD_DIS_FCOLOR_BLACK              (0)           /*!< this bit defines the color of the 12 frames is black. */
-#define EDPI_SD_DIS_FCOLOR_WHITE              (1)           /*!< this bit defines the color of the 12 frames is white. */
+#define EDPI_SD_DIS_FCOLOR_BLACK              (0)           /*!< This bit defines the color of the 12 frames is black. */
+#define EDPI_SD_DIS_FCOLOR_WHITE              (1)           /*!< This bit defines the color of the 12 frames is white. */
 
 #define IS_EDPI_SD_DIS_FCOLOR(FCOLOR)   ((FCOLOR) == EDPI_SD_DIS_FCOLOR_BLACK) || ((FCOLOR) == EDPI_SD_DIS_FCOLOR_WHITE)
 
@@ -377,7 +360,7 @@ typedef struct
  * \{
  * \ingroup     LCDC_EDPI_Exported_Constants
  */
-#define EDPI_VSYNC_CONSTANT_NONE                (0x1)      /*!< No constant value for VSYNC, it can be drive by display controller*/
+#define EDPI_VSYNC_CONSTANT_NONE                (0x1)      /*!< No constant value for VSYNC, it can be driven by display controller*/
 #define EDPI_VSYNC_CONSTANT_LOW                 (0x0)      /*!< constant low for VSYNC. */
 #define EDPI_VSYNC_CONSTANT_HIGH                (0x3)      /*!< constant high for VSYNC */
 
@@ -392,7 +375,7 @@ typedef struct
  * \{
  * \ingroup     LCDC_EDPI_Exported_Constants
  */
-#define EDPI_HSYNC_CONSTANT_NONE                (0x1)      /*!< No constant value for HSYNC, it can be drive by display controller*/
+#define EDPI_HSYNC_CONSTANT_NONE                (0x1)      /*!< No constant value for HSYNC, it can be driven by display controller*/
 #define EDPI_HSYNC_CONSTANT_LOW                 (0x0)      /*!< constant low for HSYNC. */
 #define EDPI_HSYNC_CONSTANT_HIGH                (0x3)      /*!< constant high for HSYNC */
 
@@ -409,11 +392,11 @@ typedef struct
  */
 typedef enum
 {
-    EDPI_HSYNCS = 0,
-    EDPI_VSYNCS,
-    EDPI_HDES,
-    EDPI_VDES,
-} EDPI_SIGNAL_t;
+    EDPI_HSYNCS = 0,       /*!< State of horizontal synchronize signal. */
+    EDPI_VSYNCS,           /*!< State of vertical synchronize signal. */
+    EDPI_HDES,             /*!< State of horizontal data enable. */
+    EDPI_VDES,             /*!< State of vertical data enable. */
+} EDPI_SIGNAL;
 
 /** End of LCDC_EDPI_Synchronization_Signal
   * \}
@@ -432,16 +415,12 @@ typedef enum
   */
 
 /**
- * rtl_lcdc_edpi.h
- *
  * \brief  Mask or unmask line interrupt.
  *
  * \param[in] state: New state of line interrupt.
  *            This parameter can be one of the following values:
  *            \arg ENABLE: Mask line interrupt.
  *            \arg DISABLE: Unmask line interrupt.
- *
- * \return None.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -455,31 +434,21 @@ typedef enum
 void EDPI_MaskLineINTConfig(FunctionalState state);
 
 /**
- * rtl_lcdc_edpi.h
- *
  * \brief  Clear line interrupt flag.
- *
- * \param None
- *
- * \return None.
  *
  * <b>Example usage</b>
  * \code{.c}
  *
  * void driver_lcdc_edpi_init(void)
  * {
- *     LCDC_ClearLineINTPendingBit();
+ *     EDPI_ClearLineINTPendingBit();
  * }
  * \endcode
  */
-void LCDC_ClearLineINTPendingBit(void);
+void EDPI_ClearLineINTPendingBit(void);
 
 /**
- * rtl_lcdc_edpi.h
- *
  * \brief  Get line interrupt position.
- *
- * \param None
  *
  * \return Line interrupt position.
  *
@@ -495,11 +464,7 @@ void LCDC_ClearLineINTPendingBit(void);
 uint16_t EDPI_GetLineINTPos(void);
 
 /**
- * rtl_lcdc_edpi.h
- *
  * \brief  Get current X position.
- *
- * \param None
  *
  * \return Current X position.
  *
@@ -515,11 +480,7 @@ uint16_t EDPI_GetLineINTPos(void);
 uint16_t EDPI_GetXPos(void);
 
 /**
- * rtl_lcdc_edpi.h
- *
  * \brief  Get current Y position.
- *
- * \param None
  *
  * \return Current Y position.
  *
@@ -535,16 +496,12 @@ uint16_t EDPI_GetXPos(void);
 uint16_t EDPI_GetYPos(void);
 
 /**
- * rtl_lcdc_edpi.h
+ * \brief  Config operating mode of EDPI Interface.
  *
- * \brief  Config operating mode of edpi Interface.
- *
- * \param[in] mode: Operating mode of edpi Interface.
+ * \param[in] mode: Operating mode of EDPI Interface.
  *            This parameter can be one of the following values:
  *            \arg EDPI_STANDARD_VIDEO_MODE: Standard Video mode.
  *            \arg EDPI_ADAPTED_COMMAND_MODE: Adapted Command mode.
- *
- * \return None.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -558,20 +515,66 @@ uint16_t EDPI_GetYPos(void);
 void EDPI_OPMODE_CONFIG(uint32_t mode);
 
 /**
- * rtl_lcdc_edpi.h
+ * \brief  Initialize EDPI peripheral according to the specified parameters in the eDPICfg.
  *
- * \brief  Initializes EDPI interface according to the specified parameters in the eDPICfg.
+ * \param[in] eDPICfg: Pointer to a LCDC_eDPICfgTypeDef structure that contains
+ *                     the configuration information for the specified EDPI peripheral.
  *
- * \param[in] eDPICfg: Pointer to a LCDC_eDPICfgTypeDef structure that contains the configuration information for EDPI interface.
- *
- * \return None.
+ * \note   The default settings for the eDPICfg member are shown in the following table:
+ *         | Member                          | Default Value                 |
+ *         |-------------------------------- |-------------------------------|
+ *         | eDPI_ClockDiv                   | \ref EDPI_CLOCKDIV1           |
+ *         | eDPI_HoriSyncWidth              | 0                             |
+ *         | eDPI_VeriSyncHeight             | 0                             |
+ *         | eDPI_AccumulatedHBP             | 0                             |
+ *         | eDPI_AccumulatedVBP             | 0                             |
+ *         | eDPI_AccumulatedActiveW         | 0                             |
+ *         | eDPI_AccumulatedActiveH         | 0                             |
+ *         | eDPI_TotalWidth                 | 0                             |
+ *         | eDPI_TotalHeight                | 0                             |
+ *         | eDPI_HoriSyncPolarity           | \ref EDPI_HSPOL_AL            |
+ *         | eDPI_VeriSyncPolarity           | \ref EDPI_VSPOL_AL            |
+ *         | eDPI_DataEnPolarity             | \ref EDPI_DEPOL_AL            |
+ *         | eDPI_LineIntMask                | ENABLE                        |
+ *         | eDPI_ColorMap                   | \ref EDPI_PIXELFORMAT_RGB888  |
+ *         | eDPI_OperateMode                | \ref EDPI_STANDARD_VIDEO_MODE |
+ *         | eDPI_LcdArc                     | \ref EDPI_LCD_ARC_TYPE123     |
+ *         | eDPI_ShutdnPolarity             | \ref EDPI_SDPOL_AL            |
+ *         | eDPI_ColorModePolarity          | \ref EDPI_CLMPOL_AL           |
+ *         | eDPI_ShutdnEn                   | \ref EDPI_SD_DISABLE          |
+ *         | eDPI_ColorModeEn                | \ref EDPI_CLM_DISABLE         |
+ *         | eDPI_UpdateCfgEn                | \ref EDPI_UPEN_DISABLE        |
+ *         | eDPI_TearReq                    | \ref EDPI_TEARREQ_AL          |
+ *         | eDPI_Halt                       | \ref EDPI_HALT_AL             |
+ *         | eDPI_CmdMaxLatency              | 0                             |
+ *         | eDPI_LineBufferPixelThreshold   | 0                             |
  *
  * <b>Example usage</b>
  * \code{.c}
  *
  * void driver_lcdc_edpi_init(void)
  * {
- *     LCDC_eDPICfgTypeDef eDPICfg
+ *     LCDC_eDPICfgTypeDef eDPICfg;
+ *     EDPI_StructInit(&eDPICfg);
+ *     // Initialize other parameters
+ *     EDPI_Init(&eDPICfg);
+ * }
+ * \endcode
+ */
+void EDPI_StructInit(LCDC_eDPICfgTypeDef *eDPICfg);
+
+/**
+ * \brief  Initialize EDPI peripheral according to the specified parameters in the eDPICfg.
+ *
+ * \param[in] eDPICfg: Pointer to a LCDC_eDPICfgTypeDef structure that contains
+ *                     the configuration information for the specified EDPI peripheral.
+ *
+ * <b>Example usage</b>
+ * \code{.c}
+ *
+ * void driver_lcdc_edpi_init(void)
+ * {
+ *     LCDC_eDPICfgTypeDef eDPICfg = {0};
  *     eDPICfg.eDPI_ClockDiv = 4;
  *     eDPICfg.eDPI_HoriSyncWidth = SH8601A_LCD_HSYNC;
  *     eDPICfg.eDPI_VeriSyncHeight = SH8601A_LCD_VSYNC;

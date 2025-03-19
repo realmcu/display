@@ -4,7 +4,10 @@
 *********************************************************************************************************
 * \file     rtl_lcdc.h
 * \brief    This file provides all the LCDC HANDLER firmware functions.
-* \details
+* \details  The LCD Controller (LCDC) module provides interfaces to connect with various LCD panels.
+*           It supports multiple interfaces including eDPI, DBI-B, DBI-C/SPI, and DPI.
+*           This driver provides APIs for configuring and controlling the LCDC module.
+*
 * \author   howie wang
 * \date     2023-10-17
 * \version  v1.0
@@ -93,7 +96,7 @@ typedef struct
 } LCDC_DMA_LinkListTypeDef;
 
 /** \defgroup LCDC        LCDC
-  * \brief
+  * \brief    LCD Controller driver module
   * \{
   */
 
@@ -112,10 +115,10 @@ typedef struct
  */
 typedef enum
 {
-    LCDC_IF_eDPI,
-    LCDC_IF_DBIB,
-    LCDC_IF_DBIC,
-    LCDC_IF_DPI
+    LCDC_IF_eDPI = 0x0,                     /*!< Enhanced Display Pixel Interface, need MIPI DSI host */
+    LCDC_IF_DBIB = 0x1,                     /*!< Display Bus Interface Type-B */
+    LCDC_IF_DBIC = 0x2,                     /*!< Serial Display Interface */
+    LCDC_IF_DPI  = 0x3                      /*!< Display Pixel Interface */
 } LCDC_IF_T;
 
 #define IS_LCDC_IF_SEL(IF) (((IF) == LCDC_IF_eDPI) || ((IF) == LCDC_IF_DBIB) || \
@@ -125,6 +128,8 @@ typedef enum
   * \}
   */
 
+#define LCDC_IF_SDI  LCDC_IF_DBIC
+
 /**
  * \defgroup    LCDC_Pixel_Input_Format LCDC Pixel Input Format
  * \{
@@ -132,11 +137,11 @@ typedef enum
  */
 typedef enum
 {
-    LCDC_INPUT_ARGB8888,
-    LCDC_INPUT_BGR565,
-    LCDC_INPUT_RGB565,
-    LCDC_INPUT_RGB888,
-    LCDC_INPUT_ABGR8888,
+    LCDC_INPUT_ARGB8888,               /*!< A(bit 31:24) R(bit 23:16) G(bit 15:8) B(bit 7:0). */
+    LCDC_INPUT_BGR565,                 /*!< B(bit 15:11) G(bit 10:5) R(bit 4:0). */
+    LCDC_INPUT_RGB565,                 /*!< R(bit 15:11) G(bit 10:5) B(bit 4:0). */
+    LCDC_INPUT_RGB888,                 /*!< R(bit 23:16) G(bit 15:8) B(bit 7:0). */
+    LCDC_INPUT_ABGR8888,               /*!< A(bit 31:24) B(bit 23:16) G(bit 15:8) R(bit 7:0). */
 } LCDC_INPUT_FORMAT_T;
 
 #define IS_LCDC_INPUT_FORMAT(FORMAT) (((FORMAT) == LCDC_INPUT_ARGB8888) || ((FORMAT) == LCDC_INPUT_BGR565) || \
@@ -154,29 +159,29 @@ typedef enum
  */
 typedef enum
 {
-    LCDC_OUTPUT_RGB888,
-    LCDC_OUTPUT_RGB565,
-    LCDC_OUTPUT_BGR888,
-    LCDC_OUTPUT_BGR565,
+    LCDC_OUTPUT_RGB888,           /*!< R(bit 23:16) G(bit 15:8) B(bit 7:0). */
+    LCDC_OUTPUT_RGB565,           /*!< R(bit 15:11) G(bit 10:5) B(bit 4:0). */
+    LCDC_OUTPUT_BGR888,           /*!< B(bit 23:16) G(bit 15:8) R(bit 7:0). */
+    LCDC_OUTPUT_BGR565,           /*!< B(bit 15:11) G(bit 10:5) R(bit 4:0). */
 } LCDC_OUTPUT_FORMAT_T;
 
-#define IS_LCDC_OUTPUT_FORMAT(FORMAT) ((FORMAT) == LCDC_OUTPUT_RGB888) || ((FORMAT) == LCDC_OUTPUT_RGB565) || ((FORMAT) == LCDC_OUTPUT_BGR565)
+#define IS_LCDC_OUTPUT_FORMAT(FORMAT) (((FORMAT) == LCDC_OUTPUT_RGB888) || ((FORMAT) == LCDC_OUTPUT_RGB565) || ((FORMAT) == LCDC_OUTPUT_BGR565))
 
 /** End of LCDC_Pixel_Output_Format
   * \}
   */
 
 /**
- * \defgroup    LCDC_Pixel_Bit_Swap LCDC Pixel Bit Swap
+ * \defgroup    LCDC_Pixel_Bit_Swap LCDC Pixel Bit Swap with in each word sized byte
  * \{
  * \ingroup     LCDC_Exported_Constants
  */
 typedef enum
 {
-    LCDC_SWAP_BYPASS,
-    LCDC_SWAP_8BIT,
-    LCDC_SWAP_16BIT,
-    LCDC_SWAP_8BIT_16BIT,
+    LCDC_SWAP_BYPASS,          /*!< No swap operation is performed. */
+    LCDC_SWAP_8BIT,            /*!< Each 4 bytes (byte3 byte2 byte1 byte0) is changed to (byte2 byte3 byte0 byte1). */
+    LCDC_SWAP_16BIT,           /*!< Each 4 bytes (byte3 byte2 byte1 byte0) is changed to (byte1 byte0 byte3 byte2). */
+    LCDC_SWAP_8BIT_16BIT,      /*!< Each 4 bytes (byte3 byte2 byte1 byte0) is changed to (byte0 byte1 byte2 byte3). */
 } LCDC_SWAP_BIT_T;
 
 #define IS_LCDC_SWAP(SWAP) (((SWAP) == LCDC_SWAP_BYPASS) || ((SWAP) == LCDC_SWAP_8BIT) || \
@@ -193,12 +198,9 @@ typedef enum
  */
 typedef enum
 {
-    LCDC_TE_SIGNAL_VALID_LOW,
-    LCDC_TE_SIGNAL_VALID_HIGH,
+    LCDC_TE_SIGNAL_VALID_LOW,     /*!< Tear signal is now low level. */
+    LCDC_TE_SIGNAL_VALID_HIGH,    /*!< Tear signal is now high level. */
 } LCDC_TE_SIGNAL_VALID_T;
-
-#define IS_LCDC_TE_SIGNAL_VALID(VALID) ((VALID) == LCDC_TE_SIGNAL_VALID_HIGH) || ((VALID) == LCDC_TE_SIGNAL_VALID_LOW)
-
 /** End of LCDC_Tear_Signal_Valid
   * \}
   */
@@ -210,11 +212,11 @@ typedef enum
  */
 typedef enum
 {
-    LCDC_TE_EDGE_RISING,
-    LCDC_TE_EDGE_FALLING
+    LCDC_TE_EDGE_RISING,      /*!< Tear signal triggers data transmission on rising edge. */
+    LCDC_TE_EDGE_FALLING      /*!< Tear signal triggers data transmission on falling edge. */
 } LCDC_TE_EDGE_T;
 
-#define IS_LCDC_TE_POLARITY(POLARITY) ((POLARITY) == LCDC_TE_EDGE_RISING) || ((POLARITY) == LCDC_TE_EDGE_FALLING)
+#define IS_LCDC_TE_POLARITY(POLARITY) (((POLARITY) == LCDC_TE_EDGE_RISING) || ((POLARITY) == LCDC_TE_EDGE_FALLING))
 
 /** End of LCDC_Tear_Polarity
   * \}
@@ -227,11 +229,11 @@ typedef enum
  */
 typedef enum
 {
-    LCDC_TE_LCD_INPUT,
-    LCDC_TE_DSIHOST_INPUT
+    LCDC_TE_LCD_INPUT,        /*!< Tear input signal is from LCD Panel Output. */
+    LCDC_TE_DSIHOST_INPUT     /*!< Tear input signal is from DW DSI Host Controller(Only used in eDPI interface). */
 } LCDC_INPUT_MUX_T;
 
-#define IS_LCDC_TE_INPUTMUX(INPUT) ((INPUT) == LCDC_TE_LCD_INPUT) || ((INPUT) == LCDC_TE_DSIHOST_INPUT)
+#define IS_LCDC_TE_INPUTMUX(INPUT) (((INPUT) == LCDC_TE_LCD_INPUT) || ((INPUT) == LCDC_TE_DSIHOST_INPUT))
 
 /** End of LCDC_Tear_Input_Mux
   * \}
@@ -244,11 +246,11 @@ typedef enum
  */
 typedef enum
 {
-    LCDC_AUTO_MODE,
-    LCDC_MANUAL_MODE,
+    LCDC_AUTO_MODE,      /*!< LCDC work in auto mode. */
+    LCDC_MANUAL_MODE,    /*!< LCDC work in manual mode, only valid for DBI-B interface. */
 } LCDC_MODE_T;
 
-#define IS_LCDC_MODE(MODE) ((MODE) == LCDC_AUTO_MODE) || ((MODE) == LCDC_MANUAL_MODE)
+#define IS_LCDC_MODE(MODE) (((MODE) == LCDC_AUTO_MODE) || ((MODE) == LCDC_MANUAL_MODE))
 
 /** End of LCDC_Operate_Mode
   * \}
@@ -261,11 +263,11 @@ typedef enum
  */
 typedef enum
 {
-    LCDC_TX_MODE,
-    LCDC_RX_MODE,
+    LCDC_TX_MODE,       /*!< LCDC in data transmission mode. */
+    LCDC_RX_MODE,       /*!< LCDC in data receiving mode. */
 } LCDC_DIRECTION_T;
 
-#define IS_LCDC_DIR(DIR) ((DIR) == LCDC_TX_MODE) || ((DIR) == LCDC_RX_MODE)
+#define IS_LCDC_DIR(DIR) (((DIR) == LCDC_TX_MODE) || ((DIR) == LCDC_RX_MODE))
 
 /** End of LCDC_Operate_Direction
   * \}
@@ -278,41 +280,12 @@ typedef enum
  */
 typedef enum
 {
-    LCDC_SPI_PHASE_SHIFT_0_DEGREE = 0,
-    LCDC_SPI_PHASE_SHIFT_90_DEGREE = 2,
-    LCDC_SPI_PHASE_SHIFT_180_DEGREE = 3,
+    LCDC_SPI_PHASE_SHIFT_0_DEGREE = 0,      /*!< SPI clock no phase shift. */
+    LCDC_SPI_PHASE_SHIFT_90_DEGREE = 2,     /*!< SPI clock phase shift 90 degrees. */
+    LCDC_SPI_PHASE_SHIFT_180_DEGREE = 3,    /*!< SPI clock phase shift 180 degrees. */
 } LCDC_CLK_PHASE_SHIFT_T;
 
 /** End of LCDC_Clock_Phase_Shift
-  * \}
-  */
-
-/**
- * \defgroup    LCDC_Interrupt_Mask_Definition LCDC Interrupt Mask Definition
- * \{
- * \ingroup     LCDC_Exported_Constants
- */
-#define LCDC_INT_MASK_MULTI_BLOCK_START                 BIT31
-#define LCDC_INT_MASK_WAVEFORM_FINISH                   BIT30
-#define LCDC_INT_MASK_TEAR_TTRIGGER                     BIT11
-#define LCDC_INT_MASK_RX_AUTO_DONE                      BIT10
-#define LCDC_INT_MASK_RX_FIFO_OVERFLOW                  BIT9
-#define LCDC_INT_MASK_TX_AUTO_DONE                      BIT8
-#define LCDC_INT_MASK_TX_FIFO_EMPTY                     BIT7
-#define LCDC_INT_MASK_TX_FIFO_OVERFLOW                  BIT6
-#define LCDC_INT_MASK_TX_FIFO_THRESHOLDR                BIT5
-#define LCDC_INT_MASK_TX_TRANSFER_ERROR                 BIT4
-
-#define IS_LCDC_INT_MSK_CONFIG(MASK)   (((MASK) == LCDC_INT_MASK_TEAR_TTRIGGER)            || \
-                                        ((MASK) == LCDC_INT_MASK_RX_AUTO_DONE)     || \
-                                        ((MASK) == LCDC_INT_MASK_RX_FIFO_OVERFLOW)            || \
-                                        ((MASK) == LCDC_INT_MASK_TX_AUTO_DONE)     || \
-                                        ((MASK) == LCDC_INT_MASK_TX_FIFO_EMPTY)         || \
-                                        ((MASK) == LCDC_INT_MASK_TX_FIFO_OVERFLOW)            || \
-                                        ((MASK) == LCDC_INT_MASK_TX_FIFO_THRESHOLDR)        || \
-                                        ((MASK) == LCDC_INT_MASK_TX_TRANSFER_ERROR))
-
-/** End of LCDC_Interrupt_Mask_Definition
   * \}
   */
 
@@ -321,48 +294,59 @@ typedef enum
  * \{
  * \ingroup     LCDC_Exported_Constants
  */
-#define LCDC_INT_STATUS_MULTIBLOCK_LASTBLOCK_START              BIT31
-#define LCDC_INT_STATUS_WAVEFORM_FINISH                         BIT30
-#define LCDC_INT_STATUS_TEAR_TRIGGER                            BIT20
-#define LCDC_INT_STATUS_RX_FIFO_EMPTY                           BIT19
-#define LCDC_INT_STATUS_RX_FIFO_FULL                            BIT18
-#define LCDC_INT_RX_AUTO_DONE                                   BIT17
-#define LCDC_INT_RX_FIFO_OVERFLOW                               BIT16
-#define LCDC_INT_TX_AUTO_DONE                                   BIT6
-#define LCDC_INT_STATUS_TX_FIFO_EMPTY                           BIT5
-#define LCDC_INT_STATUS_TX_FIFO_FULL                            BIT4
+#define LCDC_STATUS_WAVEFORM_FINISH_INT           BIT30 /*!< In DBI-B & SDI interface, the status will be set when CS signal return to inactive level. In eDPI interface, this status will be set when data transmission has been finished and stop state of PHY has been set. */
+#define LCDC_STATUS_TEAR_TRIGGER_INT              BIT20 /*!< Tear interrupt status is triggered. */
+#define LCDC_STATUS_RX_FIFO_EMPTY                 BIT19 /*!< RX_FIFO offset is 0 and only valid in DBI-B auto receiving. */
+#define LCDC_STATUS_RX_FIFO_FULL                  BIT18 /*!< RX_FIFO offset is full and only valid in DBI-B auto receiving. */
+#define LCDC_STATUS_RX_AUTO_DONE_INT              BIT17 /*!< RX auto done interrupt is triggered, only valid in DBI-B auto receiving. */
+#define LCDC_STATUS_RX_FIFO_OVERFLOW_INT          BIT16 /*!< RX-FIFO has overflowed, only valid in DBI-B auto receiving. */
+#define LCDC_STATUS_TX_AUTO_DONE_INT              BIT6  /*!< When output pixel count grows no less than output pixel number. In eDPI mode, it is raised when hole frame has been tranmitted. */
+#define LCDC_STATUS_TX_FIFO_EMPTY                 BIT5  /*!< TX_FIFO offset is 0. */
+#define LCDC_STATUS_TX_FIFO_FULL                  BIT4  /*!< TX_FIFO is full. */
+#define LCDC_STATUS_TX_FIFO_EMPTY_INT             BIT3  /*!< Triggered when TX_FIFO offset is 0. */
+#define LCDC_STATUS_TX_FIFO_OVERFLOW_INT          BIT2  /*!< Triggered when TX_FIFO overflows. */
+#define LCDC_STATUS_TX_FIFO_THRESHOLD_INT          BIT1  /*!< Triggered when TX_FIFO offset is less than threshold. */
 
-#define IS_LCDC_INT_STATUS(STATUS)       (((STATUS) == LCDC_INT_STATUS_MULTIBLOCK_LASTBLOCK_START)         || \
-                                          ((STATUS) == LCDC_INT_STATUS_WAVEFORM_FINISH)  || \
-                                          ((STATUS) == LCDC_INT_STATUS_TEAR_TRIGGER)         || \
-                                          ((STATUS) == LCDC_INT_STATUS_RX_FIFO_EMPTY)  || \
-                                          ((STATUS) == LCDC_INT_STATUS_RX_FIFO_FULL)      || \
-                                          ((STATUS) == LCDC_INT_RX_AUTO_DONE)         || \
-                                          ((STATUS) == LCDC_INT_RX_FIFO_OVERFLOW)           || \
-                                          ((STATUS) == LCDC_INT_TX_AUTO_DONE)          || \
-                                          ((STATUS) == LCDC_INT_STATUS_TX_FIFO_EMPTY)  || \
-                                          ((STATUS) == LCDC_INT_STATUS_TX_FIFO_FULL))
-
+#define IS_LCDC_STATUS(STATUS) (((STATUS) == LCDC_STATUS_WAVEFORM_FINISH_INT) || \
+                                ((STATUS) == LCDC_STATUS_TEAR_TRIGGER_INT) || \
+                                ((STATUS) == LCDC_STATUS_RX_FIFO_EMPTY) || \
+                                ((STATUS) == LCDC_STATUS_RX_FIFO_FULL) || \
+                                ((STATUS) == LCDC_STATUS_RX_AUTO_DONE_INT) || \
+                                ((STATUS) == LCDC_STATUS_RX_FIFO_OVERFLOW_INT) || \
+                                ((STATUS) == LCDC_STATUS_TX_AUTO_DONE_INT) || \
+                                ((STATUS) == LCDC_STATUS_TX_FIFO_EMPTY) || \
+                                ((STATUS) == LCDC_STATUS_TX_FIFO_FULL) || \
+                                ((STATUS) == LCDC_STATUS_TX_FIFO_EMPTY_INT) || \
+                                ((STATUS) == LCDC_STATUS_TX_FIFO_OVERFLOW_INT) || \
+                                ((STATUS) == LCDC_STATUS_TX_FIFO_THRESHOLD_INT))
 /** End of LCDC_Interrupt_Status_Definition
   * \}
   */
 
 /**
- * \defgroup    LCDC_Interrupt_Flag LCDC Interrupt Flag
+ * \defgroup    LCDC_Interrupt_Mask_Definition LCDC Interrupt Mask Definition
  * \{
  * \ingroup     LCDC_Exported_Constants
  */
-#define LCDC_INT_FLAG_STATUS_TX_FIFO_EMPTY                      BIT3
-#define LCDC_INT_FLAG_STATUS_TX_FIFO_OVERFLOW                   BIT2
-#define LCDC_INT_FLAG_STATUS_TX_FIFO_THESHOLD                   BIT1
-#define LCDC_INT_FLAG_STATUS_TX_FIFO_TRANSFER_ERROR             BIT0
+#define LCDC_INT_MASK_WAVEFORM_FINISH                   BIT30   /*!< Mask interrupt \ref LCDC_STATUS_WAVEFORM_FINISH_INT .*/
+#define LCDC_INT_MASK_TEAR_TTRIGGER                     BIT11   /*!< Mask interrupt \ref LCDC_STATUS_TEAR_TRIGGER_INT .*/
+#define LCDC_INT_MASK_RX_AUTO_DONE                      BIT10   /*!< Mask interrupt \ref LCDC_STATUS_RX_AUTO_DONE_INT .*/
+#define LCDC_INT_MASK_RX_FIFO_OVERFLOW                  BIT9    /*!< Mask interrupt \ref LCDC_STATUS_RX_FIFO_OVERFLOW_INT .*/
+#define LCDC_INT_MASK_TX_AUTO_DONE                      BIT8    /*!< Mask interrupt \ref LCDC_STATUS_TX_AUTO_DONE_INT .*/
+#define LCDC_INT_MASK_TX_FIFO_EMPTY                     BIT7    /*!< Mask interrupt \ref LCDC_STATUS_TX_FIFO_EMPTY_INT .*/
+#define LCDC_INT_MASK_TX_FIFO_OVERFLOW                  BIT6    /*!< Mask interrupt \ref LCDC_STATUS_TX_FIFO_OVERFLOW_INT .*/
+#define LCDC_INT_MASK_TX_FIFO_THRESHOLD                 BIT5    /*!< Mask interrupt \ref LCDC_STATUS_TX_FIFO_THRESHOLD_INT .*/
 
-#define IS_LCDC_FLAG_STATUS(FLAG)       (((FLAG) == LCDC_INT_FLAG_STATUS_TX_FIFO_EMPTY)         || \
-                                         ((FLAG) == LCDC_INT_FLAG_STATUS_TX_FIFO_OVERFLOW)  || \
-                                         ((FLAG) == LCDC_INT_FLAG_STATUS_TX_FIFO_THESHOLD)         || \
-                                         ((FLAG) == LCDC_INT_FLAG_STATUS_TX_FIFO_TRANSFER_ERROR))
+#define IS_LCDC_INT_MSK_CONFIG(MASK)   (((MASK) == LCDC_INT_MASK_TEAR_TTRIGGER)            || \
+                                        ((MASK) == LCDC_INT_MASK_WAVEFORM_FINISH)   ||\
+                                        ((MASK) == LCDC_INT_MASK_RX_AUTO_DONE)     || \
+                                        ((MASK) == LCDC_INT_MASK_RX_FIFO_OVERFLOW)            || \
+                                        ((MASK) == LCDC_INT_MASK_TX_AUTO_DONE)     || \
+                                        ((MASK) == LCDC_INT_MASK_TX_FIFO_EMPTY)         || \
+                                        ((MASK) == LCDC_INT_MASK_TX_FIFO_OVERFLOW)            || \
+                                        ((MASK) == LCDC_INT_MASK_TX_FIFO_THRESHOLD))
 
-/** End of LCDC_Interrupt_Flag
+/** End of LCDC_Interrupt_Mask_Definition
   * \}
   */
 
@@ -371,22 +355,19 @@ typedef enum
  * \{
  * \ingroup     LCDC_Exported_Constants
  */
-#define LCDC_CLR_MULTIBLOCK_LASTBLOCK_START                     BIT31
-#define LCDC_CLR_WAVEFORM_FINISH                                BIT30
-#define LCDC_CLR_TEAR_TRIGGER                                   BIT10
-#define LCDC_CLR_RX_AUTO_DONE                                   BIT9
-#define LCDC_CLR_RX_FIFO_OVERFLOW                               BIT8
-#define LCDC_CLR_RX_OUTPUT_CNT                                  BIT7
-#define LCDC_CLR_TX_AUTO_DONE                                   BIT6
-#define LCDC_CLR_TX_FIFO_EMPTY                                  BIT5
-#define LCDC_CLR_TX_FIFO_OVERFLOW                               BIT4
-#define LCDC_CLR_TX_FIFO_THESHOLD                               BIT3
-#define LCDC_CLR_TX_OUTPUT_CNT                                  BIT2
-#define LCDC_CLR_TX_FIFO_TRANSFER_ERROR                         BIT1
-#define LCDC_CLR_FIFO                                           BIT0
+#define LCDC_CLR_WAVEFORM_FINISH                                BIT30 /*!< Clear interrupt state \ref LCDC_STATUS_WAVEFORM_FINISH_INT.*/
+#define LCDC_CLR_TEAR_TRIGGER                                   BIT10 /*!< Clear interrupt state \ref LCDC_STATUS_TEAR_TRIGGER_INT .*/
+#define LCDC_CLR_RX_AUTO_DONE                                   BIT9  /*!< Clear interrupt state \ref LCDC_STATUS_RX_AUTO_DONE_INT .*/
+#define LCDC_CLR_RX_FIFO_OVERFLOW                               BIT8  /*!< Clear interrupt state \ref LCDC_STATUS_RX_FIFO_OVERFLOW_INT .*/
+#define LCDC_CLR_RX_OUTPUT_CNT                                  BIT7  /*!< Clear RX output counter. */
+#define LCDC_CLR_TX_AUTO_DONE                                   BIT6  /*!< Clear interrupt state \ref LCDC_STATUS_TX_AUTO_DONE_INT .*/
+#define LCDC_CLR_TX_FIFO_EMPTY                                  BIT5  /*!< Clear interrupt state \ref LCDC_STATUS_TX_FIFO_EMPTY_INT .*/
+#define LCDC_CLR_TX_FIFO_OVERFLOW                               BIT4  /*!< Clear interrupt state \ref LCDC_STATUS_TX_FIFO_OVERFLOW_INT .*/
+#define LCDC_CLR_TX_FIFO_THRESHOLD                              BIT3  /*!< Clear interrupt state \ref LCDC_STATUS_TX_FIFO_THRESHOLD_INT .*/
+#define LCDC_CLR_TX_OUTPUT_CNT                                  BIT2  /*!< Clear TX output counter. */
+#define LCDC_CLR_FIFO                                           BIT0  /*!< Forcefully clear the FIFOs. */
 
-#define IS_LCDC_INT_CLEAR(CLR)           (((CLR) == LCDC_CLR_MULTIBLOCK_LASTBLOCK_START) || \
-                                          ((CLR) == LCDC_CLR_WAVEFORM_FINISH) || \
+#define IS_LCDC_INT_CLEAR(CLR)           (((CLR) == LCDC_CLR_WAVEFORM_FINISH) || \
                                           ((CLR) == LCDC_CLR_TEAR_TRIGGER) || \
                                           ((CLR) == LCDC_CLR_RX_AUTO_DONE) || \
                                           ((CLR) == LCDC_CLR_RX_FIFO_OVERFLOW) || \
@@ -394,9 +375,8 @@ typedef enum
                                           ((CLR) == LCDC_CLR_TX_AUTO_DONE) || \
                                           ((CLR) == LCDC_CLR_TX_FIFO_EMPTY) || \
                                           ((CLR) == LCDC_CLR_TX_FIFO_OVERFLOW) || \
-                                          ((CLR) == LCDC_CLR_TX_FIFO_THESHOLD) || \
+                                          ((CLR) == LCDC_CLR_TX_FIFO_THRESHOLD) || \
                                           ((CLR) == LCDC_CLR_TX_OUTPUT_CNT) || \
-                                          ((CLR) == LCDC_CLR_TX_FIFO_TRANSFER_ERROR) || \
                                           ((CLR) == LCDC_CLR_FIFO))
 
 /** End of LCDC_Interrupt_Clear_Status
@@ -410,9 +390,9 @@ typedef enum
  */
 typedef enum
 {
-    SPIC_RX_FIFO_READ_SIZE_BYTE,
-    SPIC_RX_FIFO_READ_SIZE_HALFWORD,
-    SPIC_RX_FIFO_READ_SIZE_WORD
+    SPIC_RX_FIFO_READ_SIZE_BYTE,      /*!< Data size is 1 byte when reading from SDI RX FIFO. */
+    SPIC_RX_FIFO_READ_SIZE_HALFWORD,  /*!< Data size is 1 half-word when reading from SDI RX FIFO. */
+    SPIC_RX_FIFO_READ_SIZE_WORD       /*!< Data size is 1 word when reading from SDI RX FIFO. */
 } LCDC_SPIC_READ_SIZE_T;
 
 #define IS_SPIC_RX_FIFO_READ_SIZE(SIZE) (((SIZE) == SPIC_RX_FIFO_READ_SIZE_BYTE) || \
@@ -424,51 +404,17 @@ typedef enum
   */
 
 /**
- * \defgroup    LCDC_DMA_Multiblock_Mode LCDC DMA Multi-block Mode
- * \{
- * \ingroup     LCDC_Exported_Constants
- */
-#define AUTO_RELOAD_WITH_CONTIGUOUS_SAR     (BIT31)
-#define AUTO_RELOAD_WITH_CONTIGUOUS_DAR     (BIT30)
-#define AUTO_RELOAD_TRANSFER                (BIT30 | BIT31)
-#define LLI_WITH_CONTIGUOUS_SAR             (BIT27)
-#define LLI_WITH_AUTO_RELOAD_SAR            (BIT27 | BIT30)
-#define LLI_WITH_CONTIGUOUS_DAR             (BIT28)
-#define LLI_WITH_AUTO_RELOAD_DAR            (BIT28 | BIT31)
-#define LLI_TRANSFER                        (BIT27 | BIT28)
-
-#define IS_DMA_MULTIBLOCKMODE(MODE) (((MODE) == AUTO_RELOAD_WITH_CONTIGUOUS_SAR) || ((MODE) == AUTO_RELOAD_WITH_CONTIGUOUS_DAR)\
-                                     ||((MODE) == AUTO_RELOAD_TRANSFER) || ((MODE) == LLI_WITH_CONTIGUOUS_SAR)\
-                                     ||((MODE) == LLI_WITH_AUTO_RELOAD_SAR) || ((MODE) == LLI_WITH_CONTIGUOUS_DAR)\
-                                     ||((MODE) == LLI_WITH_AUTO_RELOAD_DAR) || ((MODE) == LLI_TRANSFER))
-
-/** End of LCDC_DMA_Multiblock_Mode
-  * \}
-  */
-
-/**
- * \defgroup    LCDC_DMA_Multiblock_Select_Bit LCDC DMA Multi-Block Select Bit
- * \{
- * \ingroup     LCDC_Exported_Constants
- */
-#define LCDC_DMA_LINK_G1_WP         BIT31
-#define LCDC_DMA_LINK_G2_WP         BIT30
-
-/** End of LCDC_DMA_Multiblock_Select_Bit
-  * \}
-  */
-
-/**
  * \defgroup    LCDC_AXIMUX_mode LCDC AXIMUX Mode
  * \{
  * \ingroup     LCDC_Exported_Constants
  */
 typedef enum
 {
-    LCDC_FW_MODE,
-    LCDC_HW_MODE,
+    LCDC_FW_MODE,     /*!< AXI MUX is used to set the register of SDI through APB interface. */
+    LCDC_HW_MODE,     /*!< AXI MUX is used to tranfer data packet from handler to SDI FIFO, user can not access the register of SDI. */
 } LCDC_AXI_MUX_MODE_T;
 
+#define IS_LCDC_AXI_MUX_MODE(Mode) (((Mode) == LCDC_FW_MODE) || ((Mode) == LCDC_HW_MODE))
 /** End of LCDC_AXIMUX_mode
   * \}
   */
@@ -485,42 +431,6 @@ typedef enum
   * \{
   */
 
-typedef enum
-{
-    CKO1_PLL1_VCORE4 = 0,
-    CKO1_PLL4_VCORE4 = 1
-} CLK_DISPLAY_SRC_MUX0;
-
-typedef enum
-{
-    CKO1_PLL2_VCORE4 = 0,
-    FROM_CLK_DISPLAY_SRC_MUX0 = 1
-} CLK_DISPLAY_SRC_MUX1;
-
-typedef enum
-{
-    NO_CLOCK = 0,
-    FRO_CLK_DISPLAY_SRC_MUX1 = 1
-} CLK_DISPLAY_MUX_CG_EN;
-
-typedef enum
-{
-    LCDC_DIV_DISABLE = 0,
-    LCDC_DIV_ENABLE = 1
-} LCDC_DIV_EN;
-
-typedef enum
-{
-    LCDC_DIV_1_DIV = 0,
-    LCDC_DIV_2_DIV = 1,
-    LCDC_DIV_4_DIV = 2,
-    LCDC_DIV_8_DIV = 3,
-    LCDC_DIV_16_DIV = 4,
-    LCDC_DIV_32_DIV = 5,
-    LCDC_DIV_40_DIV = 6,
-    LCDC_DIV_64_DIV = 7,
-} LCDC_DIV_SEL;
-
 /**
  * \brief       LCDC Init structure definition
  *
@@ -534,9 +444,9 @@ typedef struct
                                          This parameter can be a value of ENABLE or DISABLE */
     uint32_t LCDC_GroupSel;      /*!< selecting the output pin assignemnt groups.
                                          This parameter can be a value of 1 or 2 */
-    uint32_t LCDC_PixelInputFarmat;    /*!< Configure the input pixel format of pixel converter.
+    uint32_t LCDC_PixelInputFormat;    /*!< Configure the input pixel format of pixel converter.
                                               This parameter can be a value of @ref LCDC_Pixel_Input_Format */
-    uint32_t LCDC_PixelOutpuFarmat;    /*!< Configure the output pixel format of pixel converter.
+    uint32_t LCDC_PixelOutputFormat;    /*!< Configure the output pixel format of pixel converter.
                                               This parameter can be a value of @ref LCDC_Pixel_Output_Format */
     uint32_t LCDC_PixelBitSwap;     /*!< Input data 8/16bits swap configuration of pixel converter.
                                            This parameter can be a value of @ref LCDC_Pixel_Bit_Swap */
@@ -581,37 +491,6 @@ typedef struct
   * \}
   */
 
-/*============================================================================*
- *                         Functions
- *============================================================================*/
-/** \defgroup LCDC_Exported_Functions LCDC Exported Functions
-  * \brief
-  * \{
-  */
-
-/**
- * rtl_lcdc.h
- *
- * \brief  Enable or disable LCD reset signal, which is active low.
- *
- * * \param[in] reset: New state of LCD reset signal.
- *            This parameter can be one of the following values:
- *            \arg true: Enable LCD reset signal.
- *            \arg false: Disable LCD reset signal.
- *
- * \return None.
- *
- * <b>Example usage</b>
- * \code{.c}
- *
- * void driver_lcdc_init(void)
- * {
- *     LCDC_LCD_SET_RST(true);
- *     platform_delay_ms(120);
- *     LCDC_LCD_SET_RST(true);
- * }
- * \endcode
- */
 #ifndef __STATIC_INLINE
 #if   defined ( __CC_ARM )
 #define __STATIC_INLINE  static __inline
@@ -623,7 +502,33 @@ typedef struct
 #error Unknown compiler
 #endif
 #endif
+/*============================================================================*
+ *                         Functions
+ *============================================================================*/
+/** \defgroup LCDC_Exported_Functions LCDC Exported Functions
+  * \brief
+  * \{
+  */
 
+/**
+ * \brief  Enable or disable LCD reset signal, which is active low.
+ *
+ * * \param[in] reset: New state of LCD reset signal.
+ *            This parameter can be one of the following values:
+ *            \arg true: Enable LCD reset signal.
+ *            \arg false: Disable LCD reset signal.
+ *
+ * <b>Example usage</b>
+ * \code{.c}
+ *
+ * void driver_lcdc_init(void)
+ * {
+ *     LCDC_LCD_SET_RST(true);
+ *     platform_delay_ms(120);
+ *     LCDC_LCD_SET_RST(false);
+ * }
+ * \endcode
+ */
 __STATIC_INLINE void LCDC_LCD_SET_RST(bool reset)
 {
     LCDC_HANDLER_INTERFACE_SELECT_TypeDef handler_reg_0x00 = {.d32 = LCDC_HANDLER->INTERFACE_SELECT};
@@ -639,16 +544,12 @@ __STATIC_INLINE void LCDC_LCD_SET_RST(bool reset)
 }
 
 /**
- * rtl_lcdc.h
- *
  * \brief  Enable or disable LCDC.
  *
  * \param[in] NewState: New state of LCDC.
  *            This parameter can be one of the following values:
  *            \arg ENABLE: Enable LCDC.
  *            \arg DISABLE: Disable LCDC.
- *
- * \return None.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -674,8 +575,6 @@ __STATIC_INLINE void LCDC_Cmd(FunctionalState NewState)
 }
 
 /**
- * rtl_lcdc.h
- *
  * \brief  Selecting the output interface of LCDC.
  *
  * \param[in] InterFace: The output interface of LCDC.
@@ -684,8 +583,6 @@ __STATIC_INLINE void LCDC_Cmd(FunctionalState NewState)
  *            \arg LCDC_IF_DBIB: DBIB interface.
  *            \arg LCDC_IF_DBIC: DBIC/SPIC interface.
  *            \arg LCDC_IF_DPI: DPI interface.
- *
- * \return None.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -696,7 +593,7 @@ __STATIC_INLINE void LCDC_Cmd(FunctionalState NewState)
  * }
  * \endcode
  */
-__STATIC_INLINE void LCDC_SwitchIF(uint32_t InterFace)
+__STATIC_INLINE void LCDC_SwitchIF(LCDC_IF_T InterFace)
 {
     assert_param(IS_LCDC_IF_SEL(InterFace));
 
@@ -706,16 +603,12 @@ __STATIC_INLINE void LCDC_SwitchIF(uint32_t InterFace)
 }
 
 /**
- * rtl_lcdc.h
- *
  * \brief  Switch LCDC to required mode.
  *
  * \param[in] mode: LCDC work mode.
  *            This parameter can be one of the following values:
  *            \arg LCDC_AUTO_MODE: Auto mode.
  *            \arg LCDC_MANUAL_MODE: Manual mode.
- *
- * \return None.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -726,25 +619,21 @@ __STATIC_INLINE void LCDC_SwitchIF(uint32_t InterFace)
  * }
  * \endcode
  */
-__STATIC_INLINE void LCDC_SwitchMode(uint32_t mode)
+__STATIC_INLINE void LCDC_SwitchMode(LCDC_MODE_T Mode)
 {
-    assert_param(IS_LCDC_MODE(mode));
+    assert_param(IS_LCDC_MODE(Mode));
     LCDC_HANDLER_OPERATE_CTR_TypeDef handler_reg_0x14 = {.d32 = LCDC_HANDLER->OPERATE_CTR};
-    handler_reg_0x14.b.access_mode = mode;
+    handler_reg_0x14.b.access_mode = Mode;
     LCDC_HANDLER->OPERATE_CTR = handler_reg_0x14.d32;
 }
 
 /**
- * rtl_lcdc.h
- *
  * \brief  Swtich LCDC function to write or read.
  *
  * \param[in] dir: The transmission mode of LCDC.
  *            This parameter can be one of the following values:
  *            \arg LCDC_TX_MODE: Write pixel data from FIFO to pannel.
  *            \arg LCDC_RX_MODE: Read back data from pannel.
- *
- * \return None.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -755,25 +644,21 @@ __STATIC_INLINE void LCDC_SwitchMode(uint32_t mode)
  * }
  * \endcode
  */
-__STATIC_INLINE void LCDC_SwitchDirect(uint32_t dir)
+__STATIC_INLINE void LCDC_SwitchDirect(uint32_t Dir)
 {
-    assert_param(IS_LCDC_DIR(dir));
+    assert_param(IS_LCDC_DIR(Dir));
     LCDC_HANDLER_OPERATE_CTR_TypeDef handler_reg_0x14 = {.d32 = LCDC_HANDLER->OPERATE_CTR};
-    handler_reg_0x14.b.data_rw = dir;
+    handler_reg_0x14.b.data_rw = Dir;
     LCDC_HANDLER->OPERATE_CTR = handler_reg_0x14.d32;
 }
 
 /**
- * rtl_lcdc.h
- *
  * \brief  Start or stop DMA.
  *
  * \param[in] NewState: New state of LCDC DMA.
  *            This parameter can be one of the following values:
  *            \arg ENABLE: Enable DMA handshake and internal FIFO control.
  *            \arg DISABLE: Disable DMA handshake and internal FIFO control.
- *
- * \return None.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -800,16 +685,12 @@ __STATIC_INLINE void LCDC_DmaCmd(FunctionalState NewState)
 }
 
 /**
- * rtl_lcdc.h
- *
  * \brief  Enable or disable the function of automatically writing data when the valid edge of the tear signal arrives.
  *
  * \param[in] NewState: Enable or disable the function of automatically writing data when the valid edge of the tear signal arrives.
  *            This parameter can be one of the following values:
  *            \arg ENABLE: Enable the function of automatically writing data when the valid edge of the tear signal arrives.
  *            \arg DISABLE: Disable the function of automatically writing data when the valid edge of the tear signal arrives.
- *
- * \return None.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -837,16 +718,12 @@ __STATIC_INLINE void LCDC_TeCmd(FunctionalState NewState)
 }
 
 /**
- * rtl_lcdc.h
- *
  * \brief  Enable or disable the function of automatically turn on DMA when the valid edge of the tear signal arrives.
  *
  * \param[in] NewState: Enable or disable the function of automatically turning on DMA when the valid edge of the tear signal arrives.
  *            This parameter can be one of the following values:
  *            \arg ENABLE: Enable the function of automatically turning on DMA when the valid edge of the tear signal arrives.
  *            \arg DISABLE: Disable the function of automatically turning on DMA when the valid edge of the tear signal arrives.
- *
- * \return None.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -873,16 +750,12 @@ __STATIC_INLINE void LCDC_TeEnableDMA(FunctionalState NewState)
 }
 
 /**
- * rtl_lcdc.h
- *
  * \brief  Start or stop write data in auto mode.
  *
  * \param[in] NewState: Start or stop write data.
  *            This parameter can be one of the following values:
  *            \arg ENABLE: Start write data in auto mode.
  *            \arg DISABLE: Stop write data in auto mode.
- *
- * \return None.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -909,16 +782,12 @@ __STATIC_INLINE void LCDC_AutoWriteCmd(FunctionalState NewState)
 }
 
 /**
- * rtl_lcdc.h
- *
  * \brief  Start or stop read data in auto mode, only used in DBIB interface.
  *
  * \param[in] NewState: Start or stop read data.
  *            This parameter can be one of the following values:
  *            \arg ENABLE: Start read data in auto mode.
  *            \arg DISABLE: Stop read data in auto mode.
- *
- * \return None.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -945,13 +814,9 @@ __STATIC_INLINE void LCDC_AutoReadCmd(FunctionalState NewState)
 }
 
 /**
- * rtl_lcdc.h
- *
  * \brief  Write data to DMA FIFO.
  *
  * \param[in] data: Data to be writen.
- *
- * \return None.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -968,11 +833,7 @@ __STATIC_INLINE void LCDC_WriteFIFO(uint32_t data)
 }
 
 /**
- * rtl_lcdc.h
- *
  * \brief  Read data from DMA FIFO.
- *
- * \param None.
  *
  * \return Data read from FIFO.
  *
@@ -991,13 +852,7 @@ __STATIC_INLINE uint32_t LCDC_ReadFIFO(void)
 }
 
 /**
- * rtl_lcdc.h
- *
  * \brief  Clear DMA FIFO.
- *
- * \param None.
- *
- * \return None.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -1016,8 +871,6 @@ __STATIC_INLINE void LCDC_ClearDmaFifo(void)
 }
 
 /**
- * rtl_lcdc.h
- *
  * \brief  Clear pending bit of specified interrupt.
  *
  * \param[in] LCDC_CLEAR_INT: Specified interrupt type.
@@ -1030,8 +883,6 @@ __STATIC_INLINE void LCDC_ClearDmaFifo(void)
  *            \arg LCDC_CLR_RX_AUTO_DONE: Auto receive done, only in DBIB interface.
  *            \arg LCDC_CLR_TEAR_TRIGGER: Tear signal trigger.
  *            \arg LCDC_CLR_WAVEFORM_FINISH: Waveform finish.
- *
- * \return None.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -1052,8 +903,6 @@ __STATIC_INLINE void LCDC_ClearINTPendingBit(uint32_t LCDC_CLEAR_INT)
 }
 
 /**
- * rtl_lcdc.h
- *
  * \brief  Set the number of pixel needed to be writen in auto mode.
  *
  * \param[in] len: The number of pixel needed to be writen in auto mode.
@@ -1075,11 +924,7 @@ __STATIC_INLINE uint32_t LCDC_SetTxPixelLen(uint32_t len)
 }
 
 /**
- * rtl_lcdc.h
- *
  * \brief  Get amount of pixels that have been transmitted.
- *
- * \param None.
  *
  * \return The amount of pixels that have been transmitted.
  *
@@ -1098,13 +943,7 @@ __STATIC_INLINE uint32_t LCDC_GetTxPixelCnt(void)
 }
 
 /**
- * rtl_lcdc.h
- *
  * \brief  Clear transmitted pixel counter.
- *
- * \param None.
- *
- * \return None.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -1123,8 +962,6 @@ __STATIC_INLINE void LCDC_ClearTxPixelCnt(void)
 }
 
 /**
- * rtl_lcdc.h
- *
  * \brief  Set the number of byte needed to be read in auto mode, only used in DBIB interface.
  *
  * \param[in] len: The number of byte needed to be read in auto mode.
@@ -1146,11 +983,7 @@ __STATIC_INLINE uint32_t LCDC_SetRxByteLen(uint32_t len)
 }
 
 /**
- * rtl_lcdc.h
- *
  * \brief  Get the number of byte to be read in auto mode.
- *
- * \param None.
  *
  * \return The number of byte to be read in auto mode.
  *
@@ -1169,11 +1002,7 @@ __STATIC_INLINE uint32_t LCDC_GetRxByteCnt(void)
 }
 
 /**
- * rtl_lcdc.h
- *
  * \brief  Get amount of bytes that have been received.
- *
- * \param None.
  *
  * \return The amount of bytes that have been received.
  *
@@ -1192,13 +1021,7 @@ __STATIC_INLINE uint32_t LCDC_GetRxCounter(void)
 }
 
 /**
- * rtl_lcdc.h
- *
  * \brief  Clear recived byte counter.
- *
- * \param None.
- *
- * \return None.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -1217,16 +1040,12 @@ __STATIC_INLINE void LCDC_ClearRxCounter(void)
 }
 
 /**
- * rtl_lcdc.h
- *
  * \brief  Swtich LCDC function to firmware mode or hardware mode.
  *
  * \param[in] mode: LCDC mode.
  *            This parameter can be one of the following values:
- *            \arg LCDC_FW_MODE: Firmware mode. AXI MUX is used to set the register of SPIC through APB interface.
- *            \arg LCDC_HW_MODE: Hardware mode. AXI MUX is used to tranfer data packet from handler to SPIC FIFO(CMD+ADDR+pixel data), user can not access the register of SPIC.
- *
- * \return None.
+ *            \arg LCDC_FW_MODE: Firmware mode. Refer to \ref LCDC_FW_MODE .
+ *            \arg LCDC_HW_MODE: Hardware mode. Refer to \ref LCDC_HW_MODE .
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -1237,22 +1056,18 @@ __STATIC_INLINE void LCDC_ClearRxCounter(void)
  * }
  * \endcode
  */
-__STATIC_INLINE void LCDC_AXIMUXMode(uint32_t mode)
+__STATIC_INLINE void LCDC_AXIMUXMode(LCDC_AXI_MUX_MODE_T Mode)
 {
-    assert_param(IS_LCDC_AXI_MUX_MODE(mode));
+    assert_param(IS_LCDC_AXI_MUX_MODE(Mode));
     LCDC_HANDLER_AXI_MUX_MODE_TypeDef handler_reg_0x40 = {.d32 = LCDC_HANDLER->AXI_MUX_MODE};
-    handler_reg_0x40.b.axi_mux_mode = mode;
+    handler_reg_0x40.b.axi_mux_mode = Mode;
     LCDC_HANDLER->AXI_MUX_MODE = handler_reg_0x40.d32;
 }
 
 /**
- * rtl_lcdc.h
- *
  * \brief  Set command in SPIC communication.
  *
  * \param[in] cmd: Value of command.
- *
- * \return None.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -1271,13 +1086,9 @@ __STATIC_INLINE void LCDC_SPICCmd(uint8_t cmd)
 }
 
 /**
- * rtl_lcdc.h
- *
  * \brief  Set address in SPIC communication.
  *
  * \param[in] addr: Value of address.
- *
- * \return None.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -1296,11 +1107,7 @@ __STATIC_INLINE void LCDC_SPICAddr(uint32_t addr)
 }
 
 /**
- * rtl_lcdc.h
- *
  * \brief  Get data size of receiving.
- *
- * \param None.
  *
  * \return The data size of receiving.
  *
@@ -1320,11 +1127,7 @@ __STATIC_INLINE uint32_t LCDC_SPICRXFIFOReadSize(void)
 }
 
 /**
- * rtl_lcdc.h
- *
  * \brief  Get count of DMA load configuration times.
- *
- * \param None.
  *
  * \return Times of DMA load settings from G1 and G2.
  *
@@ -1344,16 +1147,12 @@ __STATIC_INLINE uint32_t LCDC_DMA_LOAD_CNT(void)
 }
 
 /**
- * rtl_lcdc.h
- *
  * \brief  Configure DMA multi-block mode.
  *
  * \param[in] NewState: New state of DMA multi-block mode.
  *            This parameter can be one of the following values:
  *            \arg ENABLE: Enable DMA multi-block mode.
  *            \arg DISABLE: Disable DMA multi-block mode.
- *
- * \return None.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -1380,16 +1179,12 @@ __STATIC_INLINE void LCDC_DMA_MultiBlockCmd(FunctionalState NewState)
 }
 
 /**
- * rtl_lcdc.h
- *
  * \brief  Configure DMA linklist.
  *
  * \param[in] NewState: New state of DMA linklist.
  *            This parameter can be one of the following values:
  *            \arg ENABLE: Enable DMA linklist.
  *            \arg DISABLE: Disable DMA linklist.
- *
- * \return None.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -1416,13 +1211,7 @@ __STATIC_INLINE void LCDC_DMA_LinkListCmd(FunctionalState NewState)
 }
 
 /**
- * rtl_lcdc.h
- *
  * \brief  Clear DMA load counter.
- *
- * \param None.
- *
- * \return None.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -1441,13 +1230,9 @@ __STATIC_INLINE void LCDC_DMA_LOAD_CNT_CLR(void)
 }
 
 /**
- * rtl_lcdc.h
- *
  * \brief  Set block size of group 1.
  *
  * \param[in] size: Block size in bytes.
- *
- * \return None.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -1466,13 +1251,9 @@ __STATIC_INLINE void LCDC_SET_GROUP1_BLOCKSIZE(uint32_t size)
 }
 
 /**
- * rtl_lcdc.h
- *
  * \brief  Set block size of group 2.
  *
  * \param[in] size: Block size in bytes.
- *
- * \return None.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -1491,14 +1272,10 @@ __STATIC_INLINE void LCDC_SET_GROUP2_BLOCKSIZE(uint32_t size)
 }
 
 /**
- * rtl_lcdc.h
- *
  * \brief  Set source address for group 1 and group 2 in infinite mode.
  *
  * \param[in] addr1: Source address for group 1.
  * \param[in] addr2: Source address for group 2.
- *
- * \return None.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -1516,14 +1293,10 @@ __STATIC_INLINE void LCDC_SET_INFINITE_ADDR(uint32_t addr1, uint32_t addr2)
 }
 
 /**
- * rtl_lcdc.h
- *
  * \brief  Set source address for input DMA channel.
  *
  * \param[in] LCDC_DMA_Channelx: Pointer to required DMA channel.
  * \param[in] Address: Source address of DMA.
- *
- * \return None.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -1544,14 +1317,10 @@ __STATIC_INLINE void LCDC_DMA_SetSourceAddress(LCDC_DMA_ChannelTypeDef *LCDC_DMA
 }
 
 /**
- * rtl_lcdc.h
- *
  * \brief  Set buffer size for input DMA channel.
  *
  * \param[in] LCDC_DMA_Channelx: Pointer to required DMA channel.
  * \param[in] buffer_size: The amount of data to be transmitted.
- *
- * \return None.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -1573,13 +1342,47 @@ __STATIC_INLINE void LCDC_DMA_SetBufferSize(LCDC_DMA_ChannelTypeDef *LCDC_DMA_Ch
 }
 
 /**
- * rtl_lcdc.h
+ * \brief  Initialize LCDC structure with default values
+ * \param  LCDC_InitStruct : Pointer to LCDC_InitTypeDef structure
  *
+ * \note   Default values are shown in the table below:
+ * | Parameter Name         | Default Value                      | Description                        |
+ * |------------------------|------------------------------------|------------------------------------|
+ * | LCDC_Interface         | \ref LCDC_IF_DPI                   | Interface type set to DPI          |
+ * | LCDC_RamlessEn         | DISABLE                            | Ramless function disabled          |
+ * | LCDC_GroupSel          | 1                                  | Pin Group 1 selected               |
+ * | LCDC_PixelInputFarmat  | \ref LCDC_INPUT_RGB888             | Input format set to RGB888         |
+ * | LCDC_PixelOutpuFarmat  | \ref LCDC_OUTPUT_RGB888            | Output format set to RGB888        |
+ * | LCDC_PixelBitSwap      | \ref LCDC_SWAP_BYPASS              | No bit swapping                    |
+ * | LCDC_TeEn              | DISABLE                            | Tear Effect function disabled      |
+ * | LCDC_TePolarity        | \ref LCDC_TE_EDGE_RISING           | Tear signal rising edge trigger    |
+ * | LCDC_TeInputMux        | \ref LCDC_TE_LCD_INPUT             | Tear signal from LCD panel         |
+ * | LCDC_DmaThreshold      | 8                                  | DMA threshold set to 8             |
+ * | LCDC_InfiniteModeEn    | DISABLE                            | Infinite mode disabled             |
+ * | LCDC_PhaseShift        | \ref LCDC_SPI_PHASE_SHIFT_0_DEGREE | No SPI clock phase shift           |
+ * | LCDC_DelayCell         | 0                                  | No delay cells                     |
+ *
+ * Example:
+ * \code{.c}
+ * // Declare and initialize LCDC configuration structure
+ * LCDC_InitTypeDef LCDC_InitStruct;
+ * LCDC_StructInit(&LCDC_InitStruct);
+ *
+ * // Modify default configuration as needed
+ * LCDC_InitStruct.LCDC_Interface = LCDC_IF_DBIC;        // Use DBIC interface
+ * LCDC_InitStruct.LCDC_PixelInputFarmat = LCDC_INPUT_RGB565;  // Set input format to RGB565
+ * LCDC_InitStruct.LCDC_DmaThreshold = 16;              // Modify DMA threshold
+ *
+ * // Initialize LCDC with modified configuration
+ * LCDC_Init(&LCDC_InitStruct);
+ * \endcode
+ */
+void LCDC_StructInit(LCDC_InitTypeDef *LCDC_InitStruct);
+
+/**
  * \brief  Initializes LCDC according to the specified parameters in the LCDC_Init.
  *
- * \param[in] LCDC_Init: Pointer to a LCDC_InitTypeDef structure that contains the configuration information for LCDC.
- *
- * \return None.
+ * \param[in] LCDC_InitStructure: Pointer to a LCDC_InitTypeDef structure that contains the configuration information for LCDC.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -1600,17 +1403,13 @@ __STATIC_INLINE void LCDC_DMA_SetBufferSize(LCDC_DMA_ChannelTypeDef *LCDC_DMA_Ch
  * }
  * \endcode
  */
-void LCDC_Init(LCDC_InitTypeDef *LCDC_Init);
+void LCDC_Init(LCDC_InitTypeDef *LCDC_InitStructure);
 
 /**
- * rtl_lcdc.h
- *
  * \brief  Configure linklist of LCDC DMA.
  *
  * \param[in] LCDC_DMA_LLIConfig: linklist initialization structure.
  * \param[in] LCDC_DMA_Init: LCDC DMA initialization structure.
- *
- * \return None.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -1644,19 +1443,16 @@ void LCDC_Init(LCDC_InitTypeDef *LCDC_Init);
  * }
  * \endcode
  */
-void LCDC_DMA_LinkList_Init(LCDC_DMALLI_InitTypeDef *LCDC_DMA_LLIConfig, void *LCDC_DMA_Init);
+void LCDC_DMA_LinkList_Init(LCDC_DMALLI_InitTypeDef *LCDC_DMA_LLIConfig,
+                            LCDC_DMA_InitTypeDef *LCDC_DMA_Init);
 
 /**
- * rtl_lcdc.h
- *
  * \brief  Force DMA use burst data transfer.
  *
  * \param[in] state: DMA burst fixed or not.
  *            This parameter can be one of the following values:
  *            \arg ENABLE: Force DMA use burst data transfer.
  *            \arg DISABLE: DMA burst is not required.
- *
- * \return None.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -1670,16 +1466,12 @@ void LCDC_DMA_LinkList_Init(LCDC_DMALLI_InitTypeDef *LCDC_DMA_LLIConfig, void *L
 void LCDC_ForceBurst(FunctionalState new_state);
 
 /**
- * rtl_lcdc.h
- *
  * \brief  Enable or disable LCDC clock.
  *
  * \param[in] state: New state of LCDC clock.
  *            This parameter can be one of the following values:
  *            \arg ENABLE: Enable LCDC clock.
  *            \arg DISABLE: Disable LCDC clock.
- *
- * \return None.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -1693,14 +1485,10 @@ void LCDC_ForceBurst(FunctionalState new_state);
 void LCDC_Clock_Cfg(FunctionalState state);
 
 /**
- * rtl_lcdc.h
- *
  * \brief  Update source address for group 1 and group 2 in infinite mode.
  *
  * \param[in] G1_SAR_buf: Source address for group 1.
  * \param[in] G2_SAR_buf: Source address for group 2.
- *
- * \return None.
  *
  * <b>Example usage</b>
  * \code{.c}

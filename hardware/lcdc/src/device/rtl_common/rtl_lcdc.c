@@ -63,6 +63,8 @@ void LCDC_Clock_Cfg(FunctionalState state)
     }
 }
 
+
+
 void LCDC_Init(LCDC_InitTypeDef *cfg)
 {
     /* Check the parameters */
@@ -85,7 +87,7 @@ void LCDC_Init(LCDC_InitTypeDef *cfg)
     handler_reg_0x1c.b.tx_fifo_threshold_int_msk = 1;
 
     LCDC_HANDLER_FT_IN_TypeDef handler_reg_0x04 = {.d32 = LCDC_HANDLER->FT_IN};
-    handler_reg_0x04.b.input_format = cfg->LCDC_PixelInputFarmat;
+    handler_reg_0x04.b.input_format = cfg->LCDC_PixelInputFormat;
     LCDC_HANDLER->FT_IN = handler_reg_0x04.d32;
 
     LCDC_HANDLER_INTERFACE_SELECT_TypeDef handler_reg_0x00 = {.d32 = LCDC_HANDLER->INTERFACE_SELECT};
@@ -105,7 +107,7 @@ void LCDC_Init(LCDC_InitTypeDef *cfg)
     LCDC_HANDLER->INTERFACE_SELECT = handler_reg_0x00.d32;
 
     LCDC_HANDLER_FT_OUT_TypeDef handler_reg_0x08 = {.d32 = LCDC_HANDLER->FT_OUT};
-    handler_reg_0x08.b.output_format = cfg->LCDC_PixelOutpuFarmat;
+    handler_reg_0x08.b.output_format = cfg->LCDC_PixelOutputFormat;
     LCDC_HANDLER->FT_OUT = handler_reg_0x08.d32;
 
     LCDC_HANDLER_BIT_SWAP_TypeDef handler_reg_0x0c = {.d32 = LCDC_HANDLER->BIT_SWAP};
@@ -192,6 +194,24 @@ FlagStatus LCDC_GetFlagStatus(uint32_t LCDC_FLAG)
     }
 
     return  bit_status;
+}
+
+void LCDC_StructInit(LCDC_InitTypeDef *LCDC_InitStruct)
+{
+    /*-------------- Reset LCDC init structure parameters values ------------------*/
+    LCDC_InitStruct->LCDC_Interface = LCDC_IF_DPI;
+    LCDC_InitStruct->LCDC_RamlessEn = DISABLE;
+    LCDC_InitStruct->LCDC_GroupSel = 1;
+    LCDC_InitStruct->LCDC_PixelInputFormat = LCDC_INPUT_RGB888;
+    LCDC_InitStruct->LCDC_PixelOutputFormat = LCDC_OUTPUT_RGB888;
+    LCDC_InitStruct->LCDC_PixelBitSwap = LCDC_SWAP_BYPASS;
+    LCDC_InitStruct->LCDC_TeEn = DISABLE;
+    LCDC_InitStruct->LCDC_TePolarity = LCDC_TE_EDGE_RISING;
+    LCDC_InitStruct->LCDC_TeInputMux = LCDC_TE_LCD_INPUT;
+    LCDC_InitStruct->LCDC_DmaThreshold = 8;
+    LCDC_InitStruct->LCDC_InfiniteModeEn = DISABLE;
+    LCDC_InitStruct->LCDC_PhaseShift = LCDC_SPI_PHASE_SHIFT_0_DEGREE;
+    LCDC_InitStruct->LCDC_DelayCell = 0;
 }
 
 /**
@@ -330,9 +350,9 @@ void LCDC_DMA_StructInit(LCDC_DMA_InitTypeDef *LCDC_DMA_InitStruct)
     LCDC_DMA_InitStruct->LCDC_DMA_ChannelNum      = 0;
     LCDC_DMA_InitStruct->LCDC_DMA_DIR             =
         LCDC_DMA_DIR_PeripheralToMemory;    //flow control display handler
-    LCDC_DMA_InitStruct->LCDC_DMA_BufferSize      = 200;
+    LCDC_DMA_InitStruct->LCDC_DMA_BufferSize      = 0;
     LCDC_DMA_InitStruct->LCDC_DMA_SourceInc       = LCDC_DMA_SourceInc_Fix;
-    LCDC_DMA_InitStruct->LCDC_DMA_DestinationInc  = LCDC_DMA_DestinationInc_Inc;
+    LCDC_DMA_InitStruct->LCDC_DMA_DestinationInc  = LCDC_DMA_DestinationInc_Fix;
 
     LCDC_DMA_InitStruct->LCDC_DMA_SourceDataSize  = LCDC_DMA_DataSize_Byte;
     LCDC_DMA_InitStruct->LCDC_DMA_DestinationDataSize = LCDC_DMA_DataSize_Byte;
@@ -341,21 +361,10 @@ void LCDC_DMA_StructInit(LCDC_DMA_InitTypeDef *LCDC_DMA_InitStruct)
 
     LCDC_DMA_InitStruct->LCDC_DMA_SourceAddr      = 0;
     LCDC_DMA_InitStruct->LCDC_DMA_DestinationAddr = 0;
-    LCDC_DMA_InitStruct->LCDC_DMA_ChannelPriority = 0;
 
     LCDC_DMA_InitStruct->LCDC_DMA_Multi_Block_Mode = LLI_TRANSFER;
-
-    LCDC_DMA_InitStruct->LCDC_DMA_SourceHandshake = 0;
-    LCDC_DMA_InitStruct->LCDC_DMA_DestHandshake   = 0;
-
     LCDC_DMA_InitStruct->LCDC_DMA_Multi_Block_En  = DISABLE;
-    LCDC_DMA_InitStruct->LCDC_DMA_Scatter_En      = DISABLE;
-    LCDC_DMA_InitStruct->LCDC_DMA_Gather_En       = DISABLE;
     LCDC_DMA_InitStruct->LCDC_DMA_Multi_Block_Struct = 0;
-    LCDC_DMA_InitStruct->LCDC_DMA_ScatterCount = 0;
-    LCDC_DMA_InitStruct->LCDC_DMA_ScatterInterval = 0;
-    LCDC_DMA_InitStruct->LCDC_DMA_GatherCount = 0;
-    LCDC_DMA_InitStruct->LCDC_DMA_GatherInterval = 0;
 }
 
 /**
@@ -384,7 +393,7 @@ void LCDC_DMAChannelCmd(uint8_t LCDC_DMA_ChannelNum, FunctionalState NewState)
 }
 
 void LCDC_DMA_LinkList_Init(LCDC_DMALLI_InitTypeDef *LCDC_DMA_LLIConfig,
-                            void *LCDC_DMA_cfg)//offset mean up menu not display in current menu
+                            LCDC_DMA_InitTypeDef *LCDC_DMA_cfg)//offset mean up menu not display in current menu
 {
     LCDC_DMA_InitTypeDef *LCDC_DMA_Init = (LCDC_DMA_InitTypeDef *)LCDC_DMA_cfg;
     /* Disable WP */

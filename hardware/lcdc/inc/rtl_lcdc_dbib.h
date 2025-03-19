@@ -2,12 +2,13 @@
 *********************************************************************************************************
 *               Copyright(c) 2023, Realtek Semiconductor Corporation. All rights reserved.
 **********************************************************************************************************
-* @file     rtl_lcdc_dbib.h
-* @brief    The header file of the peripheral DBIB driver
-* @details
-* @author   boris yue
-* @date     2023-10-17
-* @version  v1.0
+* \file     rtl_lcdc_dbib.h
+* \brief    The header file of the peripheral DBIB driver
+* \details  This file provides all DBIB firmware functions including initialization,
+*           configuration, data transmission and reception.
+* \author   boris yue
+* \date     2023-10-17
+* \version  v1.0
 *********************************************************************************************************
 */
 
@@ -28,12 +29,12 @@ extern "C" {
 #include "rtl_lcdc_dbib_def.h"
 
 /** \defgroup LCDC        LCDC
-  * \brief
+  * \brief    LCD Controller driver module
   * \{
   */
 
 /** \defgroup LCDC_DBIB        LCDC DBIB
-  * \brief
+  * \brief    LCD Controller Display Bus Interface Type-B driver module
   * \{
   */
 
@@ -41,31 +42,8 @@ extern "C" {
  *                         Constants
  *============================================================================*/
 /** \defgroup LCDC_DBIB_Exported_Constants LCDC DBIB Exported Constants
-  * \brief
+  * \brief    Constants used by the DBIB driver module
   * \{
-  */
-
-/**
- * \defgroup    LCDC_DBIB_Clock_Divider LCDC DBIB Clock Divider
- * \{
- * \ingroup     LCDC_DBIB_Exported_Constants
- */
-#define DBIB_CLOCK_DIV_2                             ((uint32_t)0x1)
-#define DBIB_CLOCK_DIV_3                             ((uint32_t)0x2)
-#define DBIB_CLOCK_DIV_4                             ((uint32_t)0x3)
-#define DBIB_CLOCK_DIV_5                             ((uint32_t)0x4)
-#define DBIB_CLOCK_DIV_6                             ((uint32_t)0x5)
-#define DBIB_CLOCK_DIV_7                             ((uint32_t)0x6)
-#define DBIB_CLOCK_DIV_8                             ((uint32_t)0x7)
-#define DBIB_CLOCK_DIV_64                            ((uint32_t)0x3F)
-
-#define IS_DBIB_CLOCK_DIV(DIV)   (((DIV) == DBIB_CLOCK_DIV_2) || ((DIV) == DBIB_CLOCK_DIV_3) || \
-                                  ((DIV) == DBIB_CLOCK_DIV_4) || ((DIV) == DBIB_CLOCK_DIV_5) || \
-                                  ((DIV) == DBIB_CLOCK_DIV_6) || ((DIV) == DBIB_CLOCK_DIV_7) || \
-                                  ((DIV) == DBIB_CLOCK_DIV_8))
-
-/** End of LCDC_DBIB_Clock_Divider
-  * \}
   */
 
 /**
@@ -73,8 +51,8 @@ extern "C" {
  * \{
  * \ingroup     LCDC_DBIB_Exported_Constants
  */
-#define DBIB_INIT_GUARD_TIME_ENABLE                   (0)
-#define DBIB_INIT_GUARD_TIME_DISABLE                  (1)
+#define DBIB_INIT_GUARD_TIME_ENABLE                   (0)   /*!< DBIB Init Guard Time Enable */
+#define DBIB_INIT_GUARD_TIME_DISABLE                  (1)   /*!< DBIB Init Guard Time Disable */
 
 #define IS_DBIB_INIT_GUARD_TIME_CMD(CMD) (((CMD) == DBIB_INIT_GUARD_TIME_ENABLE) || ((CMD) == DBIB_INIT_GUARD_TIME_DISABLE))
 
@@ -83,19 +61,19 @@ extern "C" {
   */
 
 /**
- * \defgroup    LCDC_DBIB_InitGuardTime LCDC DBIB Init Guard Time
+ * \defgroup    LCDC_DBIB_GuardTime LCDC DBIB Guard Time Duration
  * \{
  * \ingroup     LCDC_DBIB_Exported_Constants
  */
-#define DBIB_INIT_GUARD_TIME_1T                       (0)
-#define DBIB_INIT_GUARD_TIME_2T                       ((uint32_t)0x1)
-#define DBIB_INIT_GUARD_TIME_3T                       ((uint32_t)0x2)
-#define DBIB_INIT_GUARD_TIME_4T                       ((uint32_t)0x3)
+#define DBIB_GUARD_TIME_1T                       (0)              /*!< the guard time is 1T of divider clock */
+#define DBIB_GUARD_TIME_2T                       ((uint32_t)0x1)  /*!< the guard time is 2T of divider clock */
+#define DBIB_GUARD_TIME_3T                       ((uint32_t)0x2)  /*!< the guard time is 3T of divider clock */
+#define DBIB_GUARD_TIME_4T                       ((uint32_t)0x3)  /*!< the guard time is 4T of divider clock */
 
-#define IS_DBIB_INIT_GUARD_TIME(TIME)   (((TIME) == DBIB_INIT_GUARD_TIME_1T) || ((TIME) == DBIB_INIT_GUARD_TIME_2T) || \
-                                         ((TIME) == DBIB_INIT_GUARD_TIME_3T) || ((TIME) == DBIB_INIT_GUARD_TIME_4T))
+#define IS_DBIB_GUARD_TIME(TIME)   (((TIME) == DBIB_GUARD_TIME_1T) || ((TIME) == DBIB_GUARD_TIME_2T) || \
+                                    ((TIME) == DBIB_GUARD_TIME_3T) || ((TIME) == DBIB_GUARD_TIME_4T))
 
-/** End of LCDC_DBIB_InitGuardTime
+/** End of LCDC_DBIB_GuardTime
   * \}
   */
 
@@ -104,8 +82,8 @@ extern "C" {
  * \{
  * \ingroup     LCDC_DBIB_Exported_Constants
  */
-#define DBIB_CMD_GUARD_TIME_ENABLE                   (0)
-#define DBIB_CMD_GUARD_TIME_DISABLE                  (1)
+#define DBIB_CMD_GUARD_TIME_ENABLE                   (0)   /*!< DBIB Cmd Guard Time Enable */
+#define DBIB_CMD_GUARD_TIME_DISABLE                  (1)   /*!< DBIB Cmd Guard Time Disable */
 
 #define IS_DBIB_CMD_GUARD_TIME_CMD(CMD) (((CMD) == DBIB_CMD_GUARD_TIME_ENABLE) || ((CMD) == DBIB_CMD_GUARD_TIME_DISABLE))
 
@@ -113,22 +91,6 @@ extern "C" {
   * \}
   */
 
-/**
- * \defgroup    LCDC_DBIB_CmdGuardTime LCDC DBIB Cmd Guard Time
- * \{
- * \ingroup     LCDC_DBIB_Exported_Constants
- */
-#define DBIB_CMD_GUARD_TIME_1T                       (0)
-#define DBIB_CMD_GUARD_TIME_2T                       ((uint32_t)0x1)
-#define DBIB_CMD_GUARD_TIME_3T                       ((uint32_t)0x2)
-#define DBIB_CMD_GUARD_TIME_4T                       ((uint32_t)0x3)
-
-#define IS_DBIB_CMD_GUARD_TIME(TIME)   (((TIME) == DBIB_CMD_GUARD_TIME_1T) || ((TIME) == DBIB_CMD_GUARD_TIME_2T) || \
-                                        ((TIME) == DBIB_CMD_GUARD_TIME_3T) || ((TIME) == DBIB_CMD_GUARD_TIME_4T))
-
-/** End of LCDC_DBIB_CmdGuardTime
-  * \}
-  */
 
 /**
  * \defgroup   LCDC_DBIB_GuardTime_Cmd LCDC DBIB Guard Time Cmd
@@ -136,8 +98,8 @@ extern "C" {
  * \ingroup    LCDC_DBIB_Exported_Constants
  */
 
-#define DBIB_GUARD_TIME_ENABLE                       (0)
-#define DBIB_GUARD_TIME_DISABLE                      (1)
+#define DBIB_GUARD_TIME_ENABLE                       (0)       /*!< DBIB Guard Time Enable */
+#define DBIB_GUARD_TIME_DISABLE                      (1)       /*!< DBIB Guard Time Disable */
 
 #define IS_DBIB_GUARD_TIME_CMD(CMD) (((CMD) == DBIB_GUARD_TIME_ENABLE) || ((CMD) == DBIB_GUARD_TIME_DISABLE))
 
@@ -146,30 +108,12 @@ extern "C" {
   */
 
 /**
- * \defgroup    LCDC_DBIB_GuardTime LCDC DBIB Guard Time
- * \{
- * \ingroup     LCDC_DBIB_Exported_Constants
- */
-
-#define DBIB_GUARD_TIME_1T                           (0)
-#define DBIB_GUARD_TIME_2T                           ((uint32_t)0x1)
-#define DBIB_GUARD_TIME_3T                           ((uint32_t)0x2)
-#define DBIB_GUARD_TIME_4T                           ((uint32_t)0x3)
-
-#define IS_DBIB_GUARD_TIME(TIME) (((TIME) == DBIB_GUARD_TIME_1T) || ((TIME) == DBIB_GUARD_TIME_2T) || \
-                                  ((TIME) == DBIB_GUARD_TIME_3T) || ((TIME) == DBIB_GUARD_TIME_4T))
-
-/** End of LCDC_DBIB_GuardTime
-  * \}
-  */
-
-/**
  * \defgroup    LCDC_DBIB_WRDelay LCDC DBIB WR Delay
  * \{
  * \ingroup     LCDC_DBIB_Exported_Constants
  */
-#define DBIB_WR_HALF_DELAY          ((uint32_t)0x1)
-#define DBIB_WR_ONE_DELAY           ((uint32_t)0x2)
+#define DBIB_WR_HALF_DELAY          ((uint32_t)0x1)   /*!< DBIB_WRDelay = 1/2 display clock cycle */
+#define DBIB_WR_ONE_DELAY           ((uint32_t)0x2)   /*!< DBIB_WRDelay = 1T of display clock cycle */
 
 #define IS_DBIB_WR_DELAY_TIME(TIME) (((TIME) == DBIB_WR_HALF_DELAY) || \
                                      ((TIME) == DBIB_WR_ONE_DELAY))
@@ -186,7 +130,7 @@ extern "C" {
  *                         Types
  *============================================================================*/
 /** \defgroup LCDC_DBIB_Exported_Types LCDC DBIB Exported Types
-  * \brief
+  * \brief    Types provided by the DBIB driver module
   * \{
   */
 
@@ -197,25 +141,19 @@ extern "C" {
  */
 typedef struct
 {
-    uint32_t DBIB_SPEED_SEL;              /*!< Specifies the DBIB clock divider value.
-                                                 This parameter can be a value of \ref LCDC_DBIB_Clock_Divider */
-    uint32_t DBIB_InitGuardTimeCmd;       /*!< Specifies the init guard time function.
-                                                 This parameter can be a value of \ref LCDC_DBIB_InitGuardTime_Cmd */
-    uint32_t DBIB_InitGuardTime;          /*!< Specifies the init guard time.
-                                                 This parameter can be a value of \ref LCDC_DBIB_InitGuardTime */
-    uint32_t DBIB_CmdGuardTimeCmd;        /*!< Specifies the command guard time function.
+    uint32_t DBIB_Clock_Divider;          /*!< Specifies the DBIB clock divider value, ranging from 2 to 64. */
+    uint32_t DBIB_InitGuardTimeCmd;       /*!< Controls the init guard time function, only available for hardware continuously write mode.
+                                                 This parameter can be a value of \ref LCDC_DBIB_InitGuardTime_Cmd. */
+    uint32_t DBIB_InitGuardTime;          /*!< Delay between DBI-B idle state and DCX signal become active.
+                                                 This parameter can be a value of \ref LCDC_DBIB_GuardTime . */
+    uint32_t DBIB_CmdGuardTimeCmd;        /*!< Controls the command guard time function, only available for hardware continuously write mode.
                                                  This parameter can be a value of \ref LCDC_DBIB_CmdGuardTime_Cmd */
-    uint32_t DBIB_CmdGuardTime;           /*!< Specifies the command guard time.
-                                                 This parameter can be a value of \ref LCDC_DBIB_CmdGuardTime */
-    uint32_t DBIB_GuardTimeCmd;           /*!< Specifies the guard time function. The guard time only avaliable for hardware continuously wtite mode.*/
-    uint32_t DBIB_GuardTime;              /*!< Specifies the guard time. This parameter is 0~3T of divider clock. */
-    uint32_t DBIB_WRDelay;                /*!< Specifies the delay time for WR. This parameter is half or one bus clock cycle. */
-    uint32_t DBIB_8BitSwap;               /*!< Specifies the FIFO data format. */
-    uint32_t DBIB_16BitSwap;              /*!< Specifies the FIFO data format. */
-    uint32_t DBIB_TxThr;                  /*!< Specifies the TX FIFO threshold value. This value can be from 0 to 16. */
-    uint32_t DBIB_TxDMACmd;               /*!< Specifies the TX DMA status in auto mode. */
-    uint32_t DBIB_VsyncCmd;               /*!< Specifies the Vsync signal. */
-    uint32_t DBIB_VsyncPolarity;          /*!< Specifies the Vsync trigger polarity. */
+    uint32_t DBIB_CmdGuardTime;           /*!< Delay between CS signal become active and command output.
+                                                 This parameter can be a value of \ref LCDC_DBIB_GuardTime */
+    uint32_t DBIB_GuardTimeCmd;           /*!< Controls the guard time function, only available for hardware continuously write mode.*/
+    uint32_t DBIB_GuardTime;              /*!< Delay between command output and data input/output.
+                                                 This parameter can be a value of \ref LCDC_DBIB_GuardTime . */
+    uint32_t DBIB_WRDelay;                /*!< Specifies the delay time for WR. This parameter can be a value of \ref LCDC_DBIB_WRDelay . */
 } LCDC_DBIBCfgTypeDef;
 
 /** End of LCDC_DBIB_Exported_Types
@@ -226,21 +164,17 @@ typedef struct
  *                         Functions
  *============================================================================*/
 /** \defgroup LCDC_DBIB_Exported_Functions LCDC DBIB Exported Functions
-  * \brief
+  * \brief    Functions provided by the DBIB driver module
   * \{
   */
 
 /**
- * rtl_lcdc_dbib.h
- *
  * \brief  Enable or disable command byte bypass in auto mode.
  *
  * \param[in] NewState: New state of command byte bypass.
  *            This parameter can be one of the following values:
  *            \arg ENABLE: Enable command byte bypass.
  *            \arg DISABLE: Disable command byte bypass.
- *
- * \return None.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -254,13 +188,7 @@ typedef struct
 void DBIB_BypassCmdByteCmd(FunctionalState NewState);
 
 /**
- * rtl_lcdc_dbib.h
- *
  * \brief  Pull down CS to active state.
- *
- * \param  None.
- *
- * \return None.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -274,13 +202,7 @@ void DBIB_BypassCmdByteCmd(FunctionalState NewState);
 void DBIB_ResetCS(void);
 
 /**
- * rtl_lcdc_dbib.h
- *
  * \brief  Pull up CS to idle state.
- *
- * \param  None.
- *
- * \return None.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -294,13 +216,7 @@ void DBIB_ResetCS(void);
 void DBIB_SetCS(void);
 
 /**
- * rtl_lcdc_dbib.h
- *
  * \brief  Put DBIB in command mode.
- *
- * \param  None.
- *
- * \return None.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -314,13 +230,7 @@ void DBIB_SetCS(void);
 void DBIB_ResetDC(void);
 
 /**
- * rtl_lcdc_dbib.h
- *
  * \brief  Put DBIB in data mode.
- *
- * \param  None.
- *
- * \return None.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -334,13 +244,9 @@ void DBIB_ResetDC(void);
 void DBIB_SetDC(void);
 
 /**
- * rtl_lcdc_dbib.h
- *
  * \brief  Initializes DBIB interface according to the specified parameters in the DBIBCfg.
  *
  * \param[in] DBIBCfg: Pointer to a LCDC_DBIBCfgTypeDef structure that contains the configuration information for DBIB interface.
- *
- * \return None.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -363,13 +269,9 @@ void DBIB_SetDC(void);
 void DBIB_Init(LCDC_DBIBCfgTypeDef *DBIBCfg);
 
 /**
- * rtl_lcdc_dbib.h
- *
  * \brief  Send command in manual mode.
  *
  * \param[in] cmd: Command which to be sent.
- *
- * \return None.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -383,14 +285,10 @@ void DBIB_Init(LCDC_DBIBCfgTypeDef *DBIBCfg);
 void DBIB_SendCmd(uint8_t cmd);
 
 /**
- * rtl_lcdc_dbib.h
- *
  * \brief  Send data in manual mode.
  *
  * \param[in] pBuf: Data buffer for sending.
  * \param[in] len: The length of the data to be sent.
- *
- * \return None.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -405,14 +303,10 @@ void DBIB_SendCmd(uint8_t cmd);
 void DBIB_SendData(uint8_t *pBuf, uint32_t len);
 
 /**
- * rtl_lcdc_dbib.h
- *
  * \brief  Receive data in manual mode.
  *
  * \param[in] pBuf: Data buffer for receiving.
  * \param[in] len: The length of the data to be received.
- *
- * \return None.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -427,15 +321,11 @@ void DBIB_SendData(uint8_t *pBuf, uint32_t len);
 void DBIB_ReceiveData(uint8_t *pBuf, uint32_t len);
 
 /**
- * rtl_lcdc_dbib.h
- *
  * \brief  Send command and data in manual mode.
  *
  * \param[in] cmd: Command which to be sent.
  * \param[in] pBuf: Data buffer for sending.
  * \param[in] len: The length of the data to be sent.
- *
- * \return None.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -450,15 +340,11 @@ void DBIB_ReceiveData(uint8_t *pBuf, uint32_t len);
 void DBIB_Write(uint8_t cmd, uint8_t *pBuf, uint32_t len);
 
 /**
- * rtl_lcdc_dbib.h
- *
  * \brief  Send command and read data in manual mode.
  *
- * \param[in] cmd: Command which to be sent.
+ * \param[in] cmd: Command to be sent.
  * \param[in] pBuf: Data buffer for receiving.
  * \param[in] len: The length of the data to be received.
- *
- * \return None.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -473,8 +359,6 @@ void DBIB_Write(uint8_t cmd, uint8_t *pBuf, uint32_t len);
 void DBIB_Read(uint8_t cmd, uint8_t *pBuf, uint32_t len);
 
 /**
- * rtl_lcdc_dbib.h
- *
  * \brief  Configure command sequences in auto mode.
  *
  * \param[in] pCmdBuf: Buffer address which store command sequence.
@@ -495,6 +379,36 @@ void DBIB_Read(uint8_t cmd, uint8_t *pBuf, uint32_t len);
  * \endcode
  */
 FlagStatus LCDC_DBIB_SetCmdSequence(uint8_t *pCmdBuf, uint8_t len);
+
+/**
+ * \brief  Initialize the LCDC_DBIBCfgTypeDef structure with default values.
+ *
+ * \param[in] DBIBCfg: Pointer to a LCDC_DBIBCfgTypeDef structure that will be initialized.
+ *
+ * \note Default values for each member:
+ *       | Member                  | Default Value                        |
+ *       |-------------------------|--------------------------------------|
+ *       | DBIB_Clock_Divider      | 2                                    |
+ *       | DBIB_InitGuardTimeCmd   | \ref DBIB_INIT_GUARD_TIME_DISABLE    |
+ *       | DBIB_InitGuardTime      | \ref DBIB_GUARD_TIME_1T              |
+ *       | DBIB_CmdGuardTimeCmd    | \ref DBIB_CMD_GUARD_TIME_DISABLE     |
+ *       | DBIB_CmdGuardTime       | \ref DBIB_GUARD_TIME_1T              |
+ *       | DBIB_GuardTimeCmd       | \ref DBIB_GUARD_TIME_DISABLE         |
+ *       | DBIB_GuardTime          | \ref DBIB_GUARD_TIME_1T              |
+ *       | DBIB_WRDelay            | \ref DBIB_WR_HALF_DELAY              |
+ *
+ * <b>Example usage</b>
+ * \code{.c}
+ *
+ * void driver_lcdc_dbib_init(void)
+ * {
+ *     LCDC_DBIBCfgTypeDef dbib_init;
+ *     DBIB_StructInit(&dbib_init);
+ *     DBIB_Init(&dbib_init);
+ * }
+ * \endcode
+ */
+void DBIB_StructInit(LCDC_DBIBCfgTypeDef *DBIBCfg);
 
 /** End of LCDC_DBIB_Exported_Functions
   * \}

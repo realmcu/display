@@ -19,7 +19,7 @@
 /*============================================================================*
  *                           Public Functions
  *============================================================================*/
-void DBIC_Init(LCDC_DBICCfgTypeDef *DBICCfg)
+void DBIC_Init(LCDC_DBICCfgTypeDef *DBIC_InitStruct)
 {
     LCDC_AXIMUXMode(LCDC_FW_MODE);
 
@@ -27,8 +27,8 @@ void DBIC_Init(LCDC_DBICCfgTypeDef *DBICCfg)
     /* set cs and baudrate */
     DBIC_CTRLR0_TypeDef dbic_reg_0x00 = {.d32 = DBIC->CTRLR0};
     dbic_reg_0x00.b.user_mode = DBIC_USER_MODE;
-    dbic_reg_0x00.b.scpol = DBICCfg->SCPOL;
-    dbic_reg_0x00.b.scph = DBICCfg->SCPH;
+    dbic_reg_0x00.b.scpol = DBIC_InitStruct->SCPOL;
+    dbic_reg_0x00.b.scph = DBIC_InitStruct->SCPH;
     DBIC->CTRLR0 = dbic_reg_0x00.d32;
 
     DBIC_Select();
@@ -38,15 +38,15 @@ void DBIC_Init(LCDC_DBICCfgTypeDef *DBICCfg)
     DBIC->ICR = dbic_reg_0x48.d32;
 
     DBIC_TXFTLR_TypeDef dbic_reg_0x18 = {.d32 = DBIC->TXFTLR};
-    dbic_reg_0x18.b.tft = DBICCfg->DBIC_TxThr;
+    dbic_reg_0x18.b.tft = DBIC_InitStruct->DBIC_TxThr;
     DBIC->TXFTLR = dbic_reg_0x18.d32;
 
     DBIC_RXFTLR_TypeDef dbic_reg_0x1c = {.d32 = DBIC->RXFTLR};
-    dbic_reg_0x1c.b.rft = DBICCfg->DBIC_RxThr;
+    dbic_reg_0x1c.b.rft = DBIC_InitStruct->DBIC_RxThr;
     DBIC->RXFTLR = dbic_reg_0x1c.d32;
 
     DBIC_BAUDR_TypeDef dbic_reg_0x14 = {.d32 = DBIC->BAUDR};
-    dbic_reg_0x14.b.sckdv = DBICCfg->DBIC_SPEED_SEL;
+    dbic_reg_0x14.b.sckdv = DBIC_InitStruct->DBIC_SPEED_SEL;
     DBIC->BAUDR = dbic_reg_0x14.d32;
 
 #ifdef TARGET_RTL87x3EU
@@ -100,9 +100,9 @@ void DBIC_SendBuf(uint8_t *buf, uint32_t len)
     DBIC->SSIENR = dbic_reg_0x08.d32;//disable DBIC
 
     DBIC_CTRLR0_TypeDef dbic_reg_0x00 = {.d32 = DBIC->CTRLR0};
-    dbic_reg_0x00.b.cmd_ch = DBIC_CMD_CH_SINGLE;
-    dbic_reg_0x00.b.data_ch = DBIC_DATA_CH_SINGLE;
-    dbic_reg_0x00.b.addr_ch = DBIC_ADDR_CH_SINGLE;
+    dbic_reg_0x00.b.cmd_ch = DBIC_CH_SINGLE;
+    dbic_reg_0x00.b.data_ch = DBIC_CH_SINGLE;
+    dbic_reg_0x00.b.addr_ch = DBIC_CH_SINGLE;
     dbic_reg_0x00.b.tmod = DBIC_TMODE_TX;
     DBIC->CTRLR0 = dbic_reg_0x00.d32;//tx mode
 
@@ -146,9 +146,9 @@ void DBIC_ReceiveBuf(uint16_t addr, uint16_t data_len, uint8_t *data, uint16_t r
 
     //set addr channel and data channel in ctrl0 register.
     DBIC_CTRLR0_TypeDef dbic_reg_0x00 = {.d32 = DBIC->CTRLR0};
-    dbic_reg_0x00.b.cmd_ch = DBIC_CMD_CH_SINGLE;
-    dbic_reg_0x00.b.data_ch = DBIC_DATA_CH_SINGLE;
-    dbic_reg_0x00.b.addr_ch = DBIC_ADDR_CH_SINGLE;
+    dbic_reg_0x00.b.cmd_ch = DBIC_CH_SINGLE;
+    dbic_reg_0x00.b.data_ch = DBIC_CH_SINGLE;
+    dbic_reg_0x00.b.addr_ch = DBIC_CH_SINGLE;
     dbic_reg_0x00.b.tmod = DBIC_TMODE_RX;
     dbic_reg_0x00.b.user_mode = DBIC_USER_MODE;
     DBIC->CTRLR0 = dbic_reg_0x00.d32;//tx mode
@@ -252,6 +252,19 @@ void DBIC_TX_NDF(uint32_t len)
     DBIC_TX_NDF_TypeDef dbic_reg_0x130 = {.d32 = DBIC->TX_NDF};
     dbic_reg_0x130.b.tx_ndf = len;
     DBIC->TX_NDF = dbic_reg_0x130.d32;
+}
+
+void DBIC_StructInit(LCDC_DBICCfgTypeDef *DBIC_InitStruct)
+{
+    /* Check the parameters */
+    assert_param(DBIC_InitStruct != NULL);
+
+    /*-------------- Reset DBIC init structure parameters values ------------------*/
+    DBIC_InitStruct->DBIC_SPEED_SEL = 1;
+    DBIC_InitStruct->DBIC_TxThr = 0;
+    DBIC_InitStruct->DBIC_RxThr = 0;
+    DBIC_InitStruct->SCPOL = DBIC_SCPOL_LOW;
+    DBIC_InitStruct->SCPH = DBIC_SCPH_1Edge;
 }
 
 /******************* (C) COPYRIGHT 2023 Realtek Semiconductor Corporation *****END OF FILE****/
