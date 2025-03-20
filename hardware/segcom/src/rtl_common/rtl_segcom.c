@@ -20,7 +20,7 @@
 /*============================================================================*
  *                           Public Functions
  *============================================================================*/
-void SEGCOM_clk_config(FunctionalState state)
+void SEGCOM_CLK_Config(FunctionalState state)
 {
     uint32_t *reg = (uint32_t *)(0x40002000 + 0x31C);
     uint32_t reg_value = *reg;
@@ -44,14 +44,14 @@ void SEGCOM_clk_config(FunctionalState state)
     *reg = reg_value;
 }
 
-void SEGCOM_UpdateClk(void)
+void SEGCOM_Update_CLK(void)
 {
     SEGCOM_LCD_CR_TypeDef segcom_reg_0x00 = {.d32 = SEGCOM->LCD_CR};
     segcom_reg_0x00.b.update = 1;
     SEGCOM->LCD_CR = segcom_reg_0x00.d32;
 }
 
-void SEGCOM_CMD(FunctionalState state)
+void SEGCOM_Cmd(FunctionalState state)
 {
     SEGCOM_LCD_CR_TypeDef segcom_reg_0x00 = {.d32 = SEGCOM->LCD_CR};
     if (state)
@@ -65,22 +65,21 @@ void SEGCOM_CMD(FunctionalState state)
     SEGCOM->LCD_CR = segcom_reg_0x00.d32;
 }
 
-void SEGCOM_StructInit(SEGCOM_InitTypeDef *cfg)
+void SEGCOM_StructInit(SEGCOM_InitTypeDef *SEGCOM_InitStruct)
 {
-    assert_param(cfg);
-    cfg->SEG_bias = BIAS_STATIC;
-    cfg->SEG_duty = DUTY_STATIC;
-    cfg->SEG_blink_mode = BLINK_DISABLE;
-    cfg->SEG_blink_freq = BLINK_FREQ_8;
-    cfg->SEG_dead_time = DEAD_TIME_NONE;
-    cfg->SEG_set_manual_mode = SEGCOM_LOW_DRIVING;
-    cfg->SEG_driv_ctl_mode = SEGCOM_AUTO_MODE;
-    cfg->SEG_high_driv_duration = HIGH_DURATION_ALL;
-    cfg->SEG_clk_divider = CLK_DIV_16;
-    cfg->SEG_clk_prescaler = CLK_PRESCALE_1;
+    assert_param(SEGCOM_InitStruct);
+    SEGCOM_InitStruct->SEG_bias = BIAS_STATIC;
+    SEGCOM_InitStruct->SEG_duty = DUTY_STATIC;
+    SEGCOM_InitStruct->SEG_blink_mode = BLINK_DISABLE;
+    SEGCOM_InitStruct->SEG_blink_freq_div = BLINK_FREQ_DIV_8;
+    SEGCOM_InitStruct->SEG_dead_time = DEAD_TIME_NONE;
+    SEGCOM_InitStruct->SEG_driv_ctl_mode = SEGCOM_AUTO_MODE;
+    SEGCOM_InitStruct->SEG_high_driv_duration = HIGH_DURATION_0;
+    SEGCOM_InitStruct->SEG_clk_divider = CLK_DIV_16;
+    SEGCOM_InitStruct->SEG_clk_prescaler = CLK_PRESCALE_1;
 }
 
-void SEGCOM_IntConfig(SEGCOM_INTERRUPT interrupt, FunctionalState state)
+void SEGCOM_IntConfig(SEGCOM_INTERRUPT Interrupt, FunctionalState NewState)
 {
     assert_param(IS_SEGCOM_INT(interrupt));
     SEGCOM_LCD_FCR_TypeDef segcom_reg_0x04 = {.d32 = SEGCOM->LCD_FCR};
@@ -109,21 +108,28 @@ void SEGCOM_IntConfig(SEGCOM_INTERRUPT interrupt, FunctionalState state)
     SEGCOM->LCD_FCR = segcom_reg_0x04.d32;
 }
 
-uint32_t SEGCOM_GetStatus(SEGCOM_STATUS flag)
+ITStatus SEGCOM_GetStatus(SEGCOM_STATUS Flag)
 {
     SEGCOM_LCD_SR_TypeDef segcom_reg_0x08 = {.d32 = SEGCOM->LCD_SR};
-    uint32_t status = (segcom_reg_0x08.d32 & (1 << flag));
-    return status;
+    uint32_t status = (segcom_reg_0x08.d32 & (1 << Flag));
+    if (state != 0)
+    {
+        return SET;
+    }
+    else
+    {
+        return RESET;
+    }
 }
 
-void SEGCOM_ClearStatus(SEGCOM_CLEAR_STATUS status)
+void SEGCOM_ClearStatus(SEGCOM_CLEAR_STATUS Status)
 {
     SEGCOM_LCD_SR_TypeDef segcom_reg_0x08 = {.d32 = SEGCOM->LCD_SR};
-    if (status == SEGCOM_CLEAR_START_OF_FRAME)
+    if (Status == SEGCOM_CLEAR_START_OF_FRAME)
     {
         segcom_reg_0x08.b.sofc = 1;
     }
-    else if (status == SEGCOM_CLEAR_UPDATE_DISPLAY_DONE)
+    else if (Status == SEGCOM_CLEAR_UPDATE_DISPLAY_DONE)
     {
         segcom_reg_0x08.b.uddc = 1;
     }
@@ -137,22 +143,22 @@ void SEGCOM_UpdateDisplayRequest(void)
     SEGCOM->LCD_SR = segcom_reg_0x08.d32;
 }
 
-void SEGCOM_Write(SEGCOM_SEG_CHANNEL channel, uint32_t value)
+void SEGCOM_Write(SEGCOM_SEG_CHANNEL Channel, uint32_t Value)
 {
-    assert_param(channel <= SEGCOM_DR_3);
-    switch (channel)
+    assert_param(Channel <= SEGCOM_DR_3);
+    switch (Channel)
     {
     case SEGCOM_DR_0:
-        SEGCOM->LCD_RAM_COM0 = value;
+        SEGCOM->LCD_RAM_COM0 = Value;
         break;
     case SEGCOM_DR_1:
-        SEGCOM->LCD_RAM_COM1 = value;
+        SEGCOM->LCD_RAM_COM1 = Value;
         break;
     case SEGCOM_DR_2:
-        SEGCOM->LCD_RAM_COM2 = value;
+        SEGCOM->LCD_RAM_COM2 = Value;
         break;
     case SEGCOM_DR_3:
-        SEGCOM->LCD_RAM_COM3 = value;
+        SEGCOM->LCD_RAM_COM3 = Value;
     }
 }
 
@@ -197,25 +203,24 @@ void SEGCOM_Pin_Init(SEGCOM_com_pin_cfg_Typedef com_cfg, SEGCOM_seg_pin_cfg_Type
     *(uint32_t *)0x40001d94 = aon_reg_0x1d94.d32;
 }
 
-void SEGCOM_init(SEGCOM_InitTypeDef *cfg)
+void SEGCOM_Init(SEGCOM_InitTypeDef *SEGCOM_InitStruct)
 {
     SEGCOM_LCD_CR_TypeDef segcom_reg_0x00 = {.d32 = SEGCOM->LCD_CR};
-    segcom_reg_0x00.b.duty = cfg->SEG_duty;
-    segcom_reg_0x00.b.bias = cfg->SEG_bias;
+    segcom_reg_0x00.b.duty = SEGCOM_InitStruct->SEG_duty;
+    segcom_reg_0x00.b.bias = SEGCOM_InitStruct->SEG_bias;
     SEGCOM->LCD_CR = segcom_reg_0x00.d32;
 
     SEGCOM_LCD_FCR_TypeDef segcom_reg_0x04 = {.d32 = SEGCOM->LCD_FCR};
-    segcom_reg_0x04.b.blink = cfg->SEG_blink_mode;
-    segcom_reg_0x04.b.dead = cfg->SEG_dead_time;
-    segcom_reg_0x04.b.div = cfg->SEG_clk_divider;
-    segcom_reg_0x04.b.ps = cfg->SEG_clk_prescaler;
-    segcom_reg_0x04.b.en_res_sel = cfg->SEG_driv_ctl_mode;
-    segcom_reg_0x04.b.res_l_en_set = cfg->SEG_set_manual_mode;
-    segcom_reg_0x04.b.pon = cfg->SEG_high_driv_duration;
-    segcom_reg_0x04.b.blinkf = cfg->SEG_blink_freq;
-    if (cfg->SEG_driv_ctl_mode == SEGCOM_AUTO_MODE)
+    segcom_reg_0x04.b.blink = SEGCOM_InitStruct->SEG_blink_mode;
+    segcom_reg_0x04.b.dead = SEGCOM_InitStruct->SEG_dead_time;
+    segcom_reg_0x04.b.div = SEGCOM_InitStruct->SEG_clk_divider;
+    segcom_reg_0x04.b.ps = SEGCOM_InitStruct->SEG_clk_prescaler;
+    segcom_reg_0x04.b.en_res_sel = SEGCOM_InitStruct->SEG_driv_ctl_mode;
+    segcom_reg_0x04.b.pon = SEGCOM_InitStruct->SEG_high_driv_duration;
+    segcom_reg_0x04.b.blinkf = SEGCOM_InitStruct->SEG_blink_freq_div;
+    if (SEGCOM_InitStruct->SEG_driv_ctl_mode == SEGCOM_AUTO_MODE)
     {
-        segcom_reg_0x04.b.pon = cfg->SEG_high_driv_duration;
+        segcom_reg_0x04.b.pon = SEGCOM_InitStruct->SEG_high_driv_duration;
     }
     SEGCOM->LCD_FCR = segcom_reg_0x04.d32;
 }
