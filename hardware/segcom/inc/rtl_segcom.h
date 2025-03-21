@@ -306,8 +306,8 @@ typedef enum
  */
 typedef struct
 {
-    SEGCOM_BIAS SEG_bias;   /*!< Bias of LCD segment display, can be a value of \ref SEG_BIAS . */
-    SEGCOM_DUTY SEG_duty;   /*!< Duty cycle of each COM signal, can be a value of \ref SEG_DUTY . */
+    SEGCOM_BIAS SEG_bias;   /*!< Bias of LCD segment display, can be a value of \ref SEGCOM_BIAS. */
+    SEGCOM_DUTY SEG_duty;   /*!< Duty cycle of each COM signal, can be a value of \ref SEGCOM_DUTY. */
     SEGCOM_BLINK_MODE SEG_blink_mode;  /*!< Blink mode, can be a value of \ref SEGCOM_BLINK_MODE . */
     SEGCOM_CLK_PRESCALER
     SEG_clk_prescaler; /*!< Clock prescaler, Fclk_ps = display clock / prescaler, can be a value of \ref SEGCOM_CLK_PRESCALER. */
@@ -319,7 +319,7 @@ typedef struct
                                           During the dead time the COM and SEG voltage levels are held at 0 V to reduce the contrast.
                                           This member can be a value of \ref SEGCOM_DEAD_TIME . */
     SEGCOM_HIGH_DURATION
-    SEG_high_driv_duration;  /*!< Use low impedence to achieve fast settling, can be a value of \ref  EGCOM_HIGH_DURATION . */
+    SEG_high_driv_duration;  /*!< Use low impedence to achieve fast settling, can be a value of \ref SEGCOM_HIGH_DURATION . */
     SEGCOM_CONTROL_MODE
     SEG_driv_ctl_mode;  /*!< High driving control mode, can be a value of \ref SEGCOM_CONTROL_MODE. */
 } SEGCOM_InitTypeDef;
@@ -605,11 +605,11 @@ void SEGCOM_UpdateDisplayRequest(void);
  * {
  *     SEGCOM_InitTypeDef init_struct;
  *     SEGCOM_StructInit(&init_struct);
- *     SEGCOM_init(&init_struct);
+ *     SEGCOM_Init(&init_struct);
  * }
  * \endcode
  */
-void SEGCOM_init(SEGCOM_InitTypeDef *SEGCOM_InitStruct);
+void SEGCOM_Init(SEGCOM_InitTypeDef *SEGCOM_InitStruct);
 
 /**
  * rtl_segcom.h

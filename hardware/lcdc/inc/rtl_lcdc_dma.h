@@ -31,7 +31,7 @@ extern "C" {
   * \{
   */
 
-/** \defgroup LCDC_DMA          LCDC_DMA
+/** \defgroup LCDC_DMA          LCDC DMA
   * \brief    LCD Controller internal DMA driver
   * \{
   */
@@ -105,9 +105,9 @@ typedef enum
  */
 typedef enum
 {
-    LCDC_DMA_DataSize_Byte     = 0x0,    /*!< 8 bits */
-    LCDC_DMA_DataSize_HalfWord = 0x1,    /*!< 16 bits */
-    LCDC_DMA_DataSize_Word     = 0x2,    /*!< 32 bits */
+    LCDC_DMA_DataSize_Byte     = 0x0,    /*!< Data size is 8 bits. */
+    LCDC_DMA_DataSize_HalfWord = 0x1,    /*!< Data size is 16 bits. */
+    LCDC_DMA_DataSize_Word     = 0x2,    /*!< Data size is 32 bits. */
 } LCDC_DMA_DATASIZE_T;
 
 #define IS_LCDC_DMA_DATA_SIZE(SIZE) (((SIZE) == LCDC_DMA_DataSize_Byte) || \
@@ -120,18 +120,18 @@ typedef enum
 
 /**
  * \defgroup    LCDC_DMA_Msize LCDC DMA Msize
- *
+ * \{
  * \ingroup     LCDC_DMA_Exported_Constants
  */
 typedef enum
 {
-    LCDC_DMA_Msize_1   = 0x0,    /*!< 1 item in a burst */
-    LCDC_DMA_Msize_4   = 0x1,    /*!< 4 items in a burst */
-    LCDC_DMA_Msize_8   = 0x2,    /*!< 8 items in a burst */
-    LCDC_DMA_Msize_16  = 0x3,    /*!< 16 items in a burst */
-    LCDC_DMA_Msize_32  = 0x4,    /*!< 32 items in a burst */
-    LCDC_DMA_Msize_64  = 0x5,    /*!< 64 items in a burst */
-    LCDC_DMA_Msize_128 = 0x6,    /*!< 128 items in a burst */
+    LCDC_DMA_Msize_1   = 0x0,    /*!< Transmit 1 item in a burst. */
+    LCDC_DMA_Msize_4   = 0x1,    /*!< Transmit 4 items in a burst. */
+    LCDC_DMA_Msize_8   = 0x2,    /*!< Transmit 8 items in a burst. */
+    LCDC_DMA_Msize_16  = 0x3,    /*!< Transmit 16 items in a burst. */
+    LCDC_DMA_Msize_32  = 0x4,    /*!< Transmit 32 items in a burst. */
+    LCDC_DMA_Msize_64  = 0x5,    /*!< Transmit 64 items in a burst. */
+    LCDC_DMA_Msize_128 = 0x6,    /*!< Transmit 128 items in a burst. */
 } LCDC_DMA_MSIZE_T;
 
 #define IS_LCDC_DMA_Msize(SIZE) (((SIZE) == LCDC_DMA_Msize_1) || \
@@ -165,8 +165,18 @@ typedef enum
   * \}
   */
 
+/**
+ * \cond    private
+ * \brief   DMA mode description
+ * \defgroup DMA_MODE_BIT_FIELD LCDC DMA Mode Bit Field
+ * \{
+ */
 #define LCDC_DMA_AUTO_RELOAD_SELECTED_BIT        (BIT30 | BIT31)  /*!< SARx and DARx are auto reloaded. */
 #define LCDC_DMA_LLP_SELECTED_BIT                (BIT27 | BIT28)  /*!< Use internal Linklist module. */
+/**
+ * \}
+ * \endcond
+ */
 
 /*============================================================================*
  *                         Types
@@ -186,21 +196,19 @@ typedef struct
     uint8_t  LCDC_DMA_ChannelNum;               /*!< Specifies channel number for LCDC DMA. */
     LCDC_DMA_DIRECTION_T  LCDC_DMA_DIR;         /*!< Specifies transfer direction.
                                                            This parameter can be a value of @ref LCDC_DMA_Data_Transfer_Direction */
-    uint32_t LCDC_DMA_BufferSize;               /*!< Specifies the buffer size(<=65535).
-                                                          The data unit is equal to the configuration set in DMA_PeripheralDataSize
-                                                          or DMA_MemoryDataSize members depending in the transfer direction. */
+    uint32_t LCDC_DMA_BufferSize;               /*!< Specifies the buffer size. */
     LCDC_DMA_SRC_INC_T
     LCDC_DMA_SourceInc;      /*!< Specifies whether the source address register is incremented or not.
                                                           This parameter can be a value of @ref LCDC_DMA_Source_Incremented_Mode */
     LCDC_DMA_DEST_INC_T
     LCDC_DMA_DestinationInc;/*!< Specifies whether the destination address register is incremented or not.
-                                                          This parameter can be a value of @ref LCDC_DMA_Destination_Incremented_Mode */
+                                                          This parameter can be a value of @ref LCDC_DMA_Destination_Incremented_Mode. */
     LCDC_DMA_DATASIZE_T LCDC_DMA_SourceDataSize;    /*!< Specifies the source data width.
-                                                          This parameter can be a value of @ref LCDC_DMA_Data_Size */
+                                                          This parameter can be a value of @ref LCDC_DMA_Data_Size. */
     LCDC_DMA_DATASIZE_T LCDC_DMA_DestinationDataSize; /*!< Specifies the destination data width.
-                                                            This parameter can be a value of @ref LCDC_DMA_Data_Size */
+                                                            This parameter can be a value of @ref LCDC_DMA_Data_Size. */
     LCDC_DMA_MSIZE_T LCDC_DMA_SourceMsize;          /*!< Specifies items number to be transferred.
-                                                          This parameter can be a value of @ref LCDC_DMA_Msize */
+                                                          This parameter can be a value of @ref LCDC_DMA_Msize. */
     LCDC_DMA_MSIZE_T LCDC_DMA_DestinationMsize;     /*!< Specifies items number to be transferred.
                                                           This parameter can be a value of @ref LCDC_DMA_Msize */
     uint32_t LCDC_DMA_SourceAddr;               /*!< Specifies the source base address for LCDC DMA Channelx. */

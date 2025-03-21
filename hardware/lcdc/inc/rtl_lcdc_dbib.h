@@ -51,8 +51,8 @@ extern "C" {
  * \{
  * \ingroup     LCDC_DBIB_Exported_Constants
  */
-#define DBIB_INIT_GUARD_TIME_ENABLE                   (0)   /*!< DBIB Init Guard Time Enable */
-#define DBIB_INIT_GUARD_TIME_DISABLE                  (1)   /*!< DBIB Init Guard Time Disable */
+#define DBIB_INIT_GUARD_TIME_ENABLE                   (0)   /*!< DBIB Init Guard Time Enable. */
+#define DBIB_INIT_GUARD_TIME_DISABLE                  (1)   /*!< DBIB Init Guard Time Disable. */
 
 #define IS_DBIB_INIT_GUARD_TIME_CMD(CMD) (((CMD) == DBIB_INIT_GUARD_TIME_ENABLE) || ((CMD) == DBIB_INIT_GUARD_TIME_DISABLE))
 
@@ -65,10 +65,10 @@ extern "C" {
  * \{
  * \ingroup     LCDC_DBIB_Exported_Constants
  */
-#define DBIB_GUARD_TIME_1T                       (0)              /*!< the guard time is 1T of divider clock */
-#define DBIB_GUARD_TIME_2T                       ((uint32_t)0x1)  /*!< the guard time is 2T of divider clock */
-#define DBIB_GUARD_TIME_3T                       ((uint32_t)0x2)  /*!< the guard time is 3T of divider clock */
-#define DBIB_GUARD_TIME_4T                       ((uint32_t)0x3)  /*!< the guard time is 4T of divider clock */
+#define DBIB_GUARD_TIME_1T                       (0)              /*!< The guard time is 1T of divider clock. */
+#define DBIB_GUARD_TIME_2T                       ((uint32_t)0x1)  /*!< The guard time is 2T of divider clock. */
+#define DBIB_GUARD_TIME_3T                       ((uint32_t)0x2)  /*!< The guard time is 3T of divider clock. */
+#define DBIB_GUARD_TIME_4T                       ((uint32_t)0x3)  /*!< The guard time is 4T of divider clock. */
 
 #define IS_DBIB_GUARD_TIME(TIME)   (((TIME) == DBIB_GUARD_TIME_1T) || ((TIME) == DBIB_GUARD_TIME_2T) || \
                                     ((TIME) == DBIB_GUARD_TIME_3T) || ((TIME) == DBIB_GUARD_TIME_4T))
@@ -82,8 +82,8 @@ extern "C" {
  * \{
  * \ingroup     LCDC_DBIB_Exported_Constants
  */
-#define DBIB_CMD_GUARD_TIME_ENABLE                   (0)   /*!< DBIB Cmd Guard Time Enable */
-#define DBIB_CMD_GUARD_TIME_DISABLE                  (1)   /*!< DBIB Cmd Guard Time Disable */
+#define DBIB_CMD_GUARD_TIME_ENABLE                   (0)   /*!< DBIB Cmd Guard Time Enable. */
+#define DBIB_CMD_GUARD_TIME_DISABLE                  (1)   /*!< DBIB Cmd Guard Time Disable. */
 
 #define IS_DBIB_CMD_GUARD_TIME_CMD(CMD) (((CMD) == DBIB_CMD_GUARD_TIME_ENABLE) || ((CMD) == DBIB_CMD_GUARD_TIME_DISABLE))
 
@@ -98,8 +98,8 @@ extern "C" {
  * \ingroup    LCDC_DBIB_Exported_Constants
  */
 
-#define DBIB_GUARD_TIME_ENABLE                       (0)       /*!< DBIB Guard Time Enable */
-#define DBIB_GUARD_TIME_DISABLE                      (1)       /*!< DBIB Guard Time Disable */
+#define DBIB_GUARD_TIME_ENABLE                       (0)       /*!< DBIB Guard Time Enable. */
+#define DBIB_GUARD_TIME_DISABLE                      (1)       /*!< DBIB Guard Time Disable. */
 
 #define IS_DBIB_GUARD_TIME_CMD(CMD) (((CMD) == DBIB_GUARD_TIME_ENABLE) || ((CMD) == DBIB_GUARD_TIME_DISABLE))
 
@@ -112,8 +112,8 @@ extern "C" {
  * \{
  * \ingroup     LCDC_DBIB_Exported_Constants
  */
-#define DBIB_WR_HALF_DELAY          ((uint32_t)0x1)   /*!< DBIB_WRDelay = 1/2 display clock cycle */
-#define DBIB_WR_ONE_DELAY           ((uint32_t)0x2)   /*!< DBIB_WRDelay = 1T of display clock cycle */
+#define DBIB_WR_HALF_DELAY          ((uint32_t)0x1)   /*!< DBIB_WRDelay = 1/2 display clock cycle. */
+#define DBIB_WR_ONE_DELAY           ((uint32_t)0x2)   /*!< DBIB_WRDelay = 1T of display clock cycle. */
 
 #define IS_DBIB_WR_DELAY_TIME(TIME) (((TIME) == DBIB_WR_HALF_DELAY) || \
                                      ((TIME) == DBIB_WR_ONE_DELAY))
@@ -149,11 +149,11 @@ typedef struct
     uint32_t DBIB_CmdGuardTimeCmd;        /*!< Controls the command guard time function, only available for hardware continuously write mode.
                                                  This parameter can be a value of \ref LCDC_DBIB_CmdGuardTime_Cmd */
     uint32_t DBIB_CmdGuardTime;           /*!< Delay between CS signal become active and command output.
-                                                 This parameter can be a value of \ref LCDC_DBIB_GuardTime */
+                                                 This parameter can be a value of \ref LCDC_DBIB_GuardTime. */
     uint32_t DBIB_GuardTimeCmd;           /*!< Controls the guard time function, only available for hardware continuously write mode.*/
     uint32_t DBIB_GuardTime;              /*!< Delay between command output and data input/output.
-                                                 This parameter can be a value of \ref LCDC_DBIB_GuardTime . */
-    uint32_t DBIB_WRDelay;                /*!< Specifies the delay time for WR. This parameter can be a value of \ref LCDC_DBIB_WRDelay . */
+                                                 This parameter can be a value of \ref LCDC_DBIB_GuardTime. */
+    uint32_t DBIB_WRDelay;                /*!< Specifies the delay time for WR. This parameter can be a value of \ref LCDC_DBIB_WRDelay. */
 } LCDC_DBIBCfgTypeDef;
 
 /** End of LCDC_DBIB_Exported_Types

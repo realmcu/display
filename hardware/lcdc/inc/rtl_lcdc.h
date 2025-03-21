@@ -100,6 +100,11 @@ typedef struct
   * \{
   */
 
+/** \defgroup LCDC_BASE        LCDC Base
+  * \brief    LCD Controller driver Basic Funtion
+  * \{
+  */
+
 /*============================================================================*
  *                         Constants
  *============================================================================*/
@@ -1502,6 +1507,10 @@ void LCDC_Clock_Cfg(FunctionalState state);
 void LCDC_DMA_Infinite_Buf_Update(uint8_t *G1_SAR_buf, uint8_t *G2_SAR_buf);
 
 /** End of LCDC_Exported_Functions
+  * \}
+  */
+
+/** End of LCDC_BASE
   * \}
   */
 
