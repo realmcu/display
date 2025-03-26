@@ -215,7 +215,7 @@ typedef struct
   */
 
 /**
- * \defgroup    LCDC_EDPI_SD_EN_FCOLOR LCDC EDPI SD EN FCOLOR
+ * \defgroup    LCDC_EDPI_SD_EN_FCOLOR LCDC EDPI SD Enable Frame Color
  * \{
  * \ingroup     LCDC_EDPI_Exported_Constants
  */
@@ -229,7 +229,7 @@ typedef struct
   */
 
 /**
- * \defgroup    LCDC_EDPI_SD_DIS_FCOLOR LCDC EDPI SD DIS FCOLOR
+ * \defgroup    LCDC_EDPI_SD_DIS_FCOLOR LCDC EDPI SD Disable Frame Color
  * \{
  * \ingroup     LCDC_EDPI_Exported_Constants
  */

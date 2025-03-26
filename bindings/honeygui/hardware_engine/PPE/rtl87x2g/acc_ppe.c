@@ -450,7 +450,7 @@ static void hw_ppe_blit(draw_img_t *image, struct gui_dispdev *dc, gui_rect_t *r
         PPE_ERR err = PPE_Scale_Rect(&source, &scaled_img, scale_x, scale_y, &scale_rect);
         if (err == PPE_SUCCESS)
         {
-            err = PPE_blend(&scaled_img, &target, &trans, mode);
+            err = PPE_Blend(&scaled_img, &target, &trans, mode);
         }
         if (head->compress)
         {
@@ -488,7 +488,7 @@ static void hw_ppe_blit(draw_img_t *image, struct gui_dispdev *dc, gui_rect_t *r
                 return;
             }
         }
-        PPE_ERR err = PPE_blend(&source, &target, &trans, PPE_SRC_OVER_MODE);
+        PPE_ERR err = PPE_Blend(&source, &target, &trans, PPE_SRC_OVER_MODE);
         if (head->compress)
         {
             gui_free(source.memory);

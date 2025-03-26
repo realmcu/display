@@ -182,22 +182,22 @@ typedef struct
     {
         int32_t left;   /*!< Coordinate of left boarder, same with x1. */
         int32_t x1;     /*!< Coordinate of left boarder, same with left. */
-    };
+    }; /*!< Union of left and x1. */
     union
     {
         int32_t top;   /*!< Coordinate of top boarder, same with y1. */
         int32_t y1;    /*!< Coordinate of top boarder, same with top. */
-    };
+    }; /*!< Union of top and y1. */
     union
     {
         int32_t right; /*!< Coordinate of right boarder, same with x2. */
         int32_t x2;    /*!< Coordinate of right boarder, same with right. */
-    };
+    }; /*!< Union of right and x2. */
     union
     {
         int32_t bottom; /*!< Coordinate of bottom boarder, same with y2. */
         int32_t y2;    /*!< Coordinate of bottom boarder, same with bottom. */
-    };
+    }; /*!< Union of bottom and y2. */
 } ppe_rect_t;
 /** End of PPE_RECT
   * \}
@@ -282,8 +282,8 @@ typedef struct
 /**
  * \brief  Enable PPE.
  * \param[in] state: New state of the PPE peripheral.
- *            \arg ENABLE: Enable PPE function.
- *            \arg DISABLE: Disable PPE function.
+ *            - ENABLE: Enable PPE function.
+ *            - DISABLE: Disable PPE function.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -336,9 +336,9 @@ void PPE_Abort(void);
 
 /**
  * \brief  Check PPE channel status.
- * \return Channel state
- * \retval - SET: Channels are not all inactive.
- * \retval - RESET: Channels are all inactive.
+ * \return Channel state.
+ * \retval SET    Channels are not all inactive.
+ * \retval RESET  Channels are all inactive.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -352,9 +352,9 @@ ITStatus PPE_ChannelInactiveCheck(void);
 /**
  * \brief  Check interrupt status.
  * \param[in] PPE_INT: Specified PPE interrupt from \ref PPE_INTERRUPT
- * \return Interrupt status
- * \retval - SET: Interrupt has been triggered.
- * \retval - RESET: Interrupt has not been triggered yet.
+ * \return Interrupt status.
+ * \retval SET    Interrupt has been triggered.
+ * \retval RESET  Interrupt has not been triggered yet.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -368,9 +368,9 @@ ITStatus PPE_GetINTStatus(uint32_t PPE_INT);
 /**
  * \brief  Check interrupt status before mask.
  * \param[in] PPE_INT: Specified PPE interrupt from \ref PPE_INTERRUPT
- * \return Interrupt status
- * \retval - SET: Interrupt has been triggered.
- * \retval - RESET: Interrupt has not been triggered yet.
+ * \return Interrupt status.
+ * \retval SET    Interrupt has been triggered.
+ * \retval RESET  Interrupt has not been triggered yet.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -398,8 +398,8 @@ void PPE_ClearINTPendingBit(uint32_t PPE_INT);
  * \brief  Mask specified interrupt.
  * \param[in] PPE_INT: Specified PPE interrupt from \ref PPE_INTERRUPT
  * \param[in] NewState: New state of the PPE interrupt mask
- *            \arg ENABLE: Mask specified interrupt.
- *            \arg DISABLE: Unmask specified interrupt.
+ *            - ENABLE: Mask specified interrupt.
+ *            - DISABLE: Unmask specified interrupt.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -416,9 +416,9 @@ void PPE_MaskINTConfig(uint32_t PPE_INT_MSK, FunctionalState NewState);
  * \param[in] buffer: Pointer to output image buffer.
  * \param[in] x_ratio: Scale ration on horizontal direction.
  * \param[in] y_ratio: Scale ration on vertical direction.
- * \return Operation result
- * \retval - PPE_SUCCESS: Operation success.
- * \retval - Others: Operation failure, cause refers to @ref PPE_ERR .
+ * \return Operation result.
+ * \retval PPE_SUCCESS  Operation success.
+ * \retval Others       Operation failure, cause refers to @ref PPE_ERR .
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -449,8 +449,8 @@ PPE_ERR PPE_Scale(ppe_buffer_t *image, ppe_buffer_t *buffer, float x_ratio, floa
  * \param[in] y_ratio: Scale ration on vertical direction.
  * \param[in] rect: Boundary inside the input image.
  * \return Operation result
- * \retval - PPE_SUCCESS: Operation success.
- * \retval - Others: Operation failure, cause refers to @ref PPE_ERR .
+ * \retval PPE_SUCCESS  Operation success.
+ * \retval Others       Operation failure, cause refers to @ref PPE_ERR .
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -479,9 +479,9 @@ PPE_ERR PPE_Scale_Rect(ppe_buffer_t *image, ppe_buffer_t *buffer, float x_ratio,
  * \brief  Clear the image buffer with certain color in ABGR8888 format.
  * \param[in] buffer: Target buffer to be cleared.
  * \param[in] color: Specified color in ABGR8888 format \ref PPE_ABGR8888
- * \return Operation result
- * \retval - PPE_SUCCESS: Operation success.
- * \retval - Others: Operation failure, cause refers to @ref PPE_ERR .
+ * \return Operation result.
+ * \retval PPE_SUCCESS   Operation success.
+ * \retval Others        Operation failure, cause refers to @ref PPE_ERR .
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -506,9 +506,9 @@ PPE_ERR PPE_Clear(ppe_buffer_t *buffer, uint32_t color);
  * \param[in] buffer: Target buffer to be cleared.
  * \param[in] rect: Area of buffer to be cleared.
  * \param[in] color: Specified color in ABGR8888 format \ref PPE_ABGR8888
- * \return Operation result
- * \retval - PPE_SUCCESS: Operation success.
- * \retval - Others: Operation failure, cause refers to @ref PPE_ERR .
+ * \return Operation result.
+ * \retval PPE_SUCCESS  Operation success.
+ * \retval Others       Operation failure, cause refers to @ref PPE_ERR .
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -535,9 +535,9 @@ PPE_ERR PPE_Clear_Rect(ppe_buffer_t *buffer, ppe_rect_t *rect, uint32_t color);
  * \param[in] buffer: Target image buffer to be blended onto.
  * \param[in] trans: Position information of source image.
  * \param[in] blend_mode: Blend mode from @ref PPE_BLEND_MODE to be used.
- * \return Operation result
- * \retval - PPE_SUCCESS: Operation success.
- * \retval - Others: Operation failure, cause refers to @ref PPE_ERR .
+ * \return Operation result.
+ * \retval PPE_SUCCESS  Operation success.
+ * \retval Others       Operation failure, cause refers to @ref PPE_ERR .
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -558,11 +558,11 @@ PPE_ERR PPE_Clear_Rect(ppe_buffer_t *buffer, ppe_rect_t *rect, uint32_t color);
         memset(PIC_OUTPUT_LAYER, 0, sizeof(PIC_OUTPUT_LAYER));
 
         ppe_translate_t trans = {20, 20};
-        PPE_blend(&image, &buffer, &trans, PPE_BYPASS_MODE);
+        PPE_Blend(&image, &buffer, &trans, PPE_BYPASS_MODE);
     }
  * \endcode
  */
-PPE_ERR PPE_blend(ppe_buffer_t *image, ppe_buffer_t *buffer, ppe_translate_t *trans,
+PPE_ERR PPE_Blend(ppe_buffer_t *image, ppe_buffer_t *buffer, ppe_translate_t *trans,
                   PPE_BLEND_MODE blend_mode);
 
 /**
@@ -571,9 +571,10 @@ PPE_ERR PPE_blend(ppe_buffer_t *image, ppe_buffer_t *buffer, ppe_translate_t *tr
  * \param[in] buffer: Target image buffer to be bleneded onto.
  * \param[in] trans: Position information of source image.
  * \param[in] rect: Constraint blend area.
- * \return Operation result
- * \retval - PPE_SUCCESS: Operation success.
- * \retval - Others: Operation failure, cause refers to @ref PPE_ERR .
+ * \param[in] blend_mode: Blend mode from @ref PPE_BLEND_MODE to be used.
+ * \return Operation result.
+ * \retval PPE_SUCCESS   Operation success.
+ * \retval Others        Operation failure, cause refers to @ref PPE_ERR .
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -595,20 +596,20 @@ PPE_ERR PPE_blend(ppe_buffer_t *image, ppe_buffer_t *buffer, ppe_translate_t *tr
 
         ppe_translate_t trans = {20, 20};
         ppe_rect_t rect = {6, 4, 20, 24};
-        PPE_blend_rect(&image, &buffer, &trans, &rect, PPE_BYPASS_MODE);
+        PPE_Blend_Rect(&image, &buffer, &trans, &rect, PPE_BYPASS_MODE);
     }
  * \endcode
  */
-PPE_ERR PPE_blend_rect(ppe_buffer_t *image, ppe_buffer_t *buffer, ppe_translate_t *trans,
+PPE_ERR PPE_Blend_Rect(ppe_buffer_t *image, ppe_buffer_t *buffer, ppe_translate_t *trans,
                        ppe_rect_t *rect, PPE_BLEND_MODE blend_mode);
 
 
 /**
  * \brief  Blend multiple input layers to output layer.
  * \param[in] list: List of layers to be blended.
- * \return Operation result
- * \retval - PPE_SUCCESS: Operation success.
- * \retval - Others: Operation failure, cause refers to @ref PPE_ERR .
+ * \return Operation result.
+ * \retval PPE_SUCCESS  Operation success.
+ * \retval Others       Operation failure, cause refers to @ref PPE_ERR .
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -650,16 +651,16 @@ PPE_ERR PPE_blend_rect(ppe_buffer_t *image, ppe_buffer_t *buffer, ppe_translate_
         layer2.trans.x = 89;
         layer2.trans.y = 189;
 
-        PPE_ERR err = PPE_blend_multi(list);
+        PPE_ERR err = PPE_Blend_Multi(list);
     }
  * \endcode
  */
-PPE_ERR PPE_blend_multi(ppe_input_list_t list);
+PPE_ERR PPE_Blend_Multi(ppe_input_list_t list);
 
 /**
  * \brief  Get pixel size of specified format.
  * \param[in] format: Pixel format of PPE from @ref PPE_PIXEL_FORMAT .
- * \return pixel size in bytes
+ * \return Pixel size in bytes.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -675,9 +676,9 @@ uint8_t ppe_get_format_data_len(PPE_PIXEL_FORMAT format);
  * \param[in] result_rect: Pointer to rect that stores result
  * \param[in] rect1: Pointer to one rectangle area
  * \param[in] rect2: Pointer to another rectangle area
- * \return Operation result
- * \retval - true: rectangle areas have intersection.
- * \retval - false: rectangle areas have no intersection.
+ * \return Operation result.
+ * \retval true      rectangle areas have intersection.
+ * \retval false     rectangle areas have no intersection.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -698,9 +699,9 @@ bool ppe_rect_intersect(ppe_rect_t *result_rect, ppe_rect_t *rect1, ppe_rect_t *
  * \param[in] target: Target buffer, can be same with src.
  * \param[in] rect: The boundary of the part to be masked.
  * \param[in] color: Specified color in ABGR8888 format. \ref PPE_ABGR8888
- * \return Operation result
- * \retval - PPE_SUCCESS: Operation success.
- * \retval - Others: Operation failure, cause refers to @ref PPE_ERR .
+ * \return Operation result.
+ * \retval PPE_SUCCESS   Operation success.
+ * \retval Others        Operation failure, cause refers to @ref PPE_ERR .
  *
  * <b>Example usage</b>
  * \code{.c}

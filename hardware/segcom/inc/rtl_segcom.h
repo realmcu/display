@@ -402,14 +402,12 @@ typedef struct SEGCOM_com_pin_cfg
      */
 
 /**
- * rtl_segcom.h
- *
  * \brief  Enable or disable SEGCOM clock.
  *
  * \param[in]  NewState: New state of SEGCOM clock.
  *            This parameter can be one of the following values:
- *            \arg ENABLE: Enable SEGCOM clock.
- *            \arg DISABLE: Disable SEGCOM clock.
+ *            - ENABLE: Enable SEGCOM clock.
+ *            - DISABLE: Disable SEGCOM clock.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -423,14 +421,12 @@ typedef struct SEGCOM_com_pin_cfg
 void SEGCOM_CLK_Config(FunctionalState NewState);
 
 /**
- * rtl_segcom.h
- *
  * \brief  Enable or disable SEGCOM.
  *
  * \param[in] NewState: New state of SEGCOM.
  *            This parameter can be one of the following values:
- *            \arg ENABLE: Enable SEGCOM.
- *            \arg DISABLE: Disable SEGCOM.
+ *            - ENABLE: Enable SEGCOM.
+ *            - DISABLE: Disable SEGCOM.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -444,8 +440,6 @@ void SEGCOM_CLK_Config(FunctionalState NewState);
 void SEGCOM_Cmd(FunctionalState NewState);
 
 /**
- * rtl_segcom.h
- *
  * \brief  Fill configuration structure with default value.
  *
  * \param[in] SEGCOM_InitStruct: Pointer to configuration structure to be initialized.
@@ -475,17 +469,15 @@ void SEGCOM_Cmd(FunctionalState NewState);
 void SEGCOM_StructInit(SEGCOM_InitTypeDef *SEGCOM_InitStruct);
 
 /**
- * rtl_segcom.h
- *
  * \brief  Configure specified interrupt.
  *
  * \param[in] interrupt: Specified interrupt type.
  *            This parameter can be one of the following values:
- *            \arg SEGCOM_UPDATE_DISPLAY_DONE_INT: Update display done interrupt.
- *            \arg SEGCOM_START_OF_FRAME_INT: Start of frame interrupt.
+ *            - SEGCOM_UPDATE_DISPLAY_DONE_INT: Update display done interrupt.
+ *            - SEGCOM_START_OF_FRAME_INT: Start of frame interrupt.
  * \param[in] NewState: Specified interrupt type.
- *            \arg ENABLE: Enable interrupt.
- *            \arg DISABLE: Disable interrupt.
+ *            - ENABLE: Enable interrupt.
+ *            - DISABLE: Disable interrupt.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -499,20 +491,18 @@ void SEGCOM_StructInit(SEGCOM_InitTypeDef *SEGCOM_InitStruct);
 void SEGCOM_IntConfig(SEGCOM_INTERRUPT Interrupt, FunctionalState NewState);
 
 /**
- * rtl_segcom.h
- *
  * \brief  Get SEGCOM status.
  *
  * \param[in] Flag: Specified status type.
  *            This parameter can be one of the following values:
- *            \arg SEGCOM_STATUS_LCD_ENABLE: LCD enable status.
- *            \arg SEGCOM_STATUS_START_OF_FRAME: Start of frame.
- *            \arg SEGCOM_STATUS_UPDATE_DISP_REQ: Update display request.
- *            \arg SEGCOM_STATUS_UPDATE_DISP_DONE: Update display done.
- *            \arg SEGCOM_STATUS_FRAME_CTL_REG_SYNC: Frame control synchronize.
+ *            - SEGCOM_STATUS_LCD_ENABLE: LCD enable status.
+ *            - SEGCOM_STATUS_START_OF_FRAME: Start of frame.
+ *            - SEGCOM_STATUS_UPDATE_DISP_REQ: Update display request.
+ *            - SEGCOM_STATUS_UPDATE_DISP_DONE: Update display done.
+ *            - SEGCOM_STATUS_FRAME_CTL_REG_SYNC: Frame control synchronize.
  * \return Current event status
- * \retval - SET: Event has occured.
- * \retval - RESET: No such event occured.
+ * \retval SET    Event has occured.
+ * \retval RESET  No such event occured.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -530,14 +520,12 @@ void SEGCOM_IntConfig(SEGCOM_INTERRUPT Interrupt, FunctionalState NewState);
 ITStatus SEGCOM_GetStatus(SEGCOM_STATUS Flag);
 
 /**
- * rtl_segcom.h
- *
  * \brief  Clear SEGCOM status.
  *
  * \param[in] Status: Specified status type.
  *            This parameter can be one of the following values:
- *            \arg SEGCOM_CLEAR_START_OF_FRAME: Clear start of frame status.
- *            \arg SEGCOM_CLEAR_UPDATE_DISPLAY_DONE: Clear update display done status.
+ *            - SEGCOM_CLEAR_START_OF_FRAME: Clear start of frame status.
+ *            - SEGCOM_CLEAR_UPDATE_DISPLAY_DONE: Clear update display done status.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -551,18 +539,15 @@ ITStatus SEGCOM_GetStatus(SEGCOM_STATUS Flag);
 void SEGCOM_ClearStatus(SEGCOM_CLEAR_STATUS Status);
 
 /**
- * rtl_segcom.h
- *
  * \brief  Write value to specified COM.
  *
  * \param[in] Channel: Specified COM number.
  *            This parameter can be one of the following values:
- *            \arg SEGCOM_RAM_COM0: SEGCOM data register for COM0.
- *            \arg SEGCOM_RAM_COM1: SEGCOM data register for COM1.
- *            \arg SEGCOM_RAM_COM2: SEGCOM data register for COM2.
- *            \arg SEGCOM_RAM_COM3: SEGCOM data register for COM3.
+ *            - SEGCOM_RAM_COM0: SEGCOM data register for COM0.
+ *            - SEGCOM_RAM_COM1: SEGCOM data register for COM1.
+ *            - SEGCOM_RAM_COM2: SEGCOM data register for COM2.
+ *            - SEGCOM_RAM_COM3: SEGCOM data register for COM3.
  * \param[in] Value: Value to be written.
- * \return None.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -576,8 +561,6 @@ void SEGCOM_ClearStatus(SEGCOM_CLEAR_STATUS Status);
 void SEGCOM_Write(SEGCOM_COM_NUM Channel, uint32_t Value);
 
 /**
- * rtl_segcom.h
- *
  * \brief  Send update display request.
  *
  * <b>Example usage</b>
@@ -592,8 +575,6 @@ void SEGCOM_Write(SEGCOM_COM_NUM Channel, uint32_t Value);
 void SEGCOM_UpdateDisplayRequest(void);
 
 /**
- * rtl_segcom.h
- *
  * \brief  Use the configuration from input parameter to initilize SEGCOM.
  *
  * \param[in] SEGCOM_InitStruct: Pointer to configuration structure.
@@ -612,8 +593,6 @@ void SEGCOM_UpdateDisplayRequest(void);
 void SEGCOM_Init(SEGCOM_InitTypeDef *SEGCOM_InitStruct);
 
 /**
- * rtl_segcom.h
- *
  * \brief  Send update clock request.
  *
  * <b>Example usage</b>
@@ -628,13 +607,10 @@ void SEGCOM_Init(SEGCOM_InitTypeDef *SEGCOM_InitStruct);
 void SEGCOM_Update_Clk(void);
 
 /**
- * rtl_segcom.h
- *
  * \brief  Determine which pins to be used as SEGs and COMs.
  *
  * \param[in] com_cfg: Determine COM pins configuration.
  * \param[in] seg_cfg: Determine SEG pins configuration.
- * \return None.
  *
  * <b>Example usage</b>
  * \code{.c}

@@ -765,7 +765,7 @@ PPE_ERR PPE_Clear_Rect(ppe_buffer_t *buffer, ppe_rect_t *rect, uint32_t color)
 }
 
 #define WINDOW      1
-PPE_ERR PPE_blend(ppe_buffer_t *image, ppe_buffer_t *buffer, ppe_translate_t *trans,
+PPE_ERR PPE_Blend(ppe_buffer_t *image, ppe_buffer_t *buffer, ppe_translate_t *trans,
                   PPE_BLEND_MODE blend_mode)
 {
     if (buffer == NULL)
@@ -979,7 +979,7 @@ PPE_ERR PPE_blend(ppe_buffer_t *image, ppe_buffer_t *buffer, ppe_translate_t *tr
     return PPE_SUCCESS;
 }
 
-PPE_ERR PPE_blend_rect(ppe_buffer_t *image, ppe_buffer_t *buffer, ppe_translate_t *trans,
+PPE_ERR PPE_Blend_Rect(ppe_buffer_t *image, ppe_buffer_t *buffer, ppe_translate_t *trans,
                        ppe_rect_t *rect, PPE_BLEND_MODE blend_mode)
 {
     /*declaration of input/result layer initialization struct*/
@@ -1155,7 +1155,7 @@ PPE_ERR PPE_blend_rect(ppe_buffer_t *image, ppe_buffer_t *buffer, ppe_translate_
     return PPE_SUCCESS;
 }
 
-PPE_ERR PPE_blend_multi(ppe_input_list_t list)
+PPE_ERR PPE_Blend_Multi(ppe_input_list_t list)
 {
     /*declaration of input/result layer initialization struct*/
     if (list.output_layer == NULL)

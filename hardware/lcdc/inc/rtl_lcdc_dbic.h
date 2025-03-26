@@ -42,12 +42,22 @@ extern "C" {
  *                         Constants
  *============================================================================*/
 
+/**
+ * \cond        private
+ * \brief       Bit fields of DBIC.
+ * \defgroup    BIT_FIELD_DBIC   DBIC Bit Field
+ * \{
+ */
 #define BIT_CK_MTIMES(x)        (((x) & 0x0000001F) << 23)
 #define BIT_FAST_RD(x)          (((x) & 0x00000001) << 22)
 #define BIT_CMD_CH(x)           (((x) & 0x00000003) << 20)
 #define BIT_DATA_CH(x)          (((x) & 0x00000003) << 18)
 #define BIT_ADDR_CH(x)          (((x) & 0x00000003) << 16)
 #define BIT_TMOD(x)             (((x) & 0x00000003) << 8)
+/**
+ * \}
+ * \endcond
+ */
 
 /** \defgroup LCDC_DBIC_Exported_Constants LCDC DBIC Exported Constants
  * \brief    Constants used by the LCDC DBIC driver
