@@ -42,7 +42,9 @@ void hw_dma_copy(uint32_t length, uint32_t height, uint32_t src_stride,
     }
     uint32_t dma_height = height;
     uint32_t buffer_size = 0;
-    uint32_t total_size = length * height / 4;;
+    uint32_t total_size_in_byte = length * height;
+    uint32_t total_size = (total_size_in_byte % 4) ? (total_size_in_byte / 4 + 1) :
+                          (total_size_in_byte / 4);
     uint8_t m_size = 0, data_size = 0;
     uint8_t dma_depth = rtl_idu_get_dma_depth(high_speed_dma_channel_num);
     if (length % 4 == 0)
@@ -77,6 +79,10 @@ void hw_dma_copy(uint32_t length, uint32_t height, uint32_t src_stride,
                 }
                 buffer_size = 65535;
             }
+            else
+            {
+                buffer_size = total_size;
+            }
         }
     }
     else if (length % 2 == 0)
@@ -99,6 +105,7 @@ void hw_dma_copy(uint32_t length, uint32_t height, uint32_t src_stride,
         }
         data_size = GDMA_DataSize_HalfWord;
         buffer_size = length / 2;
+        total_size = 0;
     }
     else
     {
@@ -120,6 +127,7 @@ void hw_dma_copy(uint32_t length, uint32_t height, uint32_t src_stride,
             return;
         }
         buffer_size = length;
+        total_size = 0;
     }
 
     GDMA_LLIDef *GDMA_LLIStruct;
@@ -185,7 +193,14 @@ void hw_dma_copy(uint32_t length, uint32_t height, uint32_t src_stride,
                                              | (RX_GDMA_InitStruct.GDMA_SourceMsize << 14)
                                              | (RX_GDMA_InitStruct.GDMA_DIR << 20));
                 /* configure high 32 bit of CTL register */
-                GDMA_LLIStruct[i].CTL_HIGH = buffer_size;
+                if (total_size == 0)
+                {
+                    GDMA_LLIStruct[i].CTL_HIGH = buffer_size;
+                }
+                else
+                {
+                    GDMA_LLIStruct[i].CTL_HIGH = total_size - i * buffer_size;
+                }
             }
             else
             {
@@ -195,14 +210,7 @@ void hw_dma_copy(uint32_t length, uint32_t height, uint32_t src_stride,
                 /* configure low 32 bit of CTL register */
                 GDMA_LLIStruct[i].CTL_LOW = rtl_idu_get_dma_ctl_low_int(dma_channel);
                 /* configure high 32 bit of CTL register */
-                if (total_size == 0)
-                {
-                    GDMA_LLIStruct[i].CTL_HIGH = buffer_size;
-                }
-                else
-                {
-                    GDMA_LLIStruct[i].CTL_HIGH = total_size - i * buffer_size;
-                }
+                GDMA_LLIStruct[i].CTL_HIGH = buffer_size;
             }
         }
     }
@@ -570,142 +578,63 @@ static void hw_bare_blit(draw_img_t *image, struct gui_dispdev *dc, gui_rect_t *
     source.stride = image->img_w;
     source.address = (uint32_t)image->data + sizeof(struct gui_rgb_data_head);
     source.memory = (void *)source.address;
-    source.global_alpha_en = true;
-    source.global_alpha = image->opacity_value;
 
-    if ((image->matrix.m[0][0] != 1 || image->matrix.m[1][1] != 1) && \
-        (image->img_w != image->img_target_w && image->img_h != image->img_target_h))
+    ppe_translate_t trans = {.x = draw_area.x1 - dc->section.x1, .y = draw_area.y1 - dc->section.y1};
+    if (head->compress)
     {
-        float scale_x = image->matrix.m[0][0], scale_y = image->matrix.m[1][1];
-        ppe_buffer_t scaled_img;
-        ppe_translate_t trans;
-        ppe_rect_t range;
-        ppe_rect_t scale_rect;
-        memset(&scaled_img, 0, sizeof(ppe_buffer_t));
-        trans.x = constraint_area.x1 - buf_area.x1;
-        trans.y = constraint_area.y1 - buf_area.y1;
-        scale_rect.top = (constraint_area.y1 - draw_area.y1) / scale_y;
-        scale_rect.bottom = ceil((constraint_area.y2 - draw_area.y1) / scale_y) + ceil(
-                                1 / scale_y);
-        if (scale_rect.bottom >= image->img_h)
+        RCC_PeriphClockCmd(APBPeriph_IDU, APBPeriph_IDU_CLOCK, ENABLE);
+        const IDU_file_header *header = (IDU_file_header *)((uint32_t)image->data + sizeof(
+                                                                struct gui_rgb_data_head));
+        gui_rect_t info;
+        uint32_t length = (constraint_area.x2 - constraint_area.x1 + 1) * pixel_size;
+        if (length % 4)
         {
-            scale_rect.bottom = image->img_h - 1;
+            if (constraint_area.x2 - draw_area.x1 + 1 < image->img_w && constraint_area.x2 + 1 <= buf_area.x2)
+            {
+                constraint_area.x2 += 1;
+                length += pixel_size;
+            }
+            else
+            {
+                constraint_area.x2 -= 1;
+                length -= pixel_size;
+            }
         }
-        scale_rect.left = (constraint_area.x1 - draw_area.x1) / scale_x;
-        scale_rect.right = ceil((constraint_area.x2 - draw_area.x1) / scale_x) + ceil(
-                               1 / scale_x);
-        if (scale_rect.right >= image->img_w)
-        {
-            scale_rect.right = image->img_w - 1;
-        }
-        scaled_img.width = (uint32_t)((scale_rect.right - scale_rect.left + 1) * scale_x);
-        scaled_img.height = (uint32_t)((scale_rect.bottom - scale_rect.top + 1) * scale_y);
-        scaled_img.stride = scaled_img.width;
-        if (scaled_img.height < 1)
+        if (length == 0)
         {
             return;
         }
-        scaled_img.global_alpha_en = true;
-        scaled_img.global_alpha = image->opacity_value;
-        if (head->compress)
+        info.x1 = constraint_area.x1 - draw_area.x1;
+        info.x2 = constraint_area.x2 - draw_area.x1;
+        info.y1 = constraint_area.y1 - draw_area.y1;
+        info.y2 = constraint_area.y2 - draw_area.y1;
+        uint32_t dst_stride = dc->fb_width * pixel_size;
+
+        trans.x = constraint_area.x1 - dc->section.x1;
+        trans.y = constraint_area.y1 - dc->section.y1;
+        uint8_t *dest_address = (uint8_t *)(target.address + (trans.y * dc->fb_width + trans.x) *
+                                            pixel_size);
+        bool ret = hw_idu_decode(&info, (uint8_t *)header, dst_stride, (uint8_t *)dest_address);
+        if (!ret)
         {
-            source.height = scale_rect.bottom - scale_rect.top + 1;
-            source.width = scale_rect.right - scale_rect.left + 1;
-            source.stride = source.width;
-            const IDU_file_header *header = (IDU_file_header *)((uint32_t)image->data + sizeof(
-                                                                    struct gui_rgb_data_head));
-            gui_rect_t info;
-            info.x1 = scale_rect.left;
-            info.x2 = scale_rect.right;
-            info.y1 = scale_rect.top;
-            info.y2 = scale_rect.bottom;
-            uint32_t dst_stride = (info.x2 - info.x1 + 1) * ppe_get_format_data_len(source.format);
-            scale_rect.left = 0;
-            scale_rect.right = info.x2 - info.x1;
-            scale_rect.top = 0;
-            scale_rect.bottom = info.y2 - info.y1;
-            source.memory = gui_malloc(source.height * source.width *
-                                       ppe_get_format_data_len(source.format));
-            source.address = (uint32_t)source.memory;
-            bool ret = hw_idu_decode(&info, (uint8_t *)header, dst_stride, (uint8_t *)source.memory);
-            if (!ret)
-            {
-                gui_free(source.memory);
-                return;
-            }
+            sw_acc_blit(image, dc, rect);
+            return;
         }
-        scaled_img.format = source.format;
-        scaled_img.memory = gui_malloc(scaled_img.width * scaled_img.height * ppe_get_format_data_len(
-                                           source.format));
-        target.address = target.address + (trans.x + trans.y * target.stride) * ppe_get_format_data_len(
-                             target.format);
-        target.memory = (uint32_t *)target.address;
-        PPE_ERR err = PPE_Scale_Rect(&source, &target, scale_x, scale_y, &scale_rect);
-        if (head->compress)
-        {
-            gui_free(source.memory);
-        }
-        gui_free(scaled_img.memory);
     }
     else
     {
-        ppe_translate_t trans = {.x = draw_area.x1 - dc->section.x1, .y = draw_area.y1 - dc->section.y1};
-        if (head->compress)
-        {
-            RCC_PeriphClockCmd(APBPeriph_IDU, APBPeriph_IDU_CLOCK, ENABLE);
-            const IDU_file_header *header = (IDU_file_header *)((uint32_t)image->data + sizeof(
-                                                                    struct gui_rgb_data_head));
-            gui_rect_t info;
-            uint32_t length = (constraint_area.x2 - constraint_area.x1 + 1) * pixel_size;
-            if (length % 4)
-            {
-                if (constraint_area.x2 - draw_area.x1 + 1 < image->img_w && constraint_area.x2 + 1 <= buf_area.x2)
-                {
-                    constraint_area.x2 += 1;
-                    length += pixel_size;
-                }
-                else
-                {
-                    constraint_area.x2 -= 1;
-                    length -= pixel_size;
-                }
-            }
-            if (length == 0)
-            {
-                return;
-            }
-            info.x1 = constraint_area.x1 - draw_area.x1;
-            info.x2 = constraint_area.x2 - draw_area.x1;
-            info.y1 = constraint_area.y1 - draw_area.y1;
-            info.y2 = constraint_area.y2 - draw_area.y1;
-            uint32_t dst_stride = dc->fb_width * pixel_size;
-
-            trans.x = constraint_area.x1 - dc->section.x1;
-            trans.y = constraint_area.y1 - dc->section.y1;
-            uint8_t *dest_address = (uint8_t *)(target.address + (trans.y * dc->fb_width + trans.x) *
-                                                pixel_size);
-            bool ret = hw_idu_decode(&info, (uint8_t *)header, dst_stride, (uint8_t *)dest_address);
-            if (!ret)
-            {
-                sw_acc_blit(image, dc, rect);
-                return;
-            }
-        }
-        else
-        {
-            uint32_t basic_x = constraint_area.x1 - draw_area.x1;
-            uint32_t basic_y = constraint_area.y1 - draw_area.y1;
-            uint32_t target_x = constraint_area.x1 - dc->section.x1;
-            uint32_t target_y = constraint_area.y1 - dc->section.y1;
-            uint32_t length = (constraint_area.x2 - constraint_area.x1 + 1) * pixel_size;
-            uint32_t src_stride = image->img_w * pixel_size;
-            uint32_t dst_stride = dc->fb_width * pixel_size;
-            uint32_t height = constraint_area.y2 - constraint_area.y1 + 1;
-            uint32_t dst_start_address = target.address + (target_x + target_y * dc->fb_width) * pixel_size;
-            uint32_t src_start_address = source.address + (basic_x + basic_y * image->img_w) * pixel_size;
-            hw_dma_copy(length, height, src_stride, dst_stride, (uint8_t *)src_start_address,
-                        (uint8_t *)dst_start_address);
-        }
+        uint32_t basic_x = constraint_area.x1 - draw_area.x1;
+        uint32_t basic_y = constraint_area.y1 - draw_area.y1;
+        uint32_t target_x = constraint_area.x1 - dc->section.x1;
+        uint32_t target_y = constraint_area.y1 - dc->section.y1;
+        uint32_t length = (constraint_area.x2 - constraint_area.x1 + 1) * pixel_size;
+        uint32_t src_stride = image->img_w * pixel_size;
+        uint32_t dst_stride = dc->fb_width * pixel_size;
+        uint32_t height = constraint_area.y2 - constraint_area.y1 + 1;
+        uint32_t dst_start_address = target.address + (target_x + target_y * dc->fb_width) * pixel_size;
+        uint32_t src_start_address = source.address + (basic_x + basic_y * image->img_w) * pixel_size;
+        hw_dma_copy(length, height, src_stride, dst_stride, (uint8_t *)src_start_address,
+                    (uint8_t *)dst_start_address);
     }
 }
 #endif
@@ -723,9 +652,9 @@ void hw_acc_blit(draw_img_t *image, struct gui_dispdev *dc, gui_rect_t *rect)
 #if USE_BARE_COPY_ACC
     struct gui_rgb_data_head *head = image->data;
     if (image->blend_mode != IMG_FILTER_BLACK && \
+        image->matrix.m[0][0] == 1 && image->matrix.m[1][1] == 1 && \
         ((dc->bit_depth == 16 && head->type == RGB565) || \
-         ((dc->bit_depth == 24 && head->type == RGB888) && \
-          (head->compress == 0 || image->matrix.m[0][0] != 1 || image->matrix.m[1][1] != 1)) || \
+         ((dc->bit_depth == 24 && head->type == RGB888) && head->compress == 0) || \
          (dc->bit_depth == 32 && head->type == ARGB8888 && image->blend_mode == PPE_BYPASS_MODE)) && \
         image->opacity_value == 0xFF)
     {
