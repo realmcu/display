@@ -329,8 +329,8 @@ typedef struct
  * \brief  Enable/Disable IDU interrupt.
  * \param[in] Interrupt: Specified interrupt type from @ref IDU_INTERRUPT_TYPE.
  * \param[in] NewState: New state of the IDU interrupt.
- *            \arg ENABLE: Enable specified interrupt.
- *            \arg DISABLE: Disable specified interrupt.
+ *            - ENABLE: Enable specified interrupt.
+ *            - DISABLE: Disable specified interrupt.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -360,8 +360,8 @@ ITStatus IDU_GetINTStatus(IDU_INTERRUPT_TYPE Interrupt);
  * \brief  Mask or unmask specified IDU interrupt.
  * \param[in] Interrupt: Specified interrupt type from @ref IDU_INTERRUPT_TYPE.
  * \param[in] NewState: Mask or unmask the IDU interrupt.
- *            \arg ENABLE: Mask specified interrupt.
- *            \arg DISABLE: Unmask specified interrupt.
+ *            - ENABLE: Mask specified interrupt.
+ *            - DISABLE: Unmask specified interrupt.
  *
  * <b>Example usage</b>
  * \code{.c}

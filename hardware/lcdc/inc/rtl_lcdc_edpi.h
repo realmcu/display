@@ -419,8 +419,8 @@ typedef enum
  *
  * \param[in] state: New state of line interrupt.
  *            This parameter can be one of the following values:
- *            \arg ENABLE: Mask line interrupt.
- *            \arg DISABLE: Unmask line interrupt.
+ *            - ENABLE: Mask line interrupt.
+ *            - DISABLE: Unmask line interrupt.
  *
  * <b>Example usage</b>
  * \code{.c}
