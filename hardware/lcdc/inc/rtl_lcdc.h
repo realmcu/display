@@ -187,7 +187,7 @@ typedef enum
   */
 
 /**
- * \defgroup    LCDC_Pixel_Bit_Swap LCDC Pixel Bit Swap with in each word sized byte
+ * \defgroup    LCDC_Pixel_Bit_Swap LCDC Pixel Bit Swap
  * \{
  * \ingroup     LCDC_Exported_Constants
  */
@@ -399,7 +399,7 @@ typedef enum
   */
 
 /**
- * \defgroup    LCDC_SPIC_RX_FIFO_READ_SIZE LCDC SPIC RX FIFO READ SIZE
+ * \defgroup    LCDC_SPIC_RX_FIFO_READ_SIZE LCDC SPIC RX FIFO Read Size
  * \{
  * \ingroup     LCDC_Exported_Constants
  */
@@ -530,8 +530,8 @@ typedef struct
  *
  * \param[in] reset: New state of LCD reset signal.
  *            This parameter can be one of the following values:
- *            - true   Enable LCD reset signal.
- *            - false  Disable LCD reset signal.
+ *            - true:   Enable LCD reset signal.
+ *            - false:  Disable LCD reset signal.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -563,8 +563,8 @@ __STATIC_INLINE void LCDC_LCD_SET_RST(bool reset)
  *
  * \param[in] NewState: New state of LCDC.
  *            This parameter can be one of the following values:
- *            - ENABLE   Enable LCDC.
- *            - DISABLE  Disable LCDC.
+ *            - ENABLE:   Enable LCDC.
+ *            - DISABLE:  Disable LCDC.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -594,10 +594,10 @@ __STATIC_INLINE void LCDC_Cmd(FunctionalState NewState)
  *
  * \param[in] InterFace: The output interface of LCDC.
  *            This parameter can be one of the following values:
- *            - LCDC_IF_eDPI  eDPI interface.
- *            - LCDC_IF_DBIB  DBIB interface.
- *            - LCDC_IF_DBIC  DBIC/SPIC interface.
- *            - LCDC_IF_DPI   DPI interface.
+ *            - LCDC_IF_eDPI:  eDPI interface.
+ *            - LCDC_IF_DBIB:  DBIB interface.
+ *            - LCDC_IF_DBIC:  DBIC/SPIC interface.
+ *            - LCDC_IF_DPI:   DPI interface.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -622,8 +622,8 @@ __STATIC_INLINE void LCDC_SwitchIF(LCDC_IF_T InterFace)
  *
  * \param[in] mode: LCDC work mode.
  *            This parameter can be one of the following values:
- *            - LCDC_AUTO_MODE    Auto mode.
- *            - LCDC_MANUAL_MODE  Manual mode.
+ *            - LCDC_AUTO_MODE:    Auto mode.
+ *            - LCDC_MANUAL_MODE:  Manual mode.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -647,8 +647,8 @@ __STATIC_INLINE void LCDC_SwitchMode(LCDC_MODE_T Mode)
  *
  * \param[in] dir: The transmission mode of LCDC.
  *            This parameter can be one of the following values:
- *            - LCDC_TX_MODE  Write pixel data from FIFO to pannel.
- *            - LCDC_RX_MODE  Read back data from pannel.
+ *            - LCDC_TX_MODE:  Write pixel data from FIFO to pannel.
+ *            - LCDC_RX_MODE:  Read back data from pannel.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -672,8 +672,8 @@ __STATIC_INLINE void LCDC_SwitchDirect(uint32_t Dir)
  *
  * \param[in] NewState: New state of LCDC DMA.
  *            This parameter can be one of the following values:
- *            - ENABLE   Enable DMA handshake and internal FIFO control.
- *            - DISABLE  Disable DMA handshake and internal FIFO control.
+ *            - ENABLE:   Enable DMA handshake and internal FIFO control.
+ *            - DISABLE:  Disable DMA handshake and internal FIFO control.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -704,8 +704,8 @@ __STATIC_INLINE void LCDC_DmaCmd(FunctionalState NewState)
  *
  * \param[in] NewState: Enable or disable the function of automatically writing data when the valid edge of the tear signal arrives.
  *            This parameter can be one of the following values:
- *            - ENABLE   Enable the function of automatically writing data when the valid edge of the tear signal arrives.
- *            - DISABLE  Disable the function of automatically writing data when the valid edge of the tear signal arrives.
+ *            - ENABLE:   Enable the function of automatically writing data when the valid edge of the tear signal arrives.
+ *            - DISABLE:  Disable the function of automatically writing data when the valid edge of the tear signal arrives.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -737,8 +737,8 @@ __STATIC_INLINE void LCDC_TeCmd(FunctionalState NewState)
  *
  * \param[in] NewState: Enable or disable the function of automatically turning on DMA when the valid edge of the tear signal arrives.
  *            This parameter can be one of the following values:
- *            - ENABLE   Enable the function of automatically turning on DMA when the valid edge of the tear signal arrives.
- *            - DISABLE  Disable the function of automatically turning on DMA when the valid edge of the tear signal arrives.
+ *            - ENABLE:   Enable the function of automatically turning on DMA when the valid edge of the tear signal arrives.
+ *            - DISABLE:  Disable the function of automatically turning on DMA when the valid edge of the tear signal arrives.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -769,8 +769,8 @@ __STATIC_INLINE void LCDC_TeEnableDMA(FunctionalState NewState)
  *
  * \param[in] NewState: Start or stop write data.
  *            This parameter can be one of the following values:
- *            - ENABLE   Start write data in auto mode.
- *            - DISABLE  Stop write data in auto mode.
+ *            - ENABLE:   Start write data in auto mode.
+ *            - DISABLE:  Stop write data in auto mode.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -801,8 +801,8 @@ __STATIC_INLINE void LCDC_AutoWriteCmd(FunctionalState NewState)
  *
  * \param[in] NewState: Start or stop read data.
  *            This parameter can be one of the following values:
- *            - ENABLE   Start read data in auto mode.
- *            - DISABLE  Stop read data in auto mode.
+ *            - ENABLE:   Start read data in auto mode.
+ *            - DISABLE:  Stop read data in auto mode.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -890,14 +890,14 @@ __STATIC_INLINE void LCDC_ClearDmaFifo(void)
  *
  * \param[in] LCDC_CLEAR_INT: Specified interrupt type.
  *            This parameter can be one of the following values:
- *            - LCDC_CLR_TX_FIFO_THESHOLD   When FIFO offset smaller than threshold.
- *            - LCDC_CLR_TX_FIFO_OVERFLOW   TX FIFO overflow.
- *            - LCDC_CLR_TX_FIFO_EMPTY      TX FIFO is empty.
- *            - LCDC_CLR_TX_AUTO_DONE       Auto transmit done.
- *            - LCDC_CLR_RX_FIFO_OVERFLOW   RX FIFO overflow, only in DBIB interface.
- *            - LCDC_CLR_RX_AUTO_DONE       Auto receive done, only in DBIB interface.
- *            - LCDC_CLR_TEAR_TRIGGER       Tear signal trigger.
- *            - LCDC_CLR_WAVEFORM_FINISH    Waveform finish.
+ *            - LCDC_CLR_TX_FIFO_THESHOLD:   When FIFO offset smaller than threshold.
+ *            - LCDC_CLR_TX_FIFO_OVERFLOW:   TX FIFO overflow.
+ *            - LCDC_CLR_TX_FIFO_EMPTY:      TX FIFO is empty.
+ *            - LCDC_CLR_TX_AUTO_DONE:       Auto transmit done.
+ *            - LCDC_CLR_RX_FIFO_OVERFLOW:   RX FIFO overflow, only in DBIB interface.
+ *            - LCDC_CLR_RX_AUTO_DONE:       Auto receive done, only in DBIB interface.
+ *            - LCDC_CLR_TEAR_TRIGGER:       Tear signal trigger.
+ *            - LCDC_CLR_WAVEFORM_FINISH:    Waveform finish.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -1059,8 +1059,8 @@ __STATIC_INLINE void LCDC_ClearRxCounter(void)
  *
  * \param[in] mode: LCDC mode.
  *            This parameter can be one of the following values:
- *            - LCDC_FW_MODE  Firmware mode. Refer to \ref LCDC_FW_MODE .
- *            - LCDC_HW_MODE  Hardware mode. Refer to \ref LCDC_HW_MODE .
+ *            - LCDC_FW_MODE:  Firmware mode. Refer to \ref LCDC_FW_MODE .
+ *            - LCDC_HW_MODE:  Hardware mode. Refer to \ref LCDC_HW_MODE .
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -1166,8 +1166,8 @@ __STATIC_INLINE uint32_t LCDC_DMA_LOAD_CNT(void)
  *
  * \param[in] NewState: New state of DMA multi-block mode.
  *            This parameter can be one of the following values:
- *            - ENABLE   Enable DMA multi-block mode.
- *            - DISABLE  Disable DMA multi-block mode.
+ *            - ENABLE:   Enable DMA multi-block mode.
+ *            - DISABLE:  Disable DMA multi-block mode.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -1198,8 +1198,8 @@ __STATIC_INLINE void LCDC_DMA_MultiBlockCmd(FunctionalState NewState)
  *
  * \param[in] NewState: New state of DMA linklist.
  *            This parameter can be one of the following values:
- *            - ENABLE   Enable DMA linklist.
- *            - DISABLE  Disable DMA linklist.
+ *            - ENABLE:   Enable DMA linklist.
+ *            - DISABLE:  Disable DMA linklist.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -1466,8 +1466,8 @@ void LCDC_DMA_LinkList_Init(LCDC_DMALLI_InitTypeDef *LCDC_DMA_LLIConfig,
  *
  * \param[in] state: DMA burst fixed or not.
  *            This parameter can be one of the following values:
- *            - ENABLE   Force DMA use burst data transfer.
- *            - DISABLE  DMA burst is not required.
+ *            - ENABLE:   Force DMA use burst data transfer.
+ *            - DISABLE:  DMA burst is not required.
  *
  * <b>Example usage</b>
  * \code{.c}

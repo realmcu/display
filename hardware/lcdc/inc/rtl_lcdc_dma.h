@@ -313,8 +313,8 @@ void LCDC_DMA_StructInit(LCDC_DMA_InitTypeDef *LCDC_DMA_InitStruct);
  * \param[in]  LCDC_DMA_Channel_Num: LCDC DMA channel number, which can be 0.
  * \param[in]  NewState: New state of the selected LCDC DMA channel.
  *             This parameter can be one of the following values:
- *             \arg ENABLE: Enable the selected LCDC DMA channel.
- *             \arg DISABLE: Disable the selected LCDC DMA channel.
+ *             - ENABLE: Enable the selected LCDC DMA channel.
+ *             - DISABLE: Disable the selected LCDC DMA channel.
  *
  * <b>Example usage</b>
  * \code{.c}

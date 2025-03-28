@@ -225,8 +225,8 @@ typedef struct rtl_lcdc_dbic
  *
  * \param[in] NewState: New state of DBIC interface.
  *            This parameter can be one of the following values:
- *            \arg ENABLE: Enable DBIC interface.
- *            \arg DISABLE: Disable DBIC interface.
+ *            - ENABLE: Enable DBIC interface.
+ *            - DISABLE: Disable DBIC interface.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -244,8 +244,8 @@ void DBIC_Cmd(FunctionalState NewState);
  *
  * \param[in] mode: The mode of DBIC interface.
  *            This parameter can be one of the following values:
- *            \arg DBIC_AUTO_MODE: Auto mode. User can't push data to FIFO and Enable DBIC interface. SPIC will accept auto read/write command.
- *            \arg DBIC_USER_MODE: User mode. User can push data to FIFO and Enable DBIC interface. SPIC won't accept auto read/write command.
+ *            - DBIC_AUTO_MODE: Auto mode. User can't push data to FIFO and Enable DBIC interface. SPIC will accept auto read/write command.
+ *            - DBIC_USER_MODE: User mode. User can push data to FIFO and Enable DBIC interface. SPIC won't accept auto read/write command.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -263,8 +263,8 @@ void DBIC_SwitchMode(uint32_t mode);
  *
  * \param[in] dir: The transmission mode of DBIC.
  *            This parameter can be one of the following values:
- *            \arg DBIC_TMODE_TX: Transmit mode.
- *            \arg DBIC_TMODE_RX: Receive mode.
+ *            - DBIC_TMODE_TX: Transmit mode.
+ *            - DBIC_TMODE_RX: Receive mode.
  *
  * <b>Example usage</b>
  * \code{.c}

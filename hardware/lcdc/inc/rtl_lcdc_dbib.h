@@ -173,8 +173,8 @@ typedef struct
  *
  * \param[in] NewState: New state of command byte bypass.
  *            This parameter can be one of the following values:
- *            \arg ENABLE: Enable command byte bypass.
- *            \arg DISABLE: Disable command byte bypass.
+ *            - ENABLE: Enable command byte bypass.
+ *            - DISABLE: Disable command byte bypass.
  *
  * <b>Example usage</b>
  * \code{.c}
