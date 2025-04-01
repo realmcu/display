@@ -4,17 +4,16 @@
 #include <gui_matrix.h>
 #include <rtl_ppe.h>
 #include <rtl_idu.h>
+#include <rtl_idu_int.h>
 #include <rtl876x_rcc.h>
 #include <rtl876x_gdma.h>
 #include <dma_channel.h>
-#include "trace.h"
 #include "rtl876x_gpio.h"
 #include "os_mem.h"
 #include "rtl876x_pinmux.h"
 #include "math.h"
 #include "fmc_api_ext.h"
 #include "os_sync.h"
-#include "hal_idu.h"
 
 extern void sw_acc_blit(draw_img_t *image, struct gui_dispdev *dc, struct gui_rect *rect);
 
@@ -28,6 +27,9 @@ SHM_DATA_SECTION static uint8_t cache_buf1[CACHE_BUF_SIZE];
 static uint8_t *cache_buf2;
 static uint8_t *cache_buf = cache_buf1;
 static uint32_t last_cache_size = 0;
+static uint8_t high_speed_dma_channel_num = 0xFF;
+static uint8_t low_speed_dma_channel_num = 0xFF;
+
 static void change_cache_buf(uint32_t cache_size)
 {
     if (cache_buf == cache_buf1)
@@ -73,6 +75,223 @@ static void cache_on_psram(uint32_t size)
 }
 #endif
 
+void hw_dma_copy(uint32_t length, uint32_t height, uint32_t src_stride,
+                 uint32_t dst_stride, uint8_t *src, uint8_t *dst)
+{
+    bool use_LLI = true;
+    if ((length == src_stride && length == dst_stride) || height == 1)
+    {
+        use_LLI = false;
+    }
+    uint32_t dma_height = height;
+    uint32_t buffer_size = 0;
+    uint32_t total_size_in_byte = length * height;
+    uint32_t total_size = total_size_in_byte / 4;
+    uint8_t m_size = 0, data_size = 0;
+    uint8_t dma_depth = rtl_idu_get_dma_depth(high_speed_dma_channel_num);
+    if (length % 4 == 0)
+    {
+        data_size = GDMA_DataSize_Word;
+        if (dma_depth == 4)
+        {
+            m_size = GDMA_Msize_4;
+        }
+        else if (dma_depth == 8)
+        {
+            m_size = GDMA_Msize_8;
+        }
+        else if (dma_depth == 16)
+        {
+            m_size = GDMA_Msize_16;
+        }
+        else
+        {
+            return;
+        }
+        buffer_size = length / 4;
+        if (!use_LLI)
+        {
+            if (buffer_size > 65535)
+            {
+                use_LLI = true;
+                dma_height = buffer_size / 65535;
+                if (buffer_size % 65535)
+                {
+                    dma_height += 1;
+                }
+                buffer_size = 65535;
+            }
+            else
+            {
+                buffer_size = total_size;
+            }
+        }
+    }
+    else if (length % 2 == 0)
+    {
+        if (dma_depth == 4)
+        {
+            m_size = GDMA_Msize_8;
+        }
+        else if (dma_depth == 8)
+        {
+            m_size = GDMA_Msize_16;
+        }
+        else if (dma_depth == 16)
+        {
+            m_size = GDMA_Msize_32;
+        }
+        else
+        {
+            return;
+        }
+        data_size = GDMA_DataSize_HalfWord;
+        buffer_size = length / 2;
+        total_size = 0;
+    }
+    else
+    {
+        data_size = GDMA_DataSize_Byte;
+        if (dma_depth == 4)
+        {
+            m_size = GDMA_Msize_16;
+        }
+        else if (dma_depth == 8)
+        {
+            m_size = GDMA_Msize_32;
+        }
+        else if (dma_depth == 16)
+        {
+            m_size = GDMA_Msize_64;
+        }
+        else
+        {
+            return;
+        }
+        buffer_size = length;
+        total_size = 0;
+    }
+
+    GDMA_LLIDef *GDMA_LLIStruct;
+    if (use_LLI)
+    {
+        GDMA_LLIStruct = (GDMA_LLIDef *)gui_malloc(dma_height * sizeof(GDMA_LLIDef));
+        if (GDMA_LLIStruct == NULL)
+        {
+            assert_param(GDMA_LLIStruct != NULL);
+        }
+        else
+        {
+            memset(GDMA_LLIStruct, 0, dma_height * sizeof(GDMA_LLIDef));
+        }
+    }
+    uint32_t start_address = (uint32_t)src;
+    uint32_t dest_address = (uint32_t)dst;
+    RCC_PeriphClockCmd(APBPeriph_GDMA, APBPeriph_GDMA_CLOCK, ENABLE);
+    GDMA_ChannelTypeDef *dma_channel = rtl_idu_get_dma_channel_int(high_speed_dma_channel_num);
+    GDMA_InitTypeDef RX_GDMA_InitStruct;
+    /*--------------GDMA init-----------------------------*/
+    GDMA_StructInit(&RX_GDMA_InitStruct);
+    RX_GDMA_InitStruct.GDMA_ChannelNum          = high_speed_dma_channel_num;
+    RX_GDMA_InitStruct.GDMA_BufferSize          = buffer_size;
+    RX_GDMA_InitStruct.GDMA_DIR                 = GDMA_DIR_MemoryToMemory;
+    RX_GDMA_InitStruct.GDMA_SourceInc           = DMA_SourceInc_Inc;
+    RX_GDMA_InitStruct.GDMA_DestinationInc      = DMA_DestinationInc_Inc;
+    RX_GDMA_InitStruct.GDMA_SourceMsize         =
+        m_size;                         // 8 msize for source msize
+    RX_GDMA_InitStruct.GDMA_DestinationMsize    =
+        m_size;                         // 8 msize for destiantion msize
+    RX_GDMA_InitStruct.GDMA_DestinationDataSize =
+        data_size;                   // 32 bit width for destination transaction
+    RX_GDMA_InitStruct.GDMA_SourceDataSize      =
+        data_size;                   // 32 bit width for source transaction
+    RX_GDMA_InitStruct.GDMA_SourceAddr          = (uint32_t)start_address;
+    RX_GDMA_InitStruct.GDMA_DestinationAddr     = (uint32_t)dest_address;
+
+    if (use_LLI)
+    {
+        RX_GDMA_InitStruct.GDMA_Multi_Block_Mode = LLI_TRANSFER;
+        RX_GDMA_InitStruct.GDMA_Multi_Block_En = 1;
+        RX_GDMA_InitStruct.GDMA_Multi_Block_Struct = (uint32_t)GDMA_LLIStruct;
+    }
+
+    GDMA_Init(dma_channel, &RX_GDMA_InitStruct);
+    if (use_LLI && GDMA_LLIStruct != NULL)
+    {
+        for (int i = 0; i < dma_height; i++)
+        {
+            if (i == dma_height - 1)
+            {
+                GDMA_LLIStruct[i].SAR = start_address + src_stride * i;
+                GDMA_LLIStruct[i].DAR = (uint32_t)dest_address + dst_stride * i;
+                GDMA_LLIStruct[i].LLP = 0;
+                /* configure low 32 bit of CTL register */
+                GDMA_LLIStruct[i].CTL_LOW = (BIT(0)
+                                             | (RX_GDMA_InitStruct.GDMA_DestinationDataSize << 1)
+                                             | (data_size << 4)
+                                             | (RX_GDMA_InitStruct.GDMA_DestinationInc << 7)
+                                             | (RX_GDMA_InitStruct.GDMA_SourceInc << 9)
+                                             | (RX_GDMA_InitStruct.GDMA_DestinationMsize << 11)
+                                             | (RX_GDMA_InitStruct.GDMA_SourceMsize << 14)
+                                             | (RX_GDMA_InitStruct.GDMA_DIR << 20));
+                /* configure high 32 bit of CTL register */
+                if (total_size == 0)
+                {
+                    GDMA_LLIStruct[i].CTL_HIGH = buffer_size;
+                }
+                else
+                {
+                    GDMA_LLIStruct[i].CTL_HIGH = total_size - i * buffer_size;
+                }
+            }
+            else
+            {
+                GDMA_LLIStruct[i].SAR = start_address + src_stride * i;
+                GDMA_LLIStruct[i].DAR = (uint32_t)dest_address + dst_stride * i;
+                GDMA_LLIStruct[i].LLP = (uint32_t)&GDMA_LLIStruct[i + 1];
+                /* configure low 32 bit of CTL register */
+                GDMA_LLIStruct[i].CTL_LOW = rtl_idu_get_dma_ctl_low_int(dma_channel);
+                /* configure high 32 bit of CTL register */
+                GDMA_LLIStruct[i].CTL_HIGH = buffer_size;
+            }
+        }
+    }
+    GDMA_INTConfig(high_speed_dma_channel_num, GDMA_INT_Transfer, ENABLE);
+    GDMA_Cmd(high_speed_dma_channel_num, ENABLE);
+    while (GDMA_GetTransferINTStatus(high_speed_dma_channel_num) != SET);
+    GDMA_ClearINTPendingBit(high_speed_dma_channel_num, GDMA_INT_Transfer);
+    if (use_LLI && GDMA_LLIStruct != NULL)
+    {
+        gui_free(GDMA_LLIStruct);
+    }
+}
+
+bool hw_idu_decode(ppe_rect_t *rect, uint8_t *input, uint32_t buffer_stride, uint8_t *buffer)
+{
+    IDU_file_header *header = (IDU_file_header *)input;
+    IDU_decode_range range;
+    range.start_column = rect->x;
+    range.end_column = rect->x + rect->w - 1;
+    range.start_line = rect->y;
+    range.end_line = rect->y + rect->h - 1;
+    range.target_stride = buffer_stride;
+    IDU_DMA_config dma_cfg = {0};
+    dma_cfg.output_buf = (uint32_t *)buffer;
+    dma_cfg.RX_DMA_channel_num = low_speed_dma_channel_num;
+    dma_cfg.TX_DMA_channel_num = high_speed_dma_channel_num;
+    dma_cfg.TX_FIFO_INT_threshold = 8;
+    dma_cfg.RX_FIFO_INT_threshold = 8;
+    IDU_ERROR err = IDU_Decode((uint8_t *)header, &range, &dma_cfg);
+    if (err != IDU_SUCCESS)
+    {
+        return false;
+    }
+    else
+    {
+        return true;
+    }
+}
+
 static bool memcpy_by_dma(ppe_rect_t *p_rect, ppe_buffer_t *source)
 {
     uint8_t pixel_size = PPE_Get_Pixel_Size(source->format);
@@ -80,36 +299,28 @@ static bool memcpy_by_dma(ppe_rect_t *p_rect, ppe_buffer_t *source)
     {
         return false;
     }
-    hal_idu_dma_info info;
-    info.length = p_rect->w * pixel_size;
-    info.dst_stride = p_rect->w * pixel_size;
-    info.src_stride = source->stride * pixel_size;
-    info.height = p_rect->h;
+    uint32_t length = p_rect->w * pixel_size;
+
+    uint32_t src_stride = source->stride * pixel_size;
+    uint32_t height = p_rect->h;
     uint32_t start_address = source->address + (p_rect->x + p_rect->y * source->stride) * pixel_size;
-    hal_dma_copy(&info, (uint8_t *)start_address, cache_buf);
+    hw_dma_copy(length, height, src_stride, length, (uint8_t *)start_address, cache_buf);
     source->address = (uint32_t)cache_buf;
     return true;
 }
 
 
-
-
 static bool memcpy_by_idu(ppe_rect_t *p_rect, ppe_buffer_t *source)
 {
-#if !F_APP_GUI_USE_PSRAM
     uint8_t pixel_size = PPE_Get_Pixel_Size(source->format);
+#if !F_APP_GUI_USE_PSRAM
     if (p_rect->w * p_rect->h * pixel_size > CACHE_BUF_SIZE)
     {
         return false;
     }
 #endif
-    hal_idu_decompress_info info;
-    info.start_column = p_rect->x;
-    info.end_column = p_rect->x + p_rect->w - 1;
-    info.start_line = p_rect->y;
-    info.end_line = p_rect->y + p_rect->h - 1;
-    info.raw_data_address = source->address;
-    if (hal_idu_decompress(&info, cache_buf))
+    uint32_t dst_stride = p_rect->w * pixel_size;
+    if (hw_idu_decode(p_rect, (uint8_t *)source->address, dst_stride, cache_buf))
     {
         source->address = (uint32_t)cache_buf;
         return true;
@@ -120,8 +331,6 @@ static bool memcpy_by_idu(ppe_rect_t *p_rect, ppe_buffer_t *source)
     }
 }
 
-
-
 void bare_blit_by_dma(ppe_buffer_t *target, ppe_buffer_t *source, ppe_rect_t *src_rect,
                       ppe_rect_t *dst_trans)
 {
@@ -130,29 +339,12 @@ void bare_blit_by_dma(ppe_buffer_t *target, ppe_buffer_t *source, ppe_rect_t *sr
                                  pixel_size;
     uint32_t src_start_address = source->address + (src_rect->x + src_rect->y * source->stride) *
                                  pixel_size;
-    hal_idu_dma_info info;
-    info.length = src_rect->w * pixel_size;
-    info.src_stride = source->stride * pixel_size;
-    info.dst_stride = target->stride * pixel_size;
-    info.height = src_rect->h;
-    hal_dma_copy(&info, (uint8_t *)src_start_address, (uint8_t *)dst_start_address);
-}
-
-void bare_blit_by_idu(ppe_buffer_t *target, ppe_buffer_t *source, ppe_rect_t *src_rect,
-                      ppe_rect_t *dst_trans)
-{
-    uint8_t pixel_size = PPE_Get_Pixel_Size(target->format);
-    uint32_t dst_start_address = target->address + (dst_trans->x + dst_trans->y * target->stride) *
-                                 pixel_size;
-    hal_idu_decompress_info info;
-    info.start_line = src_rect->y;
-    info.end_line = src_rect->y + src_rect->h - 1;
-    info.start_column = src_rect->x;
-    info.end_column = src_rect->x + src_rect->w - 1;
-    info.length = src_rect->w * pixel_size;
-    info.dst_stride = target->stride * pixel_size;
-    info.raw_data_address = source->address;
-    hal_idu_decompress_rect(&info, (uint8_t *)dst_start_address);
+    uint32_t length = src_rect->w * pixel_size;
+    uint32_t src_stride = source->stride * pixel_size;
+    uint32_t dst_stride = target->stride * pixel_size;
+    uint32_t height = src_rect->h;
+    hw_dma_copy(length, height, src_stride, dst_stride, (uint8_t *)src_start_address,
+                (uint8_t *)dst_start_address);
 }
 
 static float get_x(float *line, float y)
@@ -430,7 +622,11 @@ void hw_acc_blit(draw_img_t *image, struct gui_dispdev *dc, struct gui_rect *rec
                         {
                             uint32_t s;
                             s = os_lock();
-                            bare_blit_by_idu(&target, &source, &src_rect, &dst_rect);
+                            uint8_t pixel_size = PPE_Get_Pixel_Size(target.format);
+                            uint32_t dst_stride = target.stride * pixel_size;
+                            uint8_t *dest_address = (uint8_t *)(target.address + (dst_rect.y * target.stride + dst_rect.x) *
+                                                                pixel_size);
+                            hw_idu_decode(&src_rect, (uint8_t *)source.address, dst_stride, dest_address);
                             os_unlock(s);
                         }
                         else
@@ -730,6 +926,7 @@ void hw_acc_blit(draw_img_t *image, struct gui_dispdev *dc, struct gui_rect *rec
             if (head->compress)
             {
                 uint32_t s = os_lock();
+                s = os_lock();
                 ret = memcpy_by_idu(&old_rect, &source);
                 os_unlock(s);
             }
@@ -823,33 +1020,32 @@ bool hw_acc_idu_decode(uint8_t *image, gui_rect_t *rect, uint8_t *output)
     memset(&output_header, 0, sizeof(struct gui_rgb_data_head));
     const IDU_file_header *header = (IDU_file_header *)((uint32_t)image + sizeof(
                                                             struct gui_rgb_data_head));
+    uint8_t pixel_size = 0;
     switch (head->type)
     {
     case RGB565:
         output_header.type = RGB565;
+        pixel_size = 2;
         break;
     case RGB888:
         output_header.type = RGB888;
+        pixel_size = 3;
         break;
     case ARGB8888:
         output_header.type = ARGB8888;
+        pixel_size = 4;
         break;
     case ARGB8565:
         output_header.type = ARGB8565;
+        pixel_size = 3;
         break;
     default:
         return false;
     }
     RCC_PeriphClockCmd(APBPeriph_IDU, APBPeriph_IDU_CLOCK, ENABLE);
-    hal_idu_decompress_info info;
-    info.raw_data_address = (uint32_t)header;
-    info.start_column = rect->x1;
-    info.end_column = rect->x2;
-    info.start_line = rect->y1;
-    info.end_line = rect->y2;
-    output_header.w = info.end_column - info.start_column + 1;
-    output_header.h = info.end_line - info.start_line + 1;
-    if (hal_idu_decompress(&info, output + 8))
+    ppe_rect_t decode_rect = {.x = rect->x1, .y = rect->y1, .w = rect->x2 - rect->x1 + 1, .h = rect->y2 - rect->y1 + 1};
+    uint32_t buffer_stride = decode_rect.w * pixel_size;
+    if (hw_idu_decode(&decode_rect, (uint8_t *)header, buffer_stride, output + 8))
     {
         memcpy(output, &output_header, sizeof(struct gui_rgb_data_head));
         return true;
@@ -1010,8 +1206,9 @@ void hw_acc_end_cb(draw_img_t *image)
 void hw_acc_init(void)
 {
     PPE_CLK_ENABLE(ENABLE);
-    uint8_t dma_channel_1, dma_channel_2;
-    hal_dma_channel_init(&dma_channel_1, &dma_channel_2);
+    GDMA_channel_request(&high_speed_dma_channel_num, NULL, true);
+    GDMA_channel_request(&low_speed_dma_channel_num, NULL, false);
+
     extern void (* draw_img_acc_prepare_cb)(struct draw_img * image, gui_rect_t *rect);
     extern void (* draw_img_acc_end_cb)(struct draw_img * image);
     draw_img_acc_prepare_cb = hw_acc_prepare_cb;

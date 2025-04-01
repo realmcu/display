@@ -1736,12 +1736,12 @@ void ppe_get_identity(ppe_matrix_t *matrix)
 bool ppe_is_identity_or_translate(ppe_matrix_t *matrix)
 {
     return (matrix->m[0][0] == 1.0f && \
-            matrix->m[0][1] = 0.0f && \
-                              matrix->m[1][0] = 0.0f && \
-                                                matrix->m[1][1] = 1.0f && \
-                                                                  matrix->m[2][0] = 0.0f && \
-                                                                                    matrix->m[2][1] = 0.0f && \
-                                                                                            matrix->m[2][2] = 1.0f);
+            matrix->m[0][1] == 0.0f && \
+            matrix->m[1][0] == 0.0f && \
+            matrix->m[1][1] == 1.0f && \
+            matrix->m[2][0] == 0.0f && \
+            matrix->m[2][1] == 0.0f && \
+            matrix->m[2][2] == 1.0f);
 }
 
 #if USE_PPE_MAT

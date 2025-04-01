@@ -85,6 +85,7 @@ uint8_t rtl_idu_get_dma_depth(uint8_t channel_num)
 IDU_ERROR rtl_idu_decode_direct_int(uint8_t *file, IDU_decode_range *range,
                                     IDU_DMA_config *dma_cfg, GDMA_LLIDef *RX_LLI)
 {
+#if SUPPORT_HS_PPE
     uint32_t decompress_start_line;
     uint32_t decompress_end_line;
     uint32_t decompress_start_column;
@@ -139,8 +140,9 @@ IDU_ERROR rtl_idu_decode_direct_int(uint8_t *file, IDU_decode_range *range,
 
     IDU_InitTypeDef IDU_struct_init;
     IDU_struct_init.algorithm_type            = (IDU_ALGORITHM)header->algorithm_type.algorithm;
-    IDU_struct_init.head_throw_away_byte_num  = THROW_AWAY_0BYTE;
-    IDU_struct_init.pic_pixel_size            = (IDU_PIXEL_SIZE)header->algorithm_type.pixel_bytes;
+    IDU_struct_init.head_throw_away_byte_num  = IDU_THROW_AWAY_0BYTE;
+    IDU_struct_init.pic_pixel_size            = rtl_idu_get_decode_pixel_length(
+                                                    (IDU_PIXEL_SIZE_INT)header->algorithm_type.pixel_bytes);
     IDU_struct_init.pic_decompress_height     = (decompress_end_line - decompress_start_line + 1);
     IDU_struct_init.pic_raw_width             = header->raw_pic_width;
     IDU_struct_init.tx_column_start           = decompress_start_column;
@@ -160,6 +162,7 @@ IDU_ERROR rtl_idu_decode_direct_int(uint8_t *file, IDU_decode_range *range,
     IDU_struct_init.rx_fifo_int_threshold     = dma_cfg->RX_FIFO_INT_threshold;
     IDU_struct_init.tx_fifo_int_threshold     = dma_cfg->TX_FIFO_INT_threshold;
     IDU_struct_init.hw_handshake              = IDU_HW_HANDSHAKE_PPE;
+    extern void IDU_Init(IDU_InitTypeDef * IDU_init_struct);
     IDU_Init(&IDU_struct_init);
 
 
@@ -250,6 +253,9 @@ IDU_ERROR rtl_idu_decode_direct_int(uint8_t *file, IDU_decode_range *range,
     IDU_INTConfig(IDU_DECOMPRESS_ERROR_INT, ENABLE);
     IDU_MaskINTConfig(IDU_DECOMPRESS_ERROR_INT, DISABLE);
     return IDU_SUCCESS;
+#else
+    return IDU_ERROR_DECODE_FAIL;
+#endif
 }
 
 uint8_t *rtl_idu_malloc_int(uint32_t size)
@@ -264,7 +270,19 @@ uint8_t *rtl_idu_malloc_int(uint32_t size)
 #endif
 }
 
-uint8_t rtl_idu_get_pixel_length(IDU_PIXEL_SIZE_INT pixel_size)
+void rtl_idu_free_int(void *p)
+{
+    if (p == 0)
+    {
+        return;
+    }
+#if 1
+    return os_mem_free(p);
+#else
+#endif
+}
+
+uint8_t rtl_idu_get_decode_pixel_length(IDU_PIXEL_SIZE_INT pixel_size)
 {
     switch (pixel_size)
     {

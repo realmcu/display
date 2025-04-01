@@ -344,7 +344,8 @@ IDU_ERROR IDU_Decode(uint8_t *file, IDU_decode_range *range, IDU_DMA_config *dma
     {
         return IDU_ERROR_FILE_INVALID;
     }
-    uint8_t pixel_size = rtl_idu_get_actual_pixel_length(header->algorithm_type.pixel_bytes);
+    uint8_t pixel_size = rtl_idu_get_actual_pixel_length((IDU_PIXEL_SIZE_INT)
+                                                         header->algorithm_type.pixel_bytes);
     if (pixel_size == 0xFF)
     {
         return IDU_ERROR_FILE_INVALID;
@@ -370,7 +371,7 @@ IDU_ERROR IDU_Decode(uint8_t *file, IDU_decode_range *range, IDU_DMA_config *dma
     IDU_struct_init.algorithm_type            = (IDU_ALGORITHM)header->algorithm_type.algorithm;
     IDU_struct_init.head_throw_away_byte_num  = IDU_THROW_AWAY_0BYTE;
     IDU_struct_init.pic_pixel_size            = rtl_idu_get_decode_pixel_length(
-                                                    header->algorithm_type.pixel_bytes);
+                                                    (IDU_PIXEL_SIZE_INT)header->algorithm_type.pixel_bytes);
     IDU_struct_init.pic_decompress_height     = (decompress_end_line - decompress_start_line + 1);
     IDU_struct_init.pic_raw_width             = header->raw_pic_width;
     IDU_struct_init.tx_column_start           = decompress_start_column;
@@ -688,7 +689,8 @@ IDU_ERROR IDU_Decode_With_Interrupt(uint8_t *file, IDU_decode_range *range, IDU_
     {
         return IDU_ERROR_FILE_INVALID;
     }
-    uint8_t pixel_size = rtl_idu_get_actual_pixel_length(header->algorithm_type.pixel_bytes);
+    uint8_t pixel_size = rtl_idu_get_actual_pixel_length((IDU_PIXEL_SIZE_INT)
+                                                         header->algorithm_type.pixel_bytes);
     if (pixel_size == 0xFF)
     {
         return IDU_ERROR_FILE_INVALID;
@@ -714,7 +716,7 @@ IDU_ERROR IDU_Decode_With_Interrupt(uint8_t *file, IDU_decode_range *range, IDU_
     IDU_struct_init.algorithm_type            = (IDU_ALGORITHM)header->algorithm_type.algorithm;
     IDU_struct_init.head_throw_away_byte_num  = IDU_THROW_AWAY_0BYTE;
     IDU_struct_init.pic_pixel_size            = rtl_idu_get_decode_pixel_length(
-                                                    header->algorithm_type.pixel_bytes);
+                                                    (IDU_PIXEL_SIZE_INT)header->algorithm_type.pixel_bytes);
     IDU_struct_init.pic_decompress_height     = (decompress_end_line - decompress_start_line + 1);
     IDU_struct_init.pic_raw_width             = header->raw_pic_width;
     IDU_struct_init.tx_column_start           = decompress_start_column;
@@ -1019,6 +1021,6 @@ IDU_ERROR IDU_Decode_Direct(uint8_t *file, IDU_decode_range *range, IDU_DMA_conf
 
 uint8_t IDU_Get_Pixel_Size(IDU_file_header *file)
 {
-    return rtl_idu_get_actual_pixel_length(file->algorithm_type.pixel_bytes);
+    return rtl_idu_get_actual_pixel_length((IDU_PIXEL_SIZE_INT)file->algorithm_type.pixel_bytes);
 }
 /******************* (C) COPYRIGHT 2023 Realtek Semiconductor Corporation *****END OF FILE****/
