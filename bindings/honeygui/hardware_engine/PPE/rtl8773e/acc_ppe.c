@@ -926,7 +926,6 @@ void hw_acc_blit(draw_img_t *image, struct gui_dispdev *dc, struct gui_rect *rec
             if (head->compress)
             {
                 uint32_t s = os_lock();
-                s = os_lock();
                 ret = memcpy_by_idu(&old_rect, &source);
                 os_unlock(s);
             }
