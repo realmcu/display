@@ -344,9 +344,9 @@ void IDU_INTConfig(IDU_INTERRUPT_TYPE Interrupt, FunctionalState NewState);
 /**
  * \brief  Get interrupt status of IDU.
  * \param[in] Interrupt: Specified interrupt type from @ref IDU_INTERRUPT_TYPE.
- * \return Interrupt status
- * \retval - SET: Interrupt has been triggered.
- * \retval - RESET: Interrupt has not been triggered yet.
+ * \return Interrupt status.
+ * \retval SET: Interrupt has been triggered.
+ * \retval RESET: Interrupt has not been triggered yet.
  * <b>Example usage</b>
  * \code{.c}
     void demo_code(void){
@@ -391,9 +391,9 @@ void IDU_ClearINTPendingBit(IDU_INTERRUPT_TYPE Interrupt);
  * \param[in] file: Pointer to header of compressed image.
  * \param[in] range: Decompress range, refer to @ref IDU_DECODE_RANGE.
  * \param[in] dma_cfg: Determine which DMA channel is selected, refer to @ref IDU_DMA_CONFIG.
- * \return Operation result
- * \retval - IDU_SUCCESS: Operation success.
- * \retval - Others: Operation failure, cause refers to @ref IDU_ERROR.
+ * \return Operation result.
+ * \retval IDU_SUCCESS: Operation success.
+ * \retval Others: Operation failure, cause refers to @ref IDU_ERROR.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -417,9 +417,9 @@ IDU_ERROR IDU_Decode(uint8_t *file, IDU_decode_range *range, IDU_DMA_config *dma
  * \param[in] range: Decompress range, refer to @ref IDU_DECODE_RANGE.
  * \param[in] dma_cfg: Determine which DMA channel is selected, refer to @ref IDU_DMA_CONFIG.
  * \param[in] int_cfg: Determine which interrupts are enabled, refer to @ref IDU_INT_CONFIG.
- * \return Operation result
- * \retval - IDU_SUCCESS: Operation success.
- * \retval - Others: Operation failure, cause refers to @ref IDU_ERROR.
+ * \return Operation result.
+ * \retval IDU_SUCCESS: Operation success.
+ * \retval Others: Operation failure, cause refers to @ref IDU_ERROR.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -456,9 +456,9 @@ IDU_ERROR IDU_Decode_With_Interrupt(uint8_t *file, IDU_decode_range *range, IDU_
  * \brief  Get the start address of certain line in compressed file.
  * \param[in] compressed_start_address: start address of entire compressed file.
  * \param[in] line_number: specified line number
- * \return start address of specified line
- * \retval - 0: Invalid line number.
- * \retval - others: Valid address.
+ * \return Start address of specified line.
+ * \retval 0: Invalid line number.
+ * \retval others: Valid address.
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -474,9 +474,9 @@ uint32_t IDU_Get_Line_Start_Address(uint32_t compressed_start_address,
 /**
  * \brief  Get the pixel size of compressed image.
  * \param[in] file: Pointer to header of compressed image.
- * \return Pixel size of compressed image
- * \retval - 0xFF: Invalid header.
- * \retval - Others: Actual pixel size.
+ * \return Pixel size of compressed image.
+ * \retval 0xFF: Invalid header.
+ * \retval Others: Actual pixel size.
  *
  * <b>Example usage</b>
  * \code{.c}
