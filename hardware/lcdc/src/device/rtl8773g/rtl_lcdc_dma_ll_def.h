@@ -14,8 +14,7 @@
 #ifndef RTL_DMALL_DEF_H
 #define RTL_DMALL_DEF_H
 
-#include "utils/rtl_utils.h"
-#include "address_map.h"
+#include "rtl876x.h"
 
 #ifdef  __cplusplus
 extern "C" {

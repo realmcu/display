@@ -14,8 +14,7 @@
 #ifndef RTL_Handler_DEF_H
 #define RTL_Handler_DEF_H
 
-#include "utils/rtl_utils.h"
-#include "address_map.h"
+#include "rtl876x.h"
 
 #ifdef  __cplusplus
 extern "C" {
@@ -722,6 +721,7 @@ typedef union
     /* Internal Type  */
 #define LCDC_HANDLER_DMA_FIFO_CTRL_t     LCDC_HANDLER_DMA_FIFO_CTRL_TypeDef
 #define LCDC_HANDLER_OPERATE_CTR_t       LCDC_HANDLER_OPERATE_CTR_TypeDef
+#define DISPLAY_CTRL_REG_BASE            DISPLAY_CTRL_BASE
 
 
 #ifdef  __cplusplus

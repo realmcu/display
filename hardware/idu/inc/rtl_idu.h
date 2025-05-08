@@ -23,6 +23,11 @@
 extern "C" {
 #endif
 
+#define IDU_DMA_Config          IDU_DMA_config
+#define IDU_Decode_Range        IDU_decode_range
+#define IDU_File_Header         IDU_file_header
+#define IDU_Interrupt_Config    IDU_interrupt_config
+
 /*============================================================================*
  *                        Header Files
  *============================================================================*/
@@ -235,7 +240,7 @@ typedef enum
   */
 
 /**
- * \defgroup    IDU_FILE_HEADER IDU_file_header
+ * \defgroup    IDU_FILE_HEADER IDU_File_Header
  * \{
  * \ingroup     IDU_Exported_Types
  */
@@ -260,7 +265,7 @@ typedef struct
   */
 
 /**
- * \defgroup    IDU_DECODE_RANGE IDU_decode_range
+ * \defgroup    IDU_DECODE_RANGE IDU_Decode_Range
  * \{
  * \ingroup     IDU_Exported_Types
  */
@@ -277,7 +282,7 @@ typedef struct
   */
 
 /**
- * \defgroup    IDU_DMA_CONFIG IDU_DMA_config
+ * \defgroup    IDU_DMA_CONFIG IDU_DMA_Config
  * \{
  * \ingroup     IDU_Exported_Types
  */
@@ -294,7 +299,7 @@ typedef struct
   */
 
 /**
- * \defgroup    IDU_INT_CONFIG IDU_interrupt_config
+ * \defgroup    IDU_INT_CONFIG IDU_Interrupt_Config
  * \{
  * \ingroup     IDU_Exported_Types
  */
