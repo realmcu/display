@@ -86,7 +86,7 @@ void hw_dma_copy(uint32_t length, uint32_t height, uint32_t src_stride,
     uint32_t dma_height = height;
     uint32_t buffer_size = 0;
     uint32_t total_size_in_byte = length * height;
-    uint32_t total_size = total_size_in_byte / 4;
+    uint32_t total_size = 0;
     uint8_t m_size = 0, data_size = 0;
     uint8_t dma_depth = rtl_idu_get_dma_depth(high_speed_dma_channel_num);
     if (length % 4 == 0)
@@ -109,13 +109,15 @@ void hw_dma_copy(uint32_t length, uint32_t height, uint32_t src_stride,
             return;
         }
         buffer_size = length / 4;
+        total_size = 0;
         if (!use_LLI)
         {
-            if (buffer_size > 65535)
+            total_size = total_size_in_byte / 4;
+            if (total_size > 65535)
             {
                 use_LLI = true;
-                dma_height = buffer_size / 65535;
-                if (buffer_size % 65535)
+                dma_height = total_size / 65535;
+                if (total_size % 65535)
                 {
                     dma_height += 1;
                 }
@@ -148,6 +150,24 @@ void hw_dma_copy(uint32_t length, uint32_t height, uint32_t src_stride,
         data_size = GDMA_DataSize_HalfWord;
         buffer_size = length / 2;
         total_size = 0;
+        if (!use_LLI)
+        {
+            total_size = total_size_in_byte / 2;
+            if (total_size > 65535)
+            {
+                use_LLI = true;
+                dma_height = total_size / 65535;
+                if (total_size % 65535)
+                {
+                    dma_height += 1;
+                }
+                buffer_size = 65535;
+            }
+            else
+            {
+                buffer_size = total_size;
+            }
+        }
     }
     else
     {
@@ -170,8 +190,25 @@ void hw_dma_copy(uint32_t length, uint32_t height, uint32_t src_stride,
         }
         buffer_size = length;
         total_size = 0;
+        if (!use_LLI)
+        {
+            total_size = total_size_in_byte;
+            if (total_size > 65535)
+            {
+                use_LLI = true;
+                dma_height = total_size / 65535;
+                if (total_size % 65535)
+                {
+                    dma_height += 1;
+                }
+                buffer_size = 65535;
+            }
+            else
+            {
+                buffer_size = total_size;
+            }
+        }
     }
-
     GDMA_LLIDef *GDMA_LLIStruct;
     if (use_LLI)
     {
@@ -614,36 +651,30 @@ void hw_acc_blit(draw_img_t *image, struct gui_dispdev *dc, struct gui_rect *rec
                 dst_rect.y -= dc->section.y1;
                 if (image->blend_mode == IMG_BYPASS_MODE || image->blend_mode == IMG_COVER_MODE)
                 {
-#if PPE_BARE_COPY_ACCURATE
-                    if (src_rect.w % 2 == 0)
-#endif
+                    if (src_rect.w % 2 == 0 && head->compress)
                     {
-                        if (head->compress)
-                        {
-                            uint32_t s;
-                            s = os_lock();
-                            uint8_t pixel_size = PPE_Get_Pixel_Size(target.format);
-                            uint32_t dst_stride = target.stride * pixel_size;
-                            uint8_t *dest_address = (uint8_t *)(target.address + (dst_rect.y * target.stride + dst_rect.x) *
-                                                                pixel_size);
-                            hw_idu_decode(&src_rect, (uint8_t *)source.address, dst_stride, dest_address);
-                            os_unlock(s);
-                        }
-                        else
-                        {
-                            uint32_t s;
-                            s = os_lock();
-                            bare_blit_by_dma(&target, &source, &src_rect, &dst_rect);
-                            os_unlock(s);
-                        }
+                        uint32_t s;
+                        s = os_lock();
+                        uint8_t pixel_size = PPE_Get_Pixel_Size(target.format);
+                        uint32_t dst_stride = target.stride * pixel_size;
+                        uint8_t *dest_address = (uint8_t *)(target.address + (dst_rect.y * target.stride + dst_rect.x) *
+                                                            pixel_size);
+                        hw_idu_decode(&src_rect, (uint8_t *)source.address, dst_stride, dest_address);
+                        os_unlock(s);
                         return;
                     }
-#if PPE_BARE_COPY_ACCURATE
+                    else if (!head->compress)
+                    {
+                        uint32_t s;
+                        s = os_lock();
+                        bare_blit_by_dma(&target, &source, &src_rect, &dst_rect);
+                        os_unlock(s);
+                        return;
+                    }
                     else
                     {
                         mode = PPE_BYPASS_MODE;
                     }
-#endif
                 }
                 else if (image->blend_mode == IMG_RECT)
                 {
@@ -1000,8 +1031,7 @@ void hw_acc_blit(draw_img_t *image, struct gui_dispdev *dc, struct gui_rect *rec
         PPE_err err = PPE_Blit_Inverse(&target, &source, &inverse, &ppe_rect, mode);
         if (err != PPE_SUCCESS)
         {
-//            DBG_DIRECT("PPE err %d", err);
-//                sw_acc_blit(image, dc, rect);
+            sw_acc_blit(image, dc, rect);
         }
     }
     PPE_Finish();
