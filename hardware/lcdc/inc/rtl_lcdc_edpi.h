@@ -110,13 +110,13 @@ typedef struct
  * \{
  * \ingroup     LCDC_EDPI_Exported_Constants
  */
-#define EDPI_CLOCKDIV2          ((uint32_t)0x1)  /*!< Frequency division factor of eDPI clock is 2*/
-#define EDPI_CLOCKDIV3          ((uint32_t)0x2)  /*!< Frequency division factor of eDPI clock is 3*/
-#define EDPI_CLOCKDIV4          ((uint32_t)0x3)  /*!< Frequency division factor of eDPI clock is 4*/
-#define EDPI_CLOCKDIV5          ((uint32_t)0x4)  /*!< Frequency division factor of eDPI clock is 5*/
-#define EDPI_CLOCKDIV6          ((uint32_t)0x5)  /*!< Frequency division factor of eDPI clock is 6*/
-#define EDPI_CLOCKDIV7          ((uint32_t)0x6)  /*!< Frequency division factor of eDPI clock is 7*/
-#define EDPI_CLOCKDIV8          ((uint32_t)0x7)  /*!< Frequency division factor of eDPI clock is 8*/
+#define EDPI_CLOCKDIV2          ((uint32_t)0x1)  /*!< Frequency division factor of eDPI clock is 2.*/
+#define EDPI_CLOCKDIV3          ((uint32_t)0x2)  /*!< Frequency division factor of eDPI clock is 3.*/
+#define EDPI_CLOCKDIV4          ((uint32_t)0x3)  /*!< Frequency division factor of eDPI clock is 4.*/
+#define EDPI_CLOCKDIV5          ((uint32_t)0x4)  /*!< Frequency division factor of eDPI clock is 5.*/
+#define EDPI_CLOCKDIV6          ((uint32_t)0x5)  /*!< Frequency division factor of eDPI clock is 6.*/
+#define EDPI_CLOCKDIV7          ((uint32_t)0x6)  /*!< Frequency division factor of eDPI clock is 7.*/
+#define EDPI_CLOCKDIV8          ((uint32_t)0x7)  /*!< Frequency division factor of eDPI clock is 8.*/
 
 #define IS_EDPI_CLOCKDIV(DIV)   (((DIV) == EDPI_CLOCKDIV2) || ((DIV) == EDPI_CLOCKDIV3) || \
                                  ((DIV) == EDPI_CLOCKDIV4) || ((DIV) == EDPI_CLOCKDIV5) || \
@@ -174,10 +174,10 @@ typedef struct
  * \{
  * \ingroup     LCDC_EDPI_Exported_Constants
  */
-#define EDPI_PIXELFORMAT_RGB888            (0)               /*!< RGB888 */
-#define EDPI_PIXELFORMAT_RGB565_1          ((uint32_t)0x1)   /*!< RGB565_3(R[D15:D11]G[D10:D5]B[D4:D0])*/
-#define EDPI_PIXELFORMAT_RGB565_2          ((uint32_t)0x2)   /*!< RGB565_2(R[D20:D16]G[D13:D8]B[D4:D0])*/
-#define EDPI_PIXELFORMAT_RGB565_3          ((uint32_t)0x3)   /*!< RGB565_1(R[D21:D17]G[D13:D8]B[D5:D1])*/
+#define EDPI_PIXELFORMAT_RGB888            (0)               /*!< RGB888. */
+#define EDPI_PIXELFORMAT_RGB565_1          ((uint32_t)0x1)   /*!< RGB565_3(R[D15:D11]G[D10:D5]B[D4:D0]).*/
+#define EDPI_PIXELFORMAT_RGB565_2          ((uint32_t)0x2)   /*!< RGB565_2(R[D20:D16]G[D13:D8]B[D4:D0]).*/
+#define EDPI_PIXELFORMAT_RGB565_3          ((uint32_t)0x3)   /*!< RGB565_1(R[D21:D17]G[D13:D8]B[D5:D1]).*/
 
 #define IS_EDPI_PIXELFORMAT(FORMAT)   (((FORMAT) == EDPI_PIXELFORMAT_RGB888) || ((FORMAT) == EDPI_PIXELFORMAT_RGB565_1) || \
                                        ((FORMAT) == EDPI_PIXELFORMAT_RGB565_2) || ((FORMAT) == EDPI_PIXELFORMAT_RGB565_3))
@@ -331,8 +331,8 @@ typedef struct
  * \{
  * \ingroup     LCDC_EDPI_Exported_Constants
  */
-#define EDPI_HALT_AL                (0)             /*!< halt signal is low. */
-#define EDPI_HALT_AH                (1)             /*!< halt signal is high. */
+#define EDPI_HALT_AL                (0)             /*!< Halt signal is low. */
+#define EDPI_HALT_AH                (1)             /*!< Halt signal is high. */
 
 #define IS_EDPI_HALT_POLARITY(POLARITY)   ((POLARITY) == EDPI_HALT_AL) || ((POLARITY) == EDPI_HALT_AH)
 
@@ -346,8 +346,8 @@ typedef struct
  * \ingroup     LCDC_EDPI_Exported_Constants
  */
 #define EDPI_DE_CONSTANT_NONE                (0x1)      /*!< No constant value for DE, it can be drive by display controller*/
-#define EDPI_DE_CONSTANT_LOW                 (0x0)      /*!< constant low for DE. */
-#define EDPI_DE_CONSTANT_HIGH                (0x3)      /*!< constant high for DE */
+#define EDPI_DE_CONSTANT_LOW                 (0x0)      /*!< Constant low for DE. */
+#define EDPI_DE_CONSTANT_HIGH                (0x3)      /*!< Constant high for DE. */
 
 #define IS_EDPI_DE_CONSTANT_VALUE(VALUE)   ((VALUE) == EDPI_DE_CONSTANT_NONE) || ((VALUE) == EDPI_DE_CONSTANT_LOW) || ((VALUE) == EDPI_DE_CONSTANT_HIGH)
 
@@ -361,8 +361,8 @@ typedef struct
  * \ingroup     LCDC_EDPI_Exported_Constants
  */
 #define EDPI_VSYNC_CONSTANT_NONE                (0x1)      /*!< No constant value for VSYNC, it can be driven by display controller*/
-#define EDPI_VSYNC_CONSTANT_LOW                 (0x0)      /*!< constant low for VSYNC. */
-#define EDPI_VSYNC_CONSTANT_HIGH                (0x3)      /*!< constant high for VSYNC */
+#define EDPI_VSYNC_CONSTANT_LOW                 (0x0)      /*!< Constant low for VSYNC. */
+#define EDPI_VSYNC_CONSTANT_HIGH                (0x3)      /*!< Cconstant high for VSYNC. */
 
 #define IS_EDPI_VSYNC_CONSTANT_VALUE(VALUE)   ((VALUE) == EDPI_VSYNC_CONSTANT_NONE) || ((VALUE) == EDPI_VSYNC_CONSTANT_LOW) || ((VALUE) == EDPI_VSYNC_CONSTANT_HIGH)
 
@@ -376,8 +376,8 @@ typedef struct
  * \ingroup     LCDC_EDPI_Exported_Constants
  */
 #define EDPI_HSYNC_CONSTANT_NONE                (0x1)      /*!< No constant value for HSYNC, it can be driven by display controller*/
-#define EDPI_HSYNC_CONSTANT_LOW                 (0x0)      /*!< constant low for HSYNC. */
-#define EDPI_HSYNC_CONSTANT_HIGH                (0x3)      /*!< constant high for HSYNC */
+#define EDPI_HSYNC_CONSTANT_LOW                 (0x0)      /*!< Constant low for HSYNC. */
+#define EDPI_HSYNC_CONSTANT_HIGH                (0x3)      /*!< Constant high for HSYNC. */
 
 #define IS_EDPI_HSYNC_CONSTANT_VALUE(VALUE)   ((VALUE) == EDPI_HSYNC_CONSTANT_NONE) || ((VALUE) == EDPI_HSYNC_CONSTANT_LOW)  || ((VALUE) == EDPI_HSYNC_CONSTANT_HIGH)
 

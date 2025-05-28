@@ -145,9 +145,9 @@ typedef struct
     uint32_t DBIB_InitGuardTimeCmd;       /*!< Controls the init guard time function, only available for hardware continuously write mode.
                                                  This parameter can be a value of \ref LCDC_DBIB_InitGuardTime_Cmd. */
     uint32_t DBIB_InitGuardTime;          /*!< Delay between DBI-B idle state and DCX signal become active.
-                                                 This parameter can be a value of \ref LCDC_DBIB_GuardTime . */
+                                                 This parameter can be a value of \ref LCDC_DBIB_GuardTime. */
     uint32_t DBIB_CmdGuardTimeCmd;        /*!< Controls the command guard time function, only available for hardware continuously write mode.
-                                                 This parameter can be a value of \ref LCDC_DBIB_CmdGuardTime_Cmd */
+                                                 This parameter can be a value of \ref LCDC_DBIB_CmdGuardTime_Cmd. */
     uint32_t DBIB_CmdGuardTime;           /*!< Delay between CS signal become active and command output.
                                                  This parameter can be a value of \ref LCDC_DBIB_GuardTime. */
     uint32_t DBIB_GuardTimeCmd;           /*!< Controls the guard time function, only available for hardware continuously write mode.*/

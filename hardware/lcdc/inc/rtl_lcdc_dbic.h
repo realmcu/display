@@ -152,15 +152,15 @@ extern "C" {
 typedef struct
 {
     uint32_t DBIC_SPEED_SEL;              /*!< Specifies the DBIC clock divider value.
-                                                 The frequency of DBIC clock = The frequency of DBIC clock source / (2 * DBIC_SPEED_SEL) */
+                                                 The frequency of DBIC clock = The frequency of DBIC clock source / (2 * DBIC_SPEED_SEL) . */
     uint32_t DBIC_TxThr;                  /*!< Specifies the TX FIFO threshold value.
                                                   This value can be from 0 to 16. */
     uint32_t DBIC_RxThr;                  /*!< Specifies the RX FIFO threshold value.
                                                   This value can be from 0 to 16. */
     uint32_t SCPOL;                       /*!< Specifies the serial clock polarity.
-                                                  This parameter can be a value of @ref LCDC_DBIC_SCPOL */
+                                                  This parameter can be a value of @ref LCDC_DBIC_SCPOL. */
     uint32_t SCPH;                        /*!< Specifies the serial clock phase.
-                                                  This parameter can be a value of @ref LCDC_DBIC_SCPH_Edge */
+                                                  This parameter can be a value of @ref LCDC_DBIC_SCPH_Edge. */
 } LCDC_DBICCfgTypeDef;
 
 /** End of LCDC_DBIC_Exported_Types

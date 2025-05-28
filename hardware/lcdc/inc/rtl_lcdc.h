@@ -120,10 +120,10 @@ typedef struct
  */
 typedef enum
 {
-    LCDC_IF_eDPI = 0x0,                     /*!< Enhanced Display Pixel Interface, need MIPI DSI host */
-    LCDC_IF_DBIB = 0x1,                     /*!< Display Bus Interface Type-B */
-    LCDC_IF_DBIC = 0x2,                     /*!< Serial Display Interface */
-    LCDC_IF_DPI  = 0x3                      /*!< Display Pixel Interface */
+    LCDC_IF_eDPI = 0x0,                     /*!< Enhanced Display Pixel Interface, need MIPI DSI host. */
+    LCDC_IF_DBIB = 0x1,                     /*!< Display Bus Interface Type-B. */
+    LCDC_IF_DBIC = 0x2,                     /*!< Serial Display Interface. */
+    LCDC_IF_DPI  = 0x3                      /*!< Display Pixel Interface. */
 } LCDC_IF_T;
 
 #define IS_LCDC_IF_SEL(IF) (((IF) == LCDC_IF_eDPI) || ((IF) == LCDC_IF_DBIB) || \
@@ -454,23 +454,23 @@ typedef enum
 typedef struct
 {
     uint32_t LCDC_Interface;     /*!< Selecting the output interface of LCDC.
-                                         This parameter can be a value of @ref LCDC_Interface */
+                                         This parameter can be a value of @ref LCDC_Interface. */
     uint32_t LCDC_RamlessEn;     /*!< Enable or disable ramless qspi, only active when DBIC/SPIC interface is selected.
-                                         This parameter can be a value of ENABLE or DISABLE */
+                                         This parameter can be a value of ENABLE or DISABLE. */
     uint32_t LCDC_GroupSel;      /*!< selecting the output pin assignemnt groups.
-                                         This parameter can be a value of 1 or 2 */
+                                         This parameter can be a value of 1 or 2. */
     uint32_t LCDC_PixelInputFormat;    /*!< Configure the input pixel format of pixel converter.
-                                              This parameter can be a value of @ref LCDC_Pixel_Input_Format */
+                                              This parameter can be a value of @ref LCDC_Pixel_Input_Format. */
     uint32_t LCDC_PixelOutputFormat;    /*!< Configure the output pixel format of pixel converter.
-                                              This parameter can be a value of @ref LCDC_Pixel_Output_Format */
+                                              This parameter can be a value of @ref LCDC_Pixel_Output_Format. */
     uint32_t LCDC_PixelBitSwap;     /*!< Input data 8/16bits swap configuration of pixel converter.
-                                           This parameter can be a value of @ref LCDC_Pixel_Bit_Swap */
+                                           This parameter can be a value of @ref LCDC_Pixel_Bit_Swap. */
     uint32_t LCDC_TeEn;             /*!< Enable or disable tear function.
-                                           This parameter can be a value of ENABLE or DISABLE */
+                                           This parameter can be a value of ENABLE or DISABLE. */
     uint32_t LCDC_TePolarity;       /*!< Configure the edge of tear triggering.
-                                           This parameter can be a value of @ref LCDC_Tear_Polarity */
+                                           This parameter can be a value of @ref LCDC_Tear_Polarity. */
     uint32_t LCDC_TeInputMux;       /*!< Indicate where the tear input signal comes from.
-                                           This parameter can be a value of @ref LCDC_Tear_Input_Mux */
+                                           This parameter can be a value of @ref LCDC_Tear_Input_Mux. */
     uint32_t LCDC_OperateMode;      /*!< Configure operate mode. */
     uint32_t LCDC_OperateDirection; /*!< Configure operate direction. */
     uint32_t LCDC_DmaThreshold;     /*!< Configure dma handler fifo threshold. */
@@ -488,18 +488,18 @@ typedef struct
  */
 typedef struct
 {
-    uint32_t g1_source_addr;      /*!< Group1 source address */
-    uint32_t g2_source_addr;      /*!< Group2 source address */
-    uint32_t g1_destination_addr; /*!< Group1 destination address */
-    uint32_t g2_destination_addr; /*!< Group2 destination address */
-    uint16_t g1_buffersize;       /*!< Group1 buffer size */
-    uint16_t g2_buffersize;       /*!< Group2 buffer size */
-    uint32_t g1_sar_offset;       /*!< Group1 SAR offset */
-    uint32_t g2_sar_offset;       /*!< Group2 SAR offset */
-    uint32_t g1_dar_offset;       /*!< Group1 DAR offset */
-    uint32_t g2_dar_offset;       /*!< Group2 DAR offset */
-    uint32_t g1_LLP;              /*!< Group1 LLP */
-    uint32_t g2_LLP;              /*!< Group2 LLP */
+    uint32_t g1_source_addr;      /*!< Group1 source address. */
+    uint32_t g2_source_addr;      /*!< Group2 source address. */
+    uint32_t g1_destination_addr; /*!< Group1 destination address. */
+    uint32_t g2_destination_addr; /*!< Group2 destination address. */
+    uint16_t g1_buffersize;       /*!< Group1 buffer size. */
+    uint16_t g2_buffersize;       /*!< Group2 buffer size. */
+    uint32_t g1_sar_offset;       /*!< Group1 SAR offset. */
+    uint32_t g2_sar_offset;       /*!< Group2 SAR offset. */
+    uint32_t g1_dar_offset;       /*!< Group1 DAR offset. */
+    uint32_t g2_dar_offset;       /*!< Group2 DAR offset. */
+    uint32_t g1_LLP;              /*!< Group1 LLP. */
+    uint32_t g2_LLP;              /*!< Group2 LLP. */
 } LCDC_DMALLI_InitTypeDef;
 
 /** End of LCDC_Exported_Types
