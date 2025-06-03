@@ -195,11 +195,11 @@ typedef struct
 {
     uint8_t  LCDC_DMA_ChannelNum;               /*!< Specifies channel number for LCDC DMA. */
     LCDC_DMA_DIRECTION_T  LCDC_DMA_DIR;         /*!< Specifies transfer direction.
-                                                           This parameter can be a value of @ref LCDC_DMA_Data_Transfer_Direction */
+                                                           This parameter can be a value of @ref LCDC_DMA_Data_Transfer_Direction. */
     uint32_t LCDC_DMA_BufferSize;               /*!< Specifies the buffer size. */
     LCDC_DMA_SRC_INC_T
     LCDC_DMA_SourceInc;      /*!< Specifies whether the source address register is incremented or not.
-                                                          This parameter can be a value of @ref LCDC_DMA_Source_Incremented_Mode */
+                                                          This parameter can be a value of @ref LCDC_DMA_Source_Incremented_Mode. */
     LCDC_DMA_DEST_INC_T
     LCDC_DMA_DestinationInc;/*!< Specifies whether the destination address register is incremented or not.
                                                           This parameter can be a value of @ref LCDC_DMA_Destination_Incremented_Mode. */
@@ -210,7 +210,7 @@ typedef struct
     LCDC_DMA_MSIZE_T LCDC_DMA_SourceMsize;          /*!< Specifies items number to be transferred.
                                                           This parameter can be a value of @ref LCDC_DMA_Msize. */
     LCDC_DMA_MSIZE_T LCDC_DMA_DestinationMsize;     /*!< Specifies items number to be transferred.
-                                                          This parameter can be a value of @ref LCDC_DMA_Msize */
+                                                          This parameter can be a value of @ref LCDC_DMA_Msize. */
     uint32_t LCDC_DMA_SourceAddr;               /*!< Specifies the source base address for LCDC DMA Channelx. */
     uint32_t LCDC_DMA_DestinationAddr;          /*!< Specifies the destination base address for LCDC DMA Channelx. */
     uint32_t LCDC_DMA_ChannelPriority;          /*!< Specifies the software priority for the LCDC DMA Channelx. */

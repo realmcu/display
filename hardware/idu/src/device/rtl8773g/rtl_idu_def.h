@@ -325,7 +325,7 @@ typedef union
             {
                 uint32_t rx_fifo: 32;
             } b;
-        } RX_FIFO_TypeDef;
+        } IDU_RX_FIFO_TypeDef;
 
 
 
@@ -340,7 +340,7 @@ typedef union
             {
                 uint32_t tx_fifo: 32;
             } b;
-        } TX_FIFO_TypeDef;
+        } IDU_TX_FIFO_TypeDef;
 
 
 
@@ -357,7 +357,7 @@ typedef union
                 const uint32_t rx_fifo_offset: 8;
                 const uint32_t reserved_0: 24;
             } b;
-        } RX_FIFO_OFFSET_TypeDef;
+        } IDU_RX_FIFO_OFFSET_TypeDef;
 
 
 
@@ -374,7 +374,7 @@ typedef union
                 const uint32_t tx_fifo_offset: 8;
                 const uint32_t reserved_0: 24;
             } b;
-        } TX_FIFO_OFFSET_TypeDef;
+        } IDU_TX_FIFO_OFFSET_TypeDef;
 
 
 
@@ -393,7 +393,7 @@ typedef union
                 const uint32_t reserved_0: 23;
                 uint32_t rx_dma_enable: 1;
             } b;
-        } RX_FIFO_DMA_THRESHOLD_TypeDef;
+        } IDU_RX_FIFO_DMA_THRESHOLD_TypeDef;
 
 
 
@@ -412,7 +412,7 @@ typedef union
                 const uint32_t reserved_0: 23;
                 uint32_t tx_dma_enable: 1;
             } b;
-        } TX_FIFO_DMA_THRESHOLD_TypeDef;
+        } IDU_TX_FIFO_DMA_THRESHOLD_TypeDef;
 
 
 
@@ -429,7 +429,7 @@ typedef union
                 uint32_t rx_fifo_int_threshold: 8;
                 const uint32_t reserved_0: 24;
             } b;
-        } RX_FIFO_INT_THRESHOLD_TypeDef;
+        } IDU_RX_FIFO_INT_THRESHOLD_TypeDef;
 
 
 
@@ -446,7 +446,7 @@ typedef union
                 uint32_t tx_fifo_int_threshold: 8;
                 const uint32_t reserved_0: 24;
             } b;
-        } TX_FIFO_INT_THRESHOLD_TypeDef;
+        } IDU_TX_FIFO_INT_THRESHOLD_TypeDef;
 
 
 
@@ -475,7 +475,7 @@ typedef union
                 uint32_t idu_decompress_finish_int_en: 1;
                 const uint32_t reserved_0: 25;
             } b;
-        } INT_ENABLE_TypeDef;
+        } IDU_INT_ENABLE_TypeDef;
 
 
 
@@ -504,7 +504,7 @@ typedef union
                 uint32_t idu_decompress_finish_int_msk: 1;
                 const uint32_t reserved_0: 25;
             } b;
-        } INT_MASK_TypeDef;
+        } IDU_INT_MASK_TypeDef;
 
 
 
@@ -533,7 +533,7 @@ typedef union
                 const uint32_t idu_decompress_finish_int_raw_status: 1;
                 const uint32_t reserved_0: 25;
             } b;
-        } INT_RAW_STATUS_TypeDef;
+        } IDU_INT_RAW_STATUS_TypeDef;
 
 
 
@@ -562,7 +562,7 @@ typedef union
                 const uint32_t idu_decompress_finish_int_status: 1;
                 const uint32_t reserved_0: 25;
             } b;
-        } INT_STATUS_TypeDef;
+        } IDU_INT_STATUS_TypeDef;
 
 
 
@@ -591,7 +591,7 @@ typedef union
                 uint32_t idu_decompress_finish_int_clr: 1;
                 const uint32_t reserved_0: 25;
             } b;
-        } INT_CLEAR_TypeDef;
+        } IDU_INT_CLEAR_TypeDef;
 
 
 #ifdef  __cplusplus

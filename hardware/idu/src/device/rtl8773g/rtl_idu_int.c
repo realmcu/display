@@ -58,13 +58,18 @@ uint8_t *rtl_idu_malloc_int(uint32_t size)
     {
         return NULL;
     }
-#if 1
     return os_mem_alloc(OS_MEM_TYPE_DATA, size);
-#else
-#endif
 }
 
-uint8_t rtl_idu_get_pixel_length(IDU_PIXEL_SIZE_INT pixel_size)
+void rtl_idu_free_int(void *p)
+{
+    if (p != NULL)
+    {
+        os_mem_free(p);
+    }
+}
+
+uint8_t rtl_idu_get_decode_pixel_length(IDU_PIXEL_SIZE_INT pixel_size)
 {
     switch (pixel_size)
     {
@@ -85,5 +90,25 @@ uint8_t rtl_idu_get_actual_pixel_length(IDU_PIXEL_SIZE_INT pixel_size)
     case PIXEL_SIZE_24BIT: return 3;
     case PIXEL_SIZE_32BIT: return 4;
     default: return 0xFF;
+    }
+}
+
+uint8_t rtl_idu_get_dma_depth(uint8_t channel_num)
+{
+    if (channel_num <= 1)
+    {
+        return 16;
+    }
+    else if (channel_num <= 5)
+    {
+        return 8;
+    }
+    else if (channel_num <= 11)
+    {
+        return 4;
+    }
+    else
+    {
+        return 0xFF;
     }
 }

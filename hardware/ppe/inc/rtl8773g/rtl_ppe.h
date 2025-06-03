@@ -165,14 +165,6 @@ typedef enum
 
 typedef enum
 {
-    PPE_BYPASS_MODE,
-    PPE_TRANSPARENT_MODE,
-    PPE_SRC_OVER_MODE,
-    PPE_CONST_MASK_MODE,
-} PPE_BLEND_MODE;
-
-typedef enum
-{
     PPE_BLEND_SRC,
     PPE_BLEND_PREMULTIPLY,
     PPE_BLEND_SRC_OVER,
@@ -440,8 +432,6 @@ void PPE_Mask_All_Interrupt(FunctionalState NewState);
 PPE_ERR PPE_buffer_init(ppe_buffer_t *buffer);
 PPE_ERR PPE_set_color_key(ppe_buffer_t *image, PPE_color_key_config *config);
 
-PPE_ERR PPE_Blit(ppe_buffer_t *target, ppe_buffer_t *image, ppe_matrix_t *matrix,
-                 PPE_BLEND_MODE mode);
 PPE_ERR PPE_Blit_Inverse(ppe_buffer_t *dst, ppe_buffer_t *src, uint8_t *output,
                          ppe_matrix_t *inverse,
                          ppe_rect_t *rect, PPE_BLEND_METHOD method);
@@ -460,8 +450,6 @@ void ppe_matrix_inverse(ppe_matrix_t *matrix);
 void ppe_mat_multiply(ppe_matrix_t *matrix, ppe_matrix_t *mult);
 bool ppe_get_area(ppe_rect_t *result_rect, ppe_rect_t *source_rect, ppe_matrix_t *matrix,
                   ppe_buffer_t *buffer);
-PPE_ERR PPE_Blend_Multi(ppe_buffer_t *dst, ppe_buffer_t *src_1,
-                        ppe_buffer_t *src_2, ppe_buffer_t *src_3, PPE_BLEND_MODE mode);
 PPE_ERR PPE_Mask(ppe_buffer_t *dst, uint32_t color, ppe_rect_t *rect);
 PPE_ERR PPE_Blit_Inverse_Simulate(ppe_buffer_t *dst, ppe_buffer_t *src, ppe_matrix_t *matrix,
                                   ppe_matrix_t *inverse,
