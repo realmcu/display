@@ -493,7 +493,6 @@ PPE_ERR PPE_set_color_key(ppe_buffer_t *image, PPE_color_key_config *config)
 }
 
 
-#include "trace.h"
 PPE_ERR PPE_Blit_Inverse(ppe_buffer_t *dst, ppe_buffer_t *src, uint8_t *output,
                          ppe_matrix_t *inverse,
                          ppe_rect_t *rect, PPE_BLEND_METHOD method)
@@ -744,8 +743,6 @@ PPE_ERR PPE_Blit_Inverse(ppe_buffer_t *dst, ppe_buffer_t *src, uint8_t *output,
 //    PPE_Clear_Interrupt(PPE_DIV0_ERR_INT);
 //    PPE_Mask_Interrupt(PPE_DIV0_ERR_INT, ENABLE);
 //    PPE_Mask_All_Interrupt(ENABLE);
-    extern uint32_t sys_timestamp_get_from_hw_timer_us(void);
-    uint32_t time1, time2;
     *(uint32_t *)(PPE_REG_BASE + 0x838) = 1;
     *(uint32_t *)(PPE_REG_BASE + 0x938) = 1;
     *(uint32_t *)(PPE_REG_BASE + 0xA38) = 1;

@@ -20,6 +20,8 @@
 extern "C" {
 #endif /* __cplusplus */
 
+#define DISPLAY_CTRL_REG_BASE   DISPLAY_CTRL_BASE
+
 /*============================================================================*
  *                         LCDC HANDLER Registers Memory Map
  *============================================================================*/
@@ -721,7 +723,6 @@ typedef union
     /* Internal Type  */
 #define LCDC_HANDLER_DMA_FIFO_CTRL_t     LCDC_HANDLER_DMA_FIFO_CTRL_TypeDef
 #define LCDC_HANDLER_OPERATE_CTR_t       LCDC_HANDLER_OPERATE_CTR_TypeDef
-#define DISPLAY_CTRL_REG_BASE            DISPLAY_CTRL_BASE
 
 
 #ifdef  __cplusplus

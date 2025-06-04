@@ -21,9 +21,10 @@ extern void sw_acc_blit(draw_img_t *image, struct gui_dispdev *dc, struct gui_re
 #define PPE_ACC_MIN_OPA             3
 #define PPE_TESS_LENGTH             92
 
-#include "section.h"
-#define CACHE_BUF_SIZE           (42 * 1024)
-SHM_DATA_SECTION static uint8_t cache_buf1[CACHE_BUF_SIZE];
+//#include "section.h"
+#define CACHE_BUF_SIZE           (30 * 1024)
+//SHM_DATA_SECTION static uint8_t cache_buf1[CACHE_BUF_SIZE];
+static uint8_t cache_buf1[CACHE_BUF_SIZE];
 static uint8_t *cache_buf2;
 static uint8_t *cache_buf = cache_buf1;
 static uint32_t last_cache_size = 0;
@@ -294,7 +295,7 @@ bool hw_idu_decode(ppe_rect_t *rect, uint8_t *input, uint32_t buffer_stride, uin
 
 static bool memcpy_by_dma(ppe_rect_t *p_rect, ppe_buffer_t *source)
 {
-    uint8_t pixel_size = PPE_Get_Pixel_Size(source->format);
+    uint8_t pixel_size = PPE_Get_Pixel_Size(source->format) / 8;
     if (p_rect->w * p_rect->h * pixel_size > CACHE_BUF_SIZE)
     {
         return false;
@@ -312,7 +313,7 @@ static bool memcpy_by_dma(ppe_rect_t *p_rect, ppe_buffer_t *source)
 
 static bool memcpy_by_idu(ppe_rect_t *p_rect, ppe_buffer_t *source)
 {
-    uint8_t pixel_size = PPE_Get_Pixel_Size(source->format);
+    uint8_t pixel_size = PPE_Get_Pixel_Size(source->format) / 8;
 #if !F_APP_GUI_USE_PSRAM
     if (p_rect->w * p_rect->h * pixel_size > CACHE_BUF_SIZE)
     {
@@ -334,7 +335,7 @@ static bool memcpy_by_idu(ppe_rect_t *p_rect, ppe_buffer_t *source)
 void bare_blit_by_dma(ppe_buffer_t *target, ppe_buffer_t *source, ppe_rect_t *src_rect,
                       ppe_rect_t *dst_trans)
 {
-    uint8_t pixel_size = PPE_Get_Pixel_Size(target->format);
+    uint8_t pixel_size = PPE_Get_Pixel_Size(target->format) / 8;
     uint32_t dst_start_address = target->address + (dst_trans->x + dst_trans->y * target->stride) *
                                  pixel_size;
     uint32_t src_start_address = source->address + (src_rect->x + src_rect->y * source->stride) *
@@ -490,7 +491,7 @@ void hw_acc_blit(draw_img_t *image, struct gui_dispdev *dc, struct gui_rect *rec
     target.width = dc->fb_width;
     target.height = dc->fb_height;
     target.stride = dc->fb_width;
-    target.const_color = 0;
+    target.const_color = 0xFFFFFFFF;
     target.win_x_min = 0;
     target.win_x_max = target.width - 1;
     target.win_y_min = 0;
@@ -501,6 +502,7 @@ void hw_acc_blit(draw_img_t *image, struct gui_dispdev *dc, struct gui_rect *rec
     source.width = image->img_w;
     source.height = image->img_h;
     source.stride = image->img_w;
+    source.const_color = 0xFFFFFFFF;
     struct gui_rgb_data_head *head = image->data;
     switch (head->type)
     {
@@ -618,7 +620,7 @@ void hw_acc_blit(draw_img_t *image, struct gui_dispdev *dc, struct gui_rect *rec
                         {
                             uint32_t s;
                             s = os_lock();
-                            uint8_t pixel_size = PPE_Get_Pixel_Size(target.format);
+                            uint8_t pixel_size = PPE_Get_Pixel_Size(target.format) / 8;
                             uint32_t dst_stride = target.stride * pixel_size;
                             uint8_t *dest_address = (uint8_t *)(target.address + (dst_rect.y * target.stride + dst_rect.x) *
                                                                 pixel_size);
@@ -807,7 +809,7 @@ void hw_acc_blit(draw_img_t *image, struct gui_dispdev *dc, struct gui_rect *rec
         ret = ppe_get_area(&old_rect, &constraint, (ppe_matrix_t *)&image->inverse, &source);
         if (ret)
         {
-            if (old_rect.w * old_rect.h * PPE_Get_Pixel_Size(source.format) < CACHE_BUF_SIZE)
+            if (old_rect.w * old_rect.h * PPE_Get_Pixel_Size(source.format) / 8 < CACHE_BUF_SIZE)
             {
                 block_num = 1;
                 tessalation_len = dc->fb_width;
@@ -892,7 +894,7 @@ void hw_acc_blit(draw_img_t *image, struct gui_dispdev *dc, struct gui_rect *rec
                     }
                 }
             }
-            uint32_t new_cache_size = old_rect.w * old_rect.h * PPE_Get_Pixel_Size(source.format) + 4;
+            uint32_t new_cache_size = old_rect.w * old_rect.h * PPE_Get_Pixel_Size(source.format) / 8 + 4;
             if (new_cache_size < (CACHE_BUF_SIZE - last_cache_size - 4))
             {
                 change_cache_buf(new_cache_size);

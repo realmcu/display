@@ -9,6 +9,11 @@ config REALTEK_DISPLAY
     help
         This config for realtek display driver
 
+config REALTEK_DISPLAY_GUI_ACC
+	bool "Enable Realtek Display GUI Acc"
+    depends on REALTEK_DISPLAY && REALTEK_BUILD_GUI
+    default n
+
 config REALTEK_DISPLAY_ENABLE_IDU
     bool "Enable Realtek IDU"
     depends on REALTEK_DISPLAY

@@ -103,7 +103,7 @@ uint8_t rtl_idu_get_dma_depth(uint8_t channel_num)
     {
         return 8;
     }
-    else if (channel_num <= 11)
+    else if (channel_num <= 15)
     {
         return 4;
     }

@@ -30,9 +30,11 @@ if(ZEPHYR_BASE)
   add_library(${HW_DISPLAY_TARGET_NAME} STATIC)
   target_link_libraries(${HW_DISPLAY_TARGET_NAME} PRIVATE zephyr_interface)
   add_subdirectory_ifdef(CONFIG_REALTEK_DISPLAY hardware)
+  add_subdirectory_ifdef(CONFIG_REALTEK_DISPLAY_GUI_ACC bindings)
 else()
   add_library(${HW_DISPLAY_TARGET_NAME} ${SOURCES})
   add_subdirectory_ifdef(CONFIG_REALTEK_DISPLAY hardware)
+  add_subdirectory_ifdef(CONFIG_REALTEK_DISPLAY_GUI_ACC bindings)
 endif()
 
 

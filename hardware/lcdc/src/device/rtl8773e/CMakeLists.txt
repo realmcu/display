@@ -5,7 +5,7 @@ cmake_minimum_required(VERSION 3.10)
 
 
 # Define a variable for the library name
-if(CONFIG_REALTEK_DISPLAY_ENABLE_LCDC AND (CONFIG_SOC_SERIES_RTL8773E OR CONFIG_SOC_SERIES_RTL8773G)) #set to 1 to enable or variable to for depnedency
+if(CONFIG_REALTEK_DISPLAY_ENABLE_LCDC AND CONFIG_SOC_SERIES_RTL8773E) #set to 1 to enable or variable to for depnedency
 
     file(GLOB SOURCES "*.c" "*.cpp")
     file(GLOB HEADERS "*.h" "*.hpp")
