@@ -37,7 +37,7 @@ typedef struct
 /*============================================================================*
  *                          Private Functions
  *============================================================================*/
-static bool inv_matrix2complement(ppe_matrix_t *matrix, uint32_t *comp);
+static bool inv_matrix2complement(ppe_matrix_t *matrix, int32_t *comp);
 static bool ppe_get_block_size(ppe_matrix_t *matrix, uint8_t pixel_size, uint16_t *block_width,
                                uint16_t *block_height);
 static uint32_t *INDEX_CLUT = NULL;
@@ -527,7 +527,7 @@ PPE_ERR PPE_Blit_Inverse(ppe_buffer_t *dst, ppe_buffer_t *src, uint8_t *output,
     }
     else
     {
-        if (!inv_matrix2complement(inverse, comp))
+        if (!inv_matrix2complement(inverse, (int32_t *)comp))
         {
             return PPE_SUCCESS;
         }
@@ -564,12 +564,23 @@ PPE_ERR PPE_Blit_Inverse(ppe_buffer_t *dst, ppe_buffer_t *src, uint8_t *output,
     PPE_input_layer2_init.Pic_Width                       = (uint32_t)src->width;
     PPE_input_layer2_init.Line_Length                     = PPE_input_layer2_init.Pic_Width *
                                                             PPE_Get_Pixel_Size(src->format);
-    PPE_input_layer2_init.Pixel_Source                = PPE_LAYER_SRC_FROM_DMA;
+    if (method == PPE_BLEND_CONST_COLOR)
+    {
+        PPE_input_layer2_init.Pixel_Source                = PPE_LAYER_SRC_CONST;
+    }
+    else
+    {
+        PPE_input_layer2_init.Pixel_Source                = PPE_LAYER_SRC_FROM_DMA;
+    }
     PPE_input_layer2_init.Const_Pixel                 = color;
     PPE_input_layer2_init.Pixel_Color_Format              = src->format;
     if (method == PPE_BLEND_BYPASS)
     {
         PPE_input_layer2_init.Blend_Method = PPE_BLEND_SRC;
+    }
+    else if (method == PPE_BLEND_CONST_COLOR)
+    {
+        PPE_input_layer2_init.Blend_Method = PPE_BLEND_PREMULTIPLY;
     }
     else
     {
@@ -750,21 +761,7 @@ PPE_ERR PPE_Blit_Inverse(ppe_buffer_t *dst, ppe_buffer_t *src, uint8_t *output,
 
 //    DBG_DIRECT("0x234 0x%08x, 0x210 0x%08x", *(uint32_t *)(0x40000234UL),  *(uint32_t *)(0x40000210UL));
 //
-//    uint32_t* data = (uint32_t*)PPE;
-//    for(int i = 0; i < 0x80; i++)
-//    {
-//        DBG_DIRECT("offset %08x = 0x%08x", i * 4, data[i]);
-//    }
-//    uint16_t block_width[] = {1, 2, 4, 8, 16, 32, 64, 128, 256};
-//    uint16_t block_height[] = {1, 2, 4, 8, 16, 32, 64, 128, 256};
-//    for (int i = 0; i < 6; i++)
-//    {
-//        for(int j = 0; j < 6; j++)
-//        {
-//            if(block_width[i] * block_height[j] * PPE_Get_Pixel_Size(dst->format) / PPE_BYTE_SIZE > 4096)
-//            {
-//                continue;
-//            }
+
     if (PPE_Get_Pixel_Size(src->format) == 16)
     {
         PPE_ResultLayer0_Init.Block_Width = 32; //block_width[i];
@@ -812,7 +809,7 @@ PPE_ERR PPE_Blit_Inverse(ppe_buffer_t *dst, ppe_buffer_t *src, uint8_t *output,
 //            {
 //                DBG_DIRECT("RESULT 0x%04x, value: 0x%08x", i * 4, *(PPE_RESULT_REG + i));
 //            }
-//
+
 //            uint32_t* PPE_LAYER1_REG = (uint32_t*)PPE_InputLayer1;
 //            for(int i = 0; i < sizeof(PPE_Input_Layer_Typedef) / 4; i++)
 //            {
@@ -881,18 +878,11 @@ PPE_ERR PPE_Mask(ppe_buffer_t *dst, uint32_t color, ppe_rect_t *rect)
     PPE_InputLayer_Init_Typedef PPE_input_layer2_init = {.Color_Key_Enable.key_enable = 0};
     PPE_InputLayer_StructInit(PPE_INPUT_2, &PPE_input_layer2_init);
     PPE_input_layer2_init.Layer_Address                   = NULL;
-    if (rect != NULL)
-    {
-        PPE_input_layer2_init.Pic_Height                      = rect->h;
-        PPE_input_layer2_init.Pic_Width                       = rect->w;
-        PPE_input_layer2_init.Line_Length                     = rect->w * 32;
-    }
-    else
-    {
-        PPE_input_layer2_init.Pic_Height                      = dst->height;
-        PPE_input_layer2_init.Pic_Width                       = dst->width;
-        PPE_input_layer2_init.Line_Length                     = dst->width * 32;
-    }
+
+    PPE_input_layer2_init.Pic_Height                      = dst->height;
+    PPE_input_layer2_init.Pic_Width                       = dst->width;
+    PPE_input_layer2_init.Line_Length                     = dst->width * 32;
+
     PPE_input_layer2_init.Pixel_Color_Format              = PPE_ABGR8888;
     PPE_input_layer2_init.Pixel_Source                    = PPE_LAYER_SRC_CONST;
     PPE_input_layer2_init.Const_Pixel                     = color;
@@ -902,10 +892,10 @@ PPE_ERR PPE_Mask(ppe_buffer_t *dst, uint32_t color, ppe_rect_t *rect)
     PPE_input_layer2_init.LayerBus_Inc                    = PPE_AWBURST_INC;
     if (rect != NULL)
     {
-        PPE_input_layer2_init.Layer_Window_Xmin               = 0;
-        PPE_input_layer2_init.Layer_Window_Xmax               = rect->w - 1;
-        PPE_input_layer2_init.Layer_Window_Ymin               = 0;
-        PPE_input_layer2_init.Layer_Window_Ymax               = rect->h - 1;
+        PPE_input_layer2_init.Layer_Window_Xmin               = rect->x;
+        PPE_input_layer2_init.Layer_Window_Xmax               = rect->x + rect->w - 1;
+        PPE_input_layer2_init.Layer_Window_Ymin               = rect->y;
+        PPE_input_layer2_init.Layer_Window_Ymax               = rect->y + rect->h - 1;
     }
     else
     {
@@ -924,37 +914,40 @@ PPE_ERR PPE_Mask(ppe_buffer_t *dst, uint32_t color, ppe_rect_t *rect)
     PPE_input_layer2_init.Transfer_Matrix_E31             = 0;
     PPE_input_layer2_init.Transfer_Matrix_E32             = 0;
     PPE_input_layer2_init.Transfer_Matrix_E33             = 0x10000;
-    PPE_InputLayer_Init(PPE_INPUT_2, &PPE_input_layer2_init);
 
     if ((color & 0xFF000000) != 0xFF000000)
     {
+        PPE_input_layer2_init.Blend_Method = PPE_BLEND_PREMULTIPLY;
         /*input layer 1 initilization*/
         PPE_InputLayer_enable(PPE_INPUT_1, ENABLE);           // logic enable of layer
         PPE_InputLayer_Init_Typedef PPE_input_layer1_init = {.Color_Key_Enable.key_enable = 0};
+        PPE_InputLayer_enable(PPE_INPUT_1, ENABLE);           // logic enable of layer
         PPE_InputLayer_StructInit(PPE_INPUT_1, &PPE_input_layer1_init);
-        if (rect != NULL)
-        {
-            PPE_input_layer1_init.Layer_Address                   = dst->address +
-                                                                    (rect->y * dst->width + rect->x) * PPE_Get_Pixel_Size(dst->format) / PPE_BYTE_SIZE;
-            PPE_input_layer1_init.Pic_Height                      = (uint32_t)rect->h;
-            PPE_input_layer1_init.Pic_Width                       = (uint32_t)rect->w;
-        }
-        else
-        {
-            PPE_input_layer1_init.Layer_Address                   = dst->address;
-            PPE_input_layer1_init.Pic_Height                      = (uint32_t)dst->height;
-            PPE_input_layer1_init.Pic_Width                       = (uint32_t)dst->width;
-        }
-        PPE_input_layer1_init.Line_Length                     = dst->width * PPE_Get_Pixel_Size(
-                                                                    dst->format) / PPE_BYTE_SIZE;
+        PPE_input_layer1_init.Layer_Address                   = dst->address;
+        PPE_input_layer1_init.Pic_Width                      = (uint32_t)dst->width;
+        PPE_input_layer1_init.Pic_Height                       = (uint32_t)dst->height;
+        PPE_input_layer1_init.Line_Length                     = dst->stride * PPE_Get_Pixel_Size(
+                                                                    dst->format);
         PPE_input_layer1_init.Pixel_Source                    = PPE_LAYER_SRC_FROM_DMA;
         PPE_input_layer1_init.Pixel_Color_Format              = dst->format;
         PPE_input_layer1_init.Const_Pixel                     = 0xFFFFFFFF;
         PPE_input_layer1_init.LayerBus_Inc                    = PPE_AWBURST_INC;
-        PPE_input_layer1_init.Layer_Window_Xmin               = 0;
-        PPE_input_layer1_init.Layer_Window_Xmax               = dst->width;
-        PPE_input_layer1_init.Layer_Window_Ymin               = 0;
-        PPE_input_layer1_init.Layer_Window_Ymax               = dst->height;
+        if (rect == NULL)
+        {
+            PPE_input_layer1_init.Layer_Window_Xmin               = 0;
+            PPE_input_layer1_init.Layer_Window_Xmax               = dst->width - 1;
+            PPE_input_layer1_init.Layer_Window_Ymin               = 0;
+            PPE_input_layer1_init.Layer_Window_Ymax               = dst->height - 1;
+        }
+        else
+        {
+            PPE_input_layer1_init.Layer_Window_Xmin               = rect->x;
+            PPE_input_layer1_init.Layer_Window_Xmax               = rect->x + rect->w - 1;
+            PPE_input_layer1_init.Layer_Window_Ymin               = rect->y;
+            PPE_input_layer1_init.Layer_Window_Ymax               = rect->y + rect->h - 1;
+        }
+        PPE_input_layer1_init.Cache_Enable                    = false;
+        PPE_input_layer1_init.Blend_Method                    = PPE_BLEND_SRC;
 
         PPE_input_layer1_init.Transfer_Matrix_E11             = 0x10000;
         PPE_input_layer1_init.Transfer_Matrix_E12             = 0;
@@ -969,43 +962,10 @@ PPE_ERR PPE_Mask(ppe_buffer_t *dst, uint32_t color, ppe_rect_t *rect)
     }
     else
     {
-        PPE_InputLayer_enable(PPE_INPUT_1, ENABLE);           // logic enable of layer
-        PPE_InputLayer_Init_Typedef PPE_input_layer1_init = {.Color_Key_Enable.key_enable = 0};
-        PPE_InputLayer_StructInit(PPE_INPUT_1, &PPE_input_layer1_init);
-        PPE_input_layer1_init.Layer_Address                   = NULL;
-        if (rect != NULL)
-        {
-            PPE_input_layer1_init.Pic_Height                      = (uint32_t)rect->h;
-            PPE_input_layer1_init.Pic_Width                       = (uint32_t)rect->w;
-        }
-        else
-        {
-            PPE_input_layer1_init.Pic_Height                      = (uint32_t)dst->height;
-            PPE_input_layer1_init.Pic_Width                       = (uint32_t)dst->width;
-        }
-        PPE_input_layer1_init.Line_Length                     = dst->width * PPE_Get_Pixel_Size(
-                                                                    dst->format) / PPE_BYTE_SIZE;
-        PPE_input_layer1_init.Pixel_Source                    = PPE_LAYER_SRC_CONST;
-        PPE_input_layer1_init.Pixel_Color_Format              = dst->format;
-        PPE_input_layer1_init.Const_Pixel                     = 0x0;
-        PPE_input_layer1_init.LayerBus_Inc                    = PPE_AWBURST_INC;
-        PPE_input_layer1_init.Layer_Window_Xmin               = 0;
-        PPE_input_layer1_init.Layer_Window_Xmax               = dst->width;
-        PPE_input_layer1_init.Layer_Window_Ymin               = 0;
-        PPE_input_layer1_init.Layer_Window_Ymax               = dst->height;
-
-        PPE_input_layer1_init.Transfer_Matrix_E11             = 0x10000;
-        PPE_input_layer1_init.Transfer_Matrix_E12             = 0;
-        PPE_input_layer1_init.Transfer_Matrix_E13             = 0;
-        PPE_input_layer1_init.Transfer_Matrix_E21             = 0;
-        PPE_input_layer1_init.Transfer_Matrix_E22             = 0x10000;
-        PPE_input_layer1_init.Transfer_Matrix_E23             = 0;
-        PPE_input_layer1_init.Transfer_Matrix_E31             = 0;
-        PPE_input_layer1_init.Transfer_Matrix_E32             = 0;
-        PPE_input_layer1_init.Transfer_Matrix_E33             = 0x10000;
-        PPE_InputLayer_Init(PPE_INPUT_1, &PPE_input_layer1_init);
+        PPE_input_layer2_init.Blend_Method = PPE_BLEND_SRC;
+        PPE_InputLayer_enable(PPE_INPUT_1, DISABLE);           // logic enable of layer
     }
-
+    PPE_InputLayer_Init(PPE_INPUT_2, &PPE_input_layer2_init);
 
     PPE_ResultLayer_Init_Typedef PPE_ResultLayer0_Init;
     PPE_ResultLayer_StructInit(&PPE_ResultLayer0_Init);
@@ -1023,6 +983,7 @@ PPE_ERR PPE_Mask(ppe_buffer_t *dst, uint32_t color, ppe_rect_t *rect)
         PPE_ResultLayer0_Init.Layer_Window_Ymin               = rect->y;
         PPE_ResultLayer0_Init.Layer_Window_Ymax               = rect->y + rect->h - 1;
     }
+    PPE_ResultLayer0_Init.Layer_Address                   = dst->address;
     PPE_ResultLayer0_Init.Line_Length                     = dst->stride * PPE_Get_Pixel_Size(
                                                                 dst->format);
     PPE_ResultLayer0_Init.Color_Format                    = dst->format;
@@ -1358,16 +1319,16 @@ bool check_inverse(ppe_matrix_t *matrix)
     return true;
 }
 
-bool inv_matrix2complement(ppe_matrix_t *matrix, uint32_t *comp)
+bool inv_matrix2complement(ppe_matrix_t *matrix, int32_t *comp)
 {
     float *tf = (float *)matrix->m;
-    int32_t tr[9];
     for (int i = 0; i < 9; i++)
     {
-        tr[i] = tf[i] * 65536;
+        comp[i] = (int32_t)((double)tf[i] * 65536);
     }
-    memcpy(comp, tr, 9 * sizeof(int32_t));
-    return true;
+    {
+        return true;
+    }
 }
 
 static void pos_transfer(ppe_matrix_t *matrix, ppe_pox_t *pox)

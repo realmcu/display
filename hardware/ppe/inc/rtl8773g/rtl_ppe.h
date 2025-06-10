@@ -176,6 +176,7 @@ typedef enum
     PPE_BLEND_ADD,
     PPE_BLEND_SUBSTRACT,
     PPE_BLEND_BYPASS,
+    PPE_BLEND_CONST_COLOR,
 } PPE_BLEND_METHOD;
 
 typedef enum
@@ -456,7 +457,6 @@ PPE_ERR PPE_Blit_Inverse_Simulate(ppe_buffer_t *dst, ppe_buffer_t *src, ppe_matr
                                   ppe_rect_t *rect, PPE_BLEND_METHOD method);
 void PPE_Register_CLUT(uint32_t *clut, uint16_t size);
 void PPE_CLK_ENABLE_IN_DLPS(FunctionalState NewState);
-void PPE_test(void);
 /** End of PPE_Exported_Functions
   * \}
   */

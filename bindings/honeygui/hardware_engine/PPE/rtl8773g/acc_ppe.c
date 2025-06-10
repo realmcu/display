@@ -14,6 +14,8 @@
 #include "math.h"
 #include "fmc_api_ext.h"
 #include "os_sync.h"
+#include "section.h"
+#include "trace.h"
 
 extern void sw_acc_blit(draw_img_t *image, struct gui_dispdev *dc, struct gui_rect *rect);
 
@@ -22,9 +24,9 @@ extern void sw_acc_blit(draw_img_t *image, struct gui_dispdev *dc, struct gui_re
 #define PPE_TESS_LENGTH             92
 
 //#include "section.h"
-#define CACHE_BUF_SIZE           (30 * 1024)
-//SHM_DATA_SECTION static uint8_t cache_buf1[CACHE_BUF_SIZE];
-static uint8_t cache_buf1[CACHE_BUF_SIZE];
+#define CACHE_BUF_SIZE           (42 * 1024)
+SHM_DATA_SECTION static uint8_t cache_buf1[CACHE_BUF_SIZE];
+//static uint8_t cache_buf1[CACHE_BUF_SIZE];
 static uint8_t *cache_buf2;
 static uint8_t *cache_buf = cache_buf1;
 static uint32_t last_cache_size = 0;
@@ -695,6 +697,11 @@ void hw_acc_blit(draw_img_t *image, struct gui_dispdev *dc, struct gui_rect *rec
         method = PPE_BLEND_SRC_OVER;
     }
 
+    if (image->blend_mode == IMG_RECT)
+    {
+        method = PPE_BLEND_CONST_COLOR;
+    }
+
     if (image->blend_mode == IMG_FILTER_BLACK)
     {
         source.color_key_config.key_enable.key_enable = true;
@@ -744,7 +751,7 @@ void hw_acc_blit(draw_img_t *image, struct gui_dispdev *dc, struct gui_rect *rec
         block_num = 1;
     }
 
-    if (shape_transform && image->acc_user != NULL)
+    if (shape_transform && image->acc_user != NULL && image->blend_mode != IMG_RECT)
     {
         ppe_rect_t section_rect = {.x = x_min - dc->section.x1, .y = y_min - dc->section.y1, .w = dc->fb_width, .h = dc->fb_height};
         if (section_rect.x < 0)
@@ -804,7 +811,7 @@ void hw_acc_blit(draw_img_t *image, struct gui_dispdev *dc, struct gui_rect *rec
         constraint.y += dc->section.y1;
     }
     bool ret = false;
-    if ((image->matrix.m[2][0] == 0 && image->matrix.m[2][1] == 0))
+    if ((image->matrix.m[2][0] == 0 && image->matrix.m[2][1] == 0) && image->blend_mode != IMG_RECT)
     {
         ret = ppe_get_area(&old_rect, &constraint, (ppe_matrix_t *)&image->inverse, &source);
         if (ret)
@@ -972,6 +979,7 @@ void hw_acc_blit(draw_img_t *image, struct gui_dispdev *dc, struct gui_rect *rec
                 }
                 ppe_translate(x_ref, y_ref, &inverse);
             }
+            source.high_quality = image->high_quality;
         }
         else
         {
@@ -994,9 +1002,10 @@ void hw_acc_blit(draw_img_t *image, struct gui_dispdev *dc, struct gui_rect *rec
 
             color.color.rgba.a = rect_header->color.color.rgba.a * (image->opacity_value * 1.0f / 255);
             source.const_color = color.color.argb_full;
+            source.opacity = 0xFF;
             ppe_rect.y -= dc->section.y1;
+            source.high_quality = true;
         }
-        source.high_quality = image->high_quality;
         if ((image->matrix.m[0][0] == 1 && image->matrix.m[1][1] == 1 && \
              image->matrix.m[2][2] == 1 && image->matrix.m[0][1] == 0 && \
              image->matrix.m[1][0] == 0 && image->matrix.m[2][0] == 0 && \
