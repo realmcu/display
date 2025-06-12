@@ -1625,7 +1625,7 @@ bool ppe_get_area(ppe_rect_t *result_rect, ppe_rect_t *source_rect, ppe_matrix_t
         result_rect->y2 = buffer->height - 1;
     }
     if (isnan(y_min) || isnan(y_max) || isnan(x_min) || isnan(x_max) || \
-        result_rect->x2 < result_rect->x1 || result_rect->y2 < result_rect->x1)
+        result_rect->x2 < result_rect->x1 || result_rect->y2 < result_rect->y1)
     {
         return false;
     }
