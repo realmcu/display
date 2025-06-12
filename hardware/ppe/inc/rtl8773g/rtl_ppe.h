@@ -360,10 +360,10 @@ typedef struct
 
 typedef struct
 {
-    int x;
-    int y;
-    uint32_t w;
-    uint32_t h;
+    int16_t x1;
+    int16_t y1;
+    int16_t x2;
+    int16_t y2;
 } ppe_rect_t;
 
 typedef struct

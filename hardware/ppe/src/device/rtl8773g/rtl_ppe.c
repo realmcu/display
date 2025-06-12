@@ -511,7 +511,7 @@ PPE_ERR PPE_Blit_Inverse(ppe_buffer_t *dst, ppe_buffer_t *src, uint8_t *output,
     }
     if (rect != NULL)
     {
-        if (rect->h == 0 || rect->w == 0)
+        if (rect->x2 < rect->x1 || rect->y2 < rect->y1)
         {
             return PPE_SUCCESS;
         }
@@ -655,10 +655,10 @@ PPE_ERR PPE_Blit_Inverse(ppe_buffer_t *dst, ppe_buffer_t *src, uint8_t *output,
         }
         else
         {
-            PPE_input_layer1_init.Layer_Window_Xmin               = rect->x;
-            PPE_input_layer1_init.Layer_Window_Xmax               = rect->x + rect->w - 1;
-            PPE_input_layer1_init.Layer_Window_Ymin               = rect->y;
-            PPE_input_layer1_init.Layer_Window_Ymax               = rect->y + rect->h - 1;
+            PPE_input_layer1_init.Layer_Window_Xmin               = rect->x1;
+            PPE_input_layer1_init.Layer_Window_Xmax               = rect->x2;
+            PPE_input_layer1_init.Layer_Window_Ymin               = rect->y1;
+            PPE_input_layer1_init.Layer_Window_Ymax               = rect->y2;
         }
         PPE_input_layer1_init.Cache_Enable                    = false;
         PPE_input_layer1_init.Blend_Method                    = PPE_BLEND_SRC;
@@ -717,10 +717,10 @@ PPE_ERR PPE_Blit_Inverse(ppe_buffer_t *dst, ppe_buffer_t *src, uint8_t *output,
     }
     else
     {
-        PPE_ResultLayer0_Init.Layer_Window_Xmin               = rect->x;
-        PPE_ResultLayer0_Init.Layer_Window_Xmax               = rect->x + rect->w - 1;
-        PPE_ResultLayer0_Init.Layer_Window_Ymin               = rect->y;
-        PPE_ResultLayer0_Init.Layer_Window_Ymax               = rect->y + rect->h - 1;
+        PPE_ResultLayer0_Init.Layer_Window_Xmin               = rect->x1;
+        PPE_ResultLayer0_Init.Layer_Window_Xmax               = rect->x2;
+        PPE_ResultLayer0_Init.Layer_Window_Ymin               = rect->y1;
+        PPE_ResultLayer0_Init.Layer_Window_Ymax               = rect->y2;
     }
     PPE_ResultLayer0_Init.Line_Length                     = dst->stride * PPE_Get_Pixel_Size(
                                                                 dst->format);
@@ -864,11 +864,10 @@ PPE_ERR PPE_Mask(ppe_buffer_t *dst, uint32_t color, ppe_rect_t *rect)
     {
         return PPE_ERR_NULL_TARGET;
     }
-    if (rect != NULL && (rect->h == 0 || rect->w == 0))
+    if (rect != NULL && (rect->x2 < rect->x1 || rect->y2 < rect->y1))
     {
         return PPE_SUCCESS;
     }
-
     PPE_CLK_ENABLE(ENABLE);
     PPE_REG_GLB_STATUS_TypeDef     ppe_reg_blg_status_0x00;
     PPE_REG_LYR_ENABLE_TypeDef     ppe_reg_lyr_enable_0x04;
@@ -892,10 +891,10 @@ PPE_ERR PPE_Mask(ppe_buffer_t *dst, uint32_t color, ppe_rect_t *rect)
     PPE_input_layer2_init.LayerBus_Inc                    = PPE_AWBURST_INC;
     if (rect != NULL)
     {
-        PPE_input_layer2_init.Layer_Window_Xmin               = rect->x;
-        PPE_input_layer2_init.Layer_Window_Xmax               = rect->x + rect->w - 1;
-        PPE_input_layer2_init.Layer_Window_Ymin               = rect->y;
-        PPE_input_layer2_init.Layer_Window_Ymax               = rect->y + rect->h - 1;
+        PPE_input_layer2_init.Layer_Window_Xmin               = rect->x1;
+        PPE_input_layer2_init.Layer_Window_Xmax               = rect->x2;
+        PPE_input_layer2_init.Layer_Window_Ymin               = rect->y1;
+        PPE_input_layer2_init.Layer_Window_Ymax               = rect->y2;
     }
     else
     {
@@ -941,10 +940,10 @@ PPE_ERR PPE_Mask(ppe_buffer_t *dst, uint32_t color, ppe_rect_t *rect)
         }
         else
         {
-            PPE_input_layer1_init.Layer_Window_Xmin               = rect->x;
-            PPE_input_layer1_init.Layer_Window_Xmax               = rect->x + rect->w - 1;
-            PPE_input_layer1_init.Layer_Window_Ymin               = rect->y;
-            PPE_input_layer1_init.Layer_Window_Ymax               = rect->y + rect->h - 1;
+            PPE_input_layer1_init.Layer_Window_Xmin               = rect->x1;
+            PPE_input_layer1_init.Layer_Window_Xmax               = rect->x2;
+            PPE_input_layer1_init.Layer_Window_Ymin               = rect->y1;
+            PPE_input_layer1_init.Layer_Window_Ymax               = rect->y2;
         }
         PPE_input_layer1_init.Cache_Enable                    = false;
         PPE_input_layer1_init.Blend_Method                    = PPE_BLEND_SRC;
@@ -978,10 +977,10 @@ PPE_ERR PPE_Mask(ppe_buffer_t *dst, uint32_t color, ppe_rect_t *rect)
     }
     else
     {
-        PPE_ResultLayer0_Init.Layer_Window_Xmin               = rect->x;
-        PPE_ResultLayer0_Init.Layer_Window_Xmax               = rect->x + rect->w - 1;
-        PPE_ResultLayer0_Init.Layer_Window_Ymin               = rect->y;
-        PPE_ResultLayer0_Init.Layer_Window_Ymax               = rect->y + rect->h - 1;
+        PPE_ResultLayer0_Init.Layer_Window_Xmin               = rect->x1;
+        PPE_ResultLayer0_Init.Layer_Window_Xmax               = rect->x2;
+        PPE_ResultLayer0_Init.Layer_Window_Ymin               = rect->y1;
+        PPE_ResultLayer0_Init.Layer_Window_Ymax               = rect->y2;
     }
     PPE_ResultLayer0_Init.Layer_Address                   = dst->address;
     PPE_ResultLayer0_Init.Line_Length                     = dst->stride * PPE_Get_Pixel_Size(
@@ -1501,8 +1500,8 @@ bool ppe_get_area(ppe_rect_t *result_rect, ppe_rect_t *source_rect, ppe_matrix_t
     float y_min = 0.0f;
     float y_max = 0.0f;
 
-    pox.p[0] = source_rect->x * 1.0f;
-    pox.p[1] = source_rect->y * 1.0f;
+    pox.p[0] = source_rect->x1 * 1.0f;
+    pox.p[1] = source_rect->y1 * 1.0f;
     pox.p[2] = 1.0f;
     pos_transfer(matrix, &pox);
     x_min = pox.p[0];
@@ -1510,8 +1509,8 @@ bool ppe_get_area(ppe_rect_t *result_rect, ppe_rect_t *source_rect, ppe_matrix_t
     y_min = pox.p[1];
     y_max = pox.p[1];
 
-    pox.p[0] = (source_rect->x + source_rect->w - 1) * 1.0f;
-    pox.p[1] = source_rect->y * 1.0f;
+    pox.p[0] = source_rect->x2 * 1.0f;
+    pox.p[1] = source_rect->y1 * 1.0f;
     pox.p[2] = 1.0f;
     pos_transfer(matrix, &pox);
     if (x_min > pox.p[0])
@@ -1531,8 +1530,8 @@ bool ppe_get_area(ppe_rect_t *result_rect, ppe_rect_t *source_rect, ppe_matrix_t
         y_max = pox.p[1];
     }
 
-    pox.p[0] = source_rect->x * 1.0f;
-    pox.p[1] = (source_rect->y + source_rect->h - 1) * 1.0f;
+    pox.p[0] = source_rect->x1 * 1.0f;
+    pox.p[1] = source_rect->y2 * 1.0f;
     pox.p[2] = 1.0f;
     pos_transfer(matrix, &pox);
     if (x_min > pox.p[0])
@@ -1552,8 +1551,8 @@ bool ppe_get_area(ppe_rect_t *result_rect, ppe_rect_t *source_rect, ppe_matrix_t
         y_max = pox.p[1];
     }
 
-    pox.p[0] = (source_rect->x + source_rect->w - 1) * 1.0f;
-    pox.p[1] = (source_rect->y + source_rect->h - 1) * 1.0f;
+    pox.p[0] = source_rect->x2 * 1.0f;
+    pox.p[1] = source_rect->y2 * 1.0f;
     pox.p[2] = 1.0f;
     pos_transfer(matrix, &pox);
     if (x_min > pox.p[0])
@@ -1575,10 +1574,6 @@ bool ppe_get_area(ppe_rect_t *result_rect, ppe_rect_t *source_rect, ppe_matrix_t
 
     if (x_max <= -1 || x_min >= buffer->width * 1.0f || y_max <= -1 || y_min >= buffer->height * 1.0f)
     {
-        result_rect->x = 0;
-        result_rect->y = 0;
-        result_rect->w = 0;
-        result_rect->h = 0;
         return false;
     }
     if (x_min < 0)
@@ -1597,8 +1592,8 @@ bool ppe_get_area(ppe_rect_t *result_rect, ppe_rect_t *source_rect, ppe_matrix_t
     {
         y_min = buffer->height - 1;
     }
-    result_rect->x = (int16_t)x_min;
-    result_rect->y = (int16_t)y_min;
+    result_rect->x1 = (int16_t)x_min;
+    result_rect->y1 = (int16_t)y_min;
 
     if (x_max >= buffer->width)
     {
@@ -1618,19 +1613,19 @@ bool ppe_get_area(ppe_rect_t *result_rect, ppe_rect_t *source_rect, ppe_matrix_t
         y_max = 0;
     }
 
-    result_rect->w = ceil(x_max) - result_rect->x + 1;
-    result_rect->h = ceil(y_max) - result_rect->y + 1;
+    result_rect->x2 = ceil(x_max);
+    result_rect->y2 = ceil(y_max);
 
-    if (result_rect->x + result_rect->w > buffer->width)
+    if (result_rect->x2 >= buffer->width)
     {
-        result_rect->w = buffer->width - result_rect->x;
+        result_rect->x2 = buffer->width - 1;
     }
-    if (result_rect->y + result_rect->h > buffer->height)
+    if (result_rect->y2 >= buffer->height)
     {
-        result_rect->h = buffer->height - result_rect->y;
+        result_rect->y2 = buffer->height - 1;
     }
-    if (isnan(y_min) || isnan(y_max) || isnan(x_min) || isnan(x_max) || result_rect->h == 0 ||
-        result_rect->w == 0)
+    if (isnan(y_min) || isnan(y_max) || isnan(x_min) || isnan(x_max) || \
+        result_rect->x2 < result_rect->x1 || result_rect->y2 < result_rect->x1)
     {
         return false;
     }

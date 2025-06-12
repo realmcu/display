@@ -428,7 +428,7 @@ IDU_ERROR IDU_Decode(uint8_t *file, IDU_decode_range *range, IDU_DMA_config *dma
     RX_GDMA_InitStruct.GDMA_DIR                 = GDMA_DIR_MemoryToPeripheral;
     RX_GDMA_InitStruct.GDMA_SourceInc           = DMA_SourceInc_Inc;
     RX_GDMA_InitStruct.GDMA_DestinationInc      = DMA_DestinationInc_Fix;
-    if (rx_dma_depth == 16)
+    if (rx_dma_depth == 16 || rx_dma_depth == 32)
     {
         RX_GDMA_InitStruct.GDMA_SourceMsize         =
             GDMA_Msize_16;                         // 16 msize for source msize
@@ -532,7 +532,7 @@ IDU_ERROR IDU_Decode(uint8_t *file, IDU_decode_range *range, IDU_DMA_config *dma
         GDMA_DataSize_Word;                   // 32 bit width for destination transaction
     TX_GDMA_InitStruct.GDMA_SourceDataSize      =
         GDMA_DataSize_Word;                   // 32 bit width for source transaction
-    if (tx_dma_depth == 16)
+    if (tx_dma_depth == 16 || tx_dma_depth == 32)
     {
         TX_GDMA_InitStruct.GDMA_SourceMsize         =
             GDMA_Msize_8;                         // 16 msize for source msize
@@ -773,7 +773,7 @@ IDU_ERROR IDU_Decode_With_Interrupt(uint8_t *file, IDU_decode_range *range, IDU_
     RX_GDMA_InitStruct.GDMA_DIR                 = GDMA_DIR_MemoryToPeripheral;
     RX_GDMA_InitStruct.GDMA_SourceInc           = DMA_SourceInc_Inc;
     RX_GDMA_InitStruct.GDMA_DestinationInc      = DMA_DestinationInc_Fix;
-    if (rx_dma_depth == 16)
+    if (rx_dma_depth == 16 || rx_dma_depth == 32)
     {
         RX_GDMA_InitStruct.GDMA_SourceMsize         =
             GDMA_Msize_16;                         // 16 msize for source msize
@@ -875,7 +875,7 @@ IDU_ERROR IDU_Decode_With_Interrupt(uint8_t *file, IDU_decode_range *range, IDU_
         GDMA_DataSize_Word;                   // 32 bit width for destination transaction
     TX_GDMA_InitStruct.GDMA_SourceDataSize      =
         GDMA_DataSize_Word;                   // 32 bit width for source transaction
-    if (tx_dma_depth == 16)
+    if (tx_dma_depth == 16 || tx_dma_depth == 32)
     {
         TX_GDMA_InitStruct.GDMA_SourceMsize         =
             GDMA_Msize_8;                         // 16 msize for source msize
