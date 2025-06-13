@@ -727,18 +727,7 @@ PPE_ERR PPE_Blit_Inverse(ppe_buffer_t *dst, ppe_buffer_t *src, uint8_t *output,
     PPE_ResultLayer0_Init.Color_Format                    = dst->format;
     PPE_ResultLayer0_Init.LayerBus_Inc                    = PPE_AWBURST_INC;
 
-    if (PPE_ResultLayer0_Init.Block_Width > PPE_ResultLayer0_Init.Layer_Window_Xmax -
-        PPE_ResultLayer0_Init.Layer_Window_Xmin + 1)
-    {
-        PPE_ResultLayer0_Init.Block_Width = PPE_ResultLayer0_Init.Layer_Window_Xmax -
-                                            PPE_ResultLayer0_Init.Layer_Window_Xmin + 1;
-    }
-    if (PPE_ResultLayer0_Init.Block_Height > PPE_ResultLayer0_Init.Layer_Window_Ymax -
-        PPE_ResultLayer0_Init.Layer_Window_Ymin + 1)
-    {
-        PPE_ResultLayer0_Init.Block_Height = PPE_ResultLayer0_Init.Layer_Window_Ymax -
-                                             PPE_ResultLayer0_Init.Layer_Window_Ymin + 1;
-    }
+
 //    for(int i = 5; i >= 0; i--)
 //    {
 //        DIRECT_LOG("table width %d", 1, block_width[i]);
@@ -797,6 +786,18 @@ PPE_ERR PPE_Blit_Inverse(ppe_buffer_t *dst, ppe_buffer_t *src, uint8_t *output,
     {
         PPE_ResultLayer0_Init.Block_Width = 64;
         PPE_ResultLayer0_Init.Block_Height = 64;
+    }
+    if (PPE_ResultLayer0_Init.Block_Width > PPE_ResultLayer0_Init.Layer_Window_Xmax -
+        PPE_ResultLayer0_Init.Layer_Window_Xmin + 1)
+    {
+        PPE_ResultLayer0_Init.Block_Width = PPE_ResultLayer0_Init.Layer_Window_Xmax -
+                                            PPE_ResultLayer0_Init.Layer_Window_Xmin + 1;
+    }
+    if (PPE_ResultLayer0_Init.Block_Height > PPE_ResultLayer0_Init.Layer_Window_Ymax -
+        PPE_ResultLayer0_Init.Layer_Window_Ymin + 1)
+    {
+        PPE_ResultLayer0_Init.Block_Height = PPE_ResultLayer0_Init.Layer_Window_Ymax -
+                                             PPE_ResultLayer0_Init.Layer_Window_Ymin + 1;
     }
     PPE_ResultLayer_Init(&PPE_ResultLayer0_Init);
 //            uint32_t* PPE_REG = (uint32_t*)PPE;
