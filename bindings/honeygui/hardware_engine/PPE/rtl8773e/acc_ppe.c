@@ -15,6 +15,10 @@
 #include "fmc_api_ext.h"
 #include "os_sync.h"
 
+#define F_APP_GUI_USE_PSRAM 1
+#define PSRAM_GUI_HEAP_ADDR 0x4000000
+
+
 extern void sw_acc_blit(draw_img_t *image, struct gui_dispdev *dc, struct gui_rect *rect);
 
 #define PPE_BARE_COPY_ACCURATE      1
@@ -1243,3 +1247,5 @@ void hw_acc_init(void)
     draw_img_acc_prepare_cb = hw_acc_prepare_cb;
     draw_img_acc_end_cb = hw_acc_end_cb;
 }
+
+
