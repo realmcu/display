@@ -581,7 +581,6 @@ void hw_acc_blit_direct(draw_img_t *image, struct gui_dispdev *dc, struct gui_re
     ppe_translate(0, dc->section.y1, &inverse);
     PPE_ERR err1 = PPE_Blit_Inverse(&target, &source, NULL, &inverse, &constraint,
                                     PPE_BLEND_PREMULTIPLY);
-    PPE_DBG("ppe err %d", err1);
     return;
 }
 
