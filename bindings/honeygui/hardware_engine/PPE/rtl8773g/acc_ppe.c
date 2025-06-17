@@ -21,6 +21,22 @@
 #define F_APP_GUI_USE_PSRAM 1
 #define PSRAM_GUI_HEAP_ADDR SPIC1_MEM_BASE
 
+
+static void *acc_ppe_malloc(size_t n)
+{
+    return gui_lower_malloc(n);
+}
+
+static void acc_ppe_free(void *rmem)
+{
+    gui_lower_free(rmem);
+}
+
+
+
+
+
+
 extern void sw_acc_blit(draw_img_t *image, struct gui_dispdev *dc, struct gui_rect *rect);
 
 #define PPE_BARE_COPY_ACCURATE      1
@@ -51,7 +67,7 @@ static void change_cache_buf(uint32_t cache_size)
 #if F_APP_GUI_USE_PSRAM
     else if ((uint32_t)cache_buf > PSRAM_GUI_HEAP_ADDR)
     {
-        gui_lower_free(cache_buf);
+        acc_ppe_free(cache_buf);
         cache_buf = cache_buf1;
     }
 #endif
@@ -65,7 +81,7 @@ static void restore_cache_buf(void)
 #if F_APP_GUI_USE_PSRAM
     if ((uint32_t)cache_buf > PSRAM_GUI_HEAP_ADDR)
     {
-        gui_lower_free(cache_buf);
+        acc_ppe_free(cache_buf);
     }
 #endif
     cache_buf = cache_buf1;
@@ -76,9 +92,9 @@ static void cache_on_psram(uint32_t size)
 {
     if ((uint32_t)cache_buf > PSRAM_GUI_HEAP_ADDR)
     {
-        gui_lower_free(cache_buf);
+        acc_ppe_free(cache_buf);
     }
-    cache_buf = gui_lower_malloc(size);
+    cache_buf = acc_ppe_malloc(size);
 }
 #endif
 
