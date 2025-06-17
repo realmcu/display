@@ -278,6 +278,7 @@ void hw_dma_copy(uint32_t length, uint32_t height, uint32_t src_stride,
                 GDMA_LLIStruct[i].CTL_HIGH = buffer_size;
             }
         }
+        SCB_CleanDCache_by_Addr(GDMA_LLIStruct, sizeof(GDMA_LLIDef) * dma_height);
     }
     GDMA_INTConfig(high_speed_dma_channel_num, GDMA_INT_Transfer, ENABLE);
     GDMA_Cmd(high_speed_dma_channel_num, ENABLE);
