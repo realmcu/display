@@ -16,6 +16,7 @@
 #include "os_sync.h"
 #include "section.h"
 #include "trace.h"
+#include "font_rendering_utils.h"
 
 #define F_APP_GUI_USE_PSRAM 1
 #define PSRAM_GUI_HEAP_ADDR SPIC1_MEM_BASE
@@ -457,7 +458,7 @@ bool acc_get_src_rect_area(ppe_rect_t *src_rect, gui_rect_t *rect)
     }
 }
 
-void hw_acc_blit(draw_img_t *image, struct gui_dispdev *dc, struct gui_rect *rect)
+void hw_acc_blit_direct(draw_img_t *image, struct gui_dispdev *dc, struct gui_rect *rect)
 {
     int32_t x_max = (image->img_target_w + image->img_target_x - 1);
     int32_t y_max = (image->img_target_h + image->img_target_y - 1);
@@ -529,6 +530,128 @@ void hw_acc_blit(draw_img_t *image, struct gui_dispdev *dc, struct gui_rect *rec
     default:
         return;
     }
+    source.win_x_min = 0;
+    source.win_x_max = target.width - 1;
+    source.win_y_min = 0;
+    source.win_y_max = target.height - 1;
+    ppe_rect_t constraint = (ppe_rect_t) {.x1 = x_min - dc->section.x1, .y1 = y_min - dc->section.y1, .x2 = dc->fb_width - 1, .y2 = dc->fb_height - 1};
+    if (constraint.x1 < 0)
+    {
+        constraint.x1 = 0;
+    }
+    if (constraint.y1 < 0)
+    {
+        constraint.y1 = 0;
+    }
+    if (x_max >= dc->section.x1 + dc->fb_width)
+    {
+        constraint.x2 = dc->section.x1 + dc->fb_width - 1;
+    }
+    else
+    {
+        constraint.x2 = x_max - dc->section.x1;
+    }
+    if (y_max >= dc->section.y1 + dc->fb_height)
+    {
+        constraint.y2 = dc->fb_height - 1;
+    }
+    else
+    {
+        constraint.y2 = y_max - dc->section.y1;
+    }
+    ppe_matrix_t inverse;
+    memcpy(&inverse, &image->inverse, sizeof(float) * 9);
+    ppe_translate(0, dc->section.y1, &inverse);
+    PPE_ERR err1 = PPE_Blit_Inverse(&target, &source, NULL, &inverse, &constraint,
+                                    PPE_BLEND_PREMULTIPLY);
+    PPE_DBG("ppe err %d", err1);
+    return;
+}
+
+void hw_acc_blit_cache(draw_img_t *image, struct gui_dispdev *dc, struct gui_rect *rect)
+{
+    int32_t x_max = (image->img_target_w + image->img_target_x - 1);
+    int32_t y_max = (image->img_target_h + image->img_target_y - 1);
+    int32_t x_min = image->img_target_x;
+    int32_t y_min = image->img_target_y;
+    if (dc->section.y2 < y_min || dc->section.y1 > y_max || dc->section.x2 < x_min ||
+        dc->section.x1 > x_max)
+    {
+        return;
+    }
+    if (image->opacity_value <= PPE_ACC_MIN_OPA)
+    {
+        return;
+    }
+
+    ppe_buffer_t target, source;
+    memset(&target, 0, sizeof(ppe_buffer_t));
+    memset(&source, 0, sizeof(ppe_buffer_t));
+    PPE_BLEND_METHOD method = PPE_BLEND_SRC;
+
+    switch (dc->bit_depth)
+    {
+    case 16:
+        target.format = PPE_RGB565;
+        break;
+    case 24:
+        target.format = PPE_RGB888;
+        break;
+    case 32:
+        target.format = PPE_ARGB8888;
+        break;
+    default:
+        return;
+    }
+    target.address = (uint32_t)dc->frame_buf;
+    target.width = dc->fb_width;
+    target.height = dc->fb_height;
+    target.stride = dc->fb_width;
+    target.const_color = 0xFFFFFFFF;
+    target.win_x_min = 0;
+    target.win_x_max = target.width - 1;
+    target.win_y_min = 0;
+    target.win_y_max = target.height - 1;
+
+    source.address = (uint32_t)image->data + sizeof(struct gui_rgb_data_head);
+    source.opacity = image->opacity_value;
+    source.width = image->img_w;
+    source.height = image->img_h;
+    source.stride = image->img_w;
+    source.const_color = 0xFFFFFFFF;
+    struct gui_rgb_data_head *head = image->data;
+    switch (head->type)
+    {
+    case RGB565:
+        source.format = PPE_RGB565;
+        break;
+    case RGB888:
+        source.format = PPE_RGB888;
+        break;
+    case ARGB8888:
+        source.format = PPE_ARGB8888;
+        break;
+    case ARGB8565:
+        source.format = PPE_ARGB8565;
+        break;
+    case XRGB8888:
+        source.format = PPE_XRGB8888;
+        break;
+    default:
+        return;
+    }
+//    source.win_x_min = 0;
+//        source.win_x_max = target.width - 1;
+//        source.win_y_min = 0;
+//        source.win_y_max = target.height - 1;
+//    ppe_matrix_t inverse1;
+//    memcpy(&inverse1, &image->inverse, sizeof(float) * 9);
+//    ppe_translate(0, dc->section.y1, &inverse1);
+//    ppe_rect_t temp_rect = {.x1 = 0, .y1 = 0, .x2 = dc->fb_width - 1, .y2 = dc->fb_height - 1};
+//    PPE_ERR err1 = PPE_Blit_Inverse(&target, &source, NULL, &inverse1, &temp_rect, method);
+//    PPE_DBG("ppe err %d", err1);
+//    return;
+
 
     bool shape_transform = true;
     if ((image->matrix.m[2][2] == 1 && image->matrix.m[0][1] == 0 && \
@@ -1085,6 +1208,97 @@ bool hw_acc_idu_decode(uint8_t *image, gui_rect_t *rect, uint8_t *output)
     }
 }
 
+void hw_blit_font(draw_font_t *font, font_glyph_t *glyph)
+{
+    if (glyph->data == NULL) { return; }
+    uint32_t stride = glyph->stride * font->render_mode;
+    if (stride % 8 != 0)
+    {
+        DBG_DIRECT("%s || %d", __FUNCTION__, __LINE__);
+        return;
+    }
+    ppe_buffer_t target, source;
+    memset(&target, 0, sizeof(ppe_buffer_t));
+    memset(&source, 0, sizeof(ppe_buffer_t));
+    PPE_BLEND_METHOD method = PPE_BLEND_PREMULTIPLY;
+    switch (font->target_format)
+    {
+    case RGB565:
+        target.format = PPE_RGB565;
+        break;
+    case RGB888:
+        target.format = PPE_RGB888;
+        break;
+    case ARGB8888:
+        target.format = PPE_ARGB8888;
+        break;
+    case ARGB8565:
+        target.format = PPE_ARGB8565;
+        break;
+    default:
+        DBG_DIRECT("%s || %d", __FUNCTION__, __LINE__);
+        return;
+    }
+    uint8_t target_pixel_size = PPE_Get_Pixel_Size(target.format) / PPE_BYTE_SIZE;
+    target.address = (uint32_t)font->target_buf;
+    target.height = font->target_rect.y2 - font->target_rect.y1 + 1;
+    target.width = font->target_rect.x2 - font->target_rect.x1 + 1;
+    target.stride = font->target_buf_stride / target_pixel_size;
+    target.const_color = 0xFFFFFFFF;
+
+    switch (font->render_mode)
+    {
+    case 1:
+        source.format = PPE_A1;
+        break;
+    case 2:
+        source.format = PPE_A2;
+        break;
+    case 4:
+        source.format = PPE_A4;
+        break;
+    case 8:
+        source.format = PPE_A8;
+        break;
+    default:
+        DBG_DIRECT("%s || %d", __FUNCTION__, __LINE__);
+        return;
+    }
+    source.address = (uint32_t)glyph->data;
+    source.opacity = 0xFF;
+    source.width = glyph->width;
+    source.height = glyph->height;
+    source.stride = glyph->stride;
+    uint8_t *font_data = (uint8_t *)glyph->data;
+    gui_color_t font_color = {.color.rgba.a = font->color.color.rgba.a,
+                              .color.rgba.r = font->color.color.rgba.b,
+                              .color.rgba.g = font->color.color.rgba.g,
+                              .color.rgba.b = font->color.color.rgba.r
+                             };
+    source.const_color = font_color.color.argb_full;
+
+    ppe_rect_t constraint = {.x1 = font->clip_rect.x1 - font->target_rect.x1,
+                             .y1 = font->clip_rect.y1 - font->target_rect.y1,
+                             .x2 = font->clip_rect.x2 - font->target_rect.x1,
+                             .y2 = font->clip_rect.y2 - font->target_rect.y1
+                            };
+    source.win_x_min = constraint.x1;
+    source.win_x_max = constraint.x2;
+    source.win_y_min = constraint.y1;
+    source.win_y_max = constraint.y2;
+    ppe_matrix_t inverse;
+    ppe_get_identity(&inverse);
+    inverse.m[0][2] = -glyph->pos_x;
+    inverse.m[1][2] = -glyph->pos_y;
+    ppe_translate(font->target_rect.x1, font->target_rect.y1, &inverse);
+    PPE_ERR err = PPE_Blit_Inverse(&target, &source, NULL, &inverse, &constraint,
+                                   PPE_BLEND_PREMULTIPLY);
+    if (err != PPE_SUCCESS)
+    {
+        DBG_DIRECT("font err %d", err);
+    }
+}
+
 void hw_acc_prepare_cb(draw_img_t *img, gui_rect_t *rect)
 {
     if (img->matrix.m[2][2] != 1 || img->matrix.m[0][1] != 0 || \
@@ -1230,6 +1444,19 @@ void hw_acc_end_cb(draw_img_t *image)
         image->acc_user = NULL;
     }
     return;
+}
+
+void hw_acc_blit(draw_img_t *image, struct gui_dispdev *dc, struct gui_rect *rect)
+{
+    struct gui_rgb_data_head *head = image->data;
+    if (0) //!head->compress && image->blend_mode != IMG_RECT)
+    {
+        hw_acc_blit_direct(image, dc, rect);
+    }
+    else
+    {
+        hw_acc_blit_cache(image, dc, rect);
+    }
 }
 
 void hw_acc_init(void)
