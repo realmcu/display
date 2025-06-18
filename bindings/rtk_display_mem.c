@@ -13,6 +13,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 #ifndef RTK_DISPLAY_MALLOC
 #define RTK_DISPLAY_MALLOC(size) malloc(size)
