@@ -171,6 +171,24 @@ void hw_dma_copy(uint32_t length, uint32_t height, uint32_t src_stride,
         data_size = GDMA_DataSize_HalfWord;
         buffer_size = length / 2;
         total_size = 0;
+        if (!use_LLI)
+        {
+            total_size = total_size_in_byte / 2;
+            if (total_size > 65535)
+            {
+                use_LLI = true;
+                dma_height = total_size / 65535;
+                if (total_size % 65535)
+                {
+                    dma_height += 1;
+                }
+                buffer_size = 65535;
+            }
+            else
+            {
+                buffer_size = total_size;
+            }
+        }
     }
     else
     {
@@ -193,6 +211,24 @@ void hw_dma_copy(uint32_t length, uint32_t height, uint32_t src_stride,
         }
         buffer_size = length;
         total_size = 0;
+        if (!use_LLI)
+        {
+            total_size = total_size_in_byte;
+            if (total_size > 65535)
+            {
+                use_LLI = true;
+                dma_height = total_size / 65535;
+                if (total_size % 65535)
+                {
+                    dma_height += 1;
+                }
+                buffer_size = 65535;
+            }
+            else
+            {
+                buffer_size = total_size;
+            }
+        }
     }
 
     GDMA_LLIDef *GDMA_LLIStruct;

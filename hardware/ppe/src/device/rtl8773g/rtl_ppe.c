@@ -221,7 +221,6 @@ void PPE_InputLayer_Init(PPE_INPUT_LAYER_INDEX intput_layer_index, \
 
     PPE_REG_LYRx_BUS_CFG_TypeDef ppe_reg_lyrx_bus_cfg_t = {.d32 = input_layer->REG_LYRx_BUS_CFG};
     ppe_reg_lyrx_bus_cfg_t.b.incr                   = PPE_InputLayer_Init_Struct->LayerBus_Inc;
-    //PPE_InputLayer_Init_Struct->Cache_Enable = false;
     if (PPE_InputLayer_Init_Struct->Cache_Enable)
     {
         ppe_reg_lyrx_bus_cfg_t.b.arcache = 0x06;
@@ -629,7 +628,14 @@ PPE_ERR PPE_Blit_Inverse(ppe_buffer_t *dst, ppe_buffer_t *src, uint8_t *output,
     PPE_input_layer2_init.Transfer_Matrix_E31             = comp[ct++];
     PPE_input_layer2_init.Transfer_Matrix_E32             = comp[ct++];
     PPE_input_layer2_init.Transfer_Matrix_E33             = comp[ct++];
-    PPE_input_layer2_init.Cache_Enable = false;
+    if (PPE_input_layer2_init.Layer_Address >= 0x22000000)
+    {
+        PPE_input_layer2_init.Cache_Enable = true;
+    }
+    else
+    {
+        PPE_input_layer2_init.Cache_Enable = false;
+    }
     PPE_InputLayer_Init(PPE_INPUT_2, &PPE_input_layer2_init);
     PPE_InputLayer_Init_Typedef PPE_input_layer1_init = {.Color_Key_Enable.key_enable = 0};
     if (PPE_BLEND_BYPASS != method)
@@ -660,7 +666,14 @@ PPE_ERR PPE_Blit_Inverse(ppe_buffer_t *dst, ppe_buffer_t *src, uint8_t *output,
             PPE_input_layer1_init.Layer_Window_Ymin               = rect->y1;
             PPE_input_layer1_init.Layer_Window_Ymax               = rect->y2;
         }
-        PPE_input_layer1_init.Cache_Enable                    = false;
+        if (PPE_input_layer1_init.Layer_Address >= 0x22000000)
+        {
+            PPE_input_layer1_init.Cache_Enable = true;
+        }
+        else
+        {
+            PPE_input_layer1_init.Cache_Enable = false;
+        }
         PPE_input_layer1_init.Blend_Method                    = PPE_BLEND_SRC;
         PPE_input_layer1_init.Color_Key_Enable.key_enable     = dst->color_key_config.key_enable.key_enable;
         if (PPE_input_layer1_init.Color_Key_Enable.key_enable)
@@ -946,7 +959,14 @@ PPE_ERR PPE_Mask(ppe_buffer_t *dst, uint32_t color, ppe_rect_t *rect)
             PPE_input_layer1_init.Layer_Window_Ymin               = rect->y1;
             PPE_input_layer1_init.Layer_Window_Ymax               = rect->y2;
         }
-        PPE_input_layer1_init.Cache_Enable                    = false;
+        if (PPE_input_layer1_init.Layer_Address >= 0x22000000)
+        {
+            PPE_input_layer1_init.Cache_Enable = true;
+        }
+        else
+        {
+            PPE_input_layer1_init.Cache_Enable = false;
+        }
         PPE_input_layer1_init.Blend_Method                    = PPE_BLEND_SRC;
 
         PPE_input_layer1_init.Transfer_Matrix_E11             = 0x10000;
