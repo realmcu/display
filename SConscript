@@ -43,6 +43,10 @@ if GetDepend(['CONFIG_REALTEK_SEGCOM']):
 if GetDepend(['CONFIG_REALTEK_BUILD_PPE']):
     src += ['bindings/honeygui/hardware_engine/PPE/' + RTK_IC_TYPE + '/acc_ppe.c']
 
+if  GetDepend(['CONFIG_REALTEK_JPU']) :
+    src += ['hardware/jpu/src/device/rtl_common/rtl_jpu.c']
+    src += ['hardware/jpu/src/device/rtl_common/rtl_hal_jpu.c']
+
 include_path += [cwd,
         cwd + '/hardware/lcdc/inc',
         cwd + '/hardware/lcdc/src/device/' + RTK_IC_TYPE,
@@ -52,7 +56,9 @@ include_path += [cwd,
         cwd + '/hardware/mipi/inc',
         cwd + '/hardware/ppe/inc/' + RTK_IC_TYPE,
         cwd + '/hardware/ppe/src/device/' + RTK_IC_TYPE,
-        cwd + '/hardware/segcom/inc']
+        cwd + '/hardware/segcom/inc',
+        cwd + '/hardware/jpu/inc',
+        cwd + '/hardware/jpu/src/device/' + RTK_IC_TYPE]
 
 
 group = DefineGroup('peripheral', src, depend = [''], CPPPATH = include_path,LIBS = [''], LIBPATH = [''])
