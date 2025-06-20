@@ -18,6 +18,7 @@
 #include "rtl_ppe_int.h"
 #include "rtl_rcc.h"
 #include "stddef.h"
+#include "string.h"
 
 /*============================================================================*
  *                          Private Macros
@@ -666,7 +667,7 @@ PPE_ERR PPE_Clear_Rect(ppe_buffer_t *buffer, ppe_rect_t *rect, uint32_t color)
     /*initial input layer2*/
     RCC_PeriphClockCmd(APBPeriph_PPE, APBPeriph_PPE_CLOCK, ENABLE);
 
-    PPE_Input_Layer2.src_addr                =  NULL;
+    PPE_Input_Layer2.src_addr                = (uint32_t)NULL;
     PPE_Input_Layer2.width                          = transfer_rect.right - transfer_rect.left + 1;
     PPE_Input_Layer2.height                         = transfer_rect.bottom - transfer_rect.top + 1;
     if (buffer->global_alpha_en)
@@ -885,7 +886,7 @@ PPE_ERR PPE_Blend(ppe_buffer_t *image, ppe_buffer_t *buffer, ppe_translate_t *tr
         PPE_Input_Layer1.start_x                        = 0;
         PPE_Input_Layer1.start_y                        = 0;
 #if WINDOW
-        PPE_Input_Layer1.src_addr                       = NULL;
+        PPE_Input_Layer1.src_addr                       = (uint32_t)NULL;
         PPE_Input_Layer1.width                          = source_rect.right - source_rect.left + 1;
         PPE_Input_Layer1.height                         = source_rect.bottom - source_rect.top + 1;
 #else
@@ -1069,7 +1070,7 @@ PPE_ERR PPE_Blend_Rect(ppe_buffer_t *image, ppe_buffer_t *buffer, ppe_translate_
         /*initial input layer1*/
         PPE_Input_Layer1.start_x                        = 0;
         PPE_Input_Layer1.start_y                        = 0;
-        PPE_Input_Layer1.src_addr                       = NULL;
+        PPE_Input_Layer1.src_addr                       = (uint32_t)NULL;
         PPE_Input_Layer1.width                          = blend_area.right - blend_area.left + 1;
         PPE_Input_Layer1.height                         = blend_area.bottom - blend_area.top + 1;
         PPE_Input_Layer1.const_ABGR8888_value           = 0;
@@ -1615,7 +1616,7 @@ PPE_ERR PPE_Mask(ppe_buffer_t *src, ppe_buffer_t *target, ppe_rect_t *rect, uint
     /*initial input layer2*/
     PPE_Input_Layer2.start_x = 0;
     PPE_Input_Layer2.start_y = 0;
-    PPE_Input_Layer2.src_addr                       = NULL;
+    PPE_Input_Layer2.src_addr                       = (uint32_t)NULL;
     PPE_Input_Layer2.width                          = rect->right - rect->left + 1;
     PPE_Input_Layer2.height                         = rect->bottom - rect->top + 1;
     PPE_Input_Layer2.const_ABGR8888_value           = color;
