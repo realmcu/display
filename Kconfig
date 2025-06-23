@@ -11,7 +11,7 @@ config REALTEK_DISPLAY
 
 config REALTEK_DISPLAY_GUI_ACC
 	bool "Enable Realtek Display GUI Acc"
-    depends on REALTEK_DISPLAY && REALTEK_BUILD_GUI
+    depends on REALTEK_DISPLAY && REALTEK_HONEYGUI
     default n
 
 config REALTEK_DISPLAY_ENABLE_IDU
