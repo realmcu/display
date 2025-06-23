@@ -16,7 +16,9 @@
 #include "os_sync.h"
 
 #define F_APP_GUI_USE_PSRAM 1
+#ifndef PSRAM_GUI_HEAP_ADDR
 #define PSRAM_GUI_HEAP_ADDR 0x4000000
+#endif
 
 
 extern void sw_acc_blit(draw_img_t *image, struct gui_dispdev *dc, struct gui_rect *rect);
