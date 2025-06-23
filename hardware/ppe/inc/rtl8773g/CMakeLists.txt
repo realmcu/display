@@ -4,9 +4,9 @@
 cmake_minimum_required(VERSION 3.10)
 
 message(STATUS "CONFIG_REALTEK_DISPLAY_ENABLE_PPE is set to: ${CONFIG_REALTEK_DISPLAY_ENABLE_PPE}")
-message(STATUS "CONFIG_SOC_SERIES_RTL8773G is set to: ${CONFIG_SOC_SERIES_RTL8773G}")
+message(STATUS "CONFIG_SOC_SERIES_RTL87X3G is set to: ${CONFIG_SOC_SERIES_RTL87X3G}")
 # Define a variable for the library name
-if(CONFIG_REALTEK_DISPLAY_ENABLE_PPE AND CONFIG_SOC_SERIES_RTL8773G) #set to 1 to enable or variable to for depnedency
+if(CONFIG_REALTEK_DISPLAY_ENABLE_PPE AND (CONFIG_SOC_SERIES_RTL8773G OR CONFIG_SOC_SERIES_RTL87X3G)) #set to 1 to enable or variable to for depnedency
 
     file(GLOB SOURCES "*.c" "*.cpp")
     file(GLOB HEADERS "*.h" "*.hpp")

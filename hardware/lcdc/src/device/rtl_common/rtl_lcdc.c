@@ -49,8 +49,8 @@ void LCDC_Clock_Cfg(FunctionalState state)
         uint32_t reg_value = *(uint32_t *)0x40000214;
         reg_value |= (BIT11 | BIT12);
         *(uint32_t *)0x40000214 = reg_value;
-#elif defined CONFIG_SOC_SERIES_RTL8773G
-        *((uint32_t *) 0x40000214) = (0x1 << 11) | (0x1 << 12);
+#elif defined CONFIG_SOC_SERIES_RTL87X3G
+        *((uint32_t *) 0x40000214) |= (0x1 << 11) | (0x1 << 12);
         //function enable
         *((uint32_t *) 0x40000218) |= (0x1 << 5);
         //clock enable
