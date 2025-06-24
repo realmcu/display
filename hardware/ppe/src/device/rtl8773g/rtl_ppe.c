@@ -496,11 +496,11 @@ PPE_ERR PPE_Blit_Inverse(ppe_buffer_t *dst, ppe_buffer_t *src, uint8_t *output,
                          ppe_matrix_t *inverse,
                          ppe_rect_t *rect, PPE_BLEND_METHOD method)
 {
-    if (dst->address == NULL)
+    if (dst->address == (uint32_t)NULL)
     {
         return PPE_ERR_NULL_TARGET;
     }
-    if (src->address == NULL)
+    if (src->address == (uint32_t)NULL)
     {
         return PPE_ERR_NULL_SOURCE;
     }
@@ -561,7 +561,7 @@ PPE_ERR PPE_Blit_Inverse(ppe_buffer_t *dst, ppe_buffer_t *src, uint8_t *output,
     PPE_input_layer2_init.Layer_Address                   = (uint32_t)src->address;
     PPE_input_layer2_init.Pic_Height                      = (uint32_t)src->height;
     PPE_input_layer2_init.Pic_Width                       = (uint32_t)src->width;
-    PPE_input_layer2_init.Line_Length                     = PPE_input_layer2_init.Pic_Width *
+    PPE_input_layer2_init.Line_Length                     = src->stride *
                                                             PPE_Get_Pixel_Size(src->format);
     if (method == PPE_BLEND_CONST_COLOR)
     {
@@ -628,7 +628,8 @@ PPE_ERR PPE_Blit_Inverse(ppe_buffer_t *dst, ppe_buffer_t *src, uint8_t *output,
     PPE_input_layer2_init.Transfer_Matrix_E31             = comp[ct++];
     PPE_input_layer2_init.Transfer_Matrix_E32             = comp[ct++];
     PPE_input_layer2_init.Transfer_Matrix_E33             = comp[ct++];
-    if (PPE_input_layer2_init.Layer_Address >= 0x22000000)
+    if (PPE_input_layer2_init.Layer_Address >= 0x22000000 || (src->format >= PPE_A8 &&
+                                                              src->format <= PPE_X1))
     {
         PPE_input_layer2_init.Cache_Enable = true;
     }
@@ -741,33 +742,20 @@ PPE_ERR PPE_Blit_Inverse(ppe_buffer_t *dst, ppe_buffer_t *src, uint8_t *output,
     PPE_ResultLayer0_Init.LayerBus_Inc                    = PPE_AWBURST_INC;
 
 
-//    for(int i = 5; i >= 0; i--)
-//    {
-//        DIRECT_LOG("table width %d", 1, block_width[i]);
-//        if(PPE_ResultLayer0_Init.Block_Width >= block_width[i])
-//        {
-//            PPE_ResultLayer0_Init.Block_Width = block_width[i];
-//            //DIRECT_LOG("change width %d", 1, PPE_ResultLayer0_Init.Block_Width);
-//            break;
-//        }
-//    }
-//    PPE_ResultLayer0_Init.Block_Width = 1;
-//    PPE_ResultLayer0_Init.Block_Height = 1;
 //    PPE_Clear_Interrupt(PPE_DIV0_ERR_INT);
 //    PPE_Mask_Interrupt(PPE_DIV0_ERR_INT, ENABLE);
 //    PPE_Mask_All_Interrupt(ENABLE);
+
     *(uint32_t *)(PPE_REG_BASE + 0x838) = 1;
     *(uint32_t *)(PPE_REG_BASE + 0x938) = 1;
     *(uint32_t *)(PPE_REG_BASE + 0xA38) = 1;
     *(uint32_t *)(PPE_REG_BASE + 0xB38) = 1;
 
-//    DBG_DIRECT("0x234 0x%08x, 0x210 0x%08x", *(uint32_t *)(0x40000234UL),  *(uint32_t *)(0x40000210UL));
-//
 
     if (PPE_Get_Pixel_Size(src->format) == 16)
     {
-        PPE_ResultLayer0_Init.Block_Width = 32; //block_width[i];
-        PPE_ResultLayer0_Init.Block_Height = 32; //block_height[j];
+        PPE_ResultLayer0_Init.Block_Width = 32;
+        PPE_ResultLayer0_Init.Block_Height = 32;
     }
     else if (PPE_Get_Pixel_Size(src->format) == 24)
     {
@@ -813,68 +801,21 @@ PPE_ERR PPE_Blit_Inverse(ppe_buffer_t *dst, ppe_buffer_t *src, uint8_t *output,
                                              PPE_ResultLayer0_Init.Layer_Window_Ymin + 1;
     }
     PPE_ResultLayer_Init(&PPE_ResultLayer0_Init);
-//            uint32_t* PPE_REG = (uint32_t*)PPE;
-//            for(int i = 0; i < sizeof(PPE_Typedef) / 4; i++)
-//            {
-//                DBG_DIRECT("GLOBAL 0x%04x, value: 0x%08x", i * 4, *(PPE_REG + i));
-//            }
-//            uint32_t* PPE_RESULT_REG = (uint32_t*)PPE_ResultLayer;
-//            for(int i = 0; i < sizeof(PPE_ResultLayer_Typedef) / 4; i++)
-//            {
-//                DBG_DIRECT("RESULT 0x%04x, value: 0x%08x", i * 4, *(PPE_RESULT_REG + i));
-//            }
 
-//            uint32_t* PPE_LAYER1_REG = (uint32_t*)PPE_InputLayer1;
-//            for(int i = 0; i < sizeof(PPE_Input_Layer_Typedef) / 4; i++)
-//            {
-//                DBG_DIRECT("LAYER1 0x%04x, value: 0x%08x", i * 4, *(PPE_LAYER1_REG + i));
-//            }
-//            uint32_t* PPE_LAYER2_REG = (uint32_t*)PPE_InputLayer2;
-//            for(int i = 0; i < sizeof(PPE_Input_Layer_Typedef) / 4; i++)
-//            {
-//                DBG_DIRECT("LAYER2 0x%04x, value: 0x%08x", i * 4, *(PPE_LAYER2_REG + i));
-//            }
-//    time1 = sys_timestamp_get_from_hw_timer_us();
     PPE_Cmd(ENABLE);
     while (((PPE_REG_GLB_STATUS_TypeDef)PPE->REG_GLB_STATUS).b.run_state)
     {
     }
-//    time2 = sys_timestamp_get_from_hw_timer_us();
-//    DBG_DIRECT("duration %d block width %d, height %d", (time2 - time1) / 40,
-//               PPE_ResultLayer0_Init.Block_Width, PPE_ResultLayer0_Init.Block_Height);
 
-    uint32_t G1_cache_cnt = *(uint32_t *)(PPE_REG_BASE + 0x810);
-    uint32_t G2_cache_cnt = *(uint32_t *)(PPE_REG_BASE + 0x910);
-    uint32_t G3_cache_cnt = *(uint32_t *)(PPE_REG_BASE + 0xA10);
-    uint32_t G4_cache_cnt = *(uint32_t *)(PPE_REG_BASE + 0xB10);
-
-    uint32_t G1_hit_cnt = *(uint32_t *)(PPE_REG_BASE + 0x814);
-    uint32_t G2_hit_cnt = *(uint32_t *)(PPE_REG_BASE + 0x914);
-    uint32_t G3_hit_cnt = *(uint32_t *)(PPE_REG_BASE + 0xA14);
-    uint32_t G4_hit_cnt = *(uint32_t *)(PPE_REG_BASE + 0xB14);
-
-//    DBG_DIRECT("cache G1 %d, G2 %d, G3 %d, G4 %d, total %d", G1_cache_cnt, G2_cache_cnt, G3_cache_cnt,
-//               G4_cache_cnt, \
-//               G1_cache_cnt + G2_cache_cnt + G3_cache_cnt + G4_cache_cnt);
-////            DBG_DIRECT("hit G1 %d, G2 %d, G3 %d, G4 %d, total %d", G1_hit_cnt, G2_hit_cnt, G3_hit_cnt, G4_hit_cnt, \
-////                                    G1_hit_cnt + G2_hit_cnt + G3_hit_cnt + G4_hit_cnt);
-//    DBG_DIRECT("cache from psram %d",
-//               (G1_cache_cnt + G2_cache_cnt + G3_cache_cnt + G4_cache_cnt) - (G1_hit_cnt + G2_hit_cnt + G3_hit_cnt
-//                                                                              + G4_hit_cnt));
     *(uint32_t *)(PPE_REG_BASE + 0x80C) = 0xFFFFFFFF;
     *(uint32_t *)(PPE_REG_BASE + 0x90C) = 0xFFFFFFFF;
     *(uint32_t *)(PPE_REG_BASE + 0xA0C) = 0xFFFFFFFF;
     *(uint32_t *)(PPE_REG_BASE + 0xB0C) = 0xFFFFFFFF;
-
-//        }
-//    }
-    return PPE_SUCCESS;
 }
-
 
 PPE_ERR PPE_Mask(ppe_buffer_t *dst, uint32_t color, ppe_rect_t *rect)
 {
-    if (dst->address == NULL)
+    if (dst->address == (uint32_t)NULL)
     {
         return PPE_ERR_NULL_TARGET;
     }
@@ -890,7 +831,7 @@ PPE_ERR PPE_Mask(ppe_buffer_t *dst, uint32_t color, ppe_rect_t *rect)
     PPE_InputLayer_enable(PPE_INPUT_2, ENABLE);           // logic enable of layer
     PPE_InputLayer_Init_Typedef PPE_input_layer2_init = {.Color_Key_Enable.key_enable = 0};
     PPE_InputLayer_StructInit(PPE_INPUT_2, &PPE_input_layer2_init);
-    PPE_input_layer2_init.Layer_Address                   = NULL;
+    PPE_input_layer2_init.Layer_Address                   = 0;
 
     PPE_input_layer2_init.Pic_Height                      = dst->height;
     PPE_input_layer2_init.Pic_Width                       = dst->width;
@@ -900,7 +841,7 @@ PPE_ERR PPE_Mask(ppe_buffer_t *dst, uint32_t color, ppe_rect_t *rect)
     PPE_input_layer2_init.Pixel_Source                    = PPE_LAYER_SRC_CONST;
     PPE_input_layer2_init.Const_Pixel                     = color;
     PPE_input_layer2_init.Color_Key_Mode                  = PPE_COLOR_KEY_INSIDE;
-    PPE_input_layer2_init.Source_Interpolation             = PPV2_SRC_BILINEAR;
+    PPE_input_layer2_init.Source_Interpolation             = PPV2_SRC_NEAREST_NEIGHBOUR;
 
     PPE_input_layer2_init.LayerBus_Inc                    = PPE_AWBURST_INC;
     if (rect != NULL)
@@ -934,7 +875,6 @@ PPE_ERR PPE_Mask(ppe_buffer_t *dst, uint32_t color, ppe_rect_t *rect)
         /*input layer 1 initilization*/
         PPE_InputLayer_enable(PPE_INPUT_1, ENABLE);           // logic enable of layer
         PPE_InputLayer_Init_Typedef PPE_input_layer1_init = {.Color_Key_Enable.key_enable = 0};
-        PPE_InputLayer_enable(PPE_INPUT_1, ENABLE);           // logic enable of layer
         PPE_InputLayer_StructInit(PPE_INPUT_1, &PPE_input_layer1_init);
         PPE_input_layer1_init.Layer_Address                   = dst->address;
         PPE_input_layer1_init.Pic_Width                      = (uint32_t)dst->width;
@@ -1003,6 +943,43 @@ PPE_ERR PPE_Mask(ppe_buffer_t *dst, uint32_t color, ppe_rect_t *rect)
         PPE_ResultLayer0_Init.Layer_Window_Ymin               = rect->y1;
         PPE_ResultLayer0_Init.Layer_Window_Ymax               = rect->y2;
     }
+
+
+    if (PPE_Get_Pixel_Size(dst->format) == 16)
+    {
+        PPE_ResultLayer0_Init.Block_Width = 32; //block_width[i];
+        PPE_ResultLayer0_Init.Block_Height = 32; //block_height[j];
+    }
+    else if (PPE_Get_Pixel_Size(dst->format) == 24)
+    {
+        PPE_ResultLayer0_Init.Block_Width = 16;
+        PPE_ResultLayer0_Init.Block_Height = 24;
+    }
+    else if (PPE_Get_Pixel_Size(dst->format) == 32)
+    {
+        PPE_ResultLayer0_Init.Block_Width = 16;
+        PPE_ResultLayer0_Init.Block_Height = 16;
+    }
+    else if (PPE_Get_Pixel_Size(dst->format) <= 8)
+    {
+        PPE_ResultLayer0_Init.Block_Width = 64;
+        PPE_ResultLayer0_Init.Block_Height = 64;
+    }
+
+    if (PPE_ResultLayer0_Init.Block_Width > PPE_ResultLayer0_Init.Layer_Window_Xmax -
+        PPE_ResultLayer0_Init.Layer_Window_Xmin + 1)
+    {
+        PPE_ResultLayer0_Init.Block_Width = PPE_ResultLayer0_Init.Layer_Window_Xmax -
+                                            PPE_ResultLayer0_Init.Layer_Window_Xmin + 1;
+    }
+    if (PPE_ResultLayer0_Init.Block_Height > PPE_ResultLayer0_Init.Layer_Window_Ymax -
+        PPE_ResultLayer0_Init.Layer_Window_Ymin + 1)
+    {
+        PPE_ResultLayer0_Init.Block_Height = PPE_ResultLayer0_Init.Layer_Window_Ymax -
+                                             PPE_ResultLayer0_Init.Layer_Window_Ymin + 1;
+    }
+
+
     PPE_ResultLayer0_Init.Layer_Address                   = dst->address;
     PPE_ResultLayer0_Init.Line_Length                     = dst->stride * PPE_Get_Pixel_Size(
                                                                 dst->format);
@@ -1187,6 +1164,50 @@ void ppe_perspective(float px, float py, ppe_matrix_t *matrix)
     };
     /* Multiply with current matrix. */
     ppe_mat_multiply(matrix, &p);
+}
+
+void ppe_reflect(bool horizontal, bool vertical, ppe_matrix_t *matrix)
+{
+    /* set prespective matrix */
+    float f1 = 1, f2 = 1;
+    bool change = false;
+    if (horizontal)
+    {
+        f1 = -1.0f;
+        change = true;
+    }
+    if (vertical)
+    {
+        f2 = -1.0f;
+        change = true;
+    }
+    if (change)
+    {
+        ppe_matrix_t p = { { {f1, 0.0f, 0.0f},
+                {0.0f, f2, 0.0f},
+                {0, 0, 1.0f}
+            }
+        };
+        /* Multiply with current matrix. */
+        ppe_mat_multiply(matrix, &p);
+    }
+}
+
+void ppe_skew(float skew_x, float skew_y, ppe_matrix_t *matrix)
+{
+    float rskew_x = skew_x / 180.0f * (float)M_PI;
+    float rskew_y = skew_y / 180.0f * (float)M_PI;
+    float tan_x = tanf(rskew_x);
+    float tan_y = tanf(rskew_y);
+
+    ppe_matrix_t s = {{
+            {1.0f, tan_x, 0.0f},
+            {tan_y, 1.0f, 0.0f},
+            {0.0f, 0.0f, 1.0f},
+        }
+    };
+
+    ppe_mat_multiply(matrix, &s);
 }
 
 static int swap(float *a, float *b)
@@ -1378,138 +1399,6 @@ static void pos_transfer(ppe_matrix_t *matrix, ppe_pox_t *pox)
     pox->p[0] = pox->p[0] / pox->p[2];
     pox->p[1] = pox->p[1] / pox->p[2];
     pox->p[2] = 1;
-}
-
-bool ppe_get_block_size(ppe_matrix_t *matrix, uint8_t pixel_size, uint16_t *block_width,
-                        uint16_t *block_height)
-{
-    float bw = 0, bh = 0;
-    switch (pixel_size)
-    {
-    case 1:
-        bw = 352;
-        bh = 88;
-        break;
-
-    case 2:
-        bw = 256;
-        bh = 64;
-        break;
-
-    case 4:
-        bw = 176;
-        bh = 44;
-        break;
-
-    case 8:
-        bw = 128;
-        bh = 32;
-        break;
-
-    case 16:
-        bw = 16;
-        bh = 8;
-        break;
-
-    case 24:
-    case 32:
-        bw = 16;
-        bh = 16;
-        break;
-
-    default:
-        assert_param(NULL != NULL);
-        break;
-    }
-    ppe_pox_t pox = {0.0f};
-    float x_min = 0.0f;
-    float x_max = 0.0f;
-    float y_min = 0.0f;
-    float y_max = 0.0f;
-
-    pox.p[0] = 0;
-    pox.p[1] = 0;
-    pox.p[2] = 1.0f;
-    pos_transfer(matrix, &pox);
-    x_min = pox.p[0];
-    x_max = pox.p[0];
-    y_min = pox.p[1];
-    y_max = pox.p[1];
-
-    pox.p[0] = bw - 1;
-    pox.p[1] = 0;
-    pox.p[2] = 1.0f;
-    pos_transfer(matrix, &pox);
-    if (x_min > pox.p[0])
-    {
-        x_min = pox.p[0];
-    }
-    if (x_max < pox.p[0])
-    {
-        x_max = pox.p[0];
-    }
-    if (y_min > pox.p[1])
-    {
-        y_min = pox.p[1];
-    }
-    if (y_max < pox.p[1])
-    {
-        y_max = pox.p[1];
-    }
-
-    pox.p[0] = 0;
-    pox.p[1] = (bh - 1) * 1.0f;
-    pox.p[2] = 1.0f;
-    pos_transfer(matrix, &pox);
-    if (x_min > pox.p[0])
-    {
-        x_min = pox.p[0];
-    }
-    if (x_max < pox.p[0])
-    {
-        x_max = pox.p[0];
-    }
-    if (y_min > pox.p[1])
-    {
-        y_min = pox.p[1];
-    }
-    if (y_max < pox.p[1])
-    {
-        y_max = pox.p[1];
-    }
-
-    pox.p[0] = (bw - 1) * 1.0f;
-    pox.p[1] = (bh - 1) * 1.0f;
-    pox.p[2] = 1.0f;
-    pos_transfer(matrix, &pox);
-    if (x_min > pox.p[0])
-    {
-        x_min = pox.p[0];
-    }
-    if (x_max < pox.p[0])
-    {
-        x_max = pox.p[0];
-    }
-    if (y_min > pox.p[1])
-    {
-        y_min = pox.p[1];
-    }
-    if (y_max < pox.p[1])
-    {
-        y_max = pox.p[1];
-    }
-
-    uint32_t w = 0, h = 0;
-    w = floor(x_max) - ceil(x_min) + 1;
-    h = floor(y_max) - ceil(y_min) + 1;
-
-    if (w == 0 || h == 0)
-    {
-        return false;
-    }
-    *block_width = w;
-    *block_height = h;
-    return true;
 }
 
 bool ppe_get_area(ppe_rect_t *result_rect, ppe_rect_t *source_rect, ppe_matrix_t *matrix,

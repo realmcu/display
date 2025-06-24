@@ -160,7 +160,8 @@ typedef enum
     PPE_I8,
     PPE_I4,
     PPE_I2,
-    PPE_I1
+    PPE_I1,
+    PPE_FORMAT_NOT_SUPPORT = 0xFF
 } PPE_PIXEL_FORMAT;
 
 typedef enum
@@ -360,10 +361,10 @@ typedef struct
 
 typedef struct
 {
-    int16_t x1;
-    int16_t y1;
-    int16_t x2;
-    int16_t y2;
+    int32_t x1;
+    int32_t y1;
+    int32_t x2;
+    int32_t y2;
 } ppe_rect_t;
 
 typedef struct
@@ -446,6 +447,8 @@ void ppe_translate(float x, float y, ppe_matrix_t *matrix);
 void ppe_scale(float scale_x, float scale_y, ppe_matrix_t *matrix);
 void ppe_rotate(float degrees, ppe_matrix_t *matrix);
 void ppe_perspective(float px, float py, ppe_matrix_t *matrix);
+void ppe_skew(float skew_x, float skew_y, ppe_matrix_t *matrix);
+void ppe_reflect(bool horizontal, bool vertical, ppe_matrix_t *matrix);
 int  ppe_get_transform_matrix(ppe_point4_t src, ppe_point4_t dst, ppe_matrix_t *mat);
 void ppe_matrix_inverse(ppe_matrix_t *matrix);
 void ppe_mat_multiply(ppe_matrix_t *matrix, ppe_matrix_t *mult);
