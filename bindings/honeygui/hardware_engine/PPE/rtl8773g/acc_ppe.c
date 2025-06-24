@@ -464,11 +464,11 @@ void acc_get_intersect_area(draw_img_t *image, ppe_rect_t *new_rect, ppe_rect_t 
     }
     if (x_min > left)
     {
-        new_rect->x1 = floor(x_min);
+        new_rect->x1 = floorf(x_min);
     }
     if (x_max < right)
     {
-        new_rect->x2 = ceil(x_max);
+        new_rect->x2 = ceilf(x_max);
     }
     else
     {

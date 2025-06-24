@@ -811,6 +811,8 @@ PPE_ERR PPE_Blit_Inverse(ppe_buffer_t *dst, ppe_buffer_t *src, uint8_t *output,
     *(uint32_t *)(PPE_REG_BASE + 0x90C) = 0xFFFFFFFF;
     *(uint32_t *)(PPE_REG_BASE + 0xA0C) = 0xFFFFFFFF;
     *(uint32_t *)(PPE_REG_BASE + 0xB0C) = 0xFFFFFFFF;
+
+    return PPE_SUCCESS;
 }
 
 PPE_ERR PPE_Mask(ppe_buffer_t *dst, uint32_t color, ppe_rect_t *rect)
@@ -1523,8 +1525,8 @@ bool ppe_get_area(ppe_rect_t *result_rect, ppe_rect_t *source_rect, ppe_matrix_t
         y_max = 0;
     }
 
-    result_rect->x2 = ceil(x_max);
-    result_rect->y2 = ceil(y_max);
+    result_rect->x2 = ceilf(x_max);
+    result_rect->y2 = ceilf(y_max);
 
     if (result_rect->x2 >= buffer->width)
     {
