@@ -452,9 +452,11 @@ void ppe_reflect(bool horizontal, bool vertical, ppe_matrix_t *matrix);
 int  ppe_get_transform_matrix(ppe_point4_t src, ppe_point4_t dst, ppe_matrix_t *mat);
 void ppe_matrix_inverse(ppe_matrix_t *matrix);
 void ppe_mat_multiply(ppe_matrix_t *matrix, ppe_matrix_t *mult);
+bool ppe_matrix_is_complex(ppe_matrix_t *mat);
 bool ppe_get_area(ppe_rect_t *result_rect, ppe_rect_t *source_rect, ppe_matrix_t *matrix,
                   ppe_buffer_t *buffer);
-PPE_ERR PPE_Mask(ppe_buffer_t *dst, uint32_t color, ppe_rect_t *rect);
+PPE_ERR PPE_Mask(ppe_buffer_t *dst, uint32_t color, ppe_rect_t *rect, ppe_rect_t *aligned);
+PPE_ERR PPE_Clear(ppe_buffer_t *dst, uint32_t color, ppe_rect_t *rect);
 PPE_ERR PPE_Blit_Inverse_Simulate(ppe_buffer_t *dst, ppe_buffer_t *src, ppe_matrix_t *matrix,
                                   ppe_matrix_t *inverse,
                                   ppe_rect_t *rect, PPE_BLEND_METHOD method);

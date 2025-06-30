@@ -287,7 +287,7 @@ void hw_dma_copy(uint32_t length, uint32_t height, uint32_t src_stride,
                 /* configure low 32 bit of CTL register */
                 GDMA_LLIStruct[i].CTL_LOW = (BIT(0)
                                              | (RX_GDMA_InitStruct.GDMA_DestinationDataSize << 1)
-                                             | (data_size << 4)
+                                             | (RX_GDMA_InitStruct.GDMA_SourceDataSize << 4)
                                              | (RX_GDMA_InitStruct.GDMA_DestinationInc << 7)
                                              | (RX_GDMA_InitStruct.GDMA_SourceInc << 9)
                                              | (RX_GDMA_InitStruct.GDMA_DestinationMsize << 11)
@@ -615,8 +615,18 @@ void hw_acc_blit_direct(draw_img_t *image, struct gui_dispdev *dc, struct gui_re
     ppe_matrix_t inverse;
     memcpy(&inverse, &image->inverse, sizeof(float) * 9);
     ppe_translate(0, dc->section.y1, &inverse);
-    PPE_ERR err1 = PPE_Blit_Inverse(&target, &source, NULL, &inverse, &constraint,
-                                    PPE_BLEND_PREMULTIPLY);
+//    ppe_rect_t ppe_rect = {.x1 = 0, .y1 = 0, .x2 = dc->fb_width - 1, .y2 = dc->fb_height - 1};
+    source.high_quality = true;
+    if ((image->matrix.m[0][0] == 1 && image->matrix.m[1][1] == 1 && \
+         image->matrix.m[2][2] == 1 && image->matrix.m[0][1] == 0 && \
+         image->matrix.m[1][0] == 0 && image->matrix.m[2][0] == 0 && \
+         image->matrix.m[2][1] == 0))
+    {
+        source.high_quality = false;
+    }
+    PPE_Finish();
+    PPE_ERR err = PPE_Blit_Inverse(&target, &source, NULL, &inverse, &constraint,
+                                   PPE_BLEND_PREMULTIPLY);
     return;
 }
 
@@ -692,17 +702,6 @@ void hw_acc_blit_cache(draw_img_t *image, struct gui_dispdev *dc, struct gui_rec
     default:
         return;
     }
-//    source.win_x_min = 0;
-//        source.win_x_max = target.width - 1;
-//        source.win_y_min = 0;
-//        source.win_y_max = target.height - 1;
-//    ppe_matrix_t inverse1;
-//    memcpy(&inverse1, &image->inverse, sizeof(float) * 9);
-//    ppe_translate(0, dc->section.y1, &inverse1);
-//    ppe_rect_t temp_rect = {.x1 = 0, .y1 = 0, .x2 = dc->fb_width - 1, .y2 = dc->fb_height - 1};
-//    PPE_ERR err1 = PPE_Blit_Inverse(&target, &source, NULL, &inverse1, &temp_rect, method);
-//    PPE_DBG("ppe err %d", err1);
-//    return;
 
 
     bool shape_transform = true;
@@ -773,7 +772,6 @@ void hw_acc_blit_cache(draw_img_t *image, struct gui_dispdev *dc, struct gui_rec
 #endif
                     if (!ret)
                     {
-                        //DBG_DIRECT("MAT err! addr %x, section %x", image->data, dc->section_count);
                         return;
                     }
                     if (rect != NULL)
@@ -837,7 +835,8 @@ void hw_acc_blit_cache(draw_img_t *image, struct gui_dispdev *dc, struct gui_rec
                     uint8_t tmp = color.color.rgba.b;
                     color.color.rgba.b = color.color.rgba.r;
                     color.color.rgba.r = tmp;
-                    PPE_Mask(&target, color.color.argb_full, &dst_rect);
+                    PPE_Finish();
+                    PPE_Mask(&target, color.color.argb_full, &dst_rect, NULL);
                     return;
                 }
             }
@@ -1194,6 +1193,7 @@ void hw_acc_blit_cache(draw_img_t *image, struct gui_dispdev *dc, struct gui_rec
             ppe_rect.y2 -= dc->section.y1;
             source.high_quality = true;
         }
+        source.high_quality = true;
         if ((image->matrix.m[0][0] == 1 && image->matrix.m[1][1] == 1 && \
              image->matrix.m[2][2] == 1 && image->matrix.m[0][1] == 0 && \
              image->matrix.m[1][0] == 0 && image->matrix.m[2][0] == 0 && \
@@ -1209,7 +1209,7 @@ void hw_acc_blit_cache(draw_img_t *image, struct gui_dispdev *dc, struct gui_rec
 //                sw_acc_blit(image, dc, rect);
         }
     }
-    PPE_Finish();
+//    PPE_Finish();
 }
 
 bool hw_acc_idu_decode(uint8_t *image, gui_rect_t *rect, uint8_t *output)
@@ -1501,7 +1501,7 @@ void hw_acc_end_cb(draw_img_t *image)
 void hw_acc_blit(draw_img_t *image, struct gui_dispdev *dc, struct gui_rect *rect)
 {
     struct gui_rgb_data_head *head = image->data;
-    if (0) //!head->compress && image->blend_mode != IMG_RECT)
+    if (head->compress && image->blend_mode != IMG_RECT)
     {
         hw_acc_blit_direct(image, dc, rect);
     }
