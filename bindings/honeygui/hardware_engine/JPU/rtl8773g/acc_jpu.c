@@ -50,7 +50,7 @@ void *hw_jpeg_load(void *input, int len, int *w, int *h, int *channel)
     *w = pheader->w;
     *h = pheader->h;
     *channel = 3;
-    DBG_DIRECT("size %d, %d", pheader->w, pheader->h);
+    // DBG_DIRECT("size %d, %d", pheader->w, pheader->h);
 
     return (void *)output;
 }

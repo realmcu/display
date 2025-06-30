@@ -1487,8 +1487,8 @@ static void *jpu_get_raw_buf(void *ptr)
     {
         // DBG_DIRECT("--jpg free align ck i:%d 0x%x %d sz: %d", i, jcache_buffer[i].ptr, jcache_buffer[i].align,
         //                jcache_buffer[i].sz);
-        if ((ptr == jcache_buffer[i].ptr) || ((ptr > jcache_buffer[i].ptr) &&
-                                              (ptr < jcache_buffer[i].ptr + jcache_buffer[i].sz)))
+        if ((ptr == jcache_buffer[i].ptr) || (((uint8_t *)ptr > jcache_buffer[i].ptr) &&
+                                              ((uint8_t *)ptr < jcache_buffer[i].ptr + jcache_buffer[i].sz)))
         {
             // DBG_DIRECT("---->buf align i:%d 0x%x  sz: %d", i, jcache_buffer[i].ptr, jcache_buffer[i].sz);
             ptr = (void *)jcache_buffer[i].ptr;
@@ -1506,8 +1506,8 @@ static void jpu_free(void *ptr)
     {
         // DBG_DIRECT("--jpg free align ck i:%d 0x%x %d sz: %d", i, jcache_buffer[i].ptr, jcache_buffer[i].align,
         //                jcache_buffer[i].sz);
-        if ((ptr == jcache_buffer[i].ptr) || ((ptr > jcache_buffer[i].ptr) &&
-                                              (ptr < jcache_buffer[i].ptr + jcache_buffer[i].sz)))
+        if ((ptr == jcache_buffer[i].ptr) || (((uint8_t *)ptr > jcache_buffer[i].ptr) &&
+                                              ((uint8_t *)ptr < jcache_buffer[i].ptr + jcache_buffer[i].sz)))
         {
             // DBG_DIRECT("---->jpg free i:%d 0x%x sz: %d", i, jcache_buffer[i].ptr, jcache_buffer[i].sz);
             ptr = (void *)jcache_buffer[i].ptr;
@@ -1517,7 +1517,10 @@ static void jpu_free(void *ptr)
         }
     }
 
-    JPU_FREE(ptr);
+    if (i < JPU_BUFF_NUM_MAX)
+    {
+        JPU_FREE(ptr);
+    }
 }
 
 

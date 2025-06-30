@@ -336,6 +336,7 @@ uint32_t JPU_Decode(JPU_DEC_CFG *config);
 uint32_t JPU_Encode(JPU_ENC_CFG *config);
 
 bool JPU_Busy(void);
+void JPU_Dump(void);
 
 /** End of JPU_Exported_Functions
   * \}
