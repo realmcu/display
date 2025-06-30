@@ -441,6 +441,9 @@ void hal_jpu_add_dec_header(uint32_t size);
 
 void hal_jpu_fb_free(void);
 
+// not free
+void hal_jpu_fb_clean(void);
+
 JPU_ERROR hal_jpu_decode(JPU_DEC_PARAM *dec_param, uint8_t **output, uint32_t *output_size);
 
 

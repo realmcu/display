@@ -1022,16 +1022,12 @@ static int JPU_EncLoadQMatTab(JPU_ENC_CFG *pEncInfo)
 
 void JPU_Clk_Init(void)
 {
-#ifdef __arm__
     RCC_PeriphClockCmd(APBPeriph_JPEG, APBPeriph_JPEG_CLOCK, ENABLE);
-#endif
 }
 
-void JPU_Deinit(void)
+void JPU_Clk_Deinit(void)
 {
-#ifdef __arm__
     RCC_PeriphClockCmd(APBPeriph_JPEG, APBPeriph_JPEG_CLOCK, DISABLE);
-#endif
 }
 
 void JPU_Reset(void)
@@ -1615,6 +1611,8 @@ uint32_t JPU_Encode(JPU_ENC_CFG *config)
 
     JPU_PIC_STATUS_TypeDef jpu_reg_0x04 = {.d32 = JPU->PIC_STATUS};
     JPU->PIC_STATUS = jpu_reg_0x04.d32;
+
+    JPU_Dump();
 
     // launch encoder
     JPU_PIC_START_TypeDef jpu_reg_0x00 = {.d32 = 0};
