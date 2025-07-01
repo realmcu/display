@@ -1359,7 +1359,6 @@ uint32_t JPU_Decode(JPU_DEC_CFG *config)
     jpu_wrap_reg_0x00.b.alpha = config->opa;
     JPU_WRAP->RGB_PF = jpu_wrap_reg_0x00.d32;
 
-    // extern void JPU_Dump(void);
     // JPU_Dump();
 
     // launch decoder
@@ -1612,7 +1611,7 @@ uint32_t JPU_Encode(JPU_ENC_CFG *config)
     JPU_PIC_STATUS_TypeDef jpu_reg_0x04 = {.d32 = JPU->PIC_STATUS};
     JPU->PIC_STATUS = jpu_reg_0x04.d32;
 
-    JPU_Dump();
+    // JPU_Dump();
 
     // launch encoder
     JPU_PIC_START_TypeDef jpu_reg_0x00 = {.d32 = 0};

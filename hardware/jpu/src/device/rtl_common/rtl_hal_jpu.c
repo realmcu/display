@@ -1690,13 +1690,11 @@ static void log_dec_info(JPU_DEC_INFO *info)
     DBG_DIRECT("\n");
 }
 
-static JPU_DEC_PARAM_INT g_dec_param;
-static JPU_DEC_INFO g_dec_info;
-static JPU_DEC_CFG g_dec_config;
 JPU_ERROR hal_jpu_decode(JPU_DEC_PARAM *dec_param, uint8_t **output, uint32_t *output_size)
 {
-    // JPU_DEC_PARAM_INT param;
-    // JPU_DEC_INFO info;
+    JPU_DEC_PARAM_INT g_dec_param;
+    JPU_DEC_INFO g_dec_info;
+    JPU_DEC_CFG g_dec_config;
     JPU_ERROR err = JPU_ERR_FAILURE;
     int ret = -1;
 
@@ -1705,21 +1703,7 @@ JPU_ERROR hal_jpu_decode(JPU_DEC_PARAM *dec_param, uint8_t **output, uint32_t *o
 
     JPU_DEC_PARAM_INT *param = &g_dec_param;
     JPU_DEC_INFO *info = &g_dec_info;
-
-    if (!param || !info)
-    {
-        if (!param)
-        {
-            JPU_FREE(param);
-        }
-        if (!info)
-        {
-            JPU_FREE(info);
-        }
-        return JPU_ERR_MALLOC_FAIL;
-    }
-
-
+    JPU_DEC_CFG *config = &g_dec_config;
 
     // check input validate
     if (!dec_param || !dec_param->data || ((uint32_t)dec_param->data & 0x7) || !dec_param->size ||
@@ -1727,6 +1711,10 @@ JPU_ERROR hal_jpu_decode(JPU_DEC_PARAM *dec_param, uint8_t **output, uint32_t *o
     {
         return JPU_ERR_INVALID_PARAM;
     }
+
+    memset((void *)param, 0, sizeof(JPU_DEC_PARAM_INT));
+    memset((void *)info, 0, sizeof(JPU_DEC_INFO));
+    memset((void *)config, 0, sizeof(JPU_DEC_CFG));
 
     err = JPU_Dec_Prepare(dec_param, param);
     if (err != JPU_SUCCESS)
@@ -1746,10 +1734,8 @@ JPU_ERROR hal_jpu_decode(JPU_DEC_PARAM *dec_param, uint8_t **output, uint32_t *o
     // log_dec_info(info);
 
     // reset JPU reg
-#ifdef __arm__
     JPU_Clk_Init();
     JPU_Reset();
-#endif
 
     // alloc frame buffer
     uint32_t fb_width = info->alignedWidth;
@@ -1801,28 +1787,20 @@ JPU_ERROR hal_jpu_decode(JPU_DEC_PARAM *dec_param, uint8_t **output, uint32_t *o
         break;
     }
 
+    uint32_t packed_factor = 1;
     if (param->packedFormat >= PACKED_FORMAT_422_YUYV && param->packedFormat <= PACKED_FORMAT_422_VYUY)
     {
-        if (param->useWrapper)
-        {
-            fb_width *= wrapper_factor;
-        }
-        else
-        {
-            fb_width *= 2;
-        }
+        packed_factor = 2;
     }
     else if (param->packedFormat == PACKED_FORMAT_444)
     {
-        if (param->useWrapper)
-        {
-            fb_width *= wrapper_factor;
-        }
-        else
-        {
-            fb_width *= 3;
-        }
+        packed_factor = 3;
     }
+
+    wrapper_factor = param->useWrapper ? wrapper_factor : 1;
+
+    uint32_t stride_factor = (wrapper_factor > packed_factor) ? wrapper_factor : packed_factor;
+    fb_width *= stride_factor;
 
     uint32_t fb_size = 0;
     uint32_t lum_size = fb_width * fb_height;
@@ -1916,8 +1894,6 @@ JPU_ERROR hal_jpu_decode(JPU_DEC_PARAM *dec_param, uint8_t **output, uint32_t *o
 
     // construct config
     // JPU_DEC_CFG config;
-    JPU_DEC_CFG *config = &g_dec_config;
-    memset(config, 0, sizeof(JPU_DEC_CFG));
     config->bs_buffer_start = param->data;
     config->bs_rd_ptr = param->data;
     config->bs_wr_ptr = param->data + param->size;
@@ -2029,21 +2005,24 @@ void hal_jpu_jpg_buf_free(void)
 {
     if (jpg_buf_raw)
     {
-        JPU_FREE(jpg_buf_raw);
+        jpu_free(jpg_buf_raw);
         jpg_buf_raw = NULL;
     }
 }
 
-static JPU_ENC_PARAM_INT param;
-static JPU_ENC_INFO info;
-static JPU_ENC_CFG config;
-
 JPU_ERROR hal_jpu_encode(JPU_ENC_PARAM *enc_param, uint8_t **output, uint32_t *wr_size)
 {
+    JPU_ENC_PARAM_INT g_enc_param;
+    JPU_ENC_INFO g_enc_info;
+    JPU_ENC_CFG g_enc_config;
 
     JPU_ERROR err = JPU_ERR_FAILURE;
     int ret = -1;
     uint32_t i = 0;
+
+    JPU_ENC_PARAM_INT *param = &g_enc_param;
+    JPU_ENC_INFO *info = &g_enc_info;
+    JPU_ENC_CFG *config = &g_enc_config;
 
     // check input validate
     if (!enc_param || !enc_param->data || ((uint32_t)enc_param->data & 0x7) || !enc_param->size ||
@@ -2052,117 +2031,118 @@ JPU_ERROR hal_jpu_encode(JPU_ENC_PARAM *enc_param, uint8_t **output, uint32_t *w
         return JPU_ERR_INVALID_PARAM;
     }
 
-    err = JPU_Enc_Prepare(enc_param, &param);
+    memset((void *)param, 0, sizeof(JPU_ENC_PARAM_INT));
+    memset((void *)info, 0, sizeof(JPU_ENC_INFO));
+    memset((void *)config, 0, sizeof(JPU_ENC_CFG));
+    err = JPU_Enc_Prepare(enc_param, param);
     if (err != JPU_SUCCESS)
     {
-        //- DBG_DIRECT("JPU_Enc_Prepare failed %d \n", err);
+        DBG_DIRECT("JPU_Enc_Prepare failed %d \n", err);
         return err;
     }
-    // log_param(&param);
+    // log_param(param);
 
     // reset JPU reg
-#ifdef __arm__
     JPU_Clk_Init();
     JPU_Reset();
-#endif
 
     // hal_jpu_jpg_buf_free();
-    jpg_buf_raw = (uint8_t *)JPU_MALLOC(param.buff_sz + 7);
+    jpg_buf_raw = (uint8_t *)jpu_malloc(param->buff_sz + 7);
     if (!jpg_buf_raw)
     {
-        //- DBG_DIRECT("jpg_buf malloc failed, size %d\n", param.buff_sz + 7);
+        DBG_DIRECT("jpg_buf malloc failed, size %d\n", param->buff_sz + 7);
         return JPU_ERR_MALLOC_FAIL;
     }
     uint8_t *jpg_buf = (uint8_t *)((((uint32_t)jpg_buf_raw + 7) >> 3) << 3);  // align to 8
     *output = jpg_buf;
-    //- DBG_DIRECT("jpg_buf 0x%x jpg_buf_raw 0x%x, sz %d \n", jpg_buf, jpg_buf_raw, param.buff_sz);
+    DBG_DIRECT("jpg_buf 0x%x jpg_buf_raw 0x%x, sz %d \n", jpg_buf, jpg_buf_raw, param->buff_sz);
 
-    getJpuEncOpenParamDefault(&info);
+    getJpuEncOpenParamDefault(info);
 
     // quality set quant table
-    JpuEncSetupTables(&info, param.quality);
+    JpuEncSetupTables(info, param->quality);
 
 
     // rotate
-    if (param.rotAngle == ROT_ANGLE_90 || param.rotAngle == ROT_ANGLE_270)
+    if (param->rotAngle == ROT_ANGLE_90 || param->rotAngle == ROT_ANGLE_270)
     {
-        param.jpgFormat = (param.jpgFormat == JPU_FORMAT_422) ? JPU_FORMAT_224 :
-                          (param.jpgFormat == JPU_FORMAT_224) ? JPU_FORMAT_422 : param.jpgFormat;
+        param->jpgFormat = (param->jpgFormat == JPU_FORMAT_422) ? JPU_FORMAT_224 :
+                           (param->jpgFormat == JPU_FORMAT_224) ? JPU_FORMAT_422 : param->jpgFormat;
     }
 
-    if (param.usePartialMode) {}
+    if (param->usePartialMode) {}
 
     // image size
-    if (param.jpgFormat == JPU_FORMAT_420 || param.jpgFormat == JPU_FORMAT_422)
+    if (param->jpgFormat == JPU_FORMAT_420 || param->jpgFormat == JPU_FORMAT_422)
     {
-        info.alignedWidth = ((param.picWidth + 15) >> 4) << 4;
+        info->alignedWidth = ((param->picWidth + 15) >> 4) << 4;
     }
     else
     {
-        info.alignedWidth = ((param.picWidth + 7) >> 3) << 3;
+        info->alignedWidth = ((param->picWidth + 7) >> 3) << 3;
     }
 
-    if (param.jpgFormat == JPU_FORMAT_420 || param.jpgFormat == JPU_FORMAT_224)
+    if (param->jpgFormat == JPU_FORMAT_420 || param->jpgFormat == JPU_FORMAT_224)
     {
-        info.alignedHeight = ((param.picHeight + 15) >> 4) << 4;
+        info->alignedHeight = ((param->picHeight + 15) >> 4) << 4;
     }
     else
     {
-        info.alignedHeight = ((param.picHeight + 7) >> 3) << 3;
+        info->alignedHeight = ((param->picHeight + 7) >> 3) << 3;
     }
 
 
     // comp info
-    switch (param.jpgFormat)
+    switch (param->jpgFormat)
     {
     case JPU_FORMAT_420:
         {
-            info.compNum = 3;
-            info.mcuBlockNum = 6;
-            info.busReqNum = 2;
-            info.compInfo[0] = 10;
-            info.compInfo[1] = 5;
-            info.compInfo[2] = 5;
+            info->compNum = 3;
+            info->mcuBlockNum = 6;
+            info->busReqNum = 2;
+            info->compInfo[0] = 10;
+            info->compInfo[1] = 5;
+            info->compInfo[2] = 5;
         }
         break;
     case JPU_FORMAT_422:
         {
-            info.compNum = 3;
-            info.mcuBlockNum = 4;
-            info.busReqNum = 3;
-            info.compInfo[0] = 9;
-            info.compInfo[1] = 5;
-            info.compInfo[2] = 5;
+            info->compNum = 3;
+            info->mcuBlockNum = 4;
+            info->busReqNum = 3;
+            info->compInfo[0] = 9;
+            info->compInfo[1] = 5;
+            info->compInfo[2] = 5;
         }
         break;
     case JPU_FORMAT_224:
         {
-            info.compNum = 3;
-            info.mcuBlockNum = 4;
-            info.busReqNum  = 3;
-            info.compInfo[0] = 6;
-            info.compInfo[1] = 5;
-            info.compInfo[2] = 5;
+            info->compNum = 3;
+            info->mcuBlockNum = 4;
+            info->busReqNum  = 3;
+            info->compInfo[0] = 6;
+            info->compInfo[1] = 5;
+            info->compInfo[2] = 5;
         }
         break;
     case JPU_FORMAT_444:
         {
-            info.compNum = 3;
-            info.mcuBlockNum = 3;
-            info.busReqNum = 4;
-            info.compInfo[0] = 5;
-            info.compInfo[1] = 5;
-            info.compInfo[2] = 5;
+            info->compNum = 3;
+            info->mcuBlockNum = 3;
+            info->busReqNum = 4;
+            info->compInfo[0] = 5;
+            info->compInfo[1] = 5;
+            info->compInfo[2] = 5;
         }
         break;
     case JPU_FORMAT_400:
         {
-            info.compNum = 1;
-            info.mcuBlockNum = 1;
-            info.busReqNum = 4;
-            info.compInfo[0] = 5;
-            info.compInfo[1] = 0;
-            info.compInfo[2] = 0;
+            info->compNum = 1;
+            info->mcuBlockNum = 1;
+            info->busReqNum = 4;
+            info->compInfo[0] = 5;
+            info->compInfo[1] = 0;
+            info->compInfo[2] = 0;
         }
         break;
     }
@@ -2171,7 +2151,7 @@ JPU_ERROR hal_jpu_encode(JPU_ENC_PARAM *enc_param, uint8_t **output, uint32_t *w
 
     // frame buffer
     uint8_t wrapper_factor = 1;
-    switch (param.rgbType)
+    switch (param->rgbType)
     {
     case JPU_RGB565:
         wrapper_factor = 2;
@@ -2185,27 +2165,28 @@ JPU_ERROR hal_jpu_encode(JPU_ENC_PARAM *enc_param, uint8_t **output, uint32_t *w
     }
 
     uint32_t packed_factor = 1;
-    if (param.frameFormat >= PACKED_FORMAT_422_YUYV && param.frameFormat <= PACKED_FORMAT_422_VYUY)
+    if (param->frameFormat >= PACKED_FORMAT_422_YUYV && param->frameFormat <= PACKED_FORMAT_422_VYUY)
     {
         packed_factor = 2;
     }
-    else if (param.frameFormat == PACKED_FORMAT_444)
+    else if (param->frameFormat == PACKED_FORMAT_444)
     {
         packed_factor = 3;
     }
 
-    wrapper_factor = param.useWrapper ? wrapper_factor : 1;
-    packed_factor  = param.useWrapper ? 1 : packed_factor;
+    wrapper_factor = param->useWrapper ? wrapper_factor : 1;
+
+    uint32_t stride_factor = (wrapper_factor > packed_factor) ? wrapper_factor : packed_factor;
 
     // expected buff size
-    uint32_t fb_width = info.alignedWidth;
-    uint32_t fb_height = info.alignedHeight;
+    uint32_t fb_width = info->alignedWidth;
+    uint32_t fb_height = info->alignedHeight;
     uint32_t fb_size = 0;
-    uint32_t lum_size = info.alignedWidth * info.alignedHeight;
+    uint32_t lum_size = info->alignedWidth * info->alignedHeight;
     uint32_t chr_size = 0;
-    if (param.frameFormat == PACKED_FORMAT_NONE)
+    if (param->frameFormat == PACKED_FORMAT_NONE)
     {
-        switch (param.jpgFormat)
+        switch (param->jpgFormat)
         {
         case JPU_FORMAT_420:
             chr_size = lum_size / 4;
@@ -2225,79 +2206,82 @@ JPU_ERROR hal_jpu_encode(JPU_ENC_PARAM *enc_param, uint8_t **output, uint32_t *w
     }
     else
     {
-        fb_width *= wrapper_factor * packed_factor;
+        fb_width *= stride_factor;
         fb_size = fb_width * fb_height;
     }
 
     uint8_t *enc_fb_buf_raw = NULL;
     uint8_t *enc_fb_buf = NULL;
-    if (info.alignedWidth == param.picWidth)
+    if (info->alignedWidth == param->picWidth)
     {
-        info.bufY = (uint32_t)param.data;
-        info.bufCb = (uint32_t)param.data + lum_size;
-        info.bufCr = (uint32_t)param.data + lum_size + chr_size;
+        info->bufY = (uint32_t)param->data;
+        if (param->frameFormat == PACKED_FORMAT_NONE)
+        {
+            info->bufCb = (uint32_t)param->data + lum_size;
+            info->bufCr = (uint32_t)param->data + lum_size + chr_size;
+        }
     }
     else
     {
-        enc_fb_buf_raw = (uint8_t *)JPU_MALLOC(fb_size + 7);
+        enc_fb_buf_raw = (uint8_t *)jpu_malloc(fb_size + 7);
         if (!enc_fb_buf_raw)
         {
-            //- DBG_DIRECT("jpg_buf malloc failed, size %d\n", fb_size + 7);
+            DBG_DIRECT("jpg_buf malloc failed, size %d\n", fb_size + 7);
             return JPU_ERR_MALLOC_FAIL;
         }
         enc_fb_buf = (uint8_t *)((((uint32_t)enc_fb_buf_raw + 7) >> 3) << 3);  // align to 8
-        //- DBG_DIRECT("jpg_buf 0x%x jpg_buf_raw 0x%x, sz %d \n", enc_fb_buf, enc_fb_buf_raw, fb_size);
+        DBG_DIRECT("enc_fb_buf 0x%x enc_fb_buf_raw 0x%x, sz %d \n", enc_fb_buf, enc_fb_buf_raw, fb_size);
 
         // copy frame to fb
-        for (i = 0; i < param.picHeight; ++i)
+        for (i = 0; i < param->picHeight; ++i)
         {
             memcpy(enc_fb_buf + fb_width * i,
-                   (uint8_t *)(param.data + i * param.picWidth * wrapper_factor * packed_factor),
-                   param.picWidth * wrapper_factor * packed_factor);
+                   (uint8_t *)(param->data + i * param->picWidth * stride_factor),
+                   param->picWidth * stride_factor);
         }
 
-        if (param.jpgFormat == JPU_FORMAT_400 || param.frameFormat != PACKED_FORMAT_NONE)
+        if (param->jpgFormat == JPU_FORMAT_400 || param->frameFormat != PACKED_FORMAT_NONE)
         {
             // copy done
         }
         else
         {
             // plannar with Cr Cb
-            uint32_t nCb = param.picHeight;
-            uint32_t nCr = param.picHeight;
-            uint32_t chromaSize = param.picWidth * param.picHeight;
+            uint32_t nCb = param->picHeight;
+            uint32_t nCr = param->picHeight;
+            uint32_t chromaSize = param->picWidth * param->picHeight;
             uint32_t chromaStride = fb_width;
-            uint32_t chromaWidth = param.picWidth;
+            uint32_t chromaWidth = param->picWidth;
 
-            switch (param.jpgFormat)
+            switch (param->jpgFormat)
             {
             case JPU_FORMAT_420:
-                nCb = nCr = param.picHeight / 2;
-                chromaSize = param.picWidth * param.picHeight / 4;
+                nCb = nCr = param->picHeight / 2;
+                chromaSize = param->picWidth * param->picHeight / 4;
                 chromaStride = fb_width / 2;
-                chromaWidth = param.picWidth / 2;
+                chromaWidth = param->picWidth / 2;
                 break;
             case JPU_FORMAT_224:
-                nCb = nCr = param.picHeight / 2;
-                chromaSize = param.picWidth * param.picHeight / 2;
+                nCb = nCr = param->picHeight / 2;
+                chromaSize = param->picWidth * param->picHeight / 2;
                 chromaStride = fb_width;
-                chromaWidth = param.picWidth;
+                chromaWidth = param->picWidth;
                 break;
             case JPU_FORMAT_422:
-                nCb = nCr = param.picHeight;
-                chromaSize = param.picWidth * param.picHeight / 2;
+                nCb = nCr = param->picHeight;
+                chromaSize = param->picWidth * param->picHeight / 2;
                 chromaStride = fb_width / 2;
-                chromaWidth = param.picWidth / 2;
+                chromaWidth = param->picWidth / 2;
                 break;
             case JPU_FORMAT_444:
-                nCb = nCr = param.picHeight;
-                chromaSize = param.picWidth * param.picHeight;
+                nCb = nCr = param->picHeight;
+                chromaSize = param->picWidth * param->picHeight;
                 chromaStride = fb_width;
-                chromaWidth = param.picWidth;
+                chromaWidth = param->picWidth;
                 break;
             }
 
-            uint32_t puc = (uint32_t)(param.data + param.picWidth * param.picHeight);
+            uint32_t puc = (uint32_t)(param->data + param->picWidth * param->picHeight);
             uint32_t addr = (uint32_t)(enc_fb_buf + lum_size);
             for (i = 0; i < nCb; ++i)
             {
@@ -2312,17 +2296,20 @@ JPU_ERROR hal_jpu_encode(JPU_ENC_PARAM *enc_param, uint8_t **output, uint32_t *w
             }
         }
 
-        info.bufY = (uint32_t)enc_fb_buf;
-        info.bufCb = (uint32_t)enc_fb_buf + lum_size;
-        info.bufCr = (uint32_t)enc_fb_buf + lum_size + chr_size;
+        info->bufY = (uint32_t)enc_fb_buf;
+        if (param->frameFormat == PACKED_FORMAT_NONE)
+        {
+            info->bufCb = (uint32_t)enc_fb_buf + lum_size;
+            info->bufCr = (uint32_t)enc_fb_buf + lum_size + chr_size;
+        }
     }
 
     uint32_t rotMirEnable = 0;
     uint32_t rotMirMode = 0;
-    if (param.useRot)
+    if (param->useRot)
     {
         rotMirEnable = 0x10; // Enable rotator
-        switch (param.rotAngle)
+        switch (param->rotAngle)
         {
         case 0:
             rotMirMode |= 0x0;
@@ -2341,7 +2328,7 @@ JPU_ERROR hal_jpu_encode(JPU_ENC_PARAM *enc_param, uint8_t **output, uint32_t *w
             break;
         }
 
-        switch (param.mirDir)
+        switch (param->mirDir)
         {
         case MIRDIR_NONE :
             rotMirMode |= 0x0;
@@ -2364,76 +2351,76 @@ JPU_ERROR hal_jpu_encode(JPU_ENC_PARAM *enc_param, uint8_t **output, uint32_t *w
 
 
     // construct config
-    memset(&config, 0, sizeof(JPU_ENC_CFG));
+    memset(config, 0, sizeof(JPU_ENC_CFG));
 
-    config.bs_buffer_start = jpg_buf;
-    config.bs_rd_ptr = jpg_buf;
-    config.bs_wr_ptr = jpg_buf;
-    config.bs_buffer_end = jpg_buf + param.buff_sz;
+    config->bs_buffer_start = jpg_buf;
+    config->bs_rd_ptr = jpg_buf;
+    config->bs_wr_ptr = jpg_buf;
+    config->bs_buffer_end = jpg_buf + param->buff_sz;
 
     // huff table
     for (i = 0; i < 4; i++)
     {
-        config.pHuffVal[i] = info.huffVal[i];
+        config->pHuffVal[i] = info->huffVal[i];
     }
     for (i = 0; i < 4; i++)
     {
-        config.pHuffBits[i] = info.huffBits[i];
+        config->pHuffBits[i] = info->huffBits[i];
     }
     for (i = 0; i < 4; i++)
     {
-        config.pQMatTab[i] = info.qMatTab[i];
+        config->pQMatTab[i] = info->qMatTab[i];
     }
 
-    config.picWidth = param.picWidth;
-    config.picHeight = param.picHeight;
-    config.alignedWidth = info.alignedWidth;
-    config.alignedHeight = info.alignedHeight;
-    config.stride = info.alignedWidth;
-    config.format = param.jpgFormat;
-    config.frame_packed_format = param.frameFormat;
-    config.streamEndian = param.StreamEndian;
-    config.frameEndian = param.FrameEndian;
-    config.chromaInterleave = param.chromaInterleave;
-    config.rstIntval = info.rstIntval;
+    config->picWidth = param->picWidth;
+    config->picHeight = param->picHeight;
+    config->alignedWidth = info->alignedWidth;
+    config->alignedHeight = info->alignedHeight;
+    config->stride = fb_width;
+    config->format = param->jpgFormat;
+    config->frame_packed_format = param->frameFormat;
+    config->streamEndian = param->StreamEndian;
+    config->frameEndian = param->FrameEndian;
+    config->chromaInterleave = param->chromaInterleave;
+    config->rstIntval = info->rstIntval;
 
-    config.compNum = info.compNum;
-    config.mcuBlockNum = info.mcuBlockNum;
-    config.busReqNum = info.busReqNum;
-    config.compInfo[0] = info.compInfo[0];
-    config.compInfo[1] = info.compInfo[1];
-    config.compInfo[2] = info.compInfo[2];
+    config->compNum = info->compNum;
+    config->mcuBlockNum = info->mcuBlockNum;
+    config->busReqNum = info->busReqNum;
+    config->compInfo[0] = info->compInfo[0];
+    config->compInfo[1] = info->compInfo[1];
+    config->compInfo[2] = info->compInfo[2];
 
     // wrapper
-    config.wrapper_en = param.useWrapper;
-    config.rgb_type = param.rgbType;
+    config->wrapper_en = param->useWrapper;
+    config->rgb_type = param->rgbType;
 
     // frame buffer
-    config.bufY =  info.bufY;
-    config.bufCb = info.bufCb;
-    config.bufCr = info.bufCr;
+    config->bufY =  info->bufY;
+    config->bufCb = info->bufCb;
+    config->bufCr = info->bufCr;
 
-    config.stuffByteEnable = param.bEnStuffByte;
+    config->stuffByteEnable = param->bEnStuffByte;
 
-    config.size = param.buff_sz;
-    config.headerMode =
+    config->size = param->buff_sz;
+    config->headerMode =
         ENC_HEADER_MODE_NORMAL;         //Encoder header disable/enable control. Annex:A 1.2.3 item 13
-    config.quantMode =
+    config->quantMode =
         JPG_TBL_NORMAL; //JPG_TBL_MERGE  // Merge quantization table. Annex:A 1.2.3 item 7
-    config.huffMode  = JPG_TBL_NORMAL; // JPG_TBL_MERGE //Merge huffman table. Annex:A 1.2.3 item 6
-    config.disableAPPMarker = 0;                        //Remove APPn. Annex:A item 11
+    config->huffMode  = JPG_TBL_NORMAL; // JPG_TBL_MERGE //Merge huffman table. Annex:A 1.2.3 item 6
+    config->disableAPPMarker = 0;                        //Remove APPn. Annex:A item 11
 
     // rotation & mirror
-    config.rotMirEnable = rotMirEnable;
-    config.rotMirMode = rotMirMode;
-    config.rotationAngle = param.rotAngle;
+    config->rotMirEnable = rotMirEnable;
+    config->rotMirMode = rotMirMode;
+    config->rotationAngle = param->rotAngle;
 
 
     // start decode
-    ret = JPU_Encode(&config);
+    ret = JPU_Encode(config);
     if (enc_fb_buf_raw)
     {
-        JPU_FREE(enc_fb_buf_raw);
+        jpu_free(enc_fb_buf_raw);
     }
 
     JPU_OUTPUT_HW_INFO *output_info = JPU_Read_Output();
