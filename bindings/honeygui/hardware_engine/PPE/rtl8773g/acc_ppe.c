@@ -836,7 +836,7 @@ void hw_acc_blit_cache(draw_img_t *image, struct gui_dispdev *dc, struct gui_rec
                     color.color.rgba.b = color.color.rgba.r;
                     color.color.rgba.r = tmp;
                     PPE_Finish();
-                    PPE_Mask(&target, color.color.argb_full, &dst_rect, NULL);
+                    PPE_Mask(&target, color.color.argb_full, &dst_rect);
                     return;
                 }
             }
@@ -1501,7 +1501,7 @@ void hw_acc_end_cb(draw_img_t *image)
 void hw_acc_blit(draw_img_t *image, struct gui_dispdev *dc, struct gui_rect *rect)
 {
     struct gui_rgb_data_head *head = image->data;
-    if (head->compress && image->blend_mode != IMG_RECT)
+    if (!head->compress && image->blend_mode != IMG_RECT)
     {
         hw_acc_blit_direct(image, dc, rect);
     }
