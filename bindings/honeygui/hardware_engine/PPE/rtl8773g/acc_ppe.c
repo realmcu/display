@@ -530,7 +530,7 @@ void hw_acc_blit_direct(draw_img_t *image, struct gui_dispdev *dc, struct gui_re
     ppe_buffer_t target, source;
     memset(&target, 0, sizeof(ppe_buffer_t));
     memset(&source, 0, sizeof(ppe_buffer_t));
-    PPE_BLEND_METHOD method = PPE_BLEND_SRC;
+    PPE_BLEND_METHOD method = PPE_BLEND_PREMULTIPLY;
 
     switch (dc->bit_depth)
     {
@@ -617,16 +617,38 @@ void hw_acc_blit_direct(draw_img_t *image, struct gui_dispdev *dc, struct gui_re
     ppe_translate(0, dc->section.y1, &inverse);
 //    ppe_rect_t ppe_rect = {.x1 = 0, .y1 = 0, .x2 = dc->fb_width - 1, .y2 = dc->fb_height - 1};
     source.high_quality = true;
-    if ((image->matrix.m[0][0] == 1 && image->matrix.m[1][1] == 1 && \
-         image->matrix.m[2][2] == 1 && image->matrix.m[0][1] == 0 && \
-         image->matrix.m[1][0] == 0 && image->matrix.m[2][0] == 0 && \
-         image->matrix.m[2][1] == 0))
+    if (image->blend_mode == IMG_FILTER_BLACK)
+    {
+        source.color_key_config.key_enable.key_enable = true;
+        source.color_key_config.key_enable.channel_en.a_en = true;
+        source.color_key_config.key_enable.channel_en.b_en = true;
+        source.color_key_config.key_enable.channel_en.g_en = true;
+        source.color_key_config.key_enable.channel_en.r_en = true;
+        source.color_key_config.key_mode = PPE_COLOR_KEY_INSIDE;
+        source.color_key_config.key_range.R_max = 0;
+        source.color_key_config.key_range.R_min = 0;
+        source.color_key_config.key_range.G_max = 0;
+        source.color_key_config.key_range.G_min = 0;
+        source.color_key_config.key_range.B_max = 0;
+        source.color_key_config.key_range.B_min = 0;
+        source.color_key_config.key_replace.key_replace = 0x00000000;
+    }
+    if (!ppe_matrix_is_complex(&inverse))
     {
         source.high_quality = false;
+        if ((source.format == PPE_RGB565 || source.format == PPE_RGB888) &&
+            image->blend_mode != IMG_FILTER_BLACK)
+        {
+            method = PPE_BLEND_BYPASS;
+        }
     }
     PPE_Finish();
     PPE_ERR err = PPE_Blit_Inverse(&target, &source, NULL, &inverse, &constraint,
-                                   PPE_BLEND_PREMULTIPLY);
+                                   method);
+    if (!gui_get_acc()->enable_async)
+    {
+        PPE_Finish();
+    }
     return;
 }
 
@@ -837,6 +859,10 @@ void hw_acc_blit_cache(draw_img_t *image, struct gui_dispdev *dc, struct gui_rec
                     color.color.rgba.r = tmp;
                     PPE_Finish();
                     PPE_Mask(&target, color.color.argb_full, &dst_rect);
+                    if (!gui_get_acc()->enable_async)
+                    {
+                        PPE_Finish();
+                    }
                     return;
                 }
             }
@@ -1209,7 +1235,10 @@ void hw_acc_blit_cache(draw_img_t *image, struct gui_dispdev *dc, struct gui_rec
 //                sw_acc_blit(image, dc, rect);
         }
     }
-//    PPE_Finish();
+    if (!gui_get_acc()->enable_async)
+    {
+        PPE_Finish();
+    }
 }
 
 bool hw_acc_idu_decode(uint8_t *image, gui_rect_t *rect, uint8_t *output)
@@ -1345,6 +1374,10 @@ void hw_blit_font(draw_font_t *font, font_glyph_t *glyph)
     ppe_translate(font->target_rect.x1, font->target_rect.y1, &inverse);
     PPE_ERR err = PPE_Blit_Inverse(&target, &source, NULL, &inverse, &constraint,
                                    PPE_BLEND_PREMULTIPLY);
+    if (!gui_get_acc()->enable_async)
+    {
+        PPE_Finish();
+    }
     if (err != PPE_SUCCESS)
     {
         DBG_DIRECT("font err %d", err);
