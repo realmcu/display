@@ -511,7 +511,7 @@ IDU_ERROR IDU_Decode(uint8_t *file, IDU_decode_range *range, IDU_DMA_config *dma
         tx_block_size = decompress_line_size / 4;
         decompress_target_stride = decompress_target_stride / 4;
     }
-    if (DMA_decompressed_data_size_word >= 65535)
+    else if (DMA_decompressed_data_size_word >= 65535)
     {
         tx_block_num = DMA_decompressed_data_size_word / 65535;
         if (DMA_decompressed_data_size_word % 65535)
@@ -855,7 +855,7 @@ IDU_ERROR IDU_Decode_With_Interrupt(uint8_t *file, IDU_decode_range *range, IDU_
         tx_block_num = decompress_height;
         tx_block_size = decompress_line_size;
     }
-    if (DMA_decompressed_data_size_word >= 65535)
+    else if (DMA_decompressed_data_size_word >= 65535)
     {
         tx_block_num = DMA_decompressed_data_size_word / 65535;
         if (DMA_decompressed_data_size_word % 65535)
