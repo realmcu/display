@@ -1603,10 +1603,10 @@ PPE_ERR PPE_Mask(ppe_buffer_t *src, ppe_buffer_t *target, ppe_rect_t *rect, uint
 
     RCC_PeriphClockCmd(APBPeriph_PPE, APBPeriph_PPE_CLOCK, ENABLE);
     /*declaration of input/result layer initialization struct*/
-    PPE_InputLayer_InitTypeDef      PPE_Input_Layer1;
-    PPE_InputLayer_InitTypeDef      PPE_Input_Layer2;
-    PPE_ResultLayer_InitTypeDef     PPE_Result_Layer;
-    PPE_InitTypeDef                 PPE_Init_User;
+    PPE_InputLayer_InitTypeDef      PPE_Input_Layer1 = {0};
+    PPE_InputLayer_InitTypeDef      PPE_Input_Layer2 = {0};
+    PPE_ResultLayer_InitTypeDef     PPE_Result_Layer = {0};
+    PPE_InitTypeDef                 PPE_Init_User = {0};
 
     PPE_InputLayer_StructInit(&PPE_Input_Layer1);
     PPE_InputLayer_StructInit(&PPE_Input_Layer2);
@@ -1634,6 +1634,7 @@ PPE_ERR PPE_Mask(ppe_buffer_t *src, ppe_buffer_t *target, ppe_rect_t *rect, uint
     PPE_Input_Layer2.handshake_en                   = DISABLE;
     PPE_Input_Layer2.handshake_msize                = PPE_MSIZE_1024;
     PPE_Input_Layer2.hw_index                       = 0;
+    PPE_Input_Layer2.key_color_value                = 0;
     PPE_InitInputLayer(2, &PPE_Input_Layer2);
 
     /*initial input layer1*/
