@@ -759,7 +759,7 @@ PPE_ERR PPE_Blit_Inverse(ppe_buffer_t *dst, ppe_buffer_t *src, uint8_t *output,
     {
         if (PPE_Get_Pixel_Size(dst->format) == 16)
         {
-            PPE_ResultLayer0_Init.Block_Width = 16;
+            PPE_ResultLayer0_Init.Block_Width = 32;
             PPE_ResultLayer0_Init.Block_Height = 24;
         }
         else
@@ -773,7 +773,7 @@ PPE_ERR PPE_Blit_Inverse(ppe_buffer_t *dst, ppe_buffer_t *src, uint8_t *output,
         if (PPE_Get_Pixel_Size(dst->format) == 16)
         {
             PPE_ResultLayer0_Init.Block_Width = 32;
-            PPE_ResultLayer0_Init.Block_Height = 16;
+            PPE_ResultLayer0_Init.Block_Height = 32;
         }
         else
         {

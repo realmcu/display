@@ -4,6 +4,8 @@
 #include "rtl_idu.h"
 #include "utils/rtl_utils.h"
 
+#define MAX_DMA_BLOCK_SIZE 65535
+
 typedef enum
 {
     IDU_HW_HANDSHAKE_DMA = 0x0,     /*!< Handshake with DMA. */

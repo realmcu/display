@@ -3,6 +3,8 @@
 #include "rtl876x_nvic.h"
 #include "rtl_idu.h"
 
+#define MAX_DMA_BLOCK_SIZE 1048575
+
 #define IDU_REG_BASE        IDU_BASE
 
 typedef enum

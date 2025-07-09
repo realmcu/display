@@ -44,12 +44,12 @@ extern void sw_acc_blit(draw_img_t *image, struct gui_dispdev *dc, struct gui_re
 #define PPE_TESS_LENGTH             92
 
 //#include "section.h"
-#define CACHE_BUF_SIZE           (42 * 1024)
+#define CACHE_BUF_SIZE           (0 * 1024)
 SHM_DATA_SECTION static uint8_t cache_buf1[CACHE_BUF_SIZE];
 //static uint8_t cache_buf1[CACHE_BUF_SIZE];
 static uint8_t *cache_buf2;
 static uint8_t *cache_buf = cache_buf1;
-static uint32_t last_cache_size = 0;
+static int32_t last_cache_size = 0;
 static uint8_t high_speed_dma_channel_num = 0xFF;
 static uint8_t low_speed_dma_channel_num = 0xFF;
 
@@ -580,6 +580,11 @@ void hw_acc_blit_direct(draw_img_t *image, struct gui_dispdev *dc, struct gui_re
     case XRGB8888:
         source.format = PPE_XRGB8888;
         break;
+    case ALPHAMASK:
+        source.format = PPE_A8;
+        source.const_color = *(uint32_t *)((uint32_t)image->data + sizeof(struct gui_rgb_data_head));
+        source.address += 4;
+        break;
     default:
         return;
     }
@@ -828,6 +833,7 @@ void hw_acc_blit_cache(draw_img_t *image, struct gui_dispdev *dc, struct gui_rec
                             uint32_t dst_stride = target.stride * pixel_size;
                             uint8_t *dest_address = (uint8_t *)(target.address + (dst_rect.y1 * target.stride + dst_rect.x1) *
                                                                 pixel_size);
+                            PPE_Finish();
                             hw_idu_decode(&src_rect, (uint8_t *)source.address, dst_stride, dest_address);
                             os_unlock(s);
                         }
@@ -835,6 +841,7 @@ void hw_acc_blit_cache(draw_img_t *image, struct gui_dispdev *dc, struct gui_rec
                         {
                             uint32_t s;
                             s = os_lock();
+                            PPE_Finish();
                             bare_blit_by_dma(&target, &source, &src_rect, &dst_rect);
                             os_unlock(s);
                         }
@@ -958,7 +965,8 @@ void hw_acc_blit_cache(draw_img_t *image, struct gui_dispdev *dc, struct gui_rec
         block_num = 1;
     }
 
-    if (shape_transform && image->acc_user != NULL && image->blend_mode != IMG_RECT)
+    if (shape_transform && image->acc_user != NULL && image->blend_mode != IMG_RECT &&
+        dc->type == DC_RAMLESS)
     {
         ppe_rect_t section_rect = {.x1 = x_min - dc->section.x1, .y1 = y_min - dc->section.y1, .x2 = dc->fb_width - 1, .y2 = dc->fb_height - 1};
         if (section_rect.x1 < 0)
@@ -1020,17 +1028,23 @@ void hw_acc_blit_cache(draw_img_t *image, struct gui_dispdev *dc, struct gui_rec
         constraint.y2 += dc->section.y1;
     }
     bool ret = false;
-    if ((image->matrix.m[2][0] == 0 && image->matrix.m[2][1] == 0) && image->blend_mode != IMG_RECT)
+    if ((image->matrix.m[2][0] == 0 && image->matrix.m[2][1] == 0 && image->blend_mode != IMG_RECT) ||
+        dc->type != DC_RAMLESS)
     {
         ret = ppe_get_area(&old_rect, &constraint, (ppe_matrix_t *)&image->inverse, &source);
         if (ret)
         {
+#if CACHE_BUF_SIZE
             if ((old_rect.x2 - old_rect.x1 + 1) * (old_rect.y2 - old_rect.y1 + 1) \
                 * PPE_Get_Pixel_Size(source.format) / 8 < CACHE_BUF_SIZE)
             {
                 block_num = 1;
                 tessalation_len = dc->fb_width;
             }
+#else
+            block_num = 1;
+            tessalation_len = dc->fb_width;
+#endif
         }
         else
         {
@@ -1095,6 +1109,23 @@ void hw_acc_blit_cache(draw_img_t *image, struct gui_dispdev *dc, struct gui_rec
                         continue;
                     }
                 }
+                if (old_rect.x1 > 0)
+                {
+                    old_rect.x1 -= 1;
+                }
+                if (old_rect.y1 > 0)
+                {
+                    old_rect.y1 -= 1;
+                }
+                if (old_rect.x2 < image->img_w - 1)
+                {
+                    old_rect.x2 += 1;
+                }
+                if (old_rect.y2 < image->img_h - 1)
+                {
+                    old_rect.x1 += 1;
+                }
+
             }
             if (rect != NULL)
             {
@@ -1111,8 +1142,8 @@ void hw_acc_blit_cache(draw_img_t *image, struct gui_dispdev *dc, struct gui_rec
                     }
                 }
             }
-            uint32_t new_cache_size = (old_rect.x2 - old_rect.x1 + 1) * (old_rect.y2 - old_rect.y1 + 1)\
-                                      * PPE_Get_Pixel_Size(source.format) / 8 + 4;
+            int new_cache_size = (old_rect.x2 - old_rect.x1 + 1) * (old_rect.y2 - old_rect.y1 + 1)\
+                                 * PPE_Get_Pixel_Size(source.format) / 8 + 4;
             if (new_cache_size < (CACHE_BUF_SIZE - last_cache_size - 4))
             {
                 change_cache_buf(new_cache_size);
@@ -1157,9 +1188,16 @@ void hw_acc_blit_cache(draw_img_t *image, struct gui_dispdev *dc, struct gui_rec
             }
             else
             {
-                uint32_t s = os_lock();
-                ret = memcpy_by_dma(&old_rect, &source);
-                os_unlock(s);
+                if (dc->type == DC_RAMLESS)
+                {
+                    uint32_t s = os_lock();
+                    ret = memcpy_by_dma(&old_rect, &source);
+                    os_unlock(s);
+                }
+                else
+                {
+                    ret = false;
+                }
             }
             ppe_rect.y1 -= section_y1;
             ppe_rect.y2 -= section_y1;
@@ -1372,6 +1410,7 @@ void hw_blit_font(draw_font_t *font, font_glyph_t *glyph)
     inverse.m[0][2] = -glyph->pos_x;
     inverse.m[1][2] = -glyph->pos_y;
     ppe_translate(font->target_rect.x1, font->target_rect.y1, &inverse);
+    PPE_Finish();
     PPE_ERR err = PPE_Blit_Inverse(&target, &source, NULL, &inverse, &constraint,
                                    PPE_BLEND_PREMULTIPLY);
     if (!gui_get_acc()->enable_async)
@@ -1548,10 +1587,13 @@ void hw_acc_init(void)
 {
     PPE_CLK_ENABLE(ENABLE);
     GDMA_channel_request(&high_speed_dma_channel_num, NULL, true);
+#if CACHE_BUF_SIZE < (5 * 1024)
+    GDMA_channel_request(&low_speed_dma_channel_num, NULL, true);
+#else
     GDMA_channel_request(&low_speed_dma_channel_num, NULL, false);
-
     extern void (* draw_img_acc_prepare_cb)(struct draw_img * image, gui_rect_t *rect);
     extern void (* draw_img_acc_end_cb)(struct draw_img * image);
     draw_img_acc_prepare_cb = hw_acc_prepare_cb;
     draw_img_acc_end_cb = hw_acc_end_cb;
+#endif
 }

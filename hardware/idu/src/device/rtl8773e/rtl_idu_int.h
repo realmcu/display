@@ -3,6 +3,8 @@
 #include "rtl876x_nvic.h"
 #include "rtl_idu.h"
 
+#define MAX_DMA_BLOCK_SIZE 65535
+
 typedef enum
 {
     IDU_HW_HANDSHAKE_DMA = 0x0,     /*!< Handshake with DMA. */
