@@ -1498,7 +1498,7 @@ static void *jpu_get_raw_buf(void *ptr)
     return NULL;
 }
 
-static void jpu_free(void *ptr)
+static void jpu_free(void *ptr, bool need_free)
 {
     uint8_t i = 0;
 
@@ -1517,7 +1517,7 @@ static void jpu_free(void *ptr)
         }
     }
 
-    if (i < JPU_BUFF_NUM_MAX)
+    if (i < JPU_BUFF_NUM_MAX && need_free)
     {
         JPU_FREE(ptr);
     }
@@ -1573,14 +1573,14 @@ void hal_jpu_fb_free(void)
 {
     if (fb_raw && JPU_FREE)
     {
-        jpu_free(fb_raw);
+        jpu_free(fb_raw, true);
         fb_raw = NULL;
     }
 }
 
-void hal_jpu_fb_clean(void)
+void hal_jpu_fb_clean(void *ptr)
 {
-    fb_raw = NULL;
+    jpu_free(ptr, false);
 }
 
 void hal_jpu_free_cache(void *ptr)
@@ -1588,7 +1588,7 @@ void hal_jpu_free_cache(void *ptr)
     if (ptr && JPU_FREE)
     {
         // DBG_DIRECT("JPU free 0x%x", ptr);
-        jpu_free(ptr);
+        jpu_free(ptr, true);
     }
 }
 
@@ -2005,7 +2005,7 @@ void hal_jpu_jpg_buf_free(void)
 {
     if (jpg_buf_raw)
     {
-        jpu_free(jpg_buf_raw);
+        jpu_free(jpg_buf_raw, true);
         jpg_buf_raw = NULL;
     }
 }
@@ -2420,7 +2420,7 @@ JPU_ERROR hal_jpu_encode(JPU_ENC_PARAM *enc_param, uint8_t **output, uint32_t *w
     ret = JPU_Encode(config);
     if (enc_fb_buf_raw)
     {
-        jpu_free(enc_fb_buf_raw);
+        jpu_free(enc_fb_buf_raw, true);
     }
 
     JPU_OUTPUT_HW_INFO *output_info = JPU_Read_Output();
