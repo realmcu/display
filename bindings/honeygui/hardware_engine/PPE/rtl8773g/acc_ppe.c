@@ -585,6 +585,19 @@ void hw_acc_blit_direct(draw_img_t *image, struct gui_dispdev *dc, struct gui_re
         source.const_color = *(uint32_t *)((uint32_t)image->data + sizeof(struct gui_rgb_data_head));
         source.address += 4;
         break;
+    case PALETTE:
+        {
+            gui_palette_file_t *head = (gui_palette_file_t *)image->data;
+            PPE->CLUT_INDEX = 0;
+            for (int i = 0; i < 256; i++)
+            {
+                PPE->CLUT_CONT = (0xFF000000 | (head->palette_data[i * 3] << 16) | (head->palette_data[i * 3 + 1] <<
+                                                                                    8) | head->palette_data[i * 3 + 2]);
+            }
+            source.address = (uint32_t)head->palette_index;
+            source.format = PPE_I8;
+            break;
+        }
     default:
         return;
     }
@@ -620,7 +633,6 @@ void hw_acc_blit_direct(draw_img_t *image, struct gui_dispdev *dc, struct gui_re
     ppe_matrix_t inverse;
     memcpy(&inverse, &image->inverse, sizeof(float) * 9);
     ppe_translate(0, dc->section.y1, &inverse);
-//    ppe_rect_t ppe_rect = {.x1 = 0, .y1 = 0, .x2 = dc->fb_width - 1, .y2 = dc->fb_height - 1};
     source.high_quality = true;
     if (image->blend_mode == IMG_FILTER_BLACK)
     {
@@ -641,8 +653,8 @@ void hw_acc_blit_direct(draw_img_t *image, struct gui_dispdev *dc, struct gui_re
     if (!ppe_matrix_is_complex(&inverse))
     {
         source.high_quality = false;
-        if ((source.format == PPE_RGB565 || source.format == PPE_RGB888) &&
-            image->blend_mode != IMG_FILTER_BLACK)
+        if ((source.format == PPE_RGB565 || source.format == PPE_RGB888 || source.format == PPE_I8) \
+            && image->blend_mode != IMG_FILTER_BLACK)
         {
             method = PPE_BLEND_BYPASS;
         }
