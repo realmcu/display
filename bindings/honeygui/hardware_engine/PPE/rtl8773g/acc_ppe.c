@@ -17,6 +17,7 @@
 #include "section.h"
 #include "trace.h"
 #include "font_rendering_utils.h"
+#include "def_file.h"
 
 #define F_APP_GUI_USE_PSRAM 1
 #define PSRAM_GUI_HEAP_ADDR SPIC1_MEM_BASE
@@ -43,15 +44,13 @@ extern void sw_acc_blit(draw_img_t *image, struct gui_dispdev *dc, struct gui_re
 #define PPE_ACC_MIN_OPA             3
 #define PPE_TESS_LENGTH             92
 
-//#include "section.h"
-#define CACHE_BUF_SIZE           (0 * 1024)
-SHM_DATA_SECTION static uint8_t cache_buf1[CACHE_BUF_SIZE];
-//static uint8_t cache_buf1[CACHE_BUF_SIZE];
+static uint8_t *cache_buf1;
 static uint8_t *cache_buf2;
-static uint8_t *cache_buf = cache_buf1;
+static uint8_t *cache_buf = NULL;
 static int32_t last_cache_size = 0;
 static uint8_t high_speed_dma_channel_num = 0xFF;
 static uint8_t low_speed_dma_channel_num = 0xFF;
+static int32_t CACHE_BUF_SIZE = 0;
 
 static void change_cache_buf(uint32_t cache_size)
 {
@@ -1046,17 +1045,20 @@ void hw_acc_blit_cache(draw_img_t *image, struct gui_dispdev *dc, struct gui_rec
         ret = ppe_get_area(&old_rect, &constraint, (ppe_matrix_t *)&image->inverse, &source);
         if (ret)
         {
-#if CACHE_BUF_SIZE
-            if ((old_rect.x2 - old_rect.x1 + 1) * (old_rect.y2 - old_rect.y1 + 1) \
-                * PPE_Get_Pixel_Size(source.format) / 8 < CACHE_BUF_SIZE)
+            if (CACHE_BUF_SIZE)
+            {
+                if ((old_rect.x2 - old_rect.x1 + 1) * (old_rect.y2 - old_rect.y1 + 1) \
+                    * PPE_Get_Pixel_Size(source.format) / 8 < CACHE_BUF_SIZE)
+                {
+                    block_num = 1;
+                    tessalation_len = dc->fb_width;
+                }
+            }
+            else
             {
                 block_num = 1;
                 tessalation_len = dc->fb_width;
             }
-#else
-            block_num = 1;
-            tessalation_len = dc->fb_width;
-#endif
         }
         else
         {
@@ -1425,7 +1427,7 @@ void hw_blit_font(draw_font_t *font, font_glyph_t *glyph)
     PPE_Finish();
     PPE_ERR err = PPE_Blit_Inverse(&target, &source, NULL, &inverse, &constraint,
                                    PPE_BLEND_PREMULTIPLY);
-    if (!gui_get_acc()->enable_async)
+    //if(!gui_get_acc()->enable_async)
     {
         PPE_Finish();
     }
@@ -1597,15 +1599,28 @@ void hw_acc_blit(draw_img_t *image, struct gui_dispdev *dc, struct gui_rect *rec
 
 void hw_acc_init(void)
 {
+    cache_buf1 = gui_get_acc()->hw_acc_cache_mem;
+    CACHE_BUF_SIZE = gui_get_acc()->hw_acc_cache_size;
+    if (cache_buf1)
+    {
+        GUI_ASSERT(CACHE_BUF_SIZE != 0);
+    }
+    if (CACHE_BUF_SIZE)
+    {
+        GUI_ASSERT(cache_buf1 != NULL);
+    }
     PPE_CLK_ENABLE(ENABLE);
     GDMA_channel_request(&high_speed_dma_channel_num, NULL, true);
-#if CACHE_BUF_SIZE < (5 * 1024)
-    GDMA_channel_request(&low_speed_dma_channel_num, NULL, true);
-#else
-    GDMA_channel_request(&low_speed_dma_channel_num, NULL, false);
-    extern void (* draw_img_acc_prepare_cb)(struct draw_img * image, gui_rect_t *rect);
-    extern void (* draw_img_acc_end_cb)(struct draw_img * image);
-    draw_img_acc_prepare_cb = hw_acc_prepare_cb;
-    draw_img_acc_end_cb = hw_acc_end_cb;
-#endif
+    if (CACHE_BUF_SIZE < (5 * 1024))
+    {
+        GDMA_channel_request(&low_speed_dma_channel_num, NULL, true);
+    }
+    else
+    {
+        GDMA_channel_request(&low_speed_dma_channel_num, NULL, false);
+        extern void (* draw_img_acc_prepare_cb)(struct draw_img * image, gui_rect_t *rect);
+        extern void (* draw_img_acc_end_cb)(struct draw_img * image);
+        draw_img_acc_prepare_cb = hw_acc_prepare_cb;
+        draw_img_acc_end_cb = hw_acc_end_cb;
+    }
 }

@@ -990,7 +990,7 @@ PPE_ERR PPE_Mask(ppe_buffer_t *dst, uint32_t color, ppe_rect_t *rect)
 
 PPE_ERR PPE_Clear(ppe_buffer_t *dst, uint32_t color, ppe_rect_t *rect)
 {
-    if (dst->address == NULL)
+    if (dst->address == (uint32_t)NULL)
     {
         return PPE_ERR_NULL_TARGET;
     }
@@ -1010,7 +1010,7 @@ PPE_ERR PPE_Clear(ppe_buffer_t *dst, uint32_t color, ppe_rect_t *rect)
     PPE_InputLayer_enable(PPE_INPUT_1, ENABLE);           // logic enable of layer
     PPE_InputLayer_Init_Typedef PPE_input_layer1_init = {.Color_Key_Enable.key_enable = 0};
     PPE_InputLayer_StructInit(PPE_INPUT_1, &PPE_input_layer1_init);
-    PPE_input_layer1_init.Layer_Address                   = NULL;
+    PPE_input_layer1_init.Layer_Address                   = 0;
     PPE_input_layer1_init.Pic_Width                      = (uint32_t)dst->width;
     PPE_input_layer1_init.Pic_Height                       = (uint32_t)dst->height;
     PPE_input_layer1_init.Line_Length                     = 0;
