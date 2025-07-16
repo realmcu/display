@@ -5,8 +5,7 @@
 * \file     rtl_jpu.h
 * \brief    This file provides all the JPU firmware functions.
 * \details  This module implements the JPEG Processing Unit (JPU) driver,
-*           supporting various JPEG image including RLE, FastLZ,
-*           and YUV sampling with blur effects for efficient image processing.
+*           supporting various JPEG image decode and encode.
 * \author   roy xie
 * \date     2025-03-24
 * \version  v1.0
@@ -86,7 +85,7 @@ typedef enum
     JPU_FORMAT_224 = 2,
     JPU_FORMAT_444 = 3,
     JPU_FORMAT_400 = 4
-} JPU_FORMAT;   // format of jpeg
+} JPU_JPG_FORMAT;   // format of jpeg
 
 typedef enum
 {
@@ -168,7 +167,7 @@ typedef struct
     uint32_t cycle;
     uint32_t strmWrPtr;
 
-} JPU_OUTPUT_HW_INFO;
+} JPU_HW_INFO;
 
 
 typedef struct
@@ -330,7 +329,7 @@ typedef struct
 void JPU_Clk_Init(void);
 void JPU_Deinit(void);
 void JPU_Reset(void);
-JPU_OUTPUT_HW_INFO *JPU_Read_Output(void);
+JPU_HW_INFO *JPU_Read_Output(void);
 
 uint32_t JPU_Decode(JPU_DEC_CFG *config);
 uint32_t JPU_Encode(JPU_ENC_CFG *config);

@@ -1068,9 +1068,9 @@ void JPU_Write_test(uint32_t val)
 }
 
 
-static JPU_OUTPUT_HW_INFO output_hw_info;
+static JPU_HW_INFO output_hw_info;
 
-JPU_OUTPUT_HW_INFO *JPU_Read_Output(void)
+JPU_HW_INFO *JPU_Read_Output(void)
 {
     return &output_hw_info;
 }
@@ -1539,22 +1539,22 @@ uint32_t JPU_Encode(JPU_ENC_CFG *config)
     switch (config->format)
     {
     case JPU_FORMAT_422:
-        DBG_DIRECT("Encode to 422 JPG");
+        // DBG_DIRECT("Encode to 422 JPG");
         jpu_reg_0x18.d32 = 0x00043955;
         break;
     case JPU_FORMAT_444:
-        DBG_DIRECT("Encode to 444 JPG");
+        // DBG_DIRECT("Encode to 444 JPG");
         // different from sw package original value
         jpu_reg_0x18.d32 = 0x00133555;
         break;
     case JPU_FORMAT_420:
-        DBG_DIRECT("Encode to 420 JPG");
+        // DBG_DIRECT("Encode to 420 JPG");
         jpu_reg_0x18.d32 = 0x00063A55;
         break;
     default:
         jpu_reg_0x18.d32 = config->mcuBlockNum << 16 | config->compNum << 12
                            | config->compInfo[0] << 8 | config->compInfo[1] << 4 | config->compInfo[2];
-        DBG_DIRECT("MCU: Ori 0x%x", jpu_reg_0x18.d32);
+        // DBG_DIRECT("MCU: Ori 0x%x", jpu_reg_0x18.d32);
         break;
     }
     JPU->MCU_INFO = jpu_reg_0x18.d32;

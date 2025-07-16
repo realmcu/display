@@ -228,10 +228,12 @@ static unsigned char chromaBQ2[64] =
 
 
 
-
+static uint8_t jpu_heap_available = false;
 static void *(*JPU_MALLOC)(size_t);
 static void (*JPU_FREE)(void *);
 
+static JPU_OUTPUT_INFO output_info;
+static uint32_t header_sz;
 /*============================================================================*
  *                           Static Functions
  *============================================================================*/
@@ -239,13 +241,11 @@ static void (*JPU_FREE)(void *);
 
 static JPU_ERROR JPU_Dec_Prepare(JPU_DEC_PARAM *usr_param, JPU_DEC_PARAM_INT *param)
 {
-//    //- DBG_DIRECT("%s %d \n", __FUNCTION__, __LINE__);
     memset(param, 0, sizeof(JPU_DEC_PARAM_INT));
 
     param->data = usr_param->data;
     param->size = usr_param->size;
 
-//    //- DBG_DIRECT("%s %d \n", __FUNCTION__, __LINE__);
     // default param: not exported to user for now
     {
         // Chroma format type [0](SEPARATED CHROMA) [1](CBCR INTERLEAVED) [2](CRCB INTERLEAVED)
@@ -268,10 +268,8 @@ static JPU_ERROR JPU_Dec_Prepare(JPU_DEC_PARAM *usr_param, JPU_DEC_PARAM_INT *pa
         param->partialBufNum = 4;
     }
 
-//    //- DBG_DIRECT("%s %d \n", __FUNCTION__, __LINE__);
     // Packed stream format output [0](PLANAR) [1](YUYV) [2](UYVY) [3](YVYU) [4](VYUY) [5](YUV_444 PACKED)
-    param->packedFormat = usr_param->packedFormat;
-//    //- DBG_DIRECT("%s %d \n", __FUNCTION__, __LINE__);
+    param->packedFormat = usr_param->frameFormat;
 //return JPU_SUCCESS;
     // Wrapper enable: 0-OFF, 1-ON
     param->useWrapper = usr_param->useWrapper;
@@ -281,7 +279,7 @@ static JPU_ERROR JPU_Dec_Prepare(JPU_DEC_PARAM *usr_param, JPU_DEC_PARAM_INT *pa
     {
         if (param->packedFormat == PACKED_FORMAT_NONE)
         {
-            //- DBG_DIRECT("Invalid operation mode : plannar format and wrapper can not be worked\n");
+            // DBG_DIRECT("Invalid operation mode : plannar format and wrapper can not be worked\n");
             return JPU_ERR_INVALID_PARAM;
         }
         if (param->rgbType == JPU_ARGB8888)
@@ -291,7 +289,6 @@ static JPU_ERROR JPU_Dec_Prepare(JPU_DEC_PARAM *usr_param, JPU_DEC_PARAM_INT *pa
     }
 
     // param->roiEnable = usr_param->roiEnable;
-//  //- DBG_DIRECT("param->roiEnable %d", param->roiEnable);
 
     if (param->roiEnable)
     {
@@ -324,7 +321,7 @@ static JPU_ERROR JPU_Dec_Prepare(JPU_DEC_PARAM *usr_param, JPU_DEC_PARAM_INT *pa
             param->rotAngle != ROT_ANGLE_180 &&
             param->rotAngle != ROT_ANGLE_270)
         {
-            //- DBG_DIRECT("Invalid rotation angle.\n");
+            // DBG_DIRECT("Invalid rotation angle.\n");
             return JPU_ERR_INVALID_PARAM;
         }
         // mirror direction(0-no mirror, 1-vertical, 2-horizontal, 3-both);
@@ -332,7 +329,7 @@ static JPU_ERROR JPU_Dec_Prepare(JPU_DEC_PARAM *usr_param, JPU_DEC_PARAM_INT *pa
         if (param->mirDir != MIRDIR_NONE && param->mirDir != MIRDIR_VER && param->mirDir != MIRDIR_HOR &&
             param->mirDir != MIRDIR_HOR_VER)
         {
-            //- DBG_DIRECT("Invalid mirror direction.\n");
+            // DBG_DIRECT("Invalid mirror direction.\n");
             return JPU_ERR_INVALID_PARAM;
         }
         if (param->rotAngle != ROT_ANGLE_0 || param->mirDir != MIRDIR_NONE)
@@ -1441,13 +1438,6 @@ static void JpuEncSetupTables(JPU_ENC_INFO *info, uint32_t quality)
 }
 
 
-
-
-
-
-// align buffer
-#define JPU_BUFF_NUM_MAX  (64)
-
 typedef struct
 {
     uint8_t *ptr;
@@ -1461,42 +1451,29 @@ static void *jpu_malloc(size_t size)
     void *ptr = NULL;
     uint8_t i = 0;
 
-    ptr = JPU_MALLOC(size);
-    for (i = 0; i < JPU_BUFF_NUM_MAX; i++)
+    if (jpu_heap_available)
     {
-        if (!jcache_buffer[i].ptr)
+        ptr = JPU_MALLOC(size);
+        for (i = 0; i < JPU_BUFF_NUM_MAX; i++)
         {
-            jcache_buffer[i].ptr = (uint8_t *)ptr;
-            jcache_buffer[i].sz = size;
-            break;
+            if (!jcache_buffer[i].ptr)
+            {
+                jcache_buffer[i].ptr = (uint8_t *)ptr;
+                jcache_buffer[i].sz = size;
+                break;
+            }
         }
-    }
-    if (i == JPU_BUFF_NUM_MAX)
-    {
-        DBG_DIRECT("JPU malloc assert: Buffer num not enough!");
-        while (1);
+        if (i == JPU_BUFF_NUM_MAX)
+        {
+            DBG_DIRECT("JPU malloc assert: Buffer num not enough!");
+            while (1);
+        }
+        // DBG_DIRECT("JPU malloc: 0x%x %d", ptr, size);
     }
 
     return ptr;
 }
 
-static void *jpu_get_raw_buf(void *ptr)
-{
-    uint8_t i = 0;
-    for (i = 0; i < JPU_BUFF_NUM_MAX; i++)
-    {
-        // DBG_DIRECT("--jpg free align ck i:%d 0x%x %d sz: %d", i, jcache_buffer[i].ptr, jcache_buffer[i].align,
-        //                jcache_buffer[i].sz);
-        if ((ptr == jcache_buffer[i].ptr) || (((uint8_t *)ptr > jcache_buffer[i].ptr) &&
-                                              ((uint8_t *)ptr < jcache_buffer[i].ptr + jcache_buffer[i].sz)))
-        {
-            // DBG_DIRECT("---->buf align i:%d 0x%x  sz: %d", i, jcache_buffer[i].ptr, jcache_buffer[i].sz);
-            ptr = (void *)jcache_buffer[i].ptr;
-            return ptr;
-        }
-    }
-    return NULL;
-}
 
 static void jpu_free(void *ptr, bool need_free)
 {
@@ -1527,6 +1504,25 @@ static void jpu_free(void *ptr, bool need_free)
 /*============================================================================*
  *                           Public Functions
  *============================================================================*/
+
+void *hal_jpu_get_raw_buffer(void *ptr)
+{
+    uint8_t i = 0;
+    for (i = 0; i < JPU_BUFF_NUM_MAX; i++)
+    {
+        // DBG_DIRECT("--jpg free align ck i:%d 0x%x %d sz: %d", i, jcache_buffer[i].ptr, jcache_buffer[i].align,
+        //                jcache_buffer[i].sz);
+        if ((ptr == jcache_buffer[i].ptr) || (((uint8_t *)ptr > jcache_buffer[i].ptr) &&
+                                              ((uint8_t *)ptr < jcache_buffer[i].ptr + jcache_buffer[i].sz)))
+        {
+            // DBG_DIRECT("---->buf align i:%d 0x%x  sz: %d", i, jcache_buffer[i].ptr, jcache_buffer[i].sz);
+            ptr = (void *)jcache_buffer[i].ptr;
+            return ptr;
+        }
+    }
+    return NULL;
+}
+
 
 #if 0
 {
@@ -1561,31 +1557,19 @@ static void jpu_free(void *ptr, bool need_free)
 #endif
 
 // decode jpg
-static uint32_t header_sz;
 void hal_jpu_add_dec_header(uint32_t size)
 {
     header_sz = size;
 }
 
-
-static uint8_t *fb_raw;
-void hal_jpu_fb_free(void)
-{
-    if (fb_raw && JPU_FREE)
-    {
-        jpu_free(fb_raw, true);
-        fb_raw = NULL;
-    }
-}
-
-void hal_jpu_fb_clean(void *ptr)
+void hal_jpu_clean_buffer(void *ptr)
 {
     jpu_free(ptr, false);
 }
 
 void hal_jpu_free_cache(void *ptr)
 {
-    if (ptr && JPU_FREE)
+    if (ptr && jpu_heap_available)
     {
         // DBG_DIRECT("JPU free 0x%x", ptr);
         jpu_free(ptr, true);
@@ -1690,7 +1674,8 @@ static void log_dec_info(JPU_DEC_INFO *info)
     DBG_DIRECT("\n");
 }
 
-JPU_ERROR hal_jpu_decode(JPU_DEC_PARAM *dec_param, uint8_t **output, uint32_t *output_size)
+JPU_ERROR hal_jpu_decode(JPU_DEC_PARAM *dec_param, uint8_t **frame_buff, uint32_t *frame_size,
+                         uint32_t *dec_w, uint32_t *dec_h)
 {
     JPU_DEC_PARAM_INT g_dec_param;
     JPU_DEC_INFO g_dec_info;
@@ -1707,7 +1692,7 @@ JPU_ERROR hal_jpu_decode(JPU_DEC_PARAM *dec_param, uint8_t **output, uint32_t *o
 
     // check input validate
     if (!dec_param || !dec_param->data || ((uint32_t)dec_param->data & 0x7) || !dec_param->size ||
-        !output)
+        !frame_buff || !frame_size || !dec_w || !dec_h)
     {
         return JPU_ERR_INVALID_PARAM;
     }
@@ -1830,16 +1815,13 @@ JPU_ERROR hal_jpu_decode(JPU_DEC_PARAM *dec_param, uint8_t **output, uint32_t *o
         fb_size = fb_width * fb_height;
     }
 
-    // hal_jpu_fb_free();
-    fb_raw = (uint8_t *)jpu_malloc(fb_size + 7 + header_sz);
+    uint8_t *fb_raw = (uint8_t *)jpu_malloc(fb_size + 7 + header_sz);
     if (!fb_raw)
     {
         DBG_DIRECT("fb malloc failed, size %d\n", fb_size + 7 + header_sz);
         return JPU_ERR_MALLOC_FAIL;
     }
     uint8_t *fb = (uint8_t *)((((uint32_t)fb_raw + 7 + header_sz) >> 3) << 3);  // align to 8
-    *output = fb - header_sz;
-    *output_size = fb_size;
     // DBG_DIRECT("fb 0x%x fb_raw 0x%x, *output 0x%x, sz %d \n", fb, fb_raw, *output, fb_size);
 
 
@@ -1970,51 +1952,64 @@ JPU_ERROR hal_jpu_decode(JPU_DEC_PARAM *dec_param, uint8_t **output, uint32_t *o
     config->opa = param->opacity;
 
     // output info
-    JPU_OUTPUT_INFO *poutput_info = hal_jpu_get_output();
+    JPU_OUTPUT_INFO *poutput_info = hal_jpu_get_info();
+    memset((void *)poutput_info, 0, sizeof(JPU_OUTPUT_INFO));
     poutput_info->picWidth = info->picWidth;
     poutput_info->picHeight = info->picHeight;
     poutput_info->alignedWidth = info->alignedWidth;
     poutput_info->alignedHeight = info->alignedHeight;
-    poutput_info->fb_raw = fb_raw;
-    poutput_info->fb = fb;
-    poutput_info->fb_size = fb_size;
+    poutput_info->buff_raw = fb_raw;
+    poutput_info->buff = fb;
+    poutput_info->buff_size = fb_size + 7 + header_sz;
 
 
     // start decode
     ret = JPU_Decode(config);
 
-    JPU_OUTPUT_HW_INFO *output_info = JPU_Read_Output();
+    JPU_HW_INFO *hw_info = JPU_Read_Output();
+    poutput_info->state = hw_info->status.d32;
+    poutput_info->cycle = hw_info->cycle;
+
     if (!ret)
     {
-        //- DBG_DIRECT("JPU Decode error: 0x%x\n", output_info->status.d32);
-        //- DBG_DIRECT("JPU Decode error: mcu_x %d mcu_y %d\n", output_info->dec_errmb.b.err_mcu_x,
-//                   output_info->dec_errmb.b.err_mcu_y);
-        hal_jpu_fb_free();
+        DBG_DIRECT("JPU Decode error: 0x%x\n", hw_info->status.d32);
+        DBG_DIRECT("JPU Decode error: mcu_x %d mcu_y %d\n", hw_info->dec_errmb.b.err_mcu_x,
+                   hw_info->dec_errmb.b.err_mcu_y);
+        poutput_info->err_mcu_x = hw_info->dec_errmb.b.err_mcu_x;
+        poutput_info->err_mcu_y = hw_info->dec_errmb.b.err_mcu_y;
+        hal_jpu_free_cache(fb_raw);
         return JPU_ERR_DECODE;
     }
 
-    uint32_t decode_cnt_clk = output_info->cycle;
-    //- DBG_DIRECT("INT_JPU_DONE cnt %d\n", decode_cnt_clk);
+    *frame_buff = fb - header_sz;
+    *frame_size = fb_size;
+    *dec_w = info->alignedWidth;
+    *dec_h = info->alignedHeight;
+
+    // DBG_DIRECT("INT_JPU_DONE cnt %d\n", hw_info->cycle);
 
     return JPU_SUCCESS;
 }
 
 
-static uint8_t *jpg_buf_raw;
-void hal_jpu_jpg_buf_free(void)
+
+
+static void log_enc_param(JPU_ENC_PARAM *param)
 {
-    if (jpg_buf_raw)
-    {
-        jpu_free(jpg_buf_raw, true);
-        jpg_buf_raw = NULL;
-    }
+    DBG_DIRECT("log_param\n");
+    DBG_DIRECT("data 0x%x %d -> format %d -> %d\n", param->data, param->size, param->frameFormat,
+               param->jpgFormat);
+    DBG_DIRECT("useWrapper %d, rgbType %d\n", param->useWrapper, param->rgbType);
+    DBG_DIRECT("jpg_buff_sz %d, quality %d\n", param->jpg_buff_sz, param->quality);
+
 }
 
-JPU_ERROR hal_jpu_encode(JPU_ENC_PARAM *enc_param, uint8_t **output, uint32_t *wr_size)
+JPU_ERROR hal_jpu_encode(JPU_ENC_PARAM *enc_param, uint8_t **jpg_buff, uint32_t *jpg_size,
+                         uint32_t *enc_w, uint32_t *enc_h)
 {
     JPU_ENC_PARAM_INT g_enc_param;
     JPU_ENC_INFO g_enc_info;
-    JPU_ENC_CFG g_enc_config;
+    // JPU_ENC_CFG g_enc_config;
 
     JPU_ERROR err = JPU_ERR_FAILURE;
     int ret = -1;
@@ -2022,40 +2017,43 @@ JPU_ERROR hal_jpu_encode(JPU_ENC_PARAM *enc_param, uint8_t **output, uint32_t *w
 
     JPU_ENC_PARAM_INT *param = &g_enc_param;
     JPU_ENC_INFO *info = &g_enc_info;
-    JPU_ENC_CFG *config = &g_enc_config;
+    // JPU_ENC_CFG *config = &g_enc_config;
+    JPU_ENC_CFG *config = NULL;
+
+    if (!jpu_heap_available)
+    {
+        return JPU_ERR_HEAP_NOT_AVAILABLE;
+    }
 
     // check input validate
     if (!enc_param || !enc_param->data || ((uint32_t)enc_param->data & 0x7) || !enc_param->size ||
-        !output || !wr_size)
+        !jpg_buff || !jpg_size || !enc_w || !enc_h)
     {
         return JPU_ERR_INVALID_PARAM;
     }
 
     memset((void *)param, 0, sizeof(JPU_ENC_PARAM_INT));
     memset((void *)info, 0, sizeof(JPU_ENC_INFO));
-    memset((void *)config, 0, sizeof(JPU_ENC_CFG));
     err = JPU_Enc_Prepare(enc_param, param);
     if (err != JPU_SUCCESS)
     {
         DBG_DIRECT("JPU_Enc_Prepare failed %d \n", err);
         return err;
     }
-    // log_param(param);
+    // log_enc_param(param);
 
     // reset JPU reg
     JPU_Clk_Init();
     JPU_Reset();
 
-    // hal_jpu_jpg_buf_free();
-    jpg_buf_raw = (uint8_t *)jpu_malloc(param->buff_sz + 7);
+    uint8_t *jpg_buf_raw = (uint8_t *)jpu_malloc(param->buff_sz + 7);
     if (!jpg_buf_raw)
     {
         DBG_DIRECT("jpg_buf malloc failed, size %d\n", param->buff_sz + 7);
         return JPU_ERR_MALLOC_FAIL;
     }
     uint8_t *jpg_buf = (uint8_t *)((((uint32_t)jpg_buf_raw + 7) >> 3) << 3);  // align to 8
-    *output = jpg_buf;
-    DBG_DIRECT("jpg_buf 0x%x jpg_buf_raw 0x%x, sz %d \n", jpg_buf, jpg_buf_raw, param->buff_sz);
+    // DBG_DIRECT("jpg_buf 0x%x jpg_buf_raw 0x%x, sz %d \n", jpg_buf, jpg_buf_raw, param->buff_sz);
 
     getJpuEncOpenParamDefault(info);
 
@@ -2230,7 +2228,7 @@ JPU_ERROR hal_jpu_encode(JPU_ENC_PARAM *enc_param, uint8_t **output, uint32_t *w
             return JPU_ERR_MALLOC_FAIL;
         }
         enc_fb_buf = (uint8_t *)((((uint32_t)enc_fb_buf_raw + 7) >> 3) << 3);  // align to 8
-        DBG_DIRECT("enc_fb_buf 0x%x enc_fb_buf_raw 0x%x, sz %d \n", enc_fb_buf, enc_fb_buf_raw, fb_size);
+        // DBG_DIRECT("enc_fb_buf 0x%x enc_fb_buf_raw 0x%x, sz %d \n", enc_fb_buf, enc_fb_buf_raw, fb_size);
 
         // copy frame to fb
         for (i = 0; i < param->picHeight; ++i)
@@ -2351,6 +2349,11 @@ JPU_ERROR hal_jpu_encode(JPU_ENC_PARAM *enc_param, uint8_t **output, uint32_t *w
 
 
     // construct config
+    config = jpu_malloc(sizeof(JPU_ENC_CFG));
+    if (!config)
+    {
+        return JPU_ERR_MALLOC_FAIL;
+    }
     memset(config, 0, sizeof(JPU_ENC_CFG));
 
     config->bs_buffer_start = jpg_buf;
@@ -2415,34 +2418,53 @@ JPU_ERROR hal_jpu_encode(JPU_ENC_PARAM *enc_param, uint8_t **output, uint32_t *w
     config->rotMirMode = rotMirMode;
     config->rotationAngle = param->rotAngle;
 
+    // expected encode size
+    JPU_OUTPUT_INFO *poutput_info = hal_jpu_get_info();
+    memset((void *)poutput_info, 0, sizeof(JPU_OUTPUT_INFO));
+    poutput_info->picWidth = param->picWidth;
+    poutput_info->picHeight = param->picHeight;
+    poutput_info->alignedWidth = info->alignedWidth;
+    poutput_info->alignedHeight = info->alignedHeight;
+    poutput_info->buff_raw = jpg_buf_raw;
+    poutput_info->buff = jpg_buf;
+    poutput_info->buff_size = param->buff_sz + 7;
+    poutput_info->jpg_format = param->jpgFormat;
+
+
 
     // start decode
     ret = JPU_Encode(config);
-    if (enc_fb_buf_raw)
-    {
-        jpu_free(enc_fb_buf_raw, true);
-    }
+    hal_jpu_free_cache(enc_fb_buf_raw);
+    hal_jpu_free_cache(config);
 
-    JPU_OUTPUT_HW_INFO *output_info = JPU_Read_Output();
+    JPU_HW_INFO *hw_info = JPU_Read_Output();
+    poutput_info->state = hw_info->status.d32;
+    poutput_info->cycle = hw_info->cycle;
+
     if (!ret)
     {
-        DBG_DIRECT("JPU Enc error: 0x%x\n", output_info->status.d32);
-        hal_jpu_jpg_buf_free();
+        DBG_DIRECT("JPU Enc error: 0x%x\n", hw_info->status.d32);
+        hal_jpu_free_cache(jpg_buf_raw);
+        if (poutput_info->state & JPU_STATUS_BBC_INT)
+        {
+            return JPU_ERR_BBC_INT;
+        }
         return JPU_ERR_ENCODE;
     }
 
-    uint32_t decode_cnt_clk = output_info->cycle;
-    DBG_DIRECT("INT_JPU_DONE cnt %d\n", decode_cnt_clk);
+    *jpg_buff = jpg_buf;
+    *jpg_size = hw_info->strmWrPtr - (uint32_t)jpg_buf;
+    *enc_w = info->alignedWidth;
+    *enc_h = info->alignedHeight;
 
-    *wr_size = output_info->strmWrPtr - (uint32_t)jpg_buf;
-    DBG_DIRECT("0x%x -> 0x%x, %d\n", jpg_buf, output_info->strmWrPtr, *wr_size);
-
+    // DBG_DIRECT("INT_JPU_DONE cycle %d\n", hw_info->cycle);
+    // DBG_DIRECT("0x%x -> 0x%x, %d\n", jpg_buf, hw_info->strmWrPtr, *wr_size);
 
     return JPU_SUCCESS;
 }
 
-static JPU_OUTPUT_INFO output_info;
-JPU_OUTPUT_INFO *hal_jpu_get_output(void)
+
+JPU_OUTPUT_INFO *hal_jpu_get_info(void)
 {
     return &output_info;
 }
@@ -2453,6 +2475,7 @@ void hal_jpu_mem_init(void *(*jmalloc)(size_t), void (*jfree)(void *))
     {
         JPU_MALLOC = jmalloc;
         JPU_FREE = jfree;
+        jpu_heap_available = true;
     }
 }
 
