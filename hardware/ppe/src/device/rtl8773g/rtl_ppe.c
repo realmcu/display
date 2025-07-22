@@ -502,7 +502,7 @@ PPE_ERR PPE_Blit_Inverse(ppe_buffer_t *dst, ppe_buffer_t *src, uint8_t *output,
     {
         return PPE_ERR_NULL_SOURCE;
     }
-    if ((src->win_x_max <= src->win_x_min) || (src->win_y_max <= src->win_y_min))
+    if ((src->win_x_max < src->win_x_min) || (src->win_y_max < src->win_y_min))
     {
         return PPE_ERR_INVALID_RANGE;
     }
