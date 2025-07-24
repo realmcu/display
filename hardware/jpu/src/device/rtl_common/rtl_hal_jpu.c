@@ -2432,7 +2432,7 @@ JPU_ERROR hal_jpu_encode(JPU_ENC_PARAM *enc_param, uint8_t **jpg_buff, uint32_t 
 
 
 
-    // start decode
+    // start encode
     ret = JPU_Encode(config);
     hal_jpu_free_cache(enc_fb_buf_raw);
     hal_jpu_free_cache(config);

@@ -15,7 +15,7 @@ void *hw_jpeg_load(void *input, int len, int *w, int *h, int *channel)
 {
     JPU_DEC_PARAM dec_param;
     uint8_t *output = NULL;
-    uint32_t dec_size = 0, w = 0, h = 0;
+    uint32_t dec_size = 0, dec_w = 0, dec_h = 0;
 
     JPU_ERROR err;
 
@@ -29,7 +29,7 @@ void *hw_jpeg_load(void *input, int len, int *w, int *h, int *channel)
 
     // DBG_DIRECT("img 0x%x, sz %d", dec_param.data, dec_param.size);
 
-    err = hal_jpu_decode(&dec_param, &output, &dec_size, &w, &h);
+    err = hal_jpu_decode(&dec_param, &output, &dec_size, &dec_w, &dec_h);
     if (err != JPU_SUCCESS)
     {
         DBG_DIRECT("img 0x%x, sz %d", dec_param.data, dec_param.size);
@@ -40,8 +40,8 @@ void *hw_jpeg_load(void *input, int len, int *w, int *h, int *channel)
     gui_rgb_data_head_t *pheader = (gui_rgb_data_head_t *)output;
     memset(pheader, 0, sizeof(gui_rgb_data_head_t));
     pheader->type = RGB565;
-    pheader->w = w;
-    pheader->h = h;
+    pheader->w = dec_w;
+    pheader->h = dec_h;
     pheader->jpeg = true;
 
 
