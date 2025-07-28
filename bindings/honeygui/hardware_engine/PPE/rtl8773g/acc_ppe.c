@@ -1293,51 +1293,64 @@ void hw_acc_blit_cache(draw_img_t *image, struct gui_dispdev *dc, struct gui_rec
     }
 }
 
-bool hw_acc_idu_decode(uint8_t *image, gui_rect_t *rect, uint8_t *output)
+void *hw_acc_idu_decode(void *input)
 {
-    if (image == NULL || rect == NULL || output == NULL)
+    if (input == NULL)
     {
-        GUI_ASSERT(image != NULL && rect != NULL && output != NULL);
-        return false;
+        GUI_ASSERT(input != NULL);
+        return NULL;
     }
-    struct gui_rgb_data_head output_header;
-    struct gui_rgb_data_head *head = (struct gui_rgb_data_head *)image;
-    memset(&output_header, 0, sizeof(struct gui_rgb_data_head));
-    const IDU_file_header *header = (IDU_file_header *)((uint32_t)image + sizeof(
-                                                            struct gui_rgb_data_head));
     uint8_t pixel_size = 0;
+    const gui_rgb_data_head_t *head = (gui_rgb_data_head_t *)input;
     switch (head->type)
     {
     case RGB565:
-        output_header.type = RGB565;
         pixel_size = 2;
         break;
     case RGB888:
-        output_header.type = RGB888;
         pixel_size = 3;
         break;
     case ARGB8888:
-        output_header.type = ARGB8888;
         pixel_size = 4;
         break;
     case ARGB8565:
-        output_header.type = ARGB8565;
         pixel_size = 3;
         break;
     default:
-        return false;
+        return NULL;
     }
+    const IDU_File_Header *idu_info = (IDU_File_Header *)((uint32_t)input + sizeof(
+                                                              gui_rgb_data_head_t));
+    uint8_t *decode_img_data = acc_ppe_malloc(sizeof(gui_rgb_data_head_t) + 4 + idu_info->raw_pic_width
+                                              * idu_info->raw_pic_height * pixel_size);
+    gui_rgb_data_head_t *output_header = (gui_rgb_data_head_t *)decode_img_data;
+    memcpy(output_header, head, sizeof(gui_rgb_data_head_t));
+    output_header->compress = 0;
+    output_header->idu = 1;
+
     RCC_PeriphClockCmd(APBPeriph_IDU, APBPeriph_IDU_CLOCK, ENABLE);
-    ppe_rect_t decode_rect = {.x1 = rect->x1, .y1 = rect->y1, .x2 = rect->x2, .y2 = rect->y2};
-    uint32_t buffer_stride = (decode_rect.x2 - decode_rect.x1 + 1) * pixel_size;
-    if (hw_idu_decode(&decode_rect, (uint8_t *)header, buffer_stride, output + 8))
+    ppe_rect_t decode_rect = {.x1 = 0, .y1 = 0, .x2 = head->w - 1, .y2 = head->h - 1};
+    uint32_t buffer_stride = head->w * pixel_size;
+    if (hw_idu_decode(&decode_rect, (uint8_t *)idu_info, buffer_stride,
+                      decode_img_data + sizeof(gui_rgb_data_head_t)))
     {
-        memcpy(output, &output_header, sizeof(struct gui_rgb_data_head));
-        return true;
+        return decode_img_data;
     }
     else
     {
-        return false;
+        acc_ppe_free(decode_img_data);
+        return NULL;
+    }
+}
+
+void hw_acc_idu_free(void *p)
+{
+    if (p)
+    {
+        if (((gui_rgb_data_head_t *)p)->idu)
+        {
+            acc_ppe_free(p);
+        }
     }
 }
 
@@ -1586,15 +1599,21 @@ void hw_acc_end_cb(draw_img_t *image)
 
 void hw_acc_blit(draw_img_t *image, struct gui_dispdev *dc, struct gui_rect *rect)
 {
+    uint32_t time1 = sys_timestamp_get_us();
     struct gui_rgb_data_head *head = image->data;
     if (!head->compress && image->blend_mode != IMG_RECT)
     {
+        uint32_t time3 = sys_timestamp_get_us();
         hw_acc_blit_direct(image, dc, rect);
+        uint32_t time4 = sys_timestamp_get_us();
+        ppe_time += (time4 - time3);
     }
     else
     {
         hw_acc_blit_cache(image, dc, rect);
     }
+    uint32_t time2 = sys_timestamp_get_us();
+    acc_time += (time2 - time1);
 }
 
 void hw_acc_init(void)
@@ -1620,7 +1639,7 @@ void hw_acc_init(void)
         GDMA_channel_request(&low_speed_dma_channel_num, NULL, false);
         extern void (* draw_img_acc_prepare_cb)(struct draw_img * image, gui_rect_t *rect);
         extern void (* draw_img_acc_end_cb)(struct draw_img * image);
-        draw_img_acc_prepare_cb = hw_acc_prepare_cb;
-        draw_img_acc_end_cb = hw_acc_end_cb;
+//        draw_img_acc_prepare_cb = hw_acc_prepare_cb;
+//        draw_img_acc_end_cb = hw_acc_end_cb;
     }
 }
