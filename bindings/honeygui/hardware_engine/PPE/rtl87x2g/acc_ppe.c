@@ -416,6 +416,16 @@ static void hw_ppe_blit(draw_img_t *image, struct gui_dispdev *dc, gui_rect_t *r
         {
             scale_rect.right = image->img_w - 1;
         }
+        if (rect != NULL)
+        {
+            ppe_rect_t scope_area = {.x1 = rect->x1, .x2 = rect->x2, \
+                                     .y1 = rect->y1, .y2 = rect->y2
+                                    };
+            if (!ppe_rect_intersect(&scale_rect, &scale_rect, &scope_area))
+            {
+                return;
+            }
+        }
         scaled_img.width = (uint32_t)((scale_rect.right - scale_rect.left + 1) * scale_x);
         scaled_img.height = (uint32_t)((scale_rect.bottom - scale_rect.top + 1) * scale_y);
         scaled_img.stride = scaled_img.width;
@@ -471,6 +481,18 @@ static void hw_ppe_blit(draw_img_t *image, struct gui_dispdev *dc, gui_rect_t *r
         ppe_translate_t trans = {.x = draw_area.x1 - dc->section.x1, .y = draw_area.y1 - dc->section.y1};
         if (head->compress)
         {
+            if (rect != NULL)
+            {
+                ppe_rect_t scope_area = {.x1 = rect->x1 + image->img_target_x, \
+                                         .x2 = rect->x2 + image->img_target_x, \
+                                         .y1 = rect->y1 + image->img_target_y, \
+                                         .y2 = rect->y2 + image->img_target_y
+                                        };
+                if (!ppe_rect_intersect(&constraint_area, &constraint_area, &scope_area))
+                {
+                    return;
+                }
+            }
             RCC_PeriphClockCmd(APBPeriph_IDU, APBPeriph_IDU_CLOCK, ENABLE);
 
             const IDU_file_header *header = (IDU_file_header *)((uint32_t)image->data + sizeof(
@@ -494,6 +516,27 @@ static void hw_ppe_blit(draw_img_t *image, struct gui_dispdev *dc, gui_rect_t *r
             {
                 gui_free(source.memory);
                 return;
+            }
+        }
+        else
+        {
+            if (rect != NULL)
+            {
+                ppe_rect_t scope_area = {.x1 = rect->x1 + image->img_target_x, \
+                                         .x2 = rect->x2 + image->img_target_x, \
+                                         .y1 = rect->y1 + image->img_target_y, \
+                                         .y2 = rect->y2 + image->img_target_y
+                                        };
+                if (!ppe_rect_intersect(&constraint_area, &constraint_area, &scope_area))
+                {
+                    return;
+                }
+                trans.x = constraint_area.x1 - dc->section.x1;
+                trans.y = constraint_area.y1 - dc->section.y1;
+                source.address = source.address + (rect->x1 + rect->y1 * image->img_w) * ppe_get_format_data_len(
+                                     source.format);
+                source.width = rect->x2 - rect->x1 + 1;
+                source.height = rect->y2 - rect->y1 + 1;
             }
         }
         PPE_ERR err = PPE_Blend(&source, &target, &trans, PPE_SRC_OVER_MODE);
@@ -521,6 +564,18 @@ static void hw_bare_blit(draw_img_t *image, struct gui_dispdev *dc, gui_rect_t *
     if (!ppe_rect_intersect(&constraint_area, &buf_area, &draw_area))
     {
         return;
+    }
+    if (rect != NULL)
+    {
+        ppe_rect_t scope_area = {.x1 = rect->x1 + image->img_target_x, \
+                                 .x2 = rect->x2 + image->img_target_x, \
+                                 .y1 = rect->y1 + image->img_target_y, \
+                                 .y2 = rect->y2 + image->img_target_y
+                                };
+        if (!ppe_rect_intersect(&constraint_area, &constraint_area, &scope_area))
+        {
+            return;
+        }
     }
 
     struct gui_rgb_data_head *head = image->data;
