@@ -37,7 +37,7 @@ extern "C" {
   * \{
   */
 
-/** \defgroup 87X2G_RAMLESS_QSPI  LCDC Ramless QSPI
+/** \defgroup LCDC_RAMLESS_QSPI  LCDC Ramless QSPI
   * \brief    LCD Controller Ramless QSPI interface driver module
   * \{
   */

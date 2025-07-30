@@ -33,7 +33,7 @@ extern "C" {
   * \{
   */
 
-/** \defgroup LCDC_DBIC        LCDC DBIC
+/** \defgroup LCDC_SDI        LCDC DBIC
   * \brief    LCD Controller Display Bus Interface Controller
   * \{
   */
