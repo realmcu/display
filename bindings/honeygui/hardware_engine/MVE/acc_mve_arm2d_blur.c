@@ -271,7 +271,7 @@ void arm2d_local_rgb565_filter_iir_blur_mve(
             }
             else
             {
-                int16x8_t       vacc = vldrhq_gather_shifted_offset_u16(phwPixel, voffs);
+                uint16x8_t       vacc = vldrhq_gather_shifted_offset_u16(phwPixel, voffs);
                 arm2d_local_rgb565_unpack_single_vec(vacc, (uint16x8_t *)&vaccR, (uint16x8_t *)&vaccG,
                                                      (uint16x8_t *)&vaccB);
             }
@@ -283,16 +283,17 @@ void arm2d_local_rgb565_filter_iir_blur_mve(
 
                 arm2d_local_rgb565_unpack_single_vec(in, &vR, &vG, &vB);
 
-                int16x8_t       vdiffR = vsubq_s16(vR, vaccR);
-                int16x8_t       vdiffG = vsubq_s16(vG, vaccG);
-                int16x8_t       vdiffB = vsubq_s16(vB, vaccB);
+                int16x8_t       vdiffR = vsubq_s16((int16x8_t)vR, vaccR);
+                int16x8_t       vdiffG = vsubq_s16((int16x8_t)vG, vaccG);
+                int16x8_t       vdiffB = vsubq_s16((int16x8_t)vB, vaccB);
 
                 vaccR += vqdmulhq(vdiffR, hwRatio);
                 vaccG += vqdmulhq(vdiffG, hwRatio);
                 vaccB += vqdmulhq(vdiffB, hwRatio);
 
-                vstrhq_scatter_shifted_offset_u16(phwPixel, voffs, arm2d_local_rgb565_pack_single_vec(vaccR, vaccG,
-                                                  vaccB));
+                vstrhq_scatter_shifted_offset_u16(phwPixel, voffs,
+                                                  arm2d_local_rgb565_pack_single_vec((uint16x8_t)vaccR, (uint16x8_t)vaccG,
+                                                                                     (uint16x8_t)vaccB));
                 voffs += 1;
             }
 
@@ -325,7 +326,7 @@ void arm2d_local_rgb565_filter_iir_blur_mve(
             }
             else
             {
-                int16x8_t       vacc = vldrhq_gather_shifted_offset_u16(phwPixel, voffs);
+                uint16x8_t       vacc = vldrhq_gather_shifted_offset_u16(phwPixel, voffs);
 
                 arm2d_local_rgb565_unpack_single_vec(vacc, (uint16x8_t *)&vaccR, (uint16x8_t *)&vaccG,
                                                      (uint16x8_t *)&vaccB);
@@ -339,16 +340,17 @@ void arm2d_local_rgb565_filter_iir_blur_mve(
 
                 arm2d_local_rgb565_unpack_single_vec(in, &vR, &vG, &vB);
 
-                int16x8_t       vdiffR = vsubq_s16(vR, vaccR);
-                int16x8_t       vdiffG = vsubq_s16(vG, vaccG);
-                int16x8_t       vdiffB = vsubq_s16(vB, vaccB);
+                int16x8_t       vdiffR = vsubq_s16((int16x8_t)vR, vaccR);
+                int16x8_t       vdiffG = vsubq_s16((int16x8_t)vG, vaccG);
+                int16x8_t       vdiffB = vsubq_s16((int16x8_t)vB, vaccB);
 
                 vaccR += vqdmulhq(vdiffR, hwRatio);
                 vaccG += vqdmulhq(vdiffG, hwRatio);
                 vaccB += vqdmulhq(vdiffB, hwRatio);
 
-                vstrhq_scatter_shifted_offset_p_u16(phwPixel, voffs, arm2d_local_rgb565_pack_single_vec(vaccR,
-                                                    vaccG, vaccB), tailPred);
+                vstrhq_scatter_shifted_offset_p_u16(phwPixel, voffs,
+                                                    arm2d_local_rgb565_pack_single_vec((uint16x8_t)vaccR,
+                                                                                       (uint16x8_t)vaccG, (uint16x8_t)vaccB), tailPred);
                 voffs += 1;
 
             }
@@ -389,7 +391,7 @@ void arm2d_local_rgb565_filter_iir_blur_mve(
             }
             else
             {
-                int16x8_t       vacc = vldrhq_u16(phwChannel);
+                uint16x8_t       vacc = vldrhq_u16(phwChannel);
                 arm2d_local_rgb565_unpack_single_vec(vacc, (uint16x8_t *)&vaccR, (uint16x8_t *)&vaccG,
                                                      (uint16x8_t *)&vaccB);
             }
@@ -402,15 +404,16 @@ void arm2d_local_rgb565_filter_iir_blur_mve(
 
                 arm2d_local_rgb565_unpack_single_vec(in, &vR, &vG, &vB);
 
-                int16x8_t       vdiffR = vsubq_s16(vR, vaccR);
-                int16x8_t       vdiffG = vsubq_s16(vG, vaccG);
-                int16x8_t       vdiffB = vsubq_s16(vB, vaccB);
+                int16x8_t       vdiffR = vsubq_s16((int16x8_t)vR, vaccR);
+                int16x8_t       vdiffG = vsubq_s16((int16x8_t)vG, vaccG);
+                int16x8_t       vdiffB = vsubq_s16((int16x8_t)vB, vaccB);
 
                 vaccR += vqdmulhq(vdiffR, hwRatio);
                 vaccG += vqdmulhq(vdiffG, hwRatio);
                 vaccB += vqdmulhq(vdiffB, hwRatio);
 
-                vstrhq_u16(phwChannel, arm2d_local_rgb565_pack_single_vec(vaccR, vaccG, vaccB));
+                vstrhq_u16(phwChannel, arm2d_local_rgb565_pack_single_vec((uint16x8_t)vaccR, (uint16x8_t)vaccG,
+                                                                          (uint16x8_t)vaccB));
                 phwChannel += iTargetStride;
             }
 
@@ -443,7 +446,7 @@ void arm2d_local_rgb565_filter_iir_blur_mve(
             }
             else
             {
-                int16x8_t       vacc = vldrhq_u16(phwChannel);
+                uint16x8_t       vacc = vldrhq_u16(phwChannel);
                 arm2d_local_rgb565_unpack_single_vec(vacc, (uint16x8_t *)&vaccR, (uint16x8_t *)&vaccG,
                                                      (uint16x8_t *)&vaccB);
             }
@@ -455,15 +458,16 @@ void arm2d_local_rgb565_filter_iir_blur_mve(
 
                 arm2d_local_rgb565_unpack_single_vec(in, &vR, &vG, &vB);
 
-                int16x8_t       vdiffR = vsubq_s16(vR, vaccR);
-                int16x8_t       vdiffG = vsubq_s16(vG, vaccG);
-                int16x8_t       vdiffB = vsubq_s16(vB, vaccB);
+                int16x8_t       vdiffR = vsubq_s16((int16x8_t)vR, vaccR);
+                int16x8_t       vdiffG = vsubq_s16((int16x8_t)vG, vaccG);
+                int16x8_t       vdiffB = vsubq_s16((int16x8_t)vB, vaccB);
 
                 vaccR += vqdmulhq(vdiffR, hwRatio);
                 vaccG += vqdmulhq(vdiffG, hwRatio);
                 vaccB += vqdmulhq(vdiffB, hwRatio);
 
-                vstrhq_p_u16(phwChannel, arm2d_local_rgb565_pack_single_vec(vaccR, vaccG, vaccB), tailPred);
+                vstrhq_p_u16(phwChannel, arm2d_local_rgb565_pack_single_vec((uint16x8_t)vaccR, (uint16x8_t)vaccG,
+                                                                            (uint16x8_t)vaccB), tailPred);
                 phwChannel += iTargetStride;
             }
             if (NULL != ptStatusH)
