@@ -1321,8 +1321,10 @@ void *hw_acc_idu_decode(void *input)
     }
     const IDU_File_Header *idu_info = (IDU_File_Header *)((uint32_t)input + sizeof(
                                                               gui_rgb_data_head_t));
-    uint8_t *decode_img_data = acc_ppe_malloc(sizeof(gui_rgb_data_head_t) + 4 + idu_info->raw_pic_width
-                                              * idu_info->raw_pic_height * pixel_size);
+    uint32_t img_w = idu_info->raw_pic_width;
+    uint32_t img_h = idu_info->raw_pic_height;
+    uint8_t *decode_img_data = acc_ppe_malloc(sizeof(gui_rgb_data_head_t) + 4 + img_w * img_h *
+                                              pixel_size);
     gui_rgb_data_head_t *output_header = (gui_rgb_data_head_t *)decode_img_data;
     memcpy(output_header, head, sizeof(gui_rgb_data_head_t));
     output_header->compress = 0;
@@ -1599,21 +1601,15 @@ void hw_acc_end_cb(draw_img_t *image)
 
 void hw_acc_blit(draw_img_t *image, struct gui_dispdev *dc, struct gui_rect *rect)
 {
-    uint32_t time1 = sys_timestamp_get_us();
     struct gui_rgb_data_head *head = image->data;
     if (!head->compress && image->blend_mode != IMG_RECT)
     {
-        uint32_t time3 = sys_timestamp_get_us();
         hw_acc_blit_direct(image, dc, rect);
-        uint32_t time4 = sys_timestamp_get_us();
-        ppe_time += (time4 - time3);
     }
     else
     {
         hw_acc_blit_cache(image, dc, rect);
     }
-    uint32_t time2 = sys_timestamp_get_us();
-    acc_time += (time2 - time1);
 }
 
 void hw_acc_init(void)
