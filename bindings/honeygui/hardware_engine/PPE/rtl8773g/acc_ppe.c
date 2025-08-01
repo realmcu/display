@@ -1321,10 +1321,12 @@ void *hw_acc_idu_decode(void *input)
     }
     const IDU_File_Header *idu_info = (IDU_File_Header *)((uint32_t)input + sizeof(
                                                               gui_rgb_data_head_t));
-    uint32_t img_w = idu_info->raw_pic_width;
-    uint32_t img_h = idu_info->raw_pic_height;
-    uint8_t *decode_img_data = acc_ppe_malloc(sizeof(gui_rgb_data_head_t) + 4 + img_w * img_h *
-                                              pixel_size);
+    if (idu_info->raw_pic_width == 0 || idu_info->raw_pic_height == 0)
+    {
+        return NULL;
+    }
+    uint8_t *decode_img_data = acc_ppe_malloc(sizeof(gui_rgb_data_head_t) + 4 + idu_info->raw_pic_width
+                                              * idu_info->raw_pic_height * pixel_size);
     gui_rgb_data_head_t *output_header = (gui_rgb_data_head_t *)decode_img_data;
     memcpy(output_header, head, sizeof(gui_rgb_data_head_t));
     output_header->compress = 0;
@@ -1602,6 +1604,10 @@ void hw_acc_end_cb(draw_img_t *image)
 void hw_acc_blit(draw_img_t *image, struct gui_dispdev *dc, struct gui_rect *rect)
 {
     struct gui_rgb_data_head *head = image->data;
+    if (image->blend_mode != IMG_RECT && image->data == NULL)
+    {
+        return;
+    }
     if (!head->compress && image->blend_mode != IMG_RECT)
     {
         hw_acc_blit_direct(image, dc, rect);
