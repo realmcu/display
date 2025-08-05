@@ -48,7 +48,7 @@ extern "C" {
 #define PPE_LLI_MAX                                 (PPE_LINKLIST_GLB_REG_NUM + PPE_LINKLIST_RESULT_REG_NUM + PPE_LINKLIST_INPUT_REG_NUM * PPE_MAX_INPUTLAYER)
 
 #define PPE_BYTE_SIZE                               8
-/** \defgroup 87X2G_PPE       PPE
+/** \defgroup 8773G_PPE       PPE
   * \brief
   * \{
   */
@@ -60,7 +60,12 @@ extern "C" {
   * \brief
   * \{
   */
-
+/**
+ * \cond        private
+ * \brief       Constants for internal use
+ * \defgroup    PPE_INTERNAL_USE   PPE constants for internal use
+ * \{
+ */
 typedef enum
 {
     PPE_INPUT_1 = 0x1,
@@ -76,168 +81,9 @@ typedef enum
 
 typedef enum
 {
-    PPE_COLOR_KEY_INSIDE         = 0X0,
-    PPE_COLOR_KEY_OUTSIDE   = 0X1,
-} PPE_COLOR_KEY_MODE;
-
-typedef enum
-{
     PPE_LAYER_SRC_CONST             = 0X0,
     PPE_LAYER_SRC_FROM_DMA         = 0X1,
 } PPE_PIXEL_SOURCE;
-
-typedef enum
-{
-    PPV2_SRC_NEAREST_NEIGHBOUR,
-    PPV2_SRC_BILINEAR,
-} PPE_SRC_INTERPOLATION;
-
-
-typedef enum
-{
-    PPE_ABGR8888 = 0x0,
-    PPE_ARGB8888,
-    PPE_XBGR8888,
-    PPE_XRGB8888,
-    PPE_BGRA8888,
-    PPE_RGBA8888,
-    PPE_BGRX8888,
-    PPE_RGBX8888,
-    PPE_ABGR4444,
-    PPE_ARGB4444,
-    PPE_XBGR4444,
-    PPE_XRGB4444,
-    PPE_BGRA4444,
-    PPE_RGBA4444,
-    PPE_BGRX4444,
-    PPE_RGBX4444,
-    PPE_ABGR2222,
-    PPE_ARGB2222,
-    PPE_XBGR2222,
-    PPE_XRGB2222,
-    PPE_BGRA2222,
-    PPE_RGBA2222,
-    PPE_BGRX2222,
-    PPE_RGBX2222,
-    PPE_ABGR8565,
-    PPE_ARGB8565,
-    PPE_XBGR8565,
-    PPE_XRGB8565,
-    PPE_BGRA5658,
-    PPE_RGBA5658,
-    PPE_BGRX5658,
-    PPE_RGBX5658,
-    PPE_ABGR1555,
-    PPE_ARGB1555,
-    PPE_XBGR1555,
-    PPE_XRGB1555,
-    PPE_BGRA5551,
-    PPE_RGBA5551,
-    PPE_BGRX5551,
-    PPE_RGBX5551,
-    PPE_BGR888,
-    PPE_RGB888,
-    PPE_BGR565,
-    PPE_RGB565,
-    PPE_A8,
-    PPE_X8,
-    PPE_A4,
-    PPE_X4,
-    PPE_A2,
-    PPE_X2,
-    PPE_A1,
-    PPE_X1,
-    PPE_ABGR8666,
-    PPE_ARGB8666,
-    PPE_XBGR8666,
-    PPE_XRGB8666,
-    PPE_BGRA6668,
-    PPE_RGBA6668,
-    PPE_BGRX6668,
-    PPE_RGBX6668,
-    PPE_BGR565_S,
-    PPE_RGB565_S,
-    PPE_I8,
-    PPE_I4,
-    PPE_I2,
-    PPE_I1,
-    PPE_FORMAT_NOT_SUPPORT = 0xFF
-} PPE_PIXEL_FORMAT;
-
-typedef enum
-{
-    PPE_BLEND_SRC,
-    PPE_BLEND_PREMULTIPLY,
-    PPE_BLEND_SRC_OVER,
-    PPE_BLEND_DST_OVER,
-    PPE_BLEND_SRC_IN,
-    PPE_BLEND_DST_IN,
-    PPE_BLEND_MULTIPLY,
-    PPE_BLEND_SCREEN,
-    PPE_BLEND_ADD,
-    PPE_BLEND_SUBSTRACT,
-    PPE_BLEND_BYPASS,
-    PPE_BLEND_CONST_COLOR,
-} PPE_BLEND_METHOD;
-
-typedef enum
-{
-    PPE_SUCCESS = 0x0,
-    PPE_ERR_NULL_TARGET,
-    PPE_ERR_NULL_SOURCE,
-    PPE_ERR_INVALID_MATRIX,
-    PPE_ERR_INVALID_RANGE,
-    PPE_ERR_INVALID_PARAMETER,
-} PPE_ERR;
-
-typedef struct
-{
-    union
-    {
-        uint8_t key_enable;
-        struct
-        {
-            __IO uint8_t r_en:  1;
-            __IO uint8_t g_en:  1;
-            __IO uint8_t b_en:  1;
-            __IO uint8_t a_en:  1;
-            __IO uint8_t reserved: 4;
-        } channel_en;
-    };
-} PPE_color_key_state;
-
-typedef struct
-{
-    uint8_t R_max;
-    uint8_t R_min;
-    uint8_t G_max;
-    uint8_t G_min;
-    uint8_t B_max;
-    uint8_t B_min;
-} PPE_color_key_range;
-
-typedef struct
-{
-    union
-    {
-        uint32_t key_replace;
-        struct
-        {
-            uint8_t r_replace;
-            uint8_t g_replace;
-            uint8_t b_replace;
-            uint8_t a_replace;
-        } channel_replace;
-    };
-} PPE_color_key_replace;
-
-typedef struct
-{
-    PPE_COLOR_KEY_MODE      key_mode;
-    PPE_color_key_state     key_enable;
-    PPE_color_key_range     key_range;
-    PPE_color_key_replace   key_replace;
-} PPE_color_key_config;
 
 typedef struct
 {
@@ -316,8 +162,173 @@ typedef enum
     PPE_SUSPEND_ALL_INA = 0x2,
     PPE_SUSPEND = 0x3,
 } PPE_RUN_STATE;
+/**
+ * \}
+ * \endcond
+ */
 
+/** \defgroup PPE_COLOR_KEY_MODE PPE Color Key Mode
+ * \{
+ * \ingroup  PPE_Exported_Constants
+ */
+typedef enum
+{
+    PPE_COLOR_KEY_INSIDE    = 0X0,  /*!< Color key inside mode, minimum <= key_value <= maximum. */
+    PPE_COLOR_KEY_OUTSIDE   = 0X1,   /*!< Color key outside mode, key_value < minimum or key_value > maximum. */
+} PPE_COLOR_KEY_MODE;
+/** End of PPE_COLOR_KEY_MODE
+  * \}
+  */
 
+/** \defgroup PPE_SRC_INTERPOLATION PPE Interpolation Mode
+ * \{
+ * \ingroup  PPE_Exported_Constants
+ */
+typedef enum
+{
+    PPV2_SRC_NEAREST_NEIGHBOUR,   /*!< Nearest neighbour interpolation. */
+    PPV2_SRC_BILINEAR,            /*!< Bilinear interpolation. */
+} PPE_SRC_INTERPOLATION;
+/** End of PPE_SRC_INTERPOLATION
+  * \}
+  */
+
+/** \defgroup PPE_PIXEL_FORMAT PPE Pixel Format
+ * \{
+ * \ingroup  PPE_Exported_Constants
+ */
+typedef enum
+{
+    PPE_ABGR8888 = 0x0,     /*!< ABGR8888: A(bit 31:24) B(bit 23:16) G(bit 15:8) R(bit 7:0) */
+    PPE_ARGB8888,           /*!< ARGB8888: A(bit 31:24) R(bit 23:16) G(bit 15:8) B(bit 7:0) */
+    PPE_XBGR8888,           /*!< XBGR8888: X(bit 31:24) B(bit 23:16) G(bit 15:8) R(bit 7:0) */
+    PPE_XRGB8888,           /*!< XRGB8888: X(bit 31:24) R(bit 23:16) G(bit 15:8) B(bit 7:0) */
+    PPE_BGRA8888,           /*!< BGRA8888: B(bit 31:24) G(bit 23:16) R(bit 15:8) A(bit 7:0) */
+    PPE_RGBA8888,           /*!< RGBA8888: R(bit 31:24) G(bit 23:16) B(bit 15:8) A(bit 7:0) */
+    PPE_BGRX8888,           /*!< BGRX8888: B(bit 31:24) G(bit 23:16) R(bit 15:8) X(bit 7:0) */
+    PPE_RGBX8888,           /*!< RGBX8888: R(bit 31:24) G(bit 23:16) B(bit 15:8) X(bit 7:0) */
+    PPE_ABGR4444,           /*!< ABGR4444: A(bit 15:12) B(bit 11:8) G(bit 7:4) R(bit 3:0) */
+    PPE_ARGB4444,           /*!< ARGB4444: A(bit 15:12) R(bit 11:8) G(bit 7:4) B(bit 3:0) */
+    PPE_XBGR4444,           /*!< XBGR4444: X(bit 15:12) B(bit 11:8) G(bit 7:4) R(bit 3:0) */
+    PPE_XRGB4444,           /*!< XRGB4444: X(bit 15:12) R(bit 11:8) G(bit 7:4) B(bit 3:0) */
+    PPE_BGRA4444,           /*!< BGRA4444: B(bit 15:12) G(bit 11:8) R(bit 7:4) A(bit 3:0) */
+    PPE_RGBA4444,           /*!< RGBA4444: R(bit 15:12) G(bit 11:8) B(bit 7:4) A(bit 3:0) */
+    PPE_BGRX4444,           /*!< BGRX4444: B(bit 15:12) G(bit 11:8) R(bit 7:4) X(bit 3:0) */
+    PPE_RGBX4444,           /*!< RGBX4444: R(bit 15:12) G(bit 11:8) B(bit 7:4) X(bit 3:0) */
+    PPE_ABGR2222,           /*!< ABGR2222: A(bit 7:6) B(bit 5:4) G(bit 3:2) R(bit 1:0) */
+    PPE_ARGB2222,           /*!< ARGB2222: A(bit 7:6) R(bit 5:4) G(bit 3:2) B(bit 1:0) */
+    PPE_XBGR2222,           /*!< XBGR2222: X(bit 7:6) B(bit 5:4) G(bit 3:2) R(bit 1:0) */
+    PPE_XRGB2222,           /*!< XRGB2222: X(bit 7:6) R(bit 5:4) G(bit 3:2) B(bit 1:0) */
+    PPE_BGRA2222,           /*!< BGRA2222: B(bit 7:6) G(bit 5:4) R(bit 3:2) A(bit 1:0) */
+    PPE_RGBA2222,           /*!< RGBA2222: R(bit 7:6) G(bit 5:4) B(bit 3:2) A(bit 1:0) */
+    PPE_BGRX2222,           /*!< BGRX2222: B(bit 7:6) G(bit 5:4) R(bit 3:2) X(bit 1:0) */
+    PPE_RGBX2222,           /*!< RGBX2222: R(bit 7:6) G(bit 5:4) B(bit 3:2) X(bit 1:0) */
+    PPE_ABGR8565,           /*!< ABGR8565: A(bit 23:16) B(bit 15:11) G(bit 10:5) R(bit 4:0) */
+    PPE_ARGB8565,           /*!< ARGB8565: A(bit 23:16) R(bit 15:11) G(bit 10:5) B(bit 4:0) */
+    PPE_XBGR8565,           /*!< XBGR8565: X(bit 23:16) B(bit 15:11) G(bit 10:5) R(bit 4:0) */
+    PPE_XRGB8565,           /*!< XRGB8565: X(bit 23:16) R(bit 15:11) G(bit 10:5) B(bit 4:0) */
+    PPE_BGRA5658,           /*!< BGRA5658: B(bit 23:19) G(bit 18:13) R(bit 12:8) A(bit 7:0) */
+    PPE_RGBA5658,           /*!< RGBA5658: R(bit 23:19) G(bit 18:13) B(bit 12:8) A(bit 7:0) */
+    PPE_BGRX5658,           /*!< BGRX5658: B(bit 23:19) G(bit 18:13) R(bit 12:8) X(bit 7:0) */
+    PPE_RGBX5658,           /*!< RGBX5658: R(bit 23:19) G(bit 18:13) B(bit 12:8) X(bit 7:0) */
+    PPE_ABGR1555,           /*!< ABGR1555: A(bit 15) B(bit 14:10) G(bit 9:5) R(bit 4:0) */
+    PPE_ARGB1555,           /*!< ARGB1555: A(bit 15) R(bit 14:10) G(bit 9:5) B(bit 4:0) */
+    PPE_XBGR1555,           /*!< XBGR1555: X(bit 15) B(bit 14:10) G(bit 9:5) R(bit 4:0) */
+    PPE_XRGB1555,           /*!< XRGB1555: X(bit 15) R(bit 14:10) G(bit 9:5) B(bit 4:0) */
+    PPE_BGRA5551,           /*!< BGRA5551: B(bit 15:11) G(bit 10:6) R(bit 5:1) A(bit 0) */
+    PPE_RGBA5551,           /*!< RGBA5551: R(bit 15:11) G(bit 10:6) B(bit 5:1) A(bit 0) */
+    PPE_BGRX5551,           /*!< BGRX5551: B(bit 15:11) G(bit 10:6) R(bit 5:1) X(bit 0) */
+    PPE_RGBX5551,           /*!< RGBX5551: R(bit 15:11) G(bit 10:6) B(bit 5:1) X(bit 0) */
+    PPE_BGR888,             /*!< BGR888: B(bit 23:16) G(bit 15:8) R(bit 7:0) */
+    PPE_RGB888,             /*!< RGB888: R(bit 23:16) G(bit 15:8) B(bit 7:0) */
+    PPE_BGR565,             /*!< BGR565: B(bit 15:11) G(bit 10:5) R(bit 4:0) */
+    PPE_RGB565,             /*!< RGB565: R(bit 15:11) G(bit 10:5) B(bit 4:0) */
+    PPE_A8,                 /*!< A8: A(bit 7:0) */
+    PPE_X8,                 /*!< X8: X(bit 7:0) */
+    PPE_A4,                 /*!< A4: pixel1(bit7:4) pixel0(bit 3:0) */
+    PPE_X4,                 /*!< X4: pixel1(bit7:4) pixel0(bit 3:0) */
+    PPE_A2,                 /*!< A2: pixel3(bit7:6) pixel2(bit 5:4) pixel1(bit 3:2) pixel0(bit 1:0)*/
+    PPE_X2,                 /*!< X2: pixel3(bit7:6) pixel2(bit 5:4) pixel1(bit 3:2) pixel0(bit 1:0)*/
+    PPE_A1,                 /*!< A1: pixel3(bit 3) pixel2(bit 2) pixel1(bit 1) pixel0(bit 0)*/
+    PPE_X1,                 /*!< X1: pixel3(bit 3) pixel2(bit 2) pixel1(bit 1) pixel0(bit 0)*/
+    PPE_ABGR8666,           /*!< ABGR8666: A(bit 31:24) B(bit 23:18) G(bit 15:10) R(bit 8:2) */
+    PPE_ARGB8666,           /*!< ARGB8666: A(bit 31:24) R(bit 23:18) G(bit 15:10) B(bit 8:2) */
+    PPE_XBGR8666,           /*!< XBGR8666: X(bit 31:24) B(bit 23:18) G(bit 15:10) R(bit 8:2) */
+    PPE_XRGB8666,           /*!< XRGB8666: X(bit 31:24) R(bit 23:18) G(bit 15:10) B(bit 8:2) */
+    PPE_BGRA6668,           /*!< BGRA6668: B(bit 31:26) G(bit 23:18) R(bit 15:10) A(bit 7:0) */
+    PPE_RGBA6668,           /*!< RGBA6668: R(bit 31:26) G(bit 23:18) B(bit 15:10) A(bit 7:0) */
+    PPE_BGRX6668,           /*!< BGRX6668: B(bit 31:26) G(bit 23:18) R(bit 15:10) X(bit 7:0) */
+    PPE_RGBX6668,           /*!< RGBX6668: R(bit 31:26) G(bit 23:18) B(bit 15:10) X(bit 7:0) */
+    PPE_BGR565_S,           /*!< BGR565: G_high(bit 15:13) R(bit 12:8) B(7:3) G_low(2:0)*/
+    PPE_RGB565_S,           /*!< RGB565: G_high(bit 15:13) B(bit 12:8) R(7:3) G_low(2:0)*/
+    PPE_I8,                 /*!< I8: I(bit 7:0) */
+    PPE_I4,                 /*!< I4: pixel1(bit 3:2) pixel0(bit 1:0) */
+    PPE_I2,                 /*!< I2: pixel3(bit7:6) pixel2(bit 5:4) pixel1(bit 3:2) pixel0(bit 1:0)*/
+    PPE_I1,                 /*!< I1: pixel3(bit 3) pixel2(bit 2) pixel1(bit 1) pixel0(bit 0) */
+    PPE_FORMAT_NOT_SUPPORT = 0xFF    /*!< Format not support */
+} PPE_PIXEL_FORMAT;
+/** End of PPE_PIXEL_FORMAT
+  * \}
+  */
+
+/** \defgroup PPE_BLEND_METHOD PPE Blend Method
+ * \{
+ * \ingroup  PPE_Exported_Constants
+ */
+typedef enum
+{
+    PPE_BLEND_SRC,            /*!< Result = S */
+    PPE_BLEND_PREMULTIPLY,    /*!< Result = S * Sa + D * (1 - Sa)*/
+    PPE_BLEND_SRC_OVER,       /*!< Result = S + D * (1 - Sa) */
+    PPE_BLEND_DST_OVER,       /*!< Result = Da * S + D * (1 - Da) */
+    PPE_BLEND_SRC_IN,         /*!< Result = Da * S */
+    PPE_BLEND_DST_IN,         /*!< Result = S * Da */
+    PPE_BLEND_MULTIPLY,       /*!< Result = (1 - Da) * S + (1 - Sa) * D + S * D / 255 */
+    PPE_BLEND_SCREEN,         /*!< Result = S + D + S * D / 255 */
+    PPE_BLEND_ADD,            /*!< Result = S + D */
+    PPE_BLEND_SUBSTRACT,      /*!< Result = (1 - Sa) * D */
+    PPE_BLEND_BYPASS,         /*!< Result = Sa * S */
+    PPE_BLEND_CONST_COLOR,    /*!< Replace input image with a constant. */
+} PPE_BLEND_METHOD;
+/** End of PPE_BLEND_METHOD
+  * \}
+  */
+
+/** \defgroup PPE_ERR PPE Error Code
+  * \{
+  * \ingroup  PPE_Exported_Constants
+  */
+typedef enum
+{
+    PPE_SUCCESS = 0x0,           /*!< PPE configure and run successfully. */
+    PPE_ERR_NULL_TARGET,         /*!< Target is NULL. */
+    PPE_ERR_NULL_SOURCE,         /*!< Source is NULL. */
+    PPE_ERR_INVALID_MATRIX,      /*!< Matrix is invalid. */
+    PPE_ERR_INVALID_RANGE,       /*!< Blend region is invalid. */
+    PPE_ERR_INVALID_PARAMETER,   /*!< Input parameter is invalid, such as buffer and color key. */
+} PPE_ERR;
+/** End of PPE_ERR
+  * \}
+  */
+
+/** End of PPE_Exported_Constants
+  * \}
+  */
+
+/*============================================================================*
+ *                         Structures
+ *============================================================================*/
+/** \defgroup PPE_Exported_Types PPE Exported Types
+  * \brief
+  * \{
+  */
+
+/**
+ * \cond        private
+ * \brief       Structures for internal use
+ * \defgroup    PPE_INTERNAL_STRUCTURE   PPE structures for internal use
+ * \{
+ */
 typedef struct
 {
     uint32_t LYR_ENABLE;
@@ -353,48 +364,164 @@ typedef struct
     uint32_t LYRx_TRANS_MATRIX_E32;
     uint32_t LYRx_TRANS_MATRIX_E33;
 } PPE_LLI_INPUT_LAYER;
+/**
+ * \}
+ * \endcond
+ */
 
+/** \defgroup PPE_COLOR_KEY_STATE PPE Color Key State
+  * \{
+  * \ingroup  PPE_Exported_Types
+  */
 typedef struct
 {
-    float m[3][3];    /*! The 3x3 matrix itself, in [row][column] order. */
+    union
+    {
+        uint8_t key_enable;        /*!< General key status. */
+        struct
+        {
+            __IO uint8_t r_en:  1;    /*!< Red channel key status. */
+            __IO uint8_t g_en:  1;    /*!< Green channel key status. */
+            __IO uint8_t b_en:  1;    /*!< Blue channel key status. */
+            __IO uint8_t a_en:  1;    /*!< Alpha channel key status. */
+            __IO uint8_t reserved: 4; /*!< Reserved. */
+        } channel_en;
+    }; /*!< Union of general key status and detail information. */
+} PPE_color_key_state;
+/** End of PPE_COLOR_KEY_STATE
+  * \}
+  */
+
+/** \defgroup PPE_COLOR_KEY_RANGE PPE Color Key Range
+  * \{
+  * \ingroup  PPE_Exported_Types
+  */
+typedef struct
+{
+    uint8_t R_max;        /*!< Maximum value of red channel color key. */
+    uint8_t R_min;        /*!< Minimum value of red channel color key. */
+    uint8_t G_max;        /*!< Maximum value of green channel color key. */
+    uint8_t G_min;        /*!< Minimum value of green channel color key. */
+    uint8_t B_max;        /*!< Maximum value of blue channel color key. */
+    uint8_t B_min;        /*!< Minimum value of blue channel color key. */
+} PPE_color_key_range;
+/** End of PPE_COLOR_KEY_RANGE
+  * \}
+  */
+
+/** \defgroup PPE_COLOR_KEY_REPLACE PPE Color Key Replace
+  * \{
+  * \ingroup  PPE_Exported_Types
+  */
+typedef struct
+{
+    union
+    {
+        uint32_t key_replace;        /*!< General key replace value in ABGR8888 format. */
+        struct
+        {
+            uint8_t r_replace;        /*!< Red channel replace value. */
+            uint8_t g_replace;        /*!< Green channel replace value. */
+            uint8_t b_replace;        /*!< Blue channel replace value. */
+            uint8_t a_replace;        /*!< Alpha channel replace value. */
+        } channel_replace;
+    }; /*!< Union of general value to replace in ABGR8888 format and detail information of each channel. */
+} PPE_color_key_replace;
+/** End of PPE_COLOR_KEY_REPLACE
+  * \}
+  */
+
+/** \defgroup PPE_COLOR_KEY_CONFIG PPE Color Key Configration
+  * \{
+  * \ingroup  PPE_Exported_Types
+  */
+typedef struct
+{
+    PPE_COLOR_KEY_MODE      key_mode;    /*!< Color key mode. */
+    PPE_color_key_state     key_enable;  /*!< Color key enable state. */
+    PPE_color_key_range     key_range;   /*!< Color key range. */
+    PPE_color_key_replace   key_replace; /*!< Color key replace value. */
+} PPE_color_key_config;
+/** End of PPE_COLOR_KEY_REPLACE
+  * \}
+  */
+
+/** \defgroup PPE_MATRIX PPE Matrix
+  * \{
+  * \ingroup  PPE_Exported_Types
+  */
+typedef struct
+{
+    float m[3][3];    /*! The 3x3 matrix in [row][column] order. */
 } ppe_matrix_t;
+/** End of PPE_MATRIX
+  * \}
+  */
 
+/** \defgroup PPE_RECT PPE Rectangle
+  * \{
+  * \ingroup  PPE_Exported_Types
+  */
 typedef struct
 {
-    int32_t x1;
-    int32_t y1;
-    int32_t x2;
-    int32_t y2;
+    int32_t x1;     /*!< Minimum x coordinate. */
+    int32_t y1;     /*!< Minimum y coordinate. */
+    int32_t x2;     /*!< Maximum x coordinate. */
+    int32_t y2;     /*!< Maximum y coordinate. */
 } ppe_rect_t;
+/** End of PPE_RECT
+  * \}
+  */
 
+/** \defgroup PPE_POINT PPE Point
+  * \{
+  * \ingroup  PPE_Exported_Types
+  */
 typedef struct
 {
-    int x;
-    int y;
+    int x;        /*!< The x coordinate of the point. */
+    int y;        /*!< The y coordinate of the point. */
 }
 ppe_point_t;
+/** End of PPE_POINT
+  * \}
+  */
 
-/* Four 2D Point that form a polygon */
-typedef ppe_point_t ppe_point4_t[4];
+/** \defgroup PPE_POINTS PPE Points of Polygon
+  * \{
+  * \ingroup  PPE_Exported_Types
+  */
+typedef ppe_point_t ppe_point4_t[4]; /* Four 2D Point that form a polygon */
+/** End of PPE_POINTS
+  * \}
+  */
 
+/** \defgroup PPE_BUFFER PPE Layer Buffer
+  * \{
+  * \ingroup  PPE_Exported_Types
+  */
 typedef struct
 {
-    uint32_t address;
-    uint16_t width;
-    uint16_t height;
-    uint16_t stride;
-    uint32_t const_color;
-    uint16_t win_x_min;
-    uint16_t win_x_max;
-    uint16_t win_y_min;
-    uint16_t win_y_max;
-    PPE_color_key_config color_key_config;
-    PPE_PIXEL_FORMAT format;
-    uint8_t opacity;
-    bool high_quality;
+    uint32_t address;     /* Address of buffer memory. */
+    uint16_t width;       /* Width of buffer in pixel. */
+    uint16_t height;      /* Height of buffer in pixel. */
+    uint16_t stride;      /* Stride of buffer. */
+    uint32_t const_color; /* Constant color for blending. */
+    uint16_t win_x_min;   /* Horizontal minimum coordinate of buffer. */
+    uint16_t win_x_max;   /* Horizontal Maximum coordinate of buffer. */
+    uint16_t win_y_min;   /* Vertical minimun coordinate of buffer. */
+    uint16_t win_y_max;   /* Vertical Maximum coordinateof buffer. */
+    PPE_color_key_config color_key_config;   /* Color key configuration. */
+    PPE_PIXEL_FORMAT format; /* Pixel format of buffer. */
+    uint8_t opacity;       /* Opacity of buffer. */
+    bool high_quality;    /* Anti-Aliasing with bilinear interpoaltion. */
 } ppe_buffer_t;
 
-/** End of PPE_Exported_Constants
+/** End of PPE_BUFFER
+  * \}
+  */
+
+/** End of PPE_Exported_Types
   * \}
   */
 
@@ -406,6 +533,13 @@ typedef struct
   * \{
   */
 
+/**
+ * \cond        private
+ * \brief       Functions for internal use
+ * \defgroup    PPE_INTERNAL_FUNCTION   PPE functions for internal use
+ * \{
+ */
+void PPE_CLK_ENABLE(FunctionalState NewState);
 
 void PPE_ResultLayer_Init(PPE_ResultLayer_Init_Typedef *PPE_ResultLyaer_Init_Struct);
 
@@ -431,37 +565,375 @@ void PPE_Mask_Interrupt(PPE_INTERRUPT PPE_int, FunctionalState NewState);
 
 void PPE_Mask_All_Interrupt(FunctionalState NewState);
 
+void PPE_CLK_ENABLE_IN_DLPS(FunctionalState NewState);
+
 PPE_ERR PPE_buffer_init(ppe_buffer_t *buffer);
+
 PPE_ERR PPE_set_color_key(ppe_buffer_t *image, PPE_color_key_config *config);
 
+PPE_ERR PPE_Blend_Handshake(ppe_buffer_t *dst, ppe_buffer_t *src, ppe_rect_t *rect);
+
+void ppe_perspective(float px, float py, ppe_matrix_t *matrix);
+/**
+ * \}
+ * \endcond
+ */
+
+/**
+ * \brief  Blend source image onto target buffer with inverse matrix, this function usually has higher performance than @ref PPE_Blit.
+ * \param[in] src: Source image buffer to be blended.
+ * \param[in] dst: Target image buffer to be blended onto.
+ * \param[in] inv: Inverse transformation matrix of source image.
+ * \param[in] rect: Rectangle of blending area.
+ * \param[in] blend_mode: Blend mode from @ref PPE_BLEND_MODE to be used.
+ * \return Operation result.
+ * \retval PPE_SUCCESS  Operation success.
+ * \retval Others       Operation failure, cause refers to @ref PPE_ERR .
+ *
+ * <b>Example usage</b>
+ * \code{.c}
+    void test_code(void){
+        RCC_PeriphClockCmd(APBPeriph_PPE, APBPeriph_PPE_CLOCK, ENABLE);
+        ppe_buffer_t image, buffer;
+        image.width = 25;
+        image.height = 25;
+        image.stride = 32;
+        image.format = PPE_RGB888;
+        image.address = (uint32_t)address1;
+        image.color_key_enable = PPE_COLOR_KEY_DISABLE;
+        image.opacity = 255; //opaque
+        image.high_quality = true; //anti-aliasing with bilinear interpolation
+        image.win_x_min = 0;
+        image.win_x_max = 25;
+        image.win_y_min = 0;
+        image.win_y_max = 25;
+
+        buffer.format = PPE_RGB565;
+        buffer.address = (uint32_t)address2;
+        buffer.width = 64;
+        buffer.height = 64;
+        buffer.stride = 64;
+        buffer.win_x_min = 0;
+        buffer.win_x_max = 64;
+        buffer.win_y_min = 0;
+        buffer.win_y_max = 64;
+        ppe_matrix_t matrix;
+        ppe_get_identity(&matrix);
+        ppe_rect_t src_rect = {.x = 0, .y = 0, .w = 25, .h = 25};
+        ppe_rect_t dst_rect = {0}
+        ppe_get_area(&dst_rect, &src_rect, &matrix);
+        PPE_Blit_Inverse(&buffer, &image, &matrix, &dst_rect, PPE_SRC_OVER_MODE);
+        PPE_Finish(); //wait for PPE to finish blending
+    }
+ * \endcode
+ */
 PPE_ERR PPE_Blit_Inverse(ppe_buffer_t *dst, ppe_buffer_t *src, uint8_t *output,
                          ppe_matrix_t *inverse,
                          ppe_rect_t *rect, PPE_BLEND_METHOD method);
-PPE_ERR PPE_Blend_Handshake(ppe_buffer_t *dst, ppe_buffer_t *src, ppe_rect_t *rect);
 
-void PPE_CLK_ENABLE(FunctionalState NewState);
+/**
+ * \brief  Wait for PPE to finish blending.
+ *
+ * <b>Example usage</b>
+ * \code{.c}
+    void test_code(void){
+        //PPE initialization
+        PPE_Finish();
+    }
+ * \endcode
+*/
 void PPE_Finish(void);
+
+/**
+ * \brief  Get pixel size of specified format.
+ * \param[in] format: Pixel format of PPE from @ref PPE_PIXEL_FORMAT .
+ * \return Pixel size in bits.
+ *
+ * <b>Example usage</b>
+ * \code{.c}
+    void test_code(void){
+        uint8_t pixel_size_in_byte = PPE_Get_Pixel_Size(PPE_RGB565) / 8;
+    }
+ * \endcode
+ */
 uint8_t PPE_Get_Pixel_Size(PPE_PIXEL_FORMAT format);
+
+/**
+ * \brief  Initialize the input matrix as identity matrix.
+ * \param[in] matrix: Pointer to matrix to be initialized.
+ *
+ * <b>Example usage</b>
+ * \code{.c}
+    void test_code(void){
+        ppe_matrix_t matrix;
+        ppe_get_identity(&matrix);
+    }
+ * \endcode
+ */
 void ppe_get_identity(ppe_matrix_t *matrix);
+
+/**
+ * \brief  Do translation on input matrix.
+ * \param[in] x: Horizontal coordinate to be translated.
+ * \param[in] y: Vertical coordinate to be translated.
+ * \param[in] matrix: Pointer to matrix to be transformed.
+ *
+ * <b>Example usage</b>
+ * \code{.c}
+    void test_code(void){
+        ppe_matrix_t matrix;
+        ppe_get_identity(&matrix);
+        ppe_translate(10, 10, &matrix);
+    }
+ * \endcode
+ */
+/**
+ * \brief  Do translation on input matrix.
+ * \param[in] x: Horizontal coordinate to be translated.
+ * \param[in] y: Vertical coordinate to be translated.
+ * \param[in] matrix: Pointer to matrix to be transformed.
+ *
+ * <b>Example usage</b>
+ * \code{.c}
+    void test_code(void){
+        ppe_matrix_t matrix;
+        ppe_get_identity(&matrix);
+        ppe_translate(10, 10, &matrix);
+    }
+ * \endcode
+ */
 void ppe_translate(float x, float y, ppe_matrix_t *matrix);
+
+/**
+ * \brief  Do scale transformation on input matrix.
+ * \param[in] scale_x: Horizontal scale ratio.
+ * \param[in] scale_y: Vertical scale ratio.
+ * \param[in] matrix: Pointer to matrix to be transformed.
+ *
+ * <b>Example usage</b>
+ * \code{.c}
+    void test_code(void){
+        ppe_matrix_t matrix;
+        ppe_get_identity(&matrix);
+        ppe_scale(0.5, 0.5, &matrix);
+    }
+ * \endcode
+ */
 void ppe_scale(float scale_x, float scale_y, ppe_matrix_t *matrix);
+
+/**
+ * \brief  Do rotation on input matrix.
+ * \param[in] degrees: Angle to be rotated.
+ * \param[in] matrix: Pointer to matrix to be rotated.
+ *
+ * <b>Example usage</b>
+ * \code{.c}
+    void test_code(void){
+        ppe_matrix_t matrix;
+        ppe_get_identity(&matrix);
+        ppe_rotate(45, &matrix);
+    }
+ * \endcode
+ */
 void ppe_rotate(float degrees, ppe_matrix_t *matrix);
-void ppe_perspective(float px, float py, ppe_matrix_t *matrix);
+
+/**
+ * \brief  Do skew transformation on input matrix.
+ * \param[in] skew_x: Horizontal skew angle.
+ * \param[in] skew_y: Vertical skew angle.
+ * \param[in] matrix: Pointer to matrix to be skewed.
+ *
+ * <b>Example usage</b>
+ * \code{.c}
+    void test_code(void){
+        ppe_matrix_t matrix;
+        ppe_get_identity(&matrix);
+        ppe_skew(45, 45, &matrix);
+    }
+ * \endcode
+ */
 void ppe_skew(float skew_x, float skew_y, ppe_matrix_t *matrix);
+
+/**
+ * \brief  Do reflect transformation on input matrix.
+ * \param[in] horizontal: Horizontal reflection.
+ * \param[in] vertical: Vertical reflection.
+ * \param[in] matrix: Pointer to matrix to be skewed.
+ *
+ * <b>Example usage</b>
+ * \code{.c}
+    void test_code(void){
+        ppe_matrix_t matrix;
+        ppe_get_identity(&matrix);
+        ppe_reflect(true, false, &matrix); //reflect horizontally
+    }
+ * \endcode
+ */
 void ppe_reflect(bool horizontal, bool vertical, ppe_matrix_t *matrix);
+
+/**
+ * \brief  Get matrix from 4 corners of image and output region.
+ * \param[in] src: Points of 4 corners of input image.
+ * \param[in] dst: Points of 4 corners of output region.
+ * \param[in] mat: Pointer to the matrix storing result.
+ * \return Operation result.
+ * \retval 0          Successfully find the matrix.
+ * \retval -1         Input parameter is invalid.
+ *
+ * <b>Example usage</b>
+ * \code{.c}
+    void test_code(void){
+        ppe_matrix_t matrix;
+        ppe_point4_t src = {{0,0},{100,0},{0,100},{100,100}};
+        ppe_point4_t dst = {{-10,-10},{150,27},{-5,80},{130,99}};
+        ppe_get_transform_matrix(src, dst, &matrix);
+    }
+ * \endcode
+ */
 int  ppe_get_transform_matrix(ppe_point4_t src, ppe_point4_t dst, ppe_matrix_t *mat);
+
+/**
+ * \brief  Inverse the input matrix.
+ * \param[in] skew_x: Pointer to the input matrix.
+ *
+ * <b>Example usage</b>
+ * \code{.c}
+    void test_code(void){
+        ppe_matrix_t matrix;
+        ppe_get_identity(&matrix);
+        ppe_skew(45, 45, &matrix);
+        ppe_matrix_inverse(&matrix);
+    }
+ * \endcode
+ */
 void ppe_matrix_inverse(ppe_matrix_t *matrix);
+
+/**
+ * \brief  Multiply 2 matrices.
+ * \param[in] matrix: Pointer to one of the input matrix, this matrix stores result.
+ * \param[in] mult: Pointer to the other input matrix.
+ *
+ * <b>Example usage</b>
+ * \code{.c}
+    void test_code(void){
+        ppe_matrix_t matrix, mult;
+        ppe_get_identity(&matrix);
+        ppe_skew(45, 45, &matrix);
+        ppe_get_identity(&mult);
+        ppe_translate(100, 100, &mult);
+        ppe_mat_multiply(&matrix, &mult);
+    }
+ * \endcode
+ */
 void ppe_mat_multiply(ppe_matrix_t *matrix, ppe_matrix_t *mult);
-bool ppe_matrix_is_complex(ppe_matrix_t *mat);
+
+/**
+ * \brief  Find the output region generated by input region and input matrix.
+ * \param[in] result_rect: Points of output region.
+ * \param[in] source_rect: Points of input region.
+ * \param[in] matrix: Pointer to the input matrix.
+ * \param[in] buffer: Pointer to a PPE buffer that stores boundary information.
+ * \return Operation result.
+ * \retval true       Successfully find the output region.
+ * \retval false      Input region or input matrix is not valid.
+ *
+ * <b>Example usage</b>
+ * \code{.c}
+    void test_code(void){
+        ppe_matrix_t matrix;
+        ppe_point4_t src = {{0,0},{100,0},{0,100},{100,100}};
+        ppe_matrix_identity(&matrix);
+        ppe_skew(45, 45, &matrix);
+        ppe_get_area(&result_rect, &src, &matrix, NULL);
+    }
+ * \endcode
+ */
 bool ppe_get_area(ppe_rect_t *result_rect, ppe_rect_t *source_rect, ppe_matrix_t *matrix,
                   ppe_buffer_t *buffer);
+
+/**
+ * \brief  Check if input matrix has shape transform.
+ * \param[in] matrix: Pointer to the input matrix.
+ * \return Operation result.
+ * \retval true       Input matrix is transformed.
+ * \retval false      Input matrix is not transformed.
+ *
+ * <b>Example usage</b>
+ * \code{.c}
+    void test_code(void){
+        //generate a matrix
+        if(!ppe_matrix_is_complex(&matrix)){
+            //handle simple case
+        }
+    }
+ * \endcode
+ */
+bool ppe_matrix_is_complex(ppe_matrix_t *mat);
+
+/**
+ * \brief  Mask the buffer with certain color in ABGR8888 format.
+ * \param[in] dst: Target buffer to be cleared.
+ * \param[in] color: Specified color in ABGR8888 format \ref PPE_ABGR8888
+ * \param[in] rect: Rectangle region of masking area.
+ * \return Operation result.
+ * \retval PPE_SUCCESS   Operation success.
+ * \retval Others        Operation failure, cause refers to @ref PPE_ERR .
+ *
+ * <b>Example usage</b>
+ * \code{.c}
+    void test_code(void){
+        RCC_PeriphClockCmd(APBPeriph_PPE, APBPeriph_PPE_CLOCK, ENABLE);
+        ppe_buffer_t buffer;
+
+        buffer.format = PPE_RGB565;
+        buffer.address = (uint32_t)PIC_OUTPUT_LAYER;
+        buffer.width = 64;
+        buffer.height = 64;
+        buffer.stride = 64;
+        buffer.win_x_min = 0;
+        buffer.win_x_max = 64;
+        buffer.win_y_min = 0;
+        buffer.win_y_max = 64;
+        ppe_rect_t rect = {0, 0, 64, 64};
+        PPE_Mask(&buffer, 0x80808080, &rect);
+        PPE_Finish(); //wait for PPE to finish blending
+    }
+ * \endcode
+ */
 PPE_ERR PPE_Mask(ppe_buffer_t *dst, uint32_t color, ppe_rect_t *rect);
+
+/**
+ * \brief  Clear the buffer with certain color in ABGR8888 format, no blending is performed.
+ * \param[in] dst: Target buffer to be cleared.
+ * \param[in] color: Specified color in ABGR8888 format \ref PPE_ABGR8888
+ * \param[in] rect: Rectangle region of clear area.
+ * \return Operation result.
+ * \retval PPE_SUCCESS   Operation success.
+ * \retval Others        Operation failure, cause refers to @ref PPE_ERR .
+ *
+ * <b>Example usage</b>
+ * \code{.c}
+    void test_code(void){
+        RCC_PeriphClockCmd(APBPeriph_PPE, APBPeriph_PPE_CLOCK, ENABLE);
+        ppe_buffer_t buffer;
+
+        buffer.format = PPE_RGB565;
+        buffer.address = (uint32_t)PIC_OUTPUT_LAYER;
+        buffer.width = 64;
+        buffer.height = 64;
+        buffer.stride = 64;
+        buffer.win_x_min = 0;
+        buffer.win_x_max = 64;
+        buffer.win_y_min = 0;
+        buffer.win_y_max = 64;
+        ppe_rect_t rect = {0, 0, 64, 64};
+        PPE_Clear(&buffer, 0x0, &rect);
+        PPE_Finish(); //wait for PPE to finish clearing
+    }
+ * \endcode
+ */
 PPE_ERR PPE_Clear(ppe_buffer_t *dst, uint32_t color, ppe_rect_t *rect);
-PPE_ERR PPE_Blit_Inverse_Simulate(ppe_buffer_t *dst, ppe_buffer_t *src, ppe_matrix_t *matrix,
-                                  ppe_matrix_t *inverse,
-                                  ppe_rect_t *rect, PPE_BLEND_METHOD method);
-void PPE_Register_CLUT(uint32_t *clut, uint16_t size);
-void PPE_CLK_ENABLE_IN_DLPS(FunctionalState NewState);
+
 /** End of PPE_Exported_Functions
   * \}
   */

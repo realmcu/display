@@ -172,7 +172,7 @@ typedef enum
   * \{
   */
 
-/** \defgroup PPE_RECT PPE Rectrangle
+/** \defgroup PPE_RECT PPE Rectangle
   * \{
   * \ingroup  PPE_Exported_Types
   */

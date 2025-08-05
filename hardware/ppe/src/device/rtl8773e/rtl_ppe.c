@@ -1899,6 +1899,33 @@ void ppe_skew(float skew_x, float skew_y, ppe_matrix_t *matrix)
     ppe_mat_multiply(matrix, &s);
 }
 
+void ppe_reflect(bool horizontal, bool vertical, ppe_matrix_t *matrix)
+{
+    /* set prespective matrix */
+    float f1 = 1, f2 = 1;
+    bool change = false;
+    if (horizontal)
+    {
+        f1 = -1.0f;
+        change = true;
+    }
+    if (vertical)
+    {
+        f2 = -1.0f;
+        change = true;
+    }
+    if (change)
+    {
+        ppe_matrix_t p = { { {f1, 0.0f, 0.0f},
+                {0.0f, f2, 0.0f},
+                {0, 0, 1.0f}
+            }
+        };
+        /* Multiply with current matrix. */
+        ppe_mat_multiply(matrix, &p);
+    }
+}
+
 void ppe_perspective(float px, float py, ppe_matrix_t *matrix)
 {
     /* set prespective matrix */
