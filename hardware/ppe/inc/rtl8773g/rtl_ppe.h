@@ -60,6 +60,9 @@ extern "C" {
   * \brief
   * \{
   */
+
+
+
 /**
  * \cond        private
  * \brief       Constants for internal use
@@ -84,64 +87,6 @@ typedef enum
     PPE_LAYER_SRC_CONST             = 0X0,
     PPE_LAYER_SRC_FROM_DMA         = 0X1,
 } PPE_PIXEL_SOURCE;
-
-typedef struct
-{
-    uint32_t                            Layer_Address;
-    uint32_t                            Line_Length;
-    uint16_t                            Layer_Window_Xmin;
-    uint16_t                            Layer_Window_Xmax;
-    uint16_t                            Layer_Window_Ymin;
-    uint16_t                            Layer_Window_Ymax;
-    uint16_t                            Block_Width;
-    uint16_t                            Block_Height;
-    PPE_PIXEL_FORMAT                    Color_Format;
-    PPE_AWBURST                         LayerBus_Inc;
-    uint8_t                             AXSize;
-    uint8_t                             MAX_AXLEN_LOG;
-} PPE_ResultLayer_Init_Typedef;
-
-typedef struct
-{
-    uint32_t                            Layer_Address;
-    uint32_t                            Pic_Height;
-    uint32_t                            Pic_Width;
-    uint32_t                            Line_Length;
-    PPE_PIXEL_SOURCE                  Pixel_Source;
-    PPE_PIXEL_FORMAT                  Pixel_Color_Format;
-    PPE_SRC_INTERPOLATION             Source_Interpolation;
-    PPE_BLEND_METHOD                  Blend_Method;
-    uint32_t                            Const_Pixel;
-    PPE_COLOR_KEY_MODE                  Color_Key_Mode;
-    uint8_t                             Color_Key_MAX_R;
-    uint8_t                             Color_Key_MAX_G;
-    uint8_t                             Color_Key_MAX_B;
-    uint8_t                             Color_Key_MIN_R;
-    uint8_t                             Color_Key_MIN_G;
-    uint8_t                             Color_Key_MIN_B;
-    uint8_t                             Color_Key_Replace_A;
-    uint8_t                             Color_Key_Replace_B;
-    uint8_t                             Color_Key_Replace_G;
-    uint8_t                             Color_Key_Replace_R;
-    PPE_color_key_state                 Color_Key_Enable;
-    PPE_AWBURST                         LayerBus_Inc;
-    FunctionalState                     Cache_Enable;
-    uint16_t                            Layer_Window_Xmin;
-    uint16_t                            Layer_Window_Xmax;
-    uint16_t                            Layer_Window_Ymin;
-    uint16_t                            Layer_Window_Ymax;
-    uint32_t                            Transfer_Matrix_E11;
-    uint32_t                            Transfer_Matrix_E12;
-    uint32_t                            Transfer_Matrix_E13;
-    uint32_t                            Transfer_Matrix_E21;
-    uint32_t                            Transfer_Matrix_E22;
-    uint32_t                            Transfer_Matrix_E23;
-    uint32_t                            Transfer_Matrix_E31;
-    uint32_t                            Transfer_Matrix_E32;
-    uint32_t                            Transfer_Matrix_E33;
-    uint32_t                           *Index_Table;
-} PPE_InputLayer_Init_Typedef;
-
 typedef enum
 {
     PPE_ALL_OVER_INT = 0x0,
@@ -323,6 +268,29 @@ typedef enum
   * \{
   */
 
+/** \defgroup PPE_COLOR_KEY_STATE PPE Color Key State
+  * \{
+  * \ingroup  PPE_Exported_Types
+  */
+typedef struct
+{
+    union
+    {
+        uint8_t key_enable;        /*!< General key status. */
+        struct
+        {
+            __IO uint8_t r_en:  1;    /*!< Red channel key status. */
+            __IO uint8_t g_en:  1;    /*!< Green channel key status. */
+            __IO uint8_t b_en:  1;    /*!< Blue channel key status. */
+            __IO uint8_t a_en:  1;    /*!< Alpha channel key status. */
+            __IO uint8_t reserved: 4; /*!< Reserved. */
+        } channel_en;
+    }; /*!< Union of general key status and detail information. */
+} PPE_color_key_state;
+/** End of PPE_COLOR_KEY_STATE
+  * \}
+  */
+
 /**
  * \cond        private
  * \brief       Structures for internal use
@@ -364,33 +332,67 @@ typedef struct
     uint32_t LYRx_TRANS_MATRIX_E32;
     uint32_t LYRx_TRANS_MATRIX_E33;
 } PPE_LLI_INPUT_LAYER;
+
+typedef struct
+{
+    uint32_t                            Layer_Address;
+    uint32_t                            Line_Length;
+    uint16_t                            Layer_Window_Xmin;
+    uint16_t                            Layer_Window_Xmax;
+    uint16_t                            Layer_Window_Ymin;
+    uint16_t                            Layer_Window_Ymax;
+    uint16_t                            Block_Width;
+    uint16_t                            Block_Height;
+    PPE_PIXEL_FORMAT                    Color_Format;
+    PPE_AWBURST                         LayerBus_Inc;
+    uint8_t                             AXSize;
+    uint8_t                             MAX_AXLEN_LOG;
+} PPE_ResultLayer_Init_Typedef;
+
+typedef struct
+{
+    uint32_t                            Layer_Address;
+    uint32_t                            Pic_Height;
+    uint32_t                            Pic_Width;
+    uint32_t                            Line_Length;
+    PPE_PIXEL_SOURCE                  Pixel_Source;
+    PPE_PIXEL_FORMAT                  Pixel_Color_Format;
+    PPE_SRC_INTERPOLATION             Source_Interpolation;
+    PPE_BLEND_METHOD                  Blend_Method;
+    uint32_t                            Const_Pixel;
+    PPE_COLOR_KEY_MODE                  Color_Key_Mode;
+    uint8_t                             Color_Key_MAX_R;
+    uint8_t                             Color_Key_MAX_G;
+    uint8_t                             Color_Key_MAX_B;
+    uint8_t                             Color_Key_MIN_R;
+    uint8_t                             Color_Key_MIN_G;
+    uint8_t                             Color_Key_MIN_B;
+    uint8_t                             Color_Key_Replace_A;
+    uint8_t                             Color_Key_Replace_B;
+    uint8_t                             Color_Key_Replace_G;
+    uint8_t                             Color_Key_Replace_R;
+    PPE_color_key_state                 Color_Key_Enable;
+    PPE_AWBURST                         LayerBus_Inc;
+    FunctionalState                     Cache_Enable;
+    uint16_t                            Layer_Window_Xmin;
+    uint16_t                            Layer_Window_Xmax;
+    uint16_t                            Layer_Window_Ymin;
+    uint16_t                            Layer_Window_Ymax;
+    uint32_t                            Transfer_Matrix_E11;
+    uint32_t                            Transfer_Matrix_E12;
+    uint32_t                            Transfer_Matrix_E13;
+    uint32_t                            Transfer_Matrix_E21;
+    uint32_t                            Transfer_Matrix_E22;
+    uint32_t                            Transfer_Matrix_E23;
+    uint32_t                            Transfer_Matrix_E31;
+    uint32_t                            Transfer_Matrix_E32;
+    uint32_t                            Transfer_Matrix_E33;
+    uint32_t                           *Index_Table;
+} PPE_InputLayer_Init_Typedef;
 /**
  * \}
  * \endcond
  */
-
-/** \defgroup PPE_COLOR_KEY_STATE PPE Color Key State
-  * \{
-  * \ingroup  PPE_Exported_Types
-  */
-typedef struct
-{
-    union
-    {
-        uint8_t key_enable;        /*!< General key status. */
-        struct
-        {
-            __IO uint8_t r_en:  1;    /*!< Red channel key status. */
-            __IO uint8_t g_en:  1;    /*!< Green channel key status. */
-            __IO uint8_t b_en:  1;    /*!< Blue channel key status. */
-            __IO uint8_t a_en:  1;    /*!< Alpha channel key status. */
-            __IO uint8_t reserved: 4; /*!< Reserved. */
-        } channel_en;
-    }; /*!< Union of general key status and detail information. */
-} PPE_color_key_state;
-/** End of PPE_COLOR_KEY_STATE
-  * \}
-  */
 
 /** \defgroup PPE_COLOR_KEY_RANGE PPE Color Key Range
   * \{
