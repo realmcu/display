@@ -69,6 +69,29 @@ void LCDC_Clock_Cfg(FunctionalState state)
     }
 }
 
+#if defined(CONFIG_SOC_SERIES_RTL87X3G)
+#include "clock.h"
+#include "rtl876x_rcc.h"
+uint32_t LCDC_Clock_Sel(LCDC_BUS_CLOCK bus_clk_sel)
+{
+    uint32_t actual_mhz = 0;
+    if (bus_clk_sel == LCDC_BUS_CLK_200M)
+    {
+        clk_register_pre_hook(CLOCK_DISPLAY, 200);
+        RCC_PeriphClockCmd(APBPeriph_DISP, APBPeriph_DISP_CLOCK, ENABLE);
+        RCC_DisplayClockConfig(DISPLAY_CLOCK_SOURCE_PLL1, DISPLAY_CLOCK_DIV_1);
+        clk_register_post_hook(CLOCK_DISPLAY, 200, &actual_mhz);
+    }
+    else if (bus_clk_sel == LCDC_BUS_CLK_280M)
+    {
+        clk_register_pre_hook(CLOCK_DISPLAY, 280);
+        RCC_PeriphClockCmd(APBPeriph_DISP, APBPeriph_DISP_CLOCK, ENABLE);
+        RCC_DisplayClockConfig(DISPLAY_CLOCK_SOURCE_PLL2, DISPLAY_CLOCK_DIV_1);
+        clk_register_post_hook(CLOCK_DISPLAY, 280, &actual_mhz);
+    }
+    return actual_mhz;
+}
+#endif
 
 
 void LCDC_Init(LCDC_InitTypeDef *cfg)

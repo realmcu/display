@@ -1499,6 +1499,27 @@ void LCDC_ForceBurst(FunctionalState new_state);
  */
 void LCDC_Clock_Cfg(FunctionalState state);
 
+#if defined(CONFIG_SOC_SERIES_RTL87X3G)
+/**
+ * \brief  Configure LCDC clock.
+ *
+ * \param[in] bus_clk_sel: bus clock.
+ *            This parameter can be one of the following values:
+ *            - LCDC_BUS_CLK_200M: 200M bus frequency.
+ *            - LCDC_BUS_CLK_280M: 280M bus frequency.
+ * \return Frequency of LCDC bus.
+ * <b>Example usage</b>
+ * \code{.c}
+ *
+ * void driver_lcdc_init(void)
+ * {
+ *     LCDC_Clock_Sel(LCDC_BUS_CLK_200M);
+ * }
+ * \endcode
+ */
+uint32_t LCDC_Clock_Sel(LCDC_BUS_CLOCK bus_clk_sel);
+#endif
+
 /**
  * \brief  Update source address for group 1 and group 2 in infinite mode.
  *

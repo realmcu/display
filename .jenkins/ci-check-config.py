@@ -1,3 +1,5 @@
+import glob
+
 ci_check_config = {
     "commit_labels":{
         'IO': {
@@ -24,6 +26,18 @@ ci_check_config = {
     "ignore_file_encoding":[
     ],
     "ignore_cpp_astyle_check":[ 
+
+    ],
+    "ignore_astyle_check":[
+     r'hardware\lcdc\src\device\rtl87x2g', 
+     r'hardware\lcdc\src\device\rtl8773e', 
+     r'hardware\lcdc\src\device\rtl8773g',
+     r'hardware\idu\src\device\rtl87x2g',
+     r'hardware\idu\src\device\rtl8773e',
+     r'hardware\idu\src\device\rtl8773g',
+     r'hardware\ppe\src\device\rtl87x2g',
+     r'hardware\segcom\src\device\rtl87x2g',
+     r'hardware\segcom\src\device\rtl8772f',
     ],
     "commit_version_check": {
         "ANCESTOR_ACCEPT_LENGTH": 5, # the 5th commit is the parent, ok // first priority
