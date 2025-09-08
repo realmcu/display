@@ -777,8 +777,8 @@ PPE_ERR PPE_Blend(ppe_buffer_t *image, ppe_buffer_t *buffer, ppe_translate_t *tr
     {
         return PPE_ERROR_NULL_SOURCE;
     }
-    if ((trans->x < -(image->width - 1)) || (trans->x >= (buffer->width - 1)) \
-        || (trans->y < -(image->height - 1)) || (trans->y >= (buffer->height - 1)))
+    if ((trans->x < -(image->width - 1)) || (trans->x >= buffer->width) \
+        || (trans->y < -(image->height - 1)) || (trans->y >= buffer->height))
     {
         return PPE_ERROR_OUT_OF_RANGE;
     }
