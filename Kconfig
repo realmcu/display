@@ -44,4 +44,8 @@ config REALTEK_DISPLAY_ENABLE_SEGCOM
     depends on REALTEK_DISPLAY
     default n
 
+config REALTEK_DISPLAY_ENABLE_JPU
+    bool "Enable Realtek JPU"
+    depends on REALTEK_DISPLAY
+    default n
 endmenu
