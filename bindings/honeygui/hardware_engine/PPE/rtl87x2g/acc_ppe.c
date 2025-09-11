@@ -533,10 +533,12 @@ static void hw_ppe_blit(draw_img_t *image, struct gui_dispdev *dc, gui_rect_t *r
                 }
                 trans.x = constraint_area.x1 - dc->section.x1;
                 trans.y = constraint_area.y1 - dc->section.y1;
-                source.address = source.address + (rect->x1 + rect->y1 * image->img_w) * ppe_get_format_data_len(
-                                     source.format);
-                source.width = rect->x2 - rect->x1 + 1;
-                source.height = rect->y2 - rect->y1 + 1;
+                source.address = source.address + ((constraint_area.x1 - image->img_target_x) +
+                                                   (constraint_area.y1 - image->img_target_y)
+                                                   * image->img_w) * ppe_get_format_data_len(source.format);
+                source.memory = (uint32_t *)source.address;
+                source.width = constraint_area.x2 - constraint_area.x1 + 1;
+                source.height = constraint_area.y2 - constraint_area.y1 + 1;
             }
         }
         PPE_ERR err = PPE_Blend(&source, &target, &trans, PPE_SRC_OVER_MODE);
