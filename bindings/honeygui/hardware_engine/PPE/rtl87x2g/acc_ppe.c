@@ -362,7 +362,6 @@ static void hw_ppe_blit(draw_img_t *image, struct gui_dispdev *dc, gui_rect_t *r
     source.global_alpha_en = true;
     source.global_alpha = image->opacity_value;
     PPE_BLEND_MODE mode = PPE_BYPASS_MODE;
-
     if (image->blend_mode == IMG_FILTER_BLACK)
     {
         source.color_key_en = true;
@@ -416,12 +415,17 @@ static void hw_ppe_blit(draw_img_t *image, struct gui_dispdev *dc, gui_rect_t *r
         {
             scale_rect.right = image->img_w - 1;
         }
+
         if (rect != NULL)
         {
+            draw_area.x1 = image->img_target_x + rect->x1 * scale_x;
+            draw_area.x2 = image->img_target_x + ceil(rect->x2 * scale_x);
+            draw_area.y1 = image->img_target_y + rect->y1 * scale_y;
+            draw_area.y2 = image->img_target_y + ceil(rect->y2 * scale_y);
             ppe_rect_t scope_area = {.x1 = rect->x1, .x2 = rect->x2, \
                                      .y1 = rect->y1, .y2 = rect->y2
                                     };
-            if (!ppe_rect_intersect(&scale_rect, &scale_rect, &scope_area))
+            if (!ppe_rect_intersect(&constraint_area, &buf_area, &draw_area))
             {
                 return;
             }
@@ -468,7 +472,19 @@ static void hw_ppe_blit(draw_img_t *image, struct gui_dispdev *dc, gui_rect_t *r
         PPE_ERR err = PPE_Scale_Rect(&source, &scaled_img, scale_x, scale_y, &scale_rect);
         if (err == PPE_SUCCESS)
         {
-            err = PPE_Blend(&scaled_img, &target, &trans, mode);
+            if (rect != NULL)
+            {
+                ppe_rect_t final = {.x1 = constraint_area.x1 - dc->section.x1,
+                                    .x2 = constraint_area.x2 - dc->section.x1,
+                                    .y1 = constraint_area.y1 - dc->section.y1,
+                                    .y2 = constraint_area.y2 - dc->section.y1
+                                   };
+                err = PPE_Blend_Rect(&scaled_img, &target, &trans, &final, mode);
+            }
+            else
+            {
+                err = PPE_Blend(&scaled_img, &target, &trans, mode);
+            }
         }
         if (head->compress)
         {
