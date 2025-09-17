@@ -17,7 +17,6 @@
 #include "rtl_ppe.h"
 #include "string.h"
 #include "math.h"
-#include "trace.h"
 
 /*============================================================================*
  *                          Private Macros
