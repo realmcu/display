@@ -65,8 +65,8 @@ extern "C" {
  * \{
  * \ingroup     IDU_Exported_Constants
  */
-#define IDU_TX_FIFO_WIDTH             32      /*!< Width of IDU TX FIFO in bits */
-#define IDU_RX_FIFO_WIDTH             32      /*!< Width of IDU RX FIFO in bits */
+#define IDU_TX_FIFO_WIDTH             32      /*!< Width of IDU TX FIFO in bits. */
+#define IDU_RX_FIFO_WIDTH             32      /*!< Width of IDU RX FIFO in bits. */
 
 /** End of IDU_FIFO_Width
   * \}
@@ -77,8 +77,8 @@ extern "C" {
  * \{
  * \ingroup     IDU_Exported_Constants
  */
-#define IDU_TX_FIFO_DEPTH             16       /*!< Depth of IDU TX FIFO in words */
-#define IDU_RX_FIFO_DEPTH             16       /*!< Depth of IDU RX FIFO in words */
+#define IDU_TX_FIFO_DEPTH             16       /*!< Depth of IDU TX FIFO in words. */
+#define IDU_RX_FIFO_DEPTH             16       /*!< Depth of IDU RX FIFO in words. */
 
 /** End of IDU_FIFO_Depth
   * \}
@@ -249,7 +249,7 @@ typedef struct
     struct
     {
         uint8_t algorithm: 2;       /*!< Compression algorithm of input file,
-                                        This parameter can be a value of @ref IDU_ALGORITHM. */
+                                        this parameter can be a value of @ref IDU_ALGORITHM. */
         uint8_t feature_1: 2;       /*!< For RLE: Run length size, value of @ref IDU_RLE_RUNLENGTH_SIZE.
                                         For YUV: Sample type, value of @ref IDU_YUV_SAMPLE_TYPE. */
         uint8_t feature_2: 2;       /*!< For RLE: Run length size, value of @ref IDU_RLE_RUNLENGTH_SIZE.
@@ -352,6 +352,7 @@ void IDU_INTConfig(IDU_INTERRUPT_TYPE Interrupt, FunctionalState NewState);
  * \return Interrupt status.
  * \retval SET: Interrupt has been triggered.
  * \retval RESET: Interrupt has not been triggered yet.
+ *
  * <b>Example usage</b>
  * \code{.c}
     void demo_code(void){
@@ -459,8 +460,8 @@ IDU_ERROR IDU_Decode_With_Interrupt(uint8_t *file, IDU_decode_range *range, IDU_
 
 /**
  * \brief  Get the start address of certain line in compressed file.
- * \param[in] compressed_start_address: start address of entire compressed file.
- * \param[in] line_number: specified line number
+ * \param[in] compressed_start_address: Start address of entire compressed file.
+ * \param[in] line_number: Specified line number
  * \return Start address of specified line.
  * \retval 0: Invalid line number.
  * \retval others: Valid address.

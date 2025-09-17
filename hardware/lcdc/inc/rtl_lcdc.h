@@ -475,7 +475,7 @@ typedef struct
     uint32_t LCDC_OperateDirection; /*!< Configure operate direction. */
     uint32_t LCDC_DmaThreshold;     /*!< Configure dma handler fifo threshold. */
     uint32_t LCDC_DmaIntMask;       /*!< Dma interrupt mask. */
-    uint32_t LCDC_TxLen;            /*!< Tx length */
+    uint32_t LCDC_TxLen;            /*!< Tx length. */
     uint32_t LCDC_InfiniteModeEn;   /*!< Enable or disable infinite mode. */
     uint32_t LCDC_PhaseShift;       /*!< Phase shift in DBIC mode. */
     uint32_t LCDC_DelayCell;        /*!< Select delay cell after phase shift in DBIC mode. */
@@ -1423,7 +1423,7 @@ void LCDC_Init(LCDC_InitTypeDef *LCDC_InitStructure);
 /**
  * \brief  Configure linklist of LCDC DMA.
  *
- * \param[in] LCDC_DMA_LLIConfig: linklist initialization structure.
+ * \param[in] LCDC_DMA_LLIConfig: Linklist initialization structure.
  * \param[in] LCDC_DMA_Init: LCDC DMA initialization structure.
  *
  * <b>Example usage</b>

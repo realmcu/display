@@ -345,7 +345,7 @@ typedef struct
  * \{
  * \ingroup     LCDC_EDPI_Exported_Constants
  */
-#define EDPI_DE_CONSTANT_NONE                (0x1)      /*!< No constant value for DE, it can be drive by display controller*/
+#define EDPI_DE_CONSTANT_NONE                (0x1)      /*!< No constant value for DE, it can be drive by display controller.*/
 #define EDPI_DE_CONSTANT_LOW                 (0x0)      /*!< Constant low for DE. */
 #define EDPI_DE_CONSTANT_HIGH                (0x3)      /*!< Constant high for DE. */
 
@@ -360,7 +360,7 @@ typedef struct
  * \{
  * \ingroup     LCDC_EDPI_Exported_Constants
  */
-#define EDPI_VSYNC_CONSTANT_NONE                (0x1)      /*!< No constant value for VSYNC, it can be driven by display controller*/
+#define EDPI_VSYNC_CONSTANT_NONE                (0x1)      /*!< No constant value for VSYNC, it can be driven by display controller.*/
 #define EDPI_VSYNC_CONSTANT_LOW                 (0x0)      /*!< Constant low for VSYNC. */
 #define EDPI_VSYNC_CONSTANT_HIGH                (0x3)      /*!< Cconstant high for VSYNC. */
 
@@ -375,7 +375,7 @@ typedef struct
  * \{
  * \ingroup     LCDC_EDPI_Exported_Constants
  */
-#define EDPI_HSYNC_CONSTANT_NONE                (0x1)      /*!< No constant value for HSYNC, it can be driven by display controller*/
+#define EDPI_HSYNC_CONSTANT_NONE                (0x1)      /*!< No constant value for HSYNC, it can be driven by display controller.*/
 #define EDPI_HSYNC_CONSTANT_LOW                 (0x0)      /*!< Constant low for HSYNC. */
 #define EDPI_HSYNC_CONSTANT_HIGH                (0x3)      /*!< Constant high for HSYNC. */
 

@@ -268,7 +268,7 @@ void LCDC_DMA_Init(LCDC_DMA_ChannelTypeDef *LCDC_DMA_Channelx,
  * \param[in] LCDC_DMA_InitStruct: pointer to a LCDC_DMA_InitTypeDef structure which will be initialized.
  *
  * \note The default settings for the LCDC_DMA_InitStruct member are shown in the following table:
- *       | LCDC_DMA_InitStruct member     | Default value                        |
+ *       | LCDC_DMA_InitStruct Member     | Default Value                        |
  *       |:------------------------------:|:------------------------------------:|
  *       | LCDC_DMA_ChannelNum            | 0                                    |
  *       | LCDC_DMA_DIR                   | \ref LCDC_DMA_DIR_PeripheralToMemory |
