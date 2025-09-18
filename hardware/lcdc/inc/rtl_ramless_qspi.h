@@ -91,23 +91,23 @@ typedef struct
 * \note Default values for each member:
 *       | Member                    | Default Value | Description                                                  |
 *       |---------------------------|---------------|--------------------------------------------------------------|
-*       | VSA                       | 0             | Vertical synchronization active height                       |
-*       | VBP                       | 0             | Vertical back porch                                          |
-*       | VFP                       | 0             | Vertical front porch                                         |
-*       | VSYNC_CMD                 | 0             | VSYNC command                                                |
-*       | VSYNC_CMD_ADDR            | 0             | VSYNC command address                                        |
-*       | HSYNC_CMD_VBP             | 0             | HSYNC command for VBP                                        |
-*       | HSYNC_CMD_VBP_ADDR        | 0             | HSYNC command address for VBP                                |
-*       | HSYNC_CMD_VACTIVE         | 0             | HSYNC command for active area                                |
-*       | HSYNC_CMD_VACTIVE_ADDR    | 0             | HSYNC command address for active area                        |
-*       | HSYNC_CMD_VFP             | 0             | HSYNC command for VFP                                        |
-*       | HSYNC_CMD_VFP_ADDR        | 0             | HSYNC command address for VFP                                |
-*       | DUMMY_CMD                 | 0             | Dummy command                                                |
-*       | width                     | 0             | Display width                                                |
-*       | height                    | 0             | Display height                                               |
-*       | line_delay_in_vactive     | 0             | Line delay in vertical active period                         |
-*       | line_delay_out_vactive     | 0            | Line delay outside vertical active period                    |
-*       | frame_delay               | 0             | Frame delay                                                  |
+*       | VSA                       | 0             | Vertical synchronization active height.                      |
+*       | VBP                       | 0             | Vertical back porch.                                         |
+*       | VFP                       | 0             | Vertical front porch.                                        |
+*       | VSYNC_CMD                 | 0             | VSYNC command.                                               |
+*       | VSYNC_CMD_ADDR            | 0             | VSYNC command address.                                       |
+*       | HSYNC_CMD_VBP             | 0             | HSYNC command for VBP.                                       |
+*       | HSYNC_CMD_VBP_ADDR        | 0             | HSYNC command address for VBP.                               |
+*       | HSYNC_CMD_VACTIVE         | 0             | HSYNC command for active area.                               |
+*       | HSYNC_CMD_VACTIVE_ADDR    | 0             | HSYNC command address for active area.                       |
+*       | HSYNC_CMD_VFP             | 0             | HSYNC command for VFP.                                       |
+*       | HSYNC_CMD_VFP_ADDR        | 0             | HSYNC command address for VFP.                               |
+*       | DUMMY_CMD                 | 0             | Dummy command.                                               |
+*       | width                     | 0             | Display width.                                               |
+*       | height                    | 0             | Display height.                                              |
+*       | line_delay_in_vactive     | 0             | Line delay in vertical active period.                        |
+*       | line_delay_out_vactive     | 0            | Line delay outside vertical active period.                   |
+*       | frame_delay               | 0             | Frame delay.                                                 |
 *
 * <b>Example usage</b>
 * \code{.c}

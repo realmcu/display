@@ -146,13 +146,13 @@ typedef enum
   */
 
 /**
- * \defgroup    LCDC_DMA_Multiblock_Mode LCDC DMA Multi-block Mode
+ * \defgroup    LCDC_DMA_Multiblock_Mode LCDC DMA Multi-Block Mode
  * \{
  * \ingroup     LCDC_DMA_Exported_Constants
  */
 #define AUTO_RELOAD_WITH_CONTIGUOUS_SAR     (BIT31)              /*!< The DARx register can be automatically reloaded from its initial value at the end of every block for multi-block transfers. */
 #define AUTO_RELOAD_TRANSFER                (BIT30 | BIT31)      /*!< Both DARx and SARx registers can be automatically reloaded from its initial value at the end of every block for multi-block transfers. */
-#define LLI_TRANSFER                        (BIT27 | BIT28)      /*!< Multi-block with Linklist module. */
+#define LLI_TRANSFER                        (BIT27 | BIT28)      /*!< Multi-Block with Linklist module. */
 
 #define IS_DMA_MULTIBLOCKMODE(MODE) (((MODE) == AUTO_RELOAD_WITH_CONTIGUOUS_SAR) || ((MODE) == LLI_TRANSFER)\
                                      ||((MODE) == AUTO_RELOAD_TRANSFER))

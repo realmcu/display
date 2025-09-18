@@ -152,7 +152,7 @@ extern "C" {
 typedef struct
 {
     uint32_t DBIC_SPEED_SEL;              /*!< Specifies the DBIC clock divider value.
-                                                 The frequency of DBIC clock = The frequency of DBIC clock source / (2 * DBIC_SPEED_SEL) . */
+                                                 The frequency of DBIC clock = the frequency of DBIC clock source / (2 * DBIC_SPEED_SEL) . */
     uint32_t DBIC_TxThr;                  /*!< Specifies the TX FIFO threshold value.
                                                   This value can be from 0 to 16. */
     uint32_t DBIC_RxThr;                  /*!< Specifies the RX FIFO threshold value.
@@ -348,11 +348,11 @@ void DBIC_TX_NDF(uint32_t len);
  * \note Default values for each member:
  *       | Member           | Default Value        | Description                  |
  *       |------------------|----------------------|------------------------------|
- *       | DBIC_SPEED_SEL   | 1                    | Clock divider value          |
- *       | DBIC_TxThr       | 0                    | TX FIFO threshold            |
- *       | DBIC_RxThr       | 0                    | RX FIFO threshold            |
- *       | SCPOL            | \ref DBIC_SCPOL_LOW  | Serial clock polarity        |
- *       | SCPH             | \ref DBIC_SCPH_1Edge | Serial clock phase           |
+ *       | DBIC_SPEED_SEL   | 1                    | Clock divider value.         |
+ *       | DBIC_TxThr       | 0                    | TX FIFO threshold.           |
+ *       | DBIC_RxThr       | 0                    | RX FIFO threshold.           |
+ *       | SCPOL            | \ref DBIC_SCPOL_LOW  | Serial clock polarity.       |
+ *       | SCPH             | \ref DBIC_SCPH_1Edge | Serial clock phase.          |
  *
  * <b>Example usage</b>
  * \code{.c}

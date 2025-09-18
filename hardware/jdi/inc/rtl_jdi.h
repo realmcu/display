@@ -218,7 +218,7 @@ void JDI_Init(JDI_SrtuctInit_TypeDef *JDI_InitStruct);
  * \brief   Fill each JDI_InitStruct member with default value.
  *
  * \note The default settings for the JDI_InitStruct member are shown in the following table:
- *       | Member                          | Default value                        |
+ *       | Member                          | Default Value                        |
  *       |:-------------------------------:|:------------------------------------:|
  *       | JDI_Input_Pixel_Format          | \ref JDI_IN_RGB565                   |
  *       | JDI_Output_Pixel_Format         | \ref JDI_OUT_3BIT                    |

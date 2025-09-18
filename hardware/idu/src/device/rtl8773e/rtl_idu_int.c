@@ -1,6 +1,5 @@
 #include "rtl_idu.h"
 #include "rtl_idu_int.h"
-#include "stdio.h"
 #include "dma_channel.h"
 #include "os_mem.h"
 

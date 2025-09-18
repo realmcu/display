@@ -364,7 +364,7 @@ void DBIB_Read(uint8_t cmd, uint8_t *pBuf, uint32_t len);
  * \param[in] pCmdBuf: Buffer address which store command sequence.
  * \param[in] len: Command length.
  *
- * \return  The status of command sequence configuration..
+ * \return  The status of command sequence configuration.
  * \retval SET: Command sequence configuration successful.
  * \retval RESET: Command sequence configuration failed.
  *

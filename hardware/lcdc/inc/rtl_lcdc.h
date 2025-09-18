@@ -1364,18 +1364,18 @@ __STATIC_INLINE void LCDC_DMA_SetBufferSize(LCDC_DMA_ChannelTypeDef *LCDC_DMA_Ch
  * | Parameter Name         | Default Value                      | Description                        |
  * |------------------------|------------------------------------|------------------------------------|
  * | LCDC_Interface         | \ref LCDC_IF_DPI                   | Interface type set to DPI          |
- * | LCDC_RamlessEn         | DISABLE                            | Ramless function disabled          |
- * | LCDC_GroupSel          | 1                                  | Pin Group 1 selected               |
- * | LCDC_PixelInputFarmat  | \ref LCDC_INPUT_RGB888             | Input format set to RGB888         |
- * | LCDC_PixelOutpuFarmat  | \ref LCDC_OUTPUT_RGB888            | Output format set to RGB888        |
- * | LCDC_PixelBitSwap      | \ref LCDC_SWAP_BYPASS              | No bit swapping                    |
- * | LCDC_TeEn              | DISABLE                            | Tear Effect function disabled      |
- * | LCDC_TePolarity        | \ref LCDC_TE_EDGE_RISING           | Tear signal rising edge trigger    |
- * | LCDC_TeInputMux        | \ref LCDC_TE_LCD_INPUT             | Tear signal from LCD panel         |
- * | LCDC_DmaThreshold      | 8                                  | DMA threshold set to 8             |
- * | LCDC_InfiniteModeEn    | DISABLE                            | Infinite mode disabled             |
- * | LCDC_PhaseShift        | \ref LCDC_SPI_PHASE_SHIFT_0_DEGREE | No SPI clock phase shift           |
- * | LCDC_DelayCell         | 0                                  | No delay cells                     |
+ * | LCDC_RamlessEn         | DISABLE                            | Ramless function disabled.         |
+ * | LCDC_GroupSel          | 1                                  | Pin Group 1 selected.              |
+ * | LCDC_PixelInputFarmat  | \ref LCDC_INPUT_RGB888             | Input format set to RGB888.        |
+ * | LCDC_PixelOutpuFarmat  | \ref LCDC_OUTPUT_RGB888            | Output format set to RGB888.       |
+ * | LCDC_PixelBitSwap      | \ref LCDC_SWAP_BYPASS              | No bit swapping.                   |
+ * | LCDC_TeEn              | DISABLE                            | Tear Effect function disabled.     |
+ * | LCDC_TePolarity        | \ref LCDC_TE_EDGE_RISING           | Tear signal rising edge trigger.   |
+ * | LCDC_TeInputMux        | \ref LCDC_TE_LCD_INPUT             | Tear signal from LCD panel.        |
+ * | LCDC_DmaThreshold      | 8                                  | DMA threshold set to 8.            |
+ * | LCDC_InfiniteModeEn    | DISABLE                            | Infinite mode disabled.            |
+ * | LCDC_PhaseShift        | \ref LCDC_SPI_PHASE_SHIFT_0_DEGREE | No SPI clock phase shift.          |
+ * | LCDC_DelayCell         | 0                                  | No delay cells.                    |
  *
  * Example:
  * \code{.c}
