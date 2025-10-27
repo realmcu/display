@@ -108,7 +108,7 @@ typedef enum
   */
 
 /**
- * \defgroup    JDI_INTERRUPT_TYPE Enumeration of all JDI interrupts
+ * \defgroup    JDI_INTERRUPT_TYPE Enumeration of All JDI Interrupts
  * \{
  * \ingroup     JDI_Exported_Constants
  */
