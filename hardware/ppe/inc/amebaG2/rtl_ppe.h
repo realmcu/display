@@ -3,7 +3,7 @@
 *               Copyright(c) 2023, Realtek Semiconductor Corporation. All rights reserved.
 *********************************************************************************************************
 * \file     rtl_ppe.h
-* \brief    This file provides all the PPE firmware functions.
+* \brief    This file provides all the PPE_DISP firmware functions.
 * \details
 * \author   astor zhang
 * \date     2025-08-05
@@ -14,8 +14,8 @@
 /*============================================================================*
  *               Define to prevent recursive inclusion
  *============================================================================*/
-#ifndef RTL_PPE_H
-#define RTL_PPE_H
+#ifndef RTL_PPE_DISP_H
+#define RTL_PPE_DISP_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -27,7 +27,7 @@ extern "C" {
 #include "rtl_ppe_reg.h"
 
 /*============================================================================*
- *                         PPE Registers Memory Map
+ *                         PPE_DISP Registers Memory Map
  *============================================================================*/
 typedef struct
 {
@@ -48,10 +48,10 @@ typedef struct
     __IO uint32_t REG_INTR_MASK;                        /* offset 0x4C*/
     __I  uint32_t REG_BUS_ERR_DETAIL;                   /* offset 0x50*/
     __I  uint32_t REG_RESERVED3;                     /* offset 0x54*/
-    __IO uint32_t PPE_XOR_CTRL
+    __IO uint32_t PPE_DISP_XOR_CTRL
     ;  /*!< XOR CONTROL REGISTER,  Address offset:0x058 */
     __I  uint32_t REG_RESERVED4;                     /* offset 0x5C*/
-} PPE_Typedef;
+} PPE_DISP_Typedef;
 
 typedef struct
 {
@@ -63,7 +63,7 @@ typedef struct
     __IO uint32_t REG_LYR0_BUS_CFG;             /* offset 0x74*/
     __IO uint32_t REG_LYR0_HS_CFG;              /* offset 0x78*/
     __IO uint32_t REG_BLOCK_SIZE;               /* offset 0x7C*/
-} PPE_ResultLayer_Typedef;
+} PPE_DISP_ResultLayer_Typedef;
 
 
 typedef struct
@@ -89,35 +89,35 @@ typedef struct
     __I uint32_t REG_LYRx_TRANS_MATRIX_E32;                    /* offset 0x48 + X * 0x80*/
     __I uint32_t REG_LYRx_TRANS_MATRIX_E33;                    /* offset 0x4C + X * 0x80*/
     __IO uint32_t REG_RESERVED2[12];                            /* offset (0x50-0x7C) + X * 0x80*/
-} PPE_Input_Layer_Typedef;
+} PPE_DISP_Input_Layer_Typedef;
 
 /*============================================================================*
- *                         PPE Declaration
+ *                         PPE_DISP Declaration
  *============================================================================*/
-#define PPE_REG_BASE                              0x40126000UL
-#define PPE_Result_Layer_BASE                     (PPE_REG_BASE + 0x60)
-#define PPE_Input_Layer1_BASE                     (PPE_REG_BASE + 1 * 0x80)
-#define PPE_Input_Layer2_BASE                     (PPE_REG_BASE + 2 * 0x80)
-#define PPE_Input_Layer3_BASE                     (PPE_REG_BASE + 3 * 0x80)
-#define PPE_Input_Layer4_BASE                     (PPE_REG_BASE + 4 * 0x80)
+#define PPE_DISP_REG_BASE                              0x40126000UL
+#define PPE_DISP_Result_Layer_BASE                     (PPE_DISP_REG_BASE + 0x60)
+#define PPE_DISP_Input_Layer1_BASE                     (PPE_DISP_REG_BASE + 1 * 0x80)
+#define PPE_DISP_Input_Layer2_BASE                     (PPE_DISP_REG_BASE + 2 * 0x80)
+#define PPE_DISP_Input_Layer3_BASE                     (PPE_DISP_REG_BASE + 3 * 0x80)
+#define PPE_DISP_Input_Layer4_BASE                     (PPE_DISP_REG_BASE + 4 * 0x80)
 
-#define PPE                                           ((PPE_Typedef *)PPE_REG_BASE)
-#define PPE_ResultLayer                               ((PPE_ResultLayer_Typedef *)PPE_Result_Layer_BASE)
-#define PPE_InputLayer1                               ((PPE_Input_Layer_Typedef *)PPE_Input_Layer1_BASE)
-#define PPE_InputLayer2                               ((PPE_Input_Layer_Typedef *)PPE_Input_Layer2_BASE)
-#define PPE_InputLayer3                               ((PPE_Input_Layer_Typedef *)PPE_Input_Layer3_BASE)
-#define PPE_InputLayer4                               ((PPE_Input_Layer_Typedef *)PPE_Input_Layer4_BASE)
+#define PPE_DISP                                           ((PPE_DISP_Typedef *)PPE_DISP_REG_BASE)
+#define PPE_DISP_ResultLayer                               ((PPE_DISP_ResultLayer_Typedef *)PPE_DISP_Result_Layer_BASE)
+#define PPE_DISP_InputLayer1                               ((PPE_DISP_Input_Layer_Typedef *)PPE_DISP_Input_Layer1_BASE)
+#define PPE_DISP_InputLayer2                               ((PPE_DISP_Input_Layer_Typedef *)PPE_DISP_Input_Layer2_BASE)
+#define PPE_DISP_InputLayer3                               ((PPE_DISP_Input_Layer_Typedef *)PPE_DISP_Input_Layer3_BASE)
+#define PPE_DISP_InputLayer4                               ((PPE_DISP_Input_Layer_Typedef *)PPE_DISP_Input_Layer4_BASE)
 
-#define PPE_MAX_INPUTLAYER                          0x4
-#define PPE_LINKLIST_GLB_REG_NUM                    3UL
-#define PPE_LINKLIST_RESULT_REG_NUM                 4UL
-#define PPE_LINKLIST_INPUT_REG_NUM                  17UL
-#define PPE_LLI_MAX                                 (PPE_LINKLIST_GLB_REG_NUM + PPE_LINKLIST_RESULT_REG_NUM + PPE_LINKLIST_INPUT_REG_NUM * PPE_MAX_INPUTLAYER)
+#define PPE_DISP_MAX_INPUTLAYER                          0x4
+#define PPE_DISP_LINKLIST_GLB_REG_NUM                    3UL
+#define PPE_DISP_LINKLIST_RESULT_REG_NUM                 4UL
+#define PPE_DISP_LINKLIST_INPUT_REG_NUM                  17UL
+#define PPE_DISP_LLI_MAX                                 (PPE_DISP_LINKLIST_GLB_REG_NUM + PPE_DISP_LINKLIST_RESULT_REG_NUM + PPE_DISP_LINKLIST_INPUT_REG_NUM * PPE_DISP_MAX_INPUTLAYER)
 
 #define BIT0          0x01
 #define BIT1          (0x01 << 1)
 #define BIT(n)        (0x01UL << (n))
-/** \defgroup 8773E_PPE       PPE
+/** \defgroup 8773E_PPE_DISP       PPE_DISP
   * \brief
   * \{
   */
@@ -125,7 +125,7 @@ typedef struct
 /*============================================================================*
  *                         Constants
  *============================================================================*/
-/** \defgroup PPE_Exported_Constants PPE Exported Constants
+/** \defgroup PPE_DISP_Exported_Constants PPE_DISP Exported Constants
   * \brief
   * \{
   */
@@ -133,7 +133,7 @@ typedef struct
 /**
  * \cond        private
  * \brief       Constants for internal use
- * \defgroup    PPE_INTERNAL_USE   PPE constants for internal use
+ * \defgroup    PPE_DISP_INTERNAL_USE   PPE_DISP constants for internal use
  * \{
  */
 typedef enum
@@ -144,106 +144,106 @@ typedef enum
 
 typedef enum
 {
-    PPE_INPUT_1 = 0x1,
-    PPE_INPUT_2 = 0x2,
-    PPE_INPUT_3 = 0x3,
-    PPE_INPUT_4 = 0x4,
-} PPE_INPUT_LAYER_INDEX;
+    PPE_DISP_INPUT_1 = 0x1,
+    PPE_DISP_INPUT_2 = 0x2,
+    PPE_DISP_INPUT_3 = 0x3,
+    PPE_DISP_INPUT_4 = 0x4,
+} PPE_DISP_INPUT_LAYER_INDEX;
 
 typedef enum
 {
-    PPE_NON_SECURE_MODE = 0X0,
-    PPE_SECURE_MODE         = 0x1,
-} PPE_SECURE;
+    PPE_DISP_NON_SECURE_MODE = 0X0,
+    PPE_DISP_SECURE_MODE         = 0x1,
+} PPE_DISP_SECURE;
 
 typedef enum
 {
-    PPE_AWBURST_FIXED     = 0X0,
-    PPE_AWBURST_INC         = 0X1,
-} PPE_AWBURST;
+    PPE_DISP_AWBURST_FIXED     = 0X0,
+    PPE_DISP_AWBURST_INC         = 0X1,
+} PPE_DISP_AWBURST;
 
 typedef enum
 {
-    PPE_HW_HS_DISABLE     = 0X0,
-    PPE_HW_HS_ENABLE         = 0X1,
-} PPE_HW_HS;
+    PPE_DISP_HW_HS_DISABLE     = 0X0,
+    PPE_DISP_HW_HS_ENABLE         = 0X1,
+} PPE_DISP_HW_HS;
 
 typedef enum
 {
-    PPE_HW_HS_ACTIVE_HIGH     = 0X0,
-    PPE_HW_HS_ACTIVE_LOW         = 0X1,
-} PPE_HW_HS_POL;
+    PPE_DISP_HW_HS_ACTIVE_HIGH     = 0X0,
+    PPE_DISP_HW_HS_ACTIVE_LOW         = 0X1,
+} PPE_DISP_HW_HS_POL;
 
 typedef enum
 {
-    PPE_LAYER_SRC_CONST             = 0X0,
-    PPE_LAYER_SRC_FROM_DMA         = 0X1,
-} PPE_PIXEL_SOURCE;
+    PPE_DISP_LAYER_SRC_CONST             = 0X0,
+    PPE_DISP_LAYER_SRC_FROM_DMA         = 0X1,
+} PPE_DISP_PIXEL_SOURCE;
 
 typedef enum
 {
-    PPE_DMA_HW_HANDSHAKE,
-    PPE_DMA_SW_HANDSHAKE,
-} PPE_DMA_HANDSHAKE;
+    PPE_DISP_DMA_HW_HANDSHAKE,
+    PPE_DISP_DMA_SW_HANDSHAKE,
+} PPE_DISP_DMA_HANDSHAKE;
 
 typedef enum
 {
-    PPE_MSIZE_1,
-    PPE_MSIZE_2,
-    PPE_MSIZE_4,
-    PPE_MSIZE_8,
-    PPE_MSIZE_16,
-    PPE_MSIZE_32,
-    PPE_MSIZE_64,
-    PPE_MSIZE_128,
-    PPE_MSIZE_256,
-    PPE_MSIZE_512,
-    PPE_MSIZE_1024,
-} PPE_MSIZE_LOG;
+    PPE_DISP_MSIZE_1,
+    PPE_DISP_MSIZE_2,
+    PPE_DISP_MSIZE_4,
+    PPE_DISP_MSIZE_8,
+    PPE_DISP_MSIZE_16,
+    PPE_DISP_MSIZE_32,
+    PPE_DISP_MSIZE_64,
+    PPE_DISP_MSIZE_128,
+    PPE_DISP_MSIZE_256,
+    PPE_DISP_MSIZE_512,
+    PPE_DISP_MSIZE_1024,
+} PPE_DISP_MSIZE_LOG;
 
 typedef enum
 {
-    PPE_HS_IDU_Tx,
-} PPE_HW_HANDSHAKE_INDEX;
+    PPE_DISP_HS_IDU_Tx,
+} PPE_DISP_HW_HANDSHAKE_INDEX;
 
 typedef enum
 {
-    PPE_MAX_AXLEN_0,
-    PPE_MAX_AXLEN_1,
-    PPE_MAX_AXLEN_3,
-    PPE_MAX_AXLEN_7,
-    PPE_MAX_AXLEN_15,
-    PPE_MAX_AXLEN_31,
-    PPE_MAX_AXLEN_63,
-    PPE_MAX_AXLEN_127,
-} PPE_MAX_AXLEN;
+    PPE_DISP_MAX_AXLEN_0,
+    PPE_DISP_MAX_AXLEN_1,
+    PPE_DISP_MAX_AXLEN_3,
+    PPE_DISP_MAX_AXLEN_7,
+    PPE_DISP_MAX_AXLEN_15,
+    PPE_DISP_MAX_AXLEN_31,
+    PPE_DISP_MAX_AXLEN_63,
+    PPE_DISP_MAX_AXLEN_127,
+} PPE_DISP_MAX_AXLEN;
 
 typedef enum
 {
     PPV2_READ_MATRIX_1X1,
     PPV2_READ_MATRIX_2X2,
-} PPE_READ_MATRIX_SIZE;
+} PPE_DISP_READ_MATRIX_SIZE;
 
 typedef enum
 {
-    PPE_ALL_OVER_INT = 0x0,
-    PPE_FRAME_OVER_INT,
-    PPE_LOAD_OVER_INT,
-    PPE_LINE_OVER_INT,
-    PPE_SUSPEND_IACTIVE_INT,
-    PPE_SECURE_ERROR_INT,
-    PPE_BUS_ERROR_INT = 0x7,
-    PPE_DIV0_ERR_INT,
-} PPE_INTERRUPT;
+    PPE_DISP_ALL_OVER_INT = 0x0,
+    PPE_DISP_FRAME_OVER_INT,
+    PPE_DISP_LOAD_OVER_INT,
+    PPE_DISP_LINE_OVER_INT,
+    PPE_DISP_SUSPEND_IACTIVE_INT,
+    PPE_DISP_SECURE_ERROR_INT,
+    PPE_DISP_BUS_ERROR_INT = 0x7,
+    PPE_DISP_DIV0_ERR_INT,
+} PPE_DISP_INTERRUPT;
 
 
 typedef enum
 {
-    PPE_DISABLE = 0x0,
-    PPE_ENABLE     = 0x1,
-    PPE_SUSPEND_ALL_INA = 0x2,
-    PPE_SUSPEND = 0x3,
-} PPE_RUN_STATE;
+    PPE_DISP_DISABLE = 0x0,
+    PPE_DISP_ENABLE     = 0x1,
+    PPE_DISP_SUSPEND_ALL_INA = 0x2,
+    PPE_DISP_SUSPEND = 0x3,
+} PPE_DISP_RUN_STATE;
 
 
 typedef struct
@@ -251,7 +251,7 @@ typedef struct
     uint32_t LYR_ENABLE;
     uint32_t LL_CFG;
     uint32_t LLP;
-} PPE_LLI_GLB;
+} PPE_DISP_LLI_GLB;
 
 typedef struct
 {
@@ -259,131 +259,131 @@ typedef struct
     uint32_t CANVAS_SIZE;
     uint32_t LYR0_PIC_CFG;
     uint32_t BACKGROUND;
-} PPE_LLI_RESULT_LAYER;
+} PPE_DISP_LLI_RESULT_LAYER;
 /**
  * \}
  * \endcond
  */
 
-/** \defgroup PPE_COLOR_KEY_MODE PPE Color Key Mode
+/** \defgroup PPE_DISP_COLOR_KEY_MODE PPE_DISP Color Key Mode
  * \{
- * \ingroup  PPE_Exported_Constants
+ * \ingroup  PPE_DISP_Exported_Constants
  */
 typedef enum
 {
-    PPE_COLOR_KEY_DISABLE     = 0X0,        /*!< Color key disabled. */
-    PPE_COLOR_KEY_INSIDE         = 0X2,     /*!< Color key inside mode, minimum <= key_value <= maximum. */
-    PPE_COLOR_KEY_OUTSIDE   = 0X3,            /*!< Color key outside mode, key_value <= minimum or key_value > maximum. */
-} PPE_COLOR_KEY_MODE;
-/** End of PPE_COLOR_KEY_MODE
+    PPE_DISP_COLOR_KEY_DISABLE     = 0X0,        /*!< Color key disabled. */
+    PPE_DISP_COLOR_KEY_INSIDE         = 0X2,     /*!< Color key inside mode, minimum <= key_value <= maximum. */
+    PPE_DISP_COLOR_KEY_OUTSIDE   = 0X3,            /*!< Color key outside mode, key_value <= minimum or key_value > maximum. */
+} PPE_DISP_COLOR_KEY_MODE;
+/** End of PPE_DISP_COLOR_KEY_MODE
   * \}
   */
 
-/** \defgroup PPE_PIXEL_FORMAT PPE Pixel Format
+/** \defgroup PPE_DISP_PIXEL_FORMAT PPE_DISP Pixel Format
  * \{
- * \ingroup  PPE_Exported_Constants
+ * \ingroup  PPE_DISP_Exported_Constants
  */
 typedef enum
 {
-    PPE_ABGR8888 = 0x0,     /*!< ABGR8888: A(bit 31:24) B(bit 23:16) G(bit 15:8) R(bit 7:0) */
-    PPE_ARGB8888,           /*!< ARGB8888: A(bit 31:24) R(bit 23:16) G(bit 15:8) B(bit 7:0) */
-    PPE_XBGR8888,           /*!< XBGR8888: X(bit 31:24) B(bit 23:16) G(bit 15:8) R(bit 7:0) */
-    PPE_XRGB8888,           /*!< XRGB8888: X(bit 31:24) R(bit 23:16) G(bit 15:8) B(bit 7:0) */
-    PPE_BGRA8888,           /*!< BGRA8888: B(bit 31:24) G(bit 23:16) R(bit 15:8) A(bit 7:0) */
-    PPE_RGBA8888,           /*!< RGBA8888: R(bit 31:24) G(bit 23:16) B(bit 15:8) A(bit 7:0) */
-    PPE_BGRX8888,           /*!< BGRX8888: B(bit 31:24) G(bit 23:16) R(bit 15:8) X(bit 7:0) */
-    PPE_RGBX8888,           /*!< RGBX8888: R(bit 31:24) G(bit 23:16) B(bit 15:8) X(bit 7:0) */
-    PPE_ABGR4444,           /*!< ABGR4444: A(bit 15:12) B(bit 11:8) G(bit 7:4) R(bit 3:0) */
-    PPE_ARGB4444,           /*!< ARGB4444: A(bit 15:12) R(bit 11:8) G(bit 7:4) B(bit 3:0) */
-    PPE_XBGR4444,           /*!< XBGR4444: X(bit 15:12) B(bit 11:8) G(bit 7:4) R(bit 3:0) */
-    PPE_XRGB4444,           /*!< XRGB4444: X(bit 15:12) R(bit 11:8) G(bit 7:4) B(bit 3:0) */
-    PPE_BGRA4444,           /*!< BGRA4444: B(bit 15:12) G(bit 11:8) R(bit 7:4) A(bit 3:0) */
-    PPE_RGBA4444,           /*!< RGBA4444: R(bit 15:12) G(bit 11:8) B(bit 7:4) A(bit 3:0) */
-    PPE_BGRX4444,           /*!< BGRX4444: B(bit 15:12) G(bit 11:8) R(bit 7:4) X(bit 3:0) */
-    PPE_RGBX4444,           /*!< RGBX4444: R(bit 15:12) G(bit 11:8) B(bit 7:4) X(bit 3:0) */
-    PPE_ABGR2222,           /*!< ABGR2222: A(bit 7:6) B(bit 5:4) G(bit 3:2) R(bit 1:0) */
-    PPE_ARGB2222,           /*!< ARGB2222: A(bit 7:6) R(bit 5:4) G(bit 3:2) B(bit 1:0) */
-    PPE_XBGR2222,           /*!< XBGR2222: X(bit 7:6) B(bit 5:4) G(bit 3:2) R(bit 1:0) */
-    PPE_XRGB2222,           /*!< XRGB2222: X(bit 7:6) R(bit 5:4) G(bit 3:2) B(bit 1:0) */
-    PPE_BGRA2222,           /*!< BGRA2222: B(bit 7:6) G(bit 5:4) R(bit 3:2) A(bit 1:0) */
-    PPE_RGBA2222,           /*!< RGBA2222: R(bit 7:6) G(bit 5:4) B(bit 3:2) A(bit 1:0) */
-    PPE_BGRX2222,           /*!< BGRX2222: B(bit 7:6) G(bit 5:4) R(bit 3:2) X(bit 1:0) */
-    PPE_RGBX2222,           /*!< RGBX2222: R(bit 7:6) G(bit 5:4) B(bit 3:2) X(bit 1:0) */
-    PPE_ABGR8565,           /*!< ABGR8565: A(bit 23:16) B(bit 15:11) G(bit 10:5) R(bit 4:0) */
-    PPE_ARGB8565,           /*!< ARGB8565: A(bit 23:16) R(bit 15:11) G(bit 10:5) B(bit 4:0) */
-    PPE_XBGR8565,           /*!< XBGR8565: X(bit 23:16) B(bit 15:11) G(bit 10:5) R(bit 4:0) */
-    PPE_XRGB8565,           /*!< XRGB8565: X(bit 23:16) R(bit 15:11) G(bit 10:5) B(bit 4:0) */
-    PPE_BGRA5658,           /*!< BGRA5658: B(bit 23:19) G(bit 18:13) R(bit 12:8) A(bit 7:0) */
-    PPE_RGBA5658,           /*!< RGBA5658: R(bit 23:19) G(bit 18:13) B(bit 12:8) A(bit 7:0) */
-    PPE_BGRX5658,           /*!< BGRX5658: B(bit 23:19) G(bit 18:13) R(bit 12:8) X(bit 7:0) */
-    PPE_RGBX5658,           /*!< RGBX5658: R(bit 23:19) G(bit 18:13) B(bit 12:8) X(bit 7:0) */
-    PPE_ABGR1555,           /*!< ABGR1555: A(bit 15) B(bit 14:10) G(bit 9:5) R(bit 4:0) */
-    PPE_ARGB1555,           /*!< ARGB1555: A(bit 15) R(bit 14:10) G(bit 9:5) B(bit 4:0) */
-    PPE_XBGR1555,           /*!< XBGR1555: X(bit 15) B(bit 14:10) G(bit 9:5) R(bit 4:0) */
-    PPE_XRGB1555,           /*!< XRGB1555: X(bit 15) R(bit 14:10) G(bit 9:5) B(bit 4:0) */
-    PPE_BGRA5551,           /*!< BGRA5551: B(bit 15:11) G(bit 10:6) R(bit 5:1) A(bit 0) */
-    PPE_RGBA5551,           /*!< RGBA5551: R(bit 15:11) G(bit 10:6) B(bit 5:1) A(bit 0) */
-    PPE_BGRX5551,           /*!< BGRX5551: B(bit 15:11) G(bit 10:6) R(bit 5:1) X(bit 0) */
-    PPE_RGBX5551,           /*!< RGBX5551: R(bit 15:11) G(bit 10:6) B(bit 5:1) X(bit 0) */
-    PPE_BGR888,             /*!< BGR888: B(bit 23:16) G(bit 15:8) R(bit 7:0) */
-    PPE_RGB888,             /*!< RGB888: R(bit 23:16) G(bit 15:8) B(bit 7:0) */
-    PPE_BGR565,             /*!< BGR565: B(bit 15:11) G(bit 10:5) R(bit 4:0) */
-    PPE_RGB565,             /*!< RGB565: R(bit 15:11) G(bit 10:5) B(bit 4:0) */
-    PPE_A8,                 /*!< A8: A(bit 7:0) */
-    PPE_X8,                 /*!< X8: X(bit 7:0) */
-    PPE_ABGR8666 = 0x32,    /*!< ABGR8666: A(bit 31:24) B(bit 23:18) G(bit 15:10) R(bit 8:2) */
-    PPE_ARGB8666,           /*!< ARGB8666: A(bit 31:24) R(bit 23:18) G(bit 15:10) B(bit 8:2) */
-    PPE_XBGR8666,           /*!< XBGR8666: X(bit 31:24) B(bit 23:18) G(bit 15:10) R(bit 8:2) */
-    PPE_XRGB8666,           /*!< XRGB8666: X(bit 31:24) R(bit 23:18) G(bit 15:10) B(bit 8:2) */
-    PPE_BGRA6668,           /*!< BGRA6668: B(bit 31:26) G(bit 23:18) R(bit 15:10) A(bit 7:0) */
-    PPE_RGBA6668,           /*!< RGBA6668: R(bit 31:26) G(bit 23:18) B(bit 15:10) A(bit 7:0) */
-    PPE_BGRX6668,           /*!< BGRX6668: B(bit 31:26) G(bit 23:18) R(bit 15:10) X(bit 7:0) */
-    PPE_RGBX6668,           /*!< RGBX6668: R(bit 31:26) G(bit 23:18) B(bit 15:10) X(bit 7:0) */
-    PPE_FORMAT_NOT_SUPPORT = 0xFF, /*!< Other color formats are not supported */
-} PPE_PIXEL_FORMAT;
-/** End of PPE_PIXEL_FORMAT
+    PPE_DISP_ABGR8888 = 0x0,     /*!< ABGR8888: A(bit 31:24) B(bit 23:16) G(bit 15:8) R(bit 7:0) */
+    PPE_DISP_ARGB8888,           /*!< ARGB8888: A(bit 31:24) R(bit 23:16) G(bit 15:8) B(bit 7:0) */
+    PPE_DISP_XBGR8888,           /*!< XBGR8888: X(bit 31:24) B(bit 23:16) G(bit 15:8) R(bit 7:0) */
+    PPE_DISP_XRGB8888,           /*!< XRGB8888: X(bit 31:24) R(bit 23:16) G(bit 15:8) B(bit 7:0) */
+    PPE_DISP_BGRA8888,           /*!< BGRA8888: B(bit 31:24) G(bit 23:16) R(bit 15:8) A(bit 7:0) */
+    PPE_DISP_RGBA8888,           /*!< RGBA8888: R(bit 31:24) G(bit 23:16) B(bit 15:8) A(bit 7:0) */
+    PPE_DISP_BGRX8888,           /*!< BGRX8888: B(bit 31:24) G(bit 23:16) R(bit 15:8) X(bit 7:0) */
+    PPE_DISP_RGBX8888,           /*!< RGBX8888: R(bit 31:24) G(bit 23:16) B(bit 15:8) X(bit 7:0) */
+    PPE_DISP_ABGR4444,           /*!< ABGR4444: A(bit 15:12) B(bit 11:8) G(bit 7:4) R(bit 3:0) */
+    PPE_DISP_ARGB4444,           /*!< ARGB4444: A(bit 15:12) R(bit 11:8) G(bit 7:4) B(bit 3:0) */
+    PPE_DISP_XBGR4444,           /*!< XBGR4444: X(bit 15:12) B(bit 11:8) G(bit 7:4) R(bit 3:0) */
+    PPE_DISP_XRGB4444,           /*!< XRGB4444: X(bit 15:12) R(bit 11:8) G(bit 7:4) B(bit 3:0) */
+    PPE_DISP_BGRA4444,           /*!< BGRA4444: B(bit 15:12) G(bit 11:8) R(bit 7:4) A(bit 3:0) */
+    PPE_DISP_RGBA4444,           /*!< RGBA4444: R(bit 15:12) G(bit 11:8) B(bit 7:4) A(bit 3:0) */
+    PPE_DISP_BGRX4444,           /*!< BGRX4444: B(bit 15:12) G(bit 11:8) R(bit 7:4) X(bit 3:0) */
+    PPE_DISP_RGBX4444,           /*!< RGBX4444: R(bit 15:12) G(bit 11:8) B(bit 7:4) X(bit 3:0) */
+    PPE_DISP_ABGR2222,           /*!< ABGR2222: A(bit 7:6) B(bit 5:4) G(bit 3:2) R(bit 1:0) */
+    PPE_DISP_ARGB2222,           /*!< ARGB2222: A(bit 7:6) R(bit 5:4) G(bit 3:2) B(bit 1:0) */
+    PPE_DISP_XBGR2222,           /*!< XBGR2222: X(bit 7:6) B(bit 5:4) G(bit 3:2) R(bit 1:0) */
+    PPE_DISP_XRGB2222,           /*!< XRGB2222: X(bit 7:6) R(bit 5:4) G(bit 3:2) B(bit 1:0) */
+    PPE_DISP_BGRA2222,           /*!< BGRA2222: B(bit 7:6) G(bit 5:4) R(bit 3:2) A(bit 1:0) */
+    PPE_DISP_RGBA2222,           /*!< RGBA2222: R(bit 7:6) G(bit 5:4) B(bit 3:2) A(bit 1:0) */
+    PPE_DISP_BGRX2222,           /*!< BGRX2222: B(bit 7:6) G(bit 5:4) R(bit 3:2) X(bit 1:0) */
+    PPE_DISP_RGBX2222,           /*!< RGBX2222: R(bit 7:6) G(bit 5:4) B(bit 3:2) X(bit 1:0) */
+    PPE_DISP_ABGR8565,           /*!< ABGR8565: A(bit 23:16) B(bit 15:11) G(bit 10:5) R(bit 4:0) */
+    PPE_DISP_ARGB8565,           /*!< ARGB8565: A(bit 23:16) R(bit 15:11) G(bit 10:5) B(bit 4:0) */
+    PPE_DISP_XBGR8565,           /*!< XBGR8565: X(bit 23:16) B(bit 15:11) G(bit 10:5) R(bit 4:0) */
+    PPE_DISP_XRGB8565,           /*!< XRGB8565: X(bit 23:16) R(bit 15:11) G(bit 10:5) B(bit 4:0) */
+    PPE_DISP_BGRA5658,           /*!< BGRA5658: B(bit 23:19) G(bit 18:13) R(bit 12:8) A(bit 7:0) */
+    PPE_DISP_RGBA5658,           /*!< RGBA5658: R(bit 23:19) G(bit 18:13) B(bit 12:8) A(bit 7:0) */
+    PPE_DISP_BGRX5658,           /*!< BGRX5658: B(bit 23:19) G(bit 18:13) R(bit 12:8) X(bit 7:0) */
+    PPE_DISP_RGBX5658,           /*!< RGBX5658: R(bit 23:19) G(bit 18:13) B(bit 12:8) X(bit 7:0) */
+    PPE_DISP_ABGR1555,           /*!< ABGR1555: A(bit 15) B(bit 14:10) G(bit 9:5) R(bit 4:0) */
+    PPE_DISP_ARGB1555,           /*!< ARGB1555: A(bit 15) R(bit 14:10) G(bit 9:5) B(bit 4:0) */
+    PPE_DISP_XBGR1555,           /*!< XBGR1555: X(bit 15) B(bit 14:10) G(bit 9:5) R(bit 4:0) */
+    PPE_DISP_XRGB1555,           /*!< XRGB1555: X(bit 15) R(bit 14:10) G(bit 9:5) B(bit 4:0) */
+    PPE_DISP_BGRA5551,           /*!< BGRA5551: B(bit 15:11) G(bit 10:6) R(bit 5:1) A(bit 0) */
+    PPE_DISP_RGBA5551,           /*!< RGBA5551: R(bit 15:11) G(bit 10:6) B(bit 5:1) A(bit 0) */
+    PPE_DISP_BGRX5551,           /*!< BGRX5551: B(bit 15:11) G(bit 10:6) R(bit 5:1) X(bit 0) */
+    PPE_DISP_RGBX5551,           /*!< RGBX5551: R(bit 15:11) G(bit 10:6) B(bit 5:1) X(bit 0) */
+    PPE_DISP_BGR888,             /*!< BGR888: B(bit 23:16) G(bit 15:8) R(bit 7:0) */
+    PPE_DISP_RGB888,             /*!< RGB888: R(bit 23:16) G(bit 15:8) B(bit 7:0) */
+    PPE_DISP_BGR565,             /*!< BGR565: B(bit 15:11) G(bit 10:5) R(bit 4:0) */
+    PPE_DISP_RGB565,             /*!< RGB565: R(bit 15:11) G(bit 10:5) B(bit 4:0) */
+    PPE_DISP_A8,                 /*!< A8: A(bit 7:0) */
+    PPE_DISP_X8,                 /*!< X8: X(bit 7:0) */
+    PPE_DISP_ABGR8666 = 0x32,    /*!< ABGR8666: A(bit 31:24) B(bit 23:18) G(bit 15:10) R(bit 8:2) */
+    PPE_DISP_ARGB8666,           /*!< ARGB8666: A(bit 31:24) R(bit 23:18) G(bit 15:10) B(bit 8:2) */
+    PPE_DISP_XBGR8666,           /*!< XBGR8666: X(bit 31:24) B(bit 23:18) G(bit 15:10) R(bit 8:2) */
+    PPE_DISP_XRGB8666,           /*!< XRGB8666: X(bit 31:24) R(bit 23:18) G(bit 15:10) B(bit 8:2) */
+    PPE_DISP_BGRA6668,           /*!< BGRA6668: B(bit 31:26) G(bit 23:18) R(bit 15:10) A(bit 7:0) */
+    PPE_DISP_RGBA6668,           /*!< RGBA6668: R(bit 31:26) G(bit 23:18) B(bit 15:10) A(bit 7:0) */
+    PPE_DISP_BGRX6668,           /*!< BGRX6668: B(bit 31:26) G(bit 23:18) R(bit 15:10) X(bit 7:0) */
+    PPE_DISP_RGBX6668,           /*!< RGBX6668: R(bit 31:26) G(bit 23:18) B(bit 15:10) X(bit 7:0) */
+    PPE_DISP_FORMAT_NOT_SUPPORT = 0xFF, /*!< Other color formats are not supported */
+} PPE_DISP_PIXEL_FORMAT;
+/** End of PPE_DISP_PIXEL_FORMAT
   * \}
   */
 
-/** \defgroup PPE_BLEND_MODE PPE Blend Mode
+/** \defgroup PPE_DISP_BLEND_MODE PPE_DISP Blend Mode
   * \{
-  * \ingroup  PPE_Exported_Constants
+  * \ingroup  PPE_DISP_Exported_Constants
   */
 typedef enum
 {
-    PPE_BYPASS_MODE,          /*!< Blend foreground color only. */
-    PPE_TRANSPARENT_MODE,     /*!< Blend foreground color with alpha only. */
-    PPE_SRC_OVER_MODE,        /*!< Blend foreground onto background. */
-    PPE_CONST_MASK_MODE,      /*!< Blend constant color onto background. */
-} PPE_BLEND_MODE;
-/** End of PPE_BLEND_MODE
+    PPE_DISP_BYPASS_MODE,          /*!< Blend foreground color only. */
+    PPE_DISP_TRANSPARENT_MODE,     /*!< Blend foreground color with alpha only. */
+    PPE_DISP_SRC_OVER_MODE,        /*!< Blend foreground onto background. */
+    PPE_DISP_CONST_MASK_MODE,      /*!< Blend constant color onto background. */
+} PPE_DISP_BLEND_MODE;
+/** End of PPE_DISP_BLEND_MODE
   * \}
   */
 
-/** \defgroup PPE_ERR PPE Error Code
+/** \defgroup PPE_DISP_ERR PPE_DISP Error Code
   * \{
-  * \ingroup  PPE_Exported_Constants
+  * \ingroup  PPE_DISP_Exported_Constants
   */
 typedef enum
 {
-    PPE_SUCCESS = 0x0,       /*!< PPE configure and run successfully. */
-    PPE_ERR_NULL_TARGET,     /*!< PPE target is null. */
-    PPE_ERR_NULL_SOURCE,     /*!< PPE source is null. */
-    PPE_ERR_INVALID_MATRIX,  /*!< Input matrix is invalid. */
-    PPE_ERR_INVALID_RANGE,   /*!< Blend range is invalid. */
-} PPE_err;
-/** End of PPE_ERR
+    PPE_DISP_SUCCESS = 0x0,       /*!< PPE_DISP configure and run successfully. */
+    PPE_DISP_ERR_NULL_TARGET,     /*!< PPE_DISP target is null. */
+    PPE_DISP_ERR_NULL_SOURCE,     /*!< PPE_DISP source is null. */
+    PPE_DISP_ERR_INVALID_MATRIX,  /*!< Input matrix is invalid. */
+    PPE_DISP_ERR_INVALID_RANGE,   /*!< Blend range is invalid. */
+} PPE_DISP_err;
+/** End of PPE_DISP_ERR
   * \}
   */
 
-/** End of PPE_Exported_Constants
+/** End of PPE_DISP_Exported_Constants
   * \}
   */
 
 /*============================================================================*
  *                         Structures
  *============================================================================*/
-/** \defgroup PPE_Exported_Types PPE Exported Types
+/** \defgroup PPE_DISP_Exported_Types PPE_DISP Exported Types
   * \brief
   * \{
   */
@@ -391,15 +391,15 @@ typedef enum
 /**
  * \cond        private
  * \brief       Structures for internal use
- * \defgroup    PPE_INTERNAL_STRUCTURE   PPE structures for internal use
+ * \defgroup    PPE_DISP_INTERNAL_STRUCTURE   PPE_DISP structures for internal use
  * \{
  */
 typedef struct
 {
     FunctionalState         SetValid_AutoClear;
     uint32_t                LLP;
-    PPE_SECURE            Secure_En;
-} PPE_Init_Typedef;
+    PPE_DISP_SECURE            Secure_En;
+} PPE_DISP_Init_Typedef;
 
 typedef struct
 {
@@ -407,19 +407,19 @@ typedef struct
     uint32_t                            Canvas_Height;
     uint32_t                            Canvas_Width;
     uint32_t                            Line_Length;
-    PPE_PIXEL_FORMAT                  Color_Format;
+    PPE_DISP_PIXEL_FORMAT                  Color_Format;
     uint32_t                            BackGround;
-    PPE_AWBURST                       LayerBus_Inc;
-    PPE_MAX_AXLEN                     Max_Axlen;
+    PPE_DISP_AWBURST                       LayerBus_Inc;
+    PPE_DISP_MAX_AXLEN                     Max_Axlen;
     FunctionalState                     MultiFrame_Reload_En;
     FunctionalState                     MultiFrame_LLP_En;
-    PPE_HW_HS                         Layer_HW_Handshake_En;
-    PPE_HW_HANDSHAKE_INDEX            Layer_HW_Handshake_Index;
-    PPE_HW_HS_POL                     Layer_HW_Handshake_Polarity;
-    PPE_MSIZE_LOG                     Layer_HW_Handshake_MsizeLog;
+    PPE_DISP_HW_HS                         Layer_HW_Handshake_En;
+    PPE_DISP_HW_HANDSHAKE_INDEX            Layer_HW_Handshake_Index;
+    PPE_DISP_HW_HS_POL                     Layer_HW_Handshake_Polarity;
+    PPE_DISP_MSIZE_LOG                     Layer_HW_Handshake_MsizeLog;
     uint32_t                          block_width;
     uint32_t                          block_height;
-} PPE_ResultLayer_Init_Typedef;
+} PPE_DISP_ResultLayer_Init_Typedef;
 
 typedef struct
 {
@@ -427,21 +427,21 @@ typedef struct
     uint32_t                            Pic_Height;
     uint32_t                            Pic_Width;
     uint32_t                            Line_Length;
-    PPE_PIXEL_SOURCE                  Pixel_Source;
-    PPE_PIXEL_FORMAT                  Pixel_Color_Format;
-    PPE_READ_MATRIX_SIZE              Read_Matrix_Size;
+    PPE_DISP_PIXEL_SOURCE                  Pixel_Source;
+    PPE_DISP_PIXEL_FORMAT                  Pixel_Color_Format;
+    PPE_DISP_READ_MATRIX_SIZE              Read_Matrix_Size;
     uint32_t                            Const_Pixel;
-    PPE_COLOR_KEY_MODE                Color_Key_Mode;
+    PPE_DISP_COLOR_KEY_MODE                Color_Key_Mode;
     uint32_t                            Color_Key_Min;
     uint32_t                            Color_Key_Max;
     FunctionalState                     MultiFrame_Reload_En;
     FunctionalState                     MultiFrame_LLP_En;
-    PPE_AWBURST                       LayerBus_Inc;
-    PPE_MAX_AXLEN                     Max_Axlen;
-    PPE_HW_HS                         Layer_HW_Handshake_En;
-    PPE_HW_HANDSHAKE_INDEX            Layer_HW_Handshake_Index;
-    PPE_HW_HS_POL                     Layer_HW_Handshake_Polarity;
-    PPE_MSIZE_LOG                     Layer_HW_Handshake_MsizeLog;
+    PPE_DISP_AWBURST                       LayerBus_Inc;
+    PPE_DISP_MAX_AXLEN                     Max_Axlen;
+    PPE_DISP_HW_HS                         Layer_HW_Handshake_En;
+    PPE_DISP_HW_HANDSHAKE_INDEX            Layer_HW_Handshake_Index;
+    PPE_DISP_HW_HS_POL                     Layer_HW_Handshake_Polarity;
+    PPE_DISP_MSIZE_LOG                     Layer_HW_Handshake_MsizeLog;
     uint16_t                            Layer_Window_Xmin;
     uint16_t                            Layer_Window_Xmax;
     uint16_t                            Layer_Window_Ymin;
@@ -455,7 +455,7 @@ typedef struct
     uint32_t                            Transfer_Matrix_E31;
     uint32_t                            Transfer_Matrix_E32;
     uint32_t                            Transfer_Matrix_E33;
-} PPE_InputLayer_Init_Typedef;
+} PPE_DISP_InputLayer_Init_Typedef;
 
 typedef struct
 {
@@ -476,15 +476,15 @@ typedef struct
     uint32_t LYRx_TRANS_MATRIX_E31;
     uint32_t LYRx_TRANS_MATRIX_E32;
     uint32_t LYRx_TRANS_MATRIX_E33;
-} PPE_LLI_INPUT_LAYER;
+} PPE_DISP_LLI_INPUT_LAYER;
 /**
  * \}
  * \endcond
  */
 
-/** \defgroup PPE_RECT PPE Rectangle
+/** \defgroup PPE_DISP_RECT PPE_DISP Rectangle
   * \{
-  * \ingroup  PPE_Exported_Types
+  * \ingroup  PPE_DISP_Exported_Types
   */
 typedef struct
 {
@@ -493,25 +493,25 @@ typedef struct
     uint32_t w;    /*!< The width of the rectangle. */
     uint32_t h;    /*!< The height of the rectangle. */
 } ppe_rect_t;
-/** End of PPE_RECT
+/** End of PPE_DISP_RECT
   * \}
   */
 
-/** \defgroup PPE_MATRIX PPE Matrix
+/** \defgroup PPE_DISP_MATRIX PPE_DISP Matrix
   * \{
-  * \ingroup  PPE_Exported_Types
+  * \ingroup  PPE_DISP_Exported_Types
   */
 typedef struct
 {
     float m[3][3];    /*! The 3x3 matrix, in [row][column] order. */
 } ppe_matrix_t;
-/** End of PPE_MATRIX
+/** End of PPE_DISP_MATRIX
   * \}
   */
 
-/** \defgroup PPE_POINT PPE Point
+/** \defgroup PPE_DISP_POINT PPE_DISP Point
   * \{
-  * \ingroup  PPE_Exported_Types
+  * \ingroup  PPE_DISP_Exported_Types
   */
 typedef struct
 {
@@ -519,22 +519,22 @@ typedef struct
     int y;        /*!< The y coordinate of the point. */
 }
 ppe_point_t;
-/** End of PPE_POINT
+/** End of PPE_DISP_POINT
   * \}
   */
 
-/** \defgroup PPE_POINTS PPE Points of Polygon
+/** \defgroup PPE_DISP_POINTS PPE_DISP Points of Polygon
   * \{
-  * \ingroup  PPE_Exported_Types
+  * \ingroup  PPE_DISP_Exported_Types
   */
 typedef ppe_point_t ppe_point4_t[4]; /* Four 2D Point that form a polygon */
-/** End of PPE_POINTS
+/** End of PPE_DISP_POINTS
   * \}
   */
 
-/** \defgroup PPE_BUFFER PPE Layer Buffer
+/** \defgroup PPE_DISP_BUFFER PPE_DISP Layer Buffer
   * \{
-  * \ingroup  PPE_Exported_Types
+  * \ingroup  PPE_DISP_Exported_Types
   */
 typedef struct
 {
@@ -549,16 +549,16 @@ typedef struct
     uint16_t win_y_max;   /* Vertical Maximum coordinateof buffer. */
     uint32_t color_key_max; /* Maximum value of color key in ABGR8888 format. */
     uint32_t color_key_min; /* Minimum value of color key in ABGR8888 format. */
-    PPE_COLOR_KEY_MODE color_key_enable; /* Color Key Mode. */
-    PPE_PIXEL_FORMAT format; /* Pixel format of buffer. */
+    PPE_DISP_COLOR_KEY_MODE color_key_enable; /* Color Key Mode. */
+    PPE_DISP_PIXEL_FORMAT format; /* Pixel format of buffer. */
     uint8_t opacity;       /* Opacity of buffer. */
     bool high_quality;    /* Anti-Aliasing with bilinear interpoaltion. */
 } ppe_buffer_t;
-/** End of PPE_BUFFER
+/** End of PPE_DISP_BUFFER
   * \}
   */
 
-/** End of PPE_Exported_Types
+/** End of PPE_DISP_Exported_Types
   * \}
   */
 
@@ -566,7 +566,7 @@ typedef struct
 /*============================================================================*
  *                         Functions
  *============================================================================*/
-/** \defgroup PPE_Exported_Functions PPE Exported Functions
+/** \defgroup PPE_DISP_Exported_Functions PPE_DISP Exported Functions
   * \brief
   * \{
   */
@@ -574,45 +574,47 @@ typedef struct
 /**
  * \cond        private
  * \brief       Functions for internal use
- * \defgroup    PPE_INTERNAL_FUNCTION   PPE functions for internal use
+ * \defgroup    PPE_DISP_INTERNAL_FUNCTION   PPE_DISP functions for internal use
  * \{
  */
-void PPE_CLK_ENABLE(FunctionalState NewState);
+void PPE_DISP_CLK_ENABLE(FunctionalState NewState);
 
-void PPE_Init(PPE_Init_Typedef *PPE_Init_Struct);
+void PPE_DISP_Init(PPE_DISP_Init_Typedef *PPE_DISP_Init_Struct);
 
-void PPE_ResultLayer_Init(PPE_ResultLayer_Init_Typedef *PPE_ResultLyaer_Init_Struct);
+void PPE_DISP_ResultLayer_Init(PPE_DISP_ResultLayer_Init_Typedef *PPE_DISP_ResultLyaer_Init_Struct);
 
-void PPE_InputLayer_Init(PPE_INPUT_LAYER_INDEX intput_layer_index,
-                         PPE_InputLayer_Init_Typedef *PPE_InputLayer_Init_Struct);
+void PPE_DISP_InputLayer_Init(PPE_DISP_INPUT_LAYER_INDEX intput_layer_index,
+                              PPE_DISP_InputLayer_Init_Typedef *PPE_DISP_InputLayer_Init_Struct);
 
-void PPE_StructInit(PPE_Init_Typedef *PPE_Init_Struct);
+void PPE_DISP_StructInit(PPE_DISP_Init_Typedef *PPE_DISP_Init_Struct);
 
-void HONEYGUI_PPE_ResultLayer_StructInit(PPE_ResultLayer_Init_Typedef *PPE_ResultLyaer_Init_Struct);
+void HONEYGUI_PPE_DISP_ResultLayer_StructInit(PPE_DISP_ResultLayer_Init_Typedef
+                                              *PPE_DISP_ResultLyaer_Init_Struct);
 
-void HONEYGUI_PPE_InputLayer_StructInit(PPE_INPUT_LAYER_INDEX intput_layer_index,
-                                        PPE_InputLayer_Init_Typedef *PPE_InputLayer_Init_Struct);
+void HONEYGUI_PPE_DISP_InputLayer_StructInit(PPE_DISP_INPUT_LAYER_INDEX intput_layer_index,
+                                             PPE_DISP_InputLayer_Init_Typedef *PPE_DISP_InputLayer_Init_Struct);
 
-void PPE_InputLayer_enable(PPE_INPUT_LAYER_INDEX intput_layer_index, FunctionalState NewState);
+void PPE_DISP_InputLayer_enable(PPE_DISP_INPUT_LAYER_INDEX intput_layer_index,
+                                FunctionalState NewState);
 
-PPE_err PPE_Blend_Handshake(ppe_buffer_t *dst, ppe_buffer_t *src, ppe_rect_t *rect);
+PPE_DISP_err PPE_DISP_Blend_Handshake(ppe_buffer_t *dst, ppe_buffer_t *src, ppe_rect_t *rect);
 
-void HONEYGUI_PPE_Cmd(FunctionalState NewState);
+void HONEYGUI_PPE_DISP_Cmd(FunctionalState NewState);
 
-FunctionalState PPE_Get_Interrupt_Status(PPE_INTERRUPT PPE_int);
+FunctionalState PPE_DISP_Get_Interrupt_Status(PPE_DISP_INTERRUPT PPE_DISP_int);
 
-FunctionalState PPE_Get_Raw_Interrupt_Status(PPE_INTERRUPT PPE_int);
+FunctionalState PPE_DISP_Get_Raw_Interrupt_Status(PPE_DISP_INTERRUPT PPE_DISP_int);
 
-void PPE_Clear_Interrupt(PPE_INTERRUPT PPE_int);
+void PPE_DISP_Clear_Interrupt(PPE_DISP_INTERRUPT PPE_DISP_int);
 
-void PPE_Mask_Interrupt(PPE_INTERRUPT PPE_int, FunctionalState NewState);
+void PPE_DISP_Mask_Interrupt(PPE_DISP_INTERRUPT PPE_DISP_int, FunctionalState NewState);
 
-void PPE_Mask_All_Interrupt(FunctionalState NewState);
+void PPE_DISP_Mask_All_Interrupt(FunctionalState NewState);
 
 void ppe_perspective(float px, float py, ppe_matrix_t *matrix);
 
-PPE_err PPE_Blend_Multi(ppe_buffer_t *dst, ppe_buffer_t *src_1,
-                        ppe_buffer_t *src_2, ppe_buffer_t *src_3, PPE_BLEND_MODE mode);
+PPE_DISP_err PPE_DISP_Blend_Multi(ppe_buffer_t *dst, ppe_buffer_t *src_1,
+                                  ppe_buffer_t *src_2, ppe_buffer_t *src_3, PPE_DISP_BLEND_MODE mode);
 /**
  * \}
  * \endcond
@@ -623,22 +625,22 @@ PPE_err PPE_Blend_Multi(ppe_buffer_t *dst, ppe_buffer_t *src_1,
  * \param[in] src: Source image buffer to be blended.
  * \param[in] dst: Target image buffer to be blended onto.
  * \param[in] matrix: Transformation matrix of source image.
- * \param[in] blend_mode: Blend mode from @ref PPE_BLEND_MODE to be used.
+ * \param[in] blend_mode: Blend mode from @ref PPE_DISP_BLEND_MODE to be used.
  * \return Operation result.
- * \retval PPE_SUCCESS  Operation success.
- * \retval Others       Operation failure, cause refers to @ref PPE_ERR .
+ * \retval PPE_DISP_SUCCESS  Operation success.
+ * \retval Others       Operation failure, cause refers to @ref PPE_DISP_ERR .
  *
  * <b>Example usage</b>
  * \code{.c}
     void test_code(void){
-        RCC_PeriphClockCmd(APBPeriph_PPE, APBPeriph_PPE_CLOCK, ENABLE);
+        RCC_PeriphClockCmd(APBPeriph_PPE_DISP, APBPeriph_PPE_DISP_CLOCK, ENABLE);
         ppe_buffer_t image, buffer;
         image.width = 25;
         image.height = 25;
         image.stride = 32;
-        image.format = PPE_RGB888;
+        image.format = PPE_DISP_RGB888;
         image.address = (uint32_t)address1;
-        image.color_key_enable = PPE_COLOR_KEY_DISABLE;
+        image.color_key_enable = PPE_DISP_COLOR_KEY_DISABLE;
         image.opacity = 255; //opaque
         image.high_quality = true; //anti-aliasing with bilinear interpolation
         image.win_x_min = 0;
@@ -646,7 +648,7 @@ PPE_err PPE_Blend_Multi(ppe_buffer_t *dst, ppe_buffer_t *src_1,
         image.win_y_min = 0;
         image.win_y_max = 25;
 
-        buffer.format = PPE_RGB565;
+        buffer.format = PPE_DISP_RGB565;
         buffer.address = (uint32_t)address2;
         buffer.width = 64;
         buffer.height = 64;
@@ -657,36 +659,36 @@ PPE_err PPE_Blend_Multi(ppe_buffer_t *dst, ppe_buffer_t *src_1,
         buffer.win_y_max = 64;
         ppe_matrix_t matrix;
         ppe_get_identity(&matrix);
-        PPE_Blit(&buffer, &image, &matrix, PPE_SRC_OVER_MODE);
-        PPE_Finish(); //wait for PPE to finish blending
+        PPE_DISP_Blit(&buffer, &image, &matrix, PPE_DISP_SRC_OVER_MODE);
+        PPE_DISP_Finish(); //wait for PPE_DISP to finish blending
     }
  * \endcode
  */
-PPE_err PPE_Blit(ppe_buffer_t *dst, ppe_buffer_t *src, ppe_matrix_t *matrix,
-                 PPE_BLEND_MODE mode);
+PPE_DISP_err PPE_DISP_Blit(ppe_buffer_t *dst, ppe_buffer_t *src, ppe_matrix_t *matrix,
+                           PPE_DISP_BLEND_MODE mode);
 
 /**
- * \brief  Blend source image onto target buffer with inverse matrix, this function usually has higher performance than @ref PPE_Blit.
+ * \brief  Blend source image onto target buffer with inverse matrix, this function usually has higher performance than @ref PPE_DISP_Blit.
  * \param[in] src: Source image buffer to be blended.
  * \param[in] dst: Target image buffer to be blended onto.
  * \param[in] inv: Inverse transformation matrix of source image.
  * \param[in] rect: Rectangle of blending area.
- * \param[in] blend_mode: Blend mode from @ref PPE_BLEND_MODE to be used.
+ * \param[in] blend_mode: Blend mode from @ref PPE_DISP_BLEND_MODE to be used.
  * \return Operation result.
- * \retval PPE_SUCCESS  Operation success.
- * \retval Others       Operation failure, cause refers to @ref PPE_ERR .
+ * \retval PPE_DISP_SUCCESS  Operation success.
+ * \retval Others       Operation failure, cause refers to @ref PPE_DISP_ERR .
  *
  * <b>Example usage</b>
  * \code{.c}
     void test_code(void){
-        RCC_PeriphClockCmd(APBPeriph_PPE, APBPeriph_PPE_CLOCK, ENABLE);
+        RCC_PeriphClockCmd(APBPeriph_PPE_DISP, APBPeriph_PPE_DISP_CLOCK, ENABLE);
         ppe_buffer_t image, buffer;
         image.width = 25;
         image.height = 25;
         image.stride = 32;
-        image.format = PPE_RGB888;
+        image.format = PPE_DISP_RGB888;
         image.address = (uint32_t)address1;
-        image.color_key_enable = PPE_COLOR_KEY_DISABLE;
+        image.color_key_enable = PPE_DISP_COLOR_KEY_DISABLE;
         image.opacity = 255; //opaque
         image.high_quality = true; //anti-aliasing with bilinear interpolation
         image.win_x_min = 0;
@@ -694,7 +696,7 @@ PPE_err PPE_Blit(ppe_buffer_t *dst, ppe_buffer_t *src, ppe_matrix_t *matrix,
         image.win_y_min = 0;
         image.win_y_max = 25;
 
-        buffer.format = PPE_RGB565;
+        buffer.format = PPE_DISP_RGB565;
         buffer.address = (uint32_t)address2;
         buffer.width = 64;
         buffer.height = 64;
@@ -708,40 +710,40 @@ PPE_err PPE_Blit(ppe_buffer_t *dst, ppe_buffer_t *src, ppe_matrix_t *matrix,
         ppe_rect_t src_rect = {.x = 0, .y = 0, .w = 25, .h = 25};
         ppe_rect_t dst_rect = {0}
         ppe_get_area(&dst_rect, &src_rect, &matrix);
-        PPE_Blit_Inverse(&buffer, &image, &matrix, &dst_rect, PPE_SRC_OVER_MODE);
-        PPE_Finish(); //wait for PPE to finish blending
+        PPE_DISP_Blit_Inverse(&buffer, &image, &matrix, &dst_rect, PPE_DISP_SRC_OVER_MODE);
+        PPE_DISP_Finish(); //wait for PPE_DISP to finish blending
     }
  * \endcode
  */
-PPE_err PPE_Blit_Inverse(ppe_buffer_t *dst, ppe_buffer_t *src, ppe_matrix_t *inverse,
-                         ppe_rect_t *rect, PPE_BLEND_MODE mode);
+PPE_DISP_err PPE_DISP_Blit_Inverse(ppe_buffer_t *dst, ppe_buffer_t *src, ppe_matrix_t *inverse,
+                                   ppe_rect_t *rect, PPE_DISP_BLEND_MODE mode);
 
 /**
- * \brief  Wait for PPE to finish blending.
+ * \brief  Wait for PPE_DISP to finish blending.
  *
  * <b>Example usage</b>
  * \code{.c}
     void test_code(void){
-        //PPE initialization
-        PPE_Finish();
+        //PPE_DISP initialization
+        PPE_DISP_Finish();
     }
  * \endcode
 */
-void PPE_Finish(void);
+void PPE_DISP_Finish(void);
 
 /**
  * \brief  Get pixel size of specified format.
- * \param[in] format: Pixel format of PPE from @ref PPE_PIXEL_FORMAT .
+ * \param[in] format: Pixel format of PPE_DISP from @ref PPE_DISP_PIXEL_FORMAT .
  * \return Pixel size in bytes.
  *
  * <b>Example usage</b>
  * \code{.c}
     void test_code(void){
-        uint8_t pixel_size = PPE_Get_Pixel_Size(PPE_RGB565);
+        uint8_t pixel_size = PPE_DISP_Get_Pixel_Size(PPE_DISP_RGB565);
     }
  * \endcode
  */
-uint8_t PPE_Get_Pixel_Size(PPE_PIXEL_FORMAT format);
+uint8_t PPE_DISP_Get_Pixel_Size(PPE_DISP_PIXEL_FORMAT format);
 
 /**
  * \brief  Initialize the input matrix as identity matrix.
@@ -903,7 +905,7 @@ void ppe_mat_multiply(ppe_matrix_t *matrix, ppe_matrix_t *mult);
  * \param[in] result_rect: Points of output region.
  * \param[in] source_rect: Points of input region.
  * \param[in] matrix: Pointer to the input matrix.
- * \param[in] buffer: Pointer to a PPE buffer that stores boundary information.
+ * \param[in] buffer: Pointer to a PPE_DISP buffer that stores boundary information.
  * \return Operation result.
  * \retval true       Successfully find the output region.
  * \retval false      Input region or input matrix is not valid.
@@ -944,19 +946,19 @@ bool ppe_is_identity_or_translate(ppe_matrix_t *matrix);
 /**
  * \brief  Mask the buffer with certain color in ABGR8888 format.
  * \param[in] dst: Target buffer to be cleared.
- * \param[in] color: Specified color in ABGR8888 format \ref PPE_ABGR8888
+ * \param[in] color: Specified color in ABGR8888 format \ref PPE_DISP_ABGR8888
  * \param[in] rect: Rectangle region of masking area.
  * \return Operation result.
- * \retval PPE_SUCCESS   Operation success.
- * \retval Others        Operation failure, cause refers to @ref PPE_ERR .
+ * \retval PPE_DISP_SUCCESS   Operation success.
+ * \retval Others        Operation failure, cause refers to @ref PPE_DISP_ERR .
  *
  * <b>Example usage</b>
  * \code{.c}
     void test_code(void){
-        RCC_PeriphClockCmd(APBPeriph_PPE, APBPeriph_PPE_CLOCK, ENABLE);
+        RCC_PeriphClockCmd(APBPeriph_PPE_DISP, APBPeriph_PPE_DISP_CLOCK, ENABLE);
         ppe_buffer_t buffer;
 
-        buffer.format = PPE_RGB565;
+        buffer.format = PPE_DISP_RGB565;
         buffer.address = (uint32_t)PIC_OUTPUT_LAYER;
         buffer.width = 64;
         buffer.height = 64;
@@ -966,19 +968,19 @@ bool ppe_is_identity_or_translate(ppe_matrix_t *matrix);
         buffer.win_y_min = 0;
         buffer.win_y_max = 64;
         ppe_rect_t rect = {0, 0, 64, 64};
-        PPE_Mask(&buffer, PPE_ABGR8888(0, 0, 0, 0), &rect);
-        PPE_Finish(); //wait for PPE to finish blending
+        PPE_DISP_Mask(&buffer, PPE_DISP_ABGR8888(0, 0, 0, 0), &rect);
+        PPE_DISP_Finish(); //wait for PPE_DISP to finish blending
     }
  * \endcode
  */
-PPE_err PPE_Mask(ppe_buffer_t *dst, uint32_t color, ppe_rect_t *rect);
+PPE_DISP_err PPE_DISP_Mask(ppe_buffer_t *dst, uint32_t color, ppe_rect_t *rect);
 
 bool ppe_matrix_is_complex(ppe_matrix_t *mat);
-/** End of PPE_Exported_Functions
+/** End of PPE_DISP_Exported_Functions
   * \}
   */
 
-/** End of PPE
+/** End of PPE_DISP
   * \}
   */
 
@@ -986,7 +988,7 @@ bool ppe_matrix_is_complex(ppe_matrix_t *mat);
 }
 #endif
 
-#endif /* RTL_PPE_H */
+#endif /* RTL_PPE_DISP_H */
 
 /******************* (C) COPYRIGHT 2023 Realtek Semiconductor Corporation *****END OF FILE****/
 
