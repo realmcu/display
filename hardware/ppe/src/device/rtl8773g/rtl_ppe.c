@@ -535,16 +535,8 @@ PPE_ERR PPE_Blit_Inverse(ppe_buffer_t *dst, ppe_buffer_t *src, uint8_t *output,
     }
 
     uint32_t color = 0;
-    if (src->format >= PPE_A8 && src->format <= PPE_X1)
-    {
-        color = (src->const_color & 0xFFFFFF) + ((((src->const_color >> 24) & 0xFF) * src->opacity / 0xFF)
-                                                 << 24);
-    }
-    else
-    {
-        color = ((src->opacity & 0xFF) * ((src->const_color & 0xFF000000) >> 24) / 0xFF << 24) + \
-                (src->const_color & 0xFFFFFF);
-    }
+    color = ((src->opacity & 0xFF) * ((src->const_color & 0xFF000000) >> 24) / 0xFF << 24) + \
+            (src->const_color & 0xFFFFFF);
     PPE_CLK_ENABLE(ENABLE);
     PPE_REG_GLB_STATUS_TypeDef     ppe_reg_blg_status_0x00;
     PPE_REG_LYR_ENABLE_TypeDef     ppe_reg_lyr_enable_0x04;
