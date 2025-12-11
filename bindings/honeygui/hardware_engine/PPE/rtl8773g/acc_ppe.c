@@ -596,6 +596,20 @@ void hw_acc_blit_direct(draw_img_t *image, struct gui_dispdev *dc, struct gui_re
             source.format = PPE_I8;
             break;
         }
+    case I8:
+        {
+            PPE->CLUT_INDEX = 0;
+            uint32_t *clut = (uint32_t *)((uint32_t)image->data + sizeof(gui_rgb_data_head_t));
+            uint32_t clut_num = *clut++;
+            for (int i = 0; i < clut_num; i++)
+            {
+                PPE->CLUT_CONT = *clut++;
+            }
+            source.address = (uint32_t)image->data + sizeof(gui_rgb_data_head_t) + (clut_num + 1) * 4;
+            source.format = PPE_I8;
+            break;
+        }
+        break;
     default:
         return;
     }
@@ -651,7 +665,7 @@ void hw_acc_blit_direct(draw_img_t *image, struct gui_dispdev *dc, struct gui_re
     if (!ppe_matrix_is_complex(&inverse))
     {
         source.high_quality = false;
-        if ((source.format == PPE_RGB565 || source.format == PPE_RGB888 || source.format == PPE_I8) \
+        if ((source.format == PPE_RGB565 || source.format == PPE_RGB888 || head->type == PALETTE) \
             && image->blend_mode != IMG_FILTER_BLACK)
         {
             method = PPE_BLEND_BYPASS;
@@ -1301,6 +1315,8 @@ void *hw_acc_idu_decode(void *input)
     }
     uint8_t pixel_size = 0;
     const gui_rgb_data_head_t *head = (gui_rgb_data_head_t *)input;
+    uint32_t clut_num = 0;
+    uint32_t clut_offset = 0;
     switch (head->type)
     {
     case RGB565:
@@ -1315,27 +1331,36 @@ void *hw_acc_idu_decode(void *input)
     case ARGB8565:
         pixel_size = 3;
         break;
+    case I8:
+        pixel_size = 1;
+        clut_num = *(uint32_t *)((uint32_t)input + sizeof(gui_rgb_data_head_t)) + 1;
+        clut_offset = clut_num * 4;
+        break;
     default:
         return NULL;
     }
     const IDU_File_Header *idu_info = (IDU_File_Header *)((uint32_t)input + sizeof(
-                                                              gui_rgb_data_head_t));
+                                                              gui_rgb_data_head_t) + clut_offset);
     if (idu_info->raw_pic_width == 0 || idu_info->raw_pic_height == 0)
     {
         return NULL;
     }
     uint8_t *decode_img_data = acc_ppe_malloc(sizeof(gui_rgb_data_head_t) + 4 + idu_info->raw_pic_width
-                                              * idu_info->raw_pic_height * pixel_size);
+                                              * idu_info->raw_pic_height * pixel_size + clut_offset);
     gui_rgb_data_head_t *output_header = (gui_rgb_data_head_t *)decode_img_data;
     memcpy(output_header, head, sizeof(gui_rgb_data_head_t));
     output_header->compress = 0;
     output_header->idu = 1;
-
+    if (clut_num)
+    {
+        memcpy(decode_img_data + sizeof(gui_rgb_data_head_t),
+               (uint8_t *)input + sizeof(gui_rgb_data_head_t), clut_offset);
+    }
     RCC_PeriphClockCmd(APBPeriph_IDU, APBPeriph_IDU_CLOCK, ENABLE);
     ppe_rect_t decode_rect = {.x1 = 0, .y1 = 0, .x2 = head->w - 1, .y2 = head->h - 1};
     uint32_t buffer_stride = head->w * pixel_size;
     if (hw_idu_decode(&decode_rect, (uint8_t *)idu_info, buffer_stride,
-                      decode_img_data + sizeof(gui_rgb_data_head_t)))
+                      decode_img_data + sizeof(gui_rgb_data_head_t) + clut_offset))
     {
         return decode_img_data;
     }
@@ -1451,6 +1476,36 @@ void hw_blit_font(draw_font_t *font, font_glyph_t *glyph)
     {
         DBG_DIRECT("font err %d", err);
     }
+}
+
+void hw_acc_memset(uint32_t color, struct gui_dispdev *dc)
+{
+    ppe_buffer_t target;
+    switch (dc->bit_depth)
+    {
+    case 16:
+        target.format = PPE_RGB565;
+        break;
+    case 24:
+        target.format = PPE_RGB888;
+        break;
+    case 32:
+        target.format = PPE_ARGB8888;
+        break;
+    default:
+        return;
+    }
+    target.address = (uint32_t)dc->frame_buf;
+    target.width = dc->fb_width;
+    target.height = dc->fb_height;
+    target.stride = dc->fb_width;
+    target.const_color = 0;
+    target.win_x_min = 0;
+    target.win_x_max = target.width - 1;
+    target.win_y_min = 0;
+    target.win_y_max = target.height - 1;
+
+    PPE_Clear(&target, color, NULL);
 }
 
 void hw_acc_prepare_cb(draw_img_t *img, gui_rect_t *rect)
@@ -1602,6 +1657,11 @@ void hw_acc_end_cb(draw_img_t *image)
 
 void hw_acc_blit(draw_img_t *image, struct gui_dispdev *dc, struct gui_rect *rect)
 {
+    if (dc->cache_need_clean)
+    {
+        SCB_CleanInvalidateDCache();
+        dc->fb_need_clean = false;
+    }
     struct gui_rgb_data_head *head = image->data;
     if (image->blend_mode != IMG_RECT && image->data == NULL)
     {
