@@ -1660,7 +1660,7 @@ void hw_acc_blit(draw_img_t *image, struct gui_dispdev *dc, struct gui_rect *rec
     if (dc->cache_need_clean)
     {
         SCB_CleanInvalidateDCache();
-        dc->fb_need_clean = false;
+        dc->cache_need_clean = false;
     }
     struct gui_rgb_data_head *head = image->data;
     if (image->blend_mode != IMG_RECT && image->data == NULL)
