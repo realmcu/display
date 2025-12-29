@@ -1097,7 +1097,7 @@ void hw_acc_prepare_cb(draw_img_t *img, gui_rect_t *rect)
         img->matrix.m[1][0] != 0 || img->matrix.m[2][0] != 0 || \
         img->matrix.m[2][1] != 0)
     {
-        gui_point3f_t pox = {0.0f};
+        gui_point3f_t pox = {0.0f, 0.0f, 1.0f};
         float point[4][2];
         float *line = gui_malloc(12 * sizeof(float));
         float x1 = 0;
@@ -1120,34 +1120,34 @@ void hw_acc_prepare_cb(draw_img_t *img, gui_rect_t *rect)
             y2 = _UI_MIN(img->img_h - 1, rect->y2);
         }
 
-        pox.p[0] = x1;
-        pox.p[1] = y1;
-        pox.p[2] = 1.0f;
+        pox.x = x1;
+        pox.y = y1;
+        pox.z = 1.0f;
         matrix_multiply_point(&img->matrix, &pox);
-        point[0][0] = pox.p[0];
-        point[0][1] = pox.p[1];
+        point[0][0] = pox.x;
+        point[0][1] = pox.y;
 
-        pox.p[0] = x2;
-        pox.p[1] = y1;
-        pox.p[2] = 1.0f;
+        pox.x = x2;
+        pox.y = y1;
+        pox.z = 1.0f;
         matrix_multiply_point(&img->matrix, &pox);
-        point[1][0] = pox.p[0];
-        point[1][1] = pox.p[1];
+        point[1][0] = pox.x;
+        point[1][1] = pox.y;
 
-        pox.p[0] = x2;
-        pox.p[1] = y2;
-        pox.p[2] = 1.0f;
+        pox.x = x2;
+        pox.y = y2;
+        pox.z = 1.0f;
         matrix_multiply_point(&img->matrix, &pox);
-        point[2][0] = pox.p[0];
-        point[2][1] = pox.p[1];
+        point[2][0] = pox.x;
+        point[2][1] = pox.y;
 
-        pox.p[0] = x1;
-        pox.p[1] = y2;
-        pox.p[2] = 1.0f;
+        pox.x = x1;
+        pox.y = y2;
+        pox.z = 1.0f;
         matrix_multiply_point(&img->matrix, &pox);
 
-        point[3][0] = pox.p[0];
-        point[3][1] = pox.p[1];
+        point[3][0] = pox.x;
+        point[3][1] = pox.y;
 
         if (point[0][0] == point[1][0])
         {
