@@ -1,15 +1,8 @@
-/**
-*********************************************************************************************************
-*               Copyright(c) 2023, Realtek Semiconductor Corporation. All rights reserved.
-**********************************************************************************************************
-* \file     rtl_hal_jpu.c
-* \brief    This file provides all the JPU HANDLER firmware functions.
-* \details
-* \author   roy xie
-* \date     2025-03-24
-* \version  v1.0
-*********************************************************************************************************
-*/
+/*
+ * Copyright (c) 2026, Realtek Semiconductor Corporation
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 /*============================================================================*
  *                        Header Files
@@ -2478,8 +2471,3 @@ void hal_jpu_mem_init(void *(*jmalloc)(size_t), void (*jfree)(void *))
         jpu_heap_available = true;
     }
 }
-
-
-
-
-/******************* (C) COPYRIGHT 2023 Realtek Semiconductor Corporation *****END OF FILE****/

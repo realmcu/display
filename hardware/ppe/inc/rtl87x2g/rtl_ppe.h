@@ -1,15 +1,8 @@
-/**
-*********************************************************************************************************
-*               Copyright(c) 2023, Realtek Semiconductor Corporation. All rights reserved.
-*********************************************************************************************************
-* \file     rtl_ppe.h
-* \brief    This file provides all the Pixel Process Engine firmware functions.
-* \details
-* \author   astor zhang
-* \date     2023-10-17
-* \version  v1.0
-*********************************************************************************************************
-*/
+/*
+ * Copyright (c) 2026, Realtek Semiconductor Corporation
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 /*============================================================================*
  *               Define to prevent recursive inclusion
@@ -735,5 +728,3 @@ PPE_ERR PPE_Mask(ppe_buffer_t *src, ppe_buffer_t *target, ppe_rect_t *rect, uint
 #endif
 
 #endif /* RTL_PPE_H */
-
-/******************* (C) COPYRIGHT 2023 Realtek Semiconductor Corporation *****END OF FILE****/

@@ -1,15 +1,8 @@
-/**
-*********************************************************************************************************
-*               Copyright(c) 2023, Realtek Semiconductor Corporation. All rights reserved.
-**********************************************************************************************************
-* \file     rtk_display_mem.c
-* \brief    This file provides display repo bindings API.
-* \details
-* \author   realmcu
-* \date     2025-03-05
-* \version  v1.0
-*********************************************************************************************************
-*/
+/*
+ * Copyright (c) 2026, Realtek Semiconductor Corporation
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 #include <stdio.h>
 #include <string.h>

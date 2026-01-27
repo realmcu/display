@@ -1,15 +1,9 @@
-/**
-*********************************************************************************************************
-*               Copyright(c) 2021, Realtek Semiconductor Corporation. All rights reserved.
-**********************************************************************************************************
-* @file     rtl_lcdc_dphy.h
-* @brief    This file provides all the LCDC HANDLER firmware functions.
-* @details
-* @author   feihu wang
-* @date     2023-02-23
-* @version  v0.1
-*********************************************************************************************************
-*/
+/*
+ * Copyright (c) 2026, Realtek Semiconductor Corporation
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 #include "utils/rtl_utils.h"
 
 typedef struct
@@ -1250,7 +1244,3 @@ typedef struct
 #define REG_EN_ALL_DIV2_POS                 (0)
 #define REG_EN_ALL_DIV2_MSK                 (0x1<<REG_EN_ALL_DIV2_POS)
 #define REG_EN_ALL_DIV2_CLR                 (~REG_EN_ALL_DIV2_MSK)
-
-
-
-

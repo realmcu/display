@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) 2026, Realtek Semiconductor Corporation
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 #include "rtl876x_gdma.h"
 #include "rtl876x_rcc.h"
 #include "rtl876x_nvic.h"
@@ -89,4 +95,3 @@ uint8_t rtl_idu_get_decode_pixel_length(IDU_PIXEL_SIZE_INT pixel_size);
 uint8_t rtl_idu_get_actual_pixel_length(IDU_PIXEL_SIZE_INT pixel_size);
 
 uint8_t rtl_idu_get_dma_depth(uint8_t channel_num);
-

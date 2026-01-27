@@ -1,6 +1,8 @@
-# Copyright (c) 2024 Realtek Semiconductor Corp.
+#
+# Copyright (c) 2026, Realtek Semiconductor Corporation
+#
 # SPDX-License-Identifier: Apache-2.0
-
+#
 message(STATUS "CONFIG_REALTEK_DISPLAY is set to: ${CONFIG_REALTEK_DISPLAY}")
 
 list(APPEND soc_series

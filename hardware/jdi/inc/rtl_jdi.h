@@ -1,15 +1,8 @@
-/**
-*********************************************************************************************************
-*               Copyright(c) 2025, Realtek Semiconductor Corporation. All rights reserved.
-**********************************************************************************************************
-* \file     rtl_jdi.h
-* \brief    This file provides JDI firmware functions.
-* \details
-* \author   astor zhang
-* \date     2025-03-04
-* \version  v1.0
-*********************************************************************************************************
-*/
+/*
+ * Copyright (c) 2026, Realtek Semiconductor Corporation
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 /*============================================================================*
  *               Define to prevent recursive inclusion
@@ -421,5 +414,3 @@ void JDI_Interrupt_Clear(JDI_INTERRUPT_TYPE Interrupt);
 #endif
 
 #endif /* RTL_JDI_H */
-
-/******************* (C) COPYRIGHT 2023 Realtek Semiconductor Corporation *****END OF FILE****/

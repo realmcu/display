@@ -1,15 +1,8 @@
-/**
-*********************************************************************************************************
-*               Copyright(c) 2023, Realtek Semiconductor Corporation. All rights reserved.
-**********************************************************************************************************
-* \file     rtl_ramless_qspi.c
-* \brief    This file provides all the Ramless QSPI firmware functions.
-* \details
-* \author   astor zhang
-* \date     2023-10-17
-* \version  v1.0
-*********************************************************************************************************
-*/
+/*
+ * Copyright (c) 2026, Realtek Semiconductor Corporation
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 /*============================================================================*
  *                        Header Files
@@ -65,5 +58,3 @@ void RLSPI_Init(LCDC_RLSPI_initTypeDef *RLSPI_InitStruct)
     RAMLESS_QSPI->RLSPI_LINE_DELAY_OUT_VACTIVE = RLSPI_InitStruct->line_delay_out_vactive;
     RAMLESS_QSPI->RLSPI_FRAME_DELAY_INFINITE = RLSPI_InitStruct->frame_delay;
 }
-
-/******************* (C) COPYRIGHT 2023 Realtek Semiconductor Corporation *****END OF FILE****/

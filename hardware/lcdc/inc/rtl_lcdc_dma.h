@@ -1,15 +1,8 @@
-/**
-*********************************************************************************************************
-*               Copyright(c) 2023, Realtek Semiconductor Corporation. All rights reserved.
-*********************************************************************************************************
-* \file     rtl_lcdc_dma.h
-* \brief    The header file of the peripheral driver for DMA inside LCDC.
-* \details  This file provides all LCDC DMA firmware functions.
-* \author   HOWIE
-* \date     2023-10-17
-* \version  v1.0
-* *********************************************************************************************************
-*/
+/*
+ * Copyright (c) 2026, Realtek Semiconductor Corporation
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 /*============================================================================*
  *               Define to prevent recursive inclusion
@@ -344,7 +337,3 @@ void LCDC_DMAChannelCmd(uint8_t LCDC_DMA_Channel_Num, FunctionalState NewState);
 #endif
 
 #endif /* RTL_LCDC_DMA_H */
-
-
-/******************* (C) COPYRIGHT 2023 Realtek Semiconductor Corporation *****END OF FILE****/
-

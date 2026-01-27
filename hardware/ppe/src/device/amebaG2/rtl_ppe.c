@@ -1,15 +1,8 @@
-/**
-*********************************************************************************************************
-*               Copyright(c) 2023, Realtek Semiconductor Corporation. All rights reserved.
-**********************************************************************************************************
-* \file     rtl_PPE_DISP.c
-* \brief    This file provides all the the PPE_DISP 2.0 firmware functions.
-* \details
-* \author   astor zhang
-* \date     2024-11-12
-* \version  v1.1
-*********************************************************************************************************
-*/
+/*
+ * Copyright (c) 2026, Realtek Semiconductor Corporation
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 /*============================================================================*
  *                        Header Files
@@ -2070,4 +2063,3 @@ bool ppe_matrix_is_complex(ppe_matrix_t *mat)
     }
     return true;
 }
-/******************* (C) COPYRIGHT 2023 Realtek Semiconductor Corporation *****END OF FILE****/

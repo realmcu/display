@@ -1,20 +1,8 @@
-/**
-*********************************************************************************************************
-*               Copyright(c) 2023, Realtek Semiconductor Corporation. All rights reserved.
-**********************************************************************************************************
-* \file     rtl_ramless_qspi.h
-* \brief    This file provides all the LCDC Ramless QSPI firmware functions.
-* \details  The LCDC Ramless QSPI interface provides the following features:
-*          - Supports QSPI interface for LCD panels without frame buffer
-*          - Configurable vertical timing parameters (VSA, VBP, VFP)
-*          - Configurable VSYNC/HSYNC commands and addresses for different display regions
-*          - Adjustable line and frame delays for timing control
-*          - Programmable display resolution settings
-* \author   howie wang
-* \date     2023-10-17
-* \version  v1.0
-*********************************************************************************************************
-*/
+/*
+ * Copyright (c) 2026, Realtek Semiconductor Corporation
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 /*============================================================================*
  *               Define to prevent recursive inclusion
@@ -156,5 +144,3 @@ void RLSPI_Init(LCDC_RLSPI_initTypeDef *RLSPI_InitStruct);
 #endif
 
 #endif /* RTL_RAMLESS_QSPI_H */
-
-/******************* (C) COPYRIGHT 2023 Realtek Semiconductor Corporation *****END OF FILE****/

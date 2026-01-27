@@ -1,15 +1,8 @@
-/**
-*********************************************************************************************************
-*               Copyright(c) 2023, Realtek Semiconductor Corporation. All rights reserved.
-**********************************************************************************************************
-* \file     rtl_lcdc.c
-* \brief    This file provides all the LCDC HANDLER firmware functions.
-* \details
-* \author   howie wang
-* \date     2023-10-17
-* \version  v1.0
-*********************************************************************************************************
-*/
+/*
+ * Copyright (c) 2026, Realtek Semiconductor Corporation
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 /*============================================================================*
  *                        Header Files
@@ -476,6 +469,3 @@ void LCDC_DMA_Infinite_Buf_Update(uint8_t *G1_SAR_buf, uint8_t *G2_SAR_buf)
     LCDC_DMA_LINKLIST->GRP1_SAR_FOR_INFINITE_MODE = (uint32_t)G1_SAR_buf;
     LCDC_DMA_LINKLIST->GRP2_SAR_FOR_INFINITE_MODE = (uint32_t)G2_SAR_buf;
 }
-
-/******************* (C) COPYRIGHT 2023 Realtek Semiconductor Corporation *****END OF FILE****/
-

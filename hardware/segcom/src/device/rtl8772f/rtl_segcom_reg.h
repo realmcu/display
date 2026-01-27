@@ -1,15 +1,8 @@
-/**
-*********************************************************************************************************
-*               Copyright(c) 2021, Realtek Semiconductor Corporation. All rights reserved.
-**********************************************************************************************************
-* @file     rtl876x_segcom_reg.h
-* @brief    This file provides SEGCOM registers.
-* @details
-* @author   astor zhang
-* @date     2022-07-29
-* @version  v0.1
-*********************************************************************************************************
-*/
+/*
+ * Copyright (c) 2026, Realtek Semiconductor Corporation
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 #ifndef __RTL8762X_SEGCOM_REG_H
 #define __RTL8762X_SEGCOM_REG_H

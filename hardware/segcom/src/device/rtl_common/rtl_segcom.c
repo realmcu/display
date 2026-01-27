@@ -1,15 +1,8 @@
-/**
-*********************************************************************************************************
-*               Copyright(c) 2023, Realtek Semiconductor Corporation. All rights reserved.
-**********************************************************************************************************
-* \file     rtl_segcom.c
-* \brief    This file provides all the SEG_COM controller firmware functions.
-* \details
-* \author   astor zhang
-* \date     2023-10-17
-* \version  v1.0
-*********************************************************************************************************
-*/
+/*
+ * Copyright (c) 2026, Realtek Semiconductor Corporation
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 /*============================================================================*
  *                        Header Files
@@ -224,5 +217,3 @@ void SEGCOM_Init(SEGCOM_InitTypeDef *SEGCOM_InitStruct)
     }
     SEGCOM->LCD_FCR = segcom_reg_0x04.d32;
 }
-
-/******************* (C) COPYRIGHT 2023 Realtek Semiconductor Corporation *****END OF FILE****/

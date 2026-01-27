@@ -1,15 +1,8 @@
-/**
-*********************************************************************************************************
-*               Copyright(c) 2023, Realtek Semiconductor Corporation. All rights reserved.
-*********************************************************************************************************
-* \file     rtl_segcom.h
-* \brief    This file provides all the SEG_COM controller firmware functions.
-* \details
-* \author   astor zhang
-* \date     2022-07-29
-* \version  v0.1
-*********************************************************************************************************
-*/
+/*
+ * Copyright (c) 2026, Realtek Semiconductor Corporation
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 /*============================================================================*
  *               Define to prevent recursive inclusion
@@ -642,5 +635,3 @@ void SEGCOM_Pin_Init(SEGCOM_COM_Pin_CFG_Typedef com_cfg, SEGCOM_SEG_Pin_CFG_Type
 #endif
 
 #endif /* RTL_SEGCOM_H */
-
-/******************* (C) COPYRIGHT 2023 Realtek Semiconductor Corporation *****END OF FILE****/

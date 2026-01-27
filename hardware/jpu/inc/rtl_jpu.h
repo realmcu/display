@@ -1,16 +1,8 @@
-/**
-*********************************************************************************************************
-*               Copyright(c) 2023, Realtek Semiconductor Corporation. All rights reserved.
-**********************************************************************************************************
-* \file     rtl_jpu.h
-* \brief    This file provides all the JPU firmware functions.
-* \details  This module implements the JPEG Processing Unit (JPU) driver,
-*           supporting various JPEG image decode and encode.
-* \author   roy xie
-* \date     2025-03-24
-* \version  v1.0
-*********************************************************************************************************
-*/
+/*
+ * Copyright (c) 2026, Realtek Semiconductor Corporation
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 /*============================================================================*
  *               Define to prevent recursive inclusion
@@ -350,5 +342,3 @@ void JPU_Dump(void);
 #endif
 
 #endif /* RTL_JPU_H */
-
-/******************* (C) COPYRIGHT 2023 Realtek Semiconductor Corporation *****END OF FILE****/

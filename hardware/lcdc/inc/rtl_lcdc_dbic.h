@@ -1,16 +1,8 @@
-/**
-*********************************************************************************************************
-*               Copyright(c) 2023, Realtek Semiconductor Corporation. All rights reserved.
-**********************************************************************************************************
-* \file     rtl_lcdc_dbic.h
-* \brief    The header file of the peripheral LCDC DBIC driver
-* \details  This file provides all LCDC DBIC firmware functions including initialization,
-*           configuration, data transmission and reception.
-* \author   boris yue
-* \date     2023-10-17
-* \version  v1.0
-*********************************************************************************************************
-*/
+/*
+ * Copyright (c) 2026, Realtek Semiconductor Corporation
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 /*============================================================================*
  *               Define to prevent recursive inclusion
@@ -446,6 +438,3 @@ void DBIC_ReceiveBuf(uint16_t addr, uint16_t data_len, uint8_t *data, uint16_t r
 #endif
 
 #endif /*RTL_DBIC_H*/
-
-/******************* (C) COPYRIGHT 2023 Realtek Semiconductor Corporation *****END OF FILE****/
-

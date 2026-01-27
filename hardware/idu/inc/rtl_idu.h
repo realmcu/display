@@ -1,17 +1,8 @@
-/**
-*********************************************************************************************************
-*               Copyright(c) 2023, Realtek Semiconductor Corporation. All rights reserved.
-**********************************************************************************************************
-* \file     rtl_idu.h
-* \brief    This file provides all the IDU firmware functions.
-* \details  This module implements the Image Decompressor Unit (IDU) driver,
-*           supporting various decompression algorithms including RLE, FastLZ,
-*           and YUV sampling with blur effects for efficient image processing.
-* \author   astor zhang
-* \date     2023-10-17
-* \version  v1.0
-*********************************************************************************************************
-*/
+/*
+ * Copyright (c) 2026, Realtek Semiconductor Corporation
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 /*============================================================================*
  *               Define to prevent recursive inclusion
@@ -508,5 +499,3 @@ uint8_t IDU_Get_Pixel_Size(IDU_file_header *file);
 #endif
 
 #endif /* RTL_IDU_H */
-
-/******************* (C) COPYRIGHT 2023 Realtek Semiconductor Corporation *****END OF FILE****/

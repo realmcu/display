@@ -1,15 +1,8 @@
-/**
-*********************************************************************************************************
-*               Copyright(c) 2023, Realtek Semiconductor Corporation. All rights reserved.
-**********************************************************************************************************
-* \file     rtl_idu.c
-* \brief    This file provides all the LCDC HANDLER firmware functions.
-* \details
-* \author   astor zhang
-* \date     2023-10-17
-* \version  v1.0
-*********************************************************************************************************
-*/
+/*
+ * Copyright (c) 2026, Realtek Semiconductor Corporation
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 /*============================================================================*
  *                        Header Files
@@ -1024,4 +1017,3 @@ uint8_t IDU_Get_Pixel_Size(IDU_file_header *file)
 {
     return rtl_idu_get_actual_pixel_length((IDU_PIXEL_SIZE_INT)file->algorithm_type.pixel_bytes);
 }
-/******************* (C) COPYRIGHT 2023 Realtek Semiconductor Corporation *****END OF FILE****/

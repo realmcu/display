@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) 2026, Realtek Semiconductor Corporation
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 #ifndef RTL_DBIB_REG_H
 #define RTL_DBIB_REG_H
 

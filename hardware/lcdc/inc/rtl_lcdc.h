@@ -1,18 +1,8 @@
-/**
-*********************************************************************************************************
-*               Copyright(c) 2023, Realtek Semiconductor Corporation. All rights reserved.
-*********************************************************************************************************
-* \file     rtl_lcdc.h
-* \brief    This file provides all the LCDC HANDLER firmware functions.
-* \details  The LCD Controller (LCDC) module provides interfaces to connect with various LCD panels.
-*           It supports multiple interfaces including eDPI, DBI-B, DBI-C/SPI, and DPI.
-*           This driver provides APIs for configuring and controlling the LCDC module.
-*
-* \author   howie wang
-* \date     2023-10-17
-* \version  v1.0
-*********************************************************************************************************
-*/
+/*
+ * Copyright (c) 2026, Realtek Semiconductor Corporation
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 /*============================================================================*
  *               Define to prevent recursive inclusion
@@ -1554,7 +1544,3 @@ void LCDC_DMA_Infinite_Buf_Update(uint8_t *G1_SAR_buf, uint8_t *G2_SAR_buf);
 #endif
 
 #endif /*__RTL_LCDC_H*/
-
-
-/******************* (C) COPYRIGHT 2023 Realtek Semiconductor Corporation *****END OF FILE****/
-

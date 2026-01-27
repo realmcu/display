@@ -1,15 +1,8 @@
-/**
-*********************************************************************************************************
-*               Copyright(c) 2023, Realtek Semiconductor Corporation. All rights reserved.
-*********************************************************************************************************
-* \file     rtl_jpu_def.h
-* \brief    JPU related register definitions for RTL87X3EU
-* \details
-* \author
-* \date     2025-03-20
-* \version  v1.0
-* *********************************************************************************************************
-*/
+/*
+ * Copyright (c) 2026, Realtek Semiconductor Corporation
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 #ifndef RTL_JPU_REG_H
 #define RTL_JPU_REG_H

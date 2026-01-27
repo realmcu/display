@@ -1,15 +1,8 @@
-/**
-*********************************************************************************************************
-*               Copyright(c) 2023, Realtek Semiconductor Corporation. All rights reserved.
-*********************************************************************************************************
-* \file     rtl_ppe.h
-* \brief    This file provides all the PPE firmware functions.
-* \details
-* \author   astor zhang
-* \date     2025-08-05
-* \version  v1.0
-*********************************************************************************************************
-*/
+/*
+ * Copyright (c) 2026, Realtek Semiconductor Corporation
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 /*============================================================================*
  *               Define to prevent recursive inclusion
@@ -973,6 +966,3 @@ PPE_err PPE_Mask(ppe_buffer_t *dst, uint32_t color, ppe_rect_t *rect);
 #endif
 
 #endif /* RTL_PPE_H */
-
-/******************* (C) COPYRIGHT 2023 Realtek Semiconductor Corporation *****END OF FILE****/
-

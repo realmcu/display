@@ -1,15 +1,8 @@
-/**
-*********************************************************************************************************
-*               Copyright(c) 2023, Realtek Semiconductor Corporation. All rights reserved.
-*********************************************************************************************************
-* \file     rtl_dbic.c
-* \brief    This file provides all the DBI firmware functions.
-* \details
-* \author   boris yue
-* \date     2023-10-17
-* \version  v1.0
-*********************************************************************************************************
-*/
+/*
+ * Copyright (c) 2026, Realtek Semiconductor Corporation
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 /*============================================================================*
  *                        Header Files
@@ -266,5 +259,3 @@ void DBIC_StructInit(LCDC_DBICCfgTypeDef *DBIC_InitStruct)
     DBIC_InitStruct->SCPOL = DBIC_SCPOL_LOW;
     DBIC_InitStruct->SCPH = DBIC_SCPH_1Edge;
 }
-
-/******************* (C) COPYRIGHT 2023 Realtek Semiconductor Corporation *****END OF FILE****/

@@ -1,15 +1,8 @@
-/**
-*********************************************************************************************************
-*               Copyright(c) 2023, Realtek Semiconductor Corporation. All rights reserved.
-*********************************************************************************************************
-* \file     rtl_lcdc_edpi.h
-* \brief    This file provides all the eDPI firmware functions.
-* \details
-* \author   boris yue
-* \date     2023-10-17
-* \version  v1.0
-*********************************************************************************************************
-*/
+/*
+ * Copyright (c) 2026, Realtek Semiconductor Corporation
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 /*============================================================================*
  *               Define to prevent recursive inclusion
@@ -622,7 +615,3 @@ void EDPI_Init(LCDC_eDPICfgTypeDef *eDPICfg);
 #endif
 
 #endif /*RTL_EDPI_H*/
-
-
-/******************* (C) COPYRIGHT 2023 Realtek Semiconductor Corporation *****END OF FILE****/
-

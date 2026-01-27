@@ -1,15 +1,8 @@
-/**
-*********************************************************************************************************
-*               Copyright(c) 2023, Realtek Semiconductor Corporation. All rights reserved.
-**********************************************************************************************************
-* \file     rtl_dsi.h
-* \brief    This file provides all the I2C firmware functions.
-* \details
-* \author   howie wang
-* \date     2023-10-17
-* \version  v1.0
-*********************************************************************************************************
-*/
+/*
+ * Copyright (c) 2026, Realtek Semiconductor Corporation
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 /*============================================================================*
  *               Define to prevent recursive inclusion
@@ -461,7 +454,3 @@ void DSI_ConfigVideoMode(DSI_TypeDef *DSIx,  DSI_VidCfgTypeDef *VidCfg);
 #endif
 
 #endif /*RTL_DSI_H*/
-
-
-/******************* (C) COPYRIGHT 2023 Realtek Semiconductor Corporation *****END OF FILE****/
-

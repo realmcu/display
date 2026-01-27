@@ -1,15 +1,8 @@
-/**
-*********************************************************************************************************
-*               Copyright(c) 2023, Realtek Semiconductor Corporation. All rights reserved.
-*********************************************************************************************************
-* \file     rtl_edpi.c
-* \brief    This file provides all the eDPI firmware functions.
-* \details
-* \author   boris yue
-* \date     2023-10-17
-* \version  v1.0
-*********************************************************************************************************
-*/
+/*
+ * Copyright (c) 2026, Realtek Semiconductor Corporation
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 /*============================================================================*
  *                        Header Files
@@ -226,6 +219,3 @@ void EDPI_OPMODE_CONFIG(uint32_t mode)
     edpi_reg_0x34.b.op_mode = mode;
     EDPI->EDPI_OP_MODE = edpi_reg_0x34.d32;
 }
-
-/******************* (C) COPYRIGHT 2023 Realtek Semiconductor Corporation *****END OF FILE****/
-
