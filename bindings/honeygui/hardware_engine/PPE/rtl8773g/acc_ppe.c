@@ -623,6 +623,13 @@ void hw_acc_blit_direct(draw_img_t *image, struct gui_dispdev *dc, struct gui_re
     source.win_x_max = target.width - 1;
     source.win_y_min = 0;
     source.win_y_max = target.height - 1;
+    if (rect != NULL)
+    {
+        source.address += (rect->x1 + rect->y1 * source.stride) * PPE_Get_Pixel_Size(
+                              source.format) / PPE_BYTE_SIZE;
+        source.width = rect->x2 - rect->x1 + 1;
+        source.height = rect->y2 - rect->y1 + 1;
+    }
     ppe_rect_t constraint = (ppe_rect_t) {.x1 = x_min - dc->section.x1, .y1 = y_min - dc->section.y1, .x2 = dc->fb_width - 1, .y2 = dc->fb_height - 1};
     if (constraint.x1 < 0)
     {
@@ -650,6 +657,16 @@ void hw_acc_blit_direct(draw_img_t *image, struct gui_dispdev *dc, struct gui_re
     }
     ppe_matrix_t inverse;
     memcpy(&inverse, &image->inverse, sizeof(float) * 9);
+    if (rect != NULL)
+    {
+        ppe_matrix_t pre_trans;
+        ppe_get_identity(&pre_trans);
+        pre_trans.m[0][2] = rect->x1 * -1.0f;
+        pre_trans.m[1][2] = rect->y1 * -1.0f;
+        ppe_mat_multiply(&pre_trans, &inverse);
+        memcpy(&inverse, &pre_trans, sizeof(float) * 9);
+        ppe_translate(0, dc->section.y1, &pre_trans);
+    }
     ppe_translate(0, dc->section.y1, &inverse);
     source.high_quality = true;
     if (image->blend_mode == IMG_FILTER_BLACK)
