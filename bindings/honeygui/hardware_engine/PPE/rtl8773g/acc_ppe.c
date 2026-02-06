@@ -586,7 +586,13 @@ void hw_acc_blit_direct(draw_img_t *image, struct gui_dispdev *dc, struct gui_re
         source.format = PPE_XRGB8888;
         break;
     case ALPHAMASK:
+    case A8:
         source.format = PPE_A8;
+        uint8_t c_a = (source.const_color & 0xFF000000);
+        uint8_t c_r = (source.const_color & 0x00FF0000);
+        uint8_t c_g = (source.const_color & 0x0000FF00);
+        uint8_t c_b = (source.const_color & 0x000000FF);
+        uint32_t ppe_abgr = (ca | cr >> 16 | c_g | (cb << 16));
         source.const_color = image->fg_color_set;
         break;
     case PALETTE:
