@@ -592,7 +592,7 @@ void hw_acc_blit_direct(draw_img_t *image, struct gui_dispdev *dc, struct gui_re
         uint8_t c_r = (source.const_color & 0x00FF0000);
         uint8_t c_g = (source.const_color & 0x0000FF00);
         uint8_t c_b = (source.const_color & 0x000000FF);
-        uint32_t ppe_abgr = (ca | cr >> 16 | c_g | (cb << 16));
+        uint32_t ppe_abgr = (c_a | c_r >> 16 | c_g | (c_b << 16));
         source.const_color = image->fg_color_set;
         break;
     case PALETTE:
