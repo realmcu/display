@@ -723,11 +723,6 @@ PPE_ERR PPE_Blit_Inverse(ppe_buffer_t *dst, ppe_buffer_t *src, uint8_t *output,
     PPE_ResultLayer0_Init.Color_Format                    = dst->format;
     PPE_ResultLayer0_Init.LayerBus_Inc                    = PPE_AWBURST_INC;
 
-
-//    PPE_Clear_Interrupt(PPE_DIV0_ERR_INT);
-//    PPE_Mask_Interrupt(PPE_DIV0_ERR_INT, ENABLE);
-//    PPE_Mask_All_Interrupt(ENABLE);
-
     *(uint32_t *)(PPE_REG_BASE + 0x838) = 1;
     *(uint32_t *)(PPE_REG_BASE + 0x938) = 1;
     *(uint32_t *)(PPE_REG_BASE + 0xA38) = 1;
@@ -786,7 +781,9 @@ PPE_ERR PPE_Blit_Inverse(ppe_buffer_t *dst, ppe_buffer_t *src, uint8_t *output,
                                              PPE_ResultLayer0_Init.Layer_Window_Ymin + 1;
     }
     PPE_ResultLayer_Init(&PPE_ResultLayer0_Init);
-
+    PPE_Clear_Interrupt(PPE_ALL_OVER_INT);
+    PPE_Mask_All_Interrupt(ENABLE);
+    PPE_Mask_Interrupt(PPE_ALL_OVER_INT, DISABLE);
     PPE_Cmd(ENABLE);
 //    while (((PPE_REG_GLB_STATUS_TypeDef)PPE->REG_GLB_STATUS).b.run_state)
 

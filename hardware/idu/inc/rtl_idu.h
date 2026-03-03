@@ -186,6 +186,7 @@ typedef enum
     IDU_ERROR_INVALID_PARAM,            /*!< Parameters in DMA setting are invalid. */
     IDU_ERROR_FILE_INVALID,             /*!< Parameters in input compressed file setting are invalid. */
     IDU_ERROR_LINE_NOT_ALIGNED,         /*!< Line width in bytes must be 4-byte aligned when target stride is larger than line width. */
+    IDU_ERROR_NULL_INT_REPORT,          /*!< Record must be created when use IDU with interrupt. */
 } IDU_ERROR;
 /** End of IDU_ERROR
   * \}
@@ -308,6 +309,22 @@ typedef struct
   * \}
   */
 
+/**
+ * \defgroup    IDU_INT_CONFIG IDU_Interrupt_Config
+ * \{
+ * \ingroup     IDU_Exported_Types
+ */
+typedef struct
+{
+    void *rx_lli;       /*!< Link list for RX DMA. */
+    void *tx_lli;       /*!< Link list for TX DMA. */
+    uint8_t rx_dma_num; /*!< Channel number of RX DMA. */
+    uint8_t tx_dma_num; /*!< Channel number of TX DMA. */
+} IDU_State_Record;
+/** End of IDU_INT_CONFIG
+  * \}
+  */
+
 /** End of IDU_Exported_Types
   * \}
   */
@@ -352,6 +369,22 @@ void IDU_INTConfig(IDU_INTERRUPT_TYPE Interrupt, FunctionalState NewState);
  * \endcode
  */
 ITStatus IDU_GetINTStatus(IDU_INTERRUPT_TYPE Interrupt);
+
+/**
+ * \brief  Get raw interrupt status of IDU.
+ * \param[in] Interrupt: Specified interrupt type from @ref IDU_INTERRUPT_TYPE.
+ * \return Raw interrupt status.
+ * \retval SET: Interrupt has been triggered before masked.
+ * \retval RESET: Interrupt has not been triggered yet before masked.
+ *
+ * <b>Example usage</b>
+ * \code{.c}
+    void demo_code(void){
+        ITStatus status = IDU_GetRawINTStatus(IDU_DECOMPRESS_FINISH_INT);
+    }
+ * \endcode
+ */
+ITStatus IDU_GetRawINTStatus(IDU_INTERRUPT_TYPE Interrupt);
 
 /**
  * \brief  Mask or unmask specified IDU interrupt.
@@ -441,13 +474,39 @@ IDU_ERROR IDU_Decode(uint8_t *file, IDU_decode_range *range, IDU_DMA_config *dma
         IDU_interrupt_config int_cfg = {0};
         int_cfg.idu_decompress_finish_int = 1;
         int_cfg.idu_decompress_error_int = 1;
-        IDU_ERROR err = IDU_Decode_With_Interrupt(file_data, &range, &dma_cfg, int_cfg);
+        IDU_State_Record record;
+        IDU_ERROR err = IDU_Decode_With_Interrupt(file_data, &range, &dma_cfg, int_cfg, &record);
     }
  * \endcode
  */
 IDU_ERROR IDU_Decode_With_Interrupt(uint8_t *file, IDU_decode_range *range, IDU_DMA_config *dma_cfg,
-                                    IDU_interrupt_config int_cfg);
+                                    IDU_interrupt_config int_cfg, IDU_State_Record *record);
 
+/**
+ * \brief  Clean the variables and hardware state after using interrupt.
+ * \param[in] record: pointer to state records.
+ *
+ * <b>Example usage</b>
+ * \code{.c}
+    void demo_code(void){
+        RCC_PeriphClockCmd(APBPeriph_IDU, APBPeriph_IDU_CLOCK, ENABLE);
+        IDU_file_header* header = (IDU_file_header*)file_data;
+        IDU_decode_range range = {0, header->raw_pic_height - 1, 0, header->raw_pic_width - 1, 0};
+        IDU_DMA_config dma_cfg;
+        dma_cfg.output_buf = (uint32_t*)buf;
+        dma_cfg.RX_DMA_channel_num = 0;
+        dma_cfg.TX_DMA_channel_num = 1;
+        IDU_interrupt_config int_cfg = {0};
+        int_cfg.idu_decompress_finish_int = 1;
+        int_cfg.idu_decompress_error_int = 1;
+        IDU_State_Record record;
+        IDU_ERROR err = IDU_Decode_With_Interrupt(file_data, &range, &dma_cfg, int_cfg, &record);
+        // some polling operation
+        IDU_Clean_State(&record);
+    }
+ * \endcode
+ */
+void IDU_Clean_State(IDU_State_Record *record);
 
 /**
  * \brief  Get the start address of certain line in compressed file.

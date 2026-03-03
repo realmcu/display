@@ -157,6 +157,47 @@ ITStatus IDU_GetINTStatus(IDU_INTERRUPT_TYPE Interrupt)
     }
 }
 
+ITStatus IDU_GetRawINTStatus(IDU_INTERRUPT_TYPE Interrupt)
+{
+    /* Check the parameters */
+    assert_param(IS_IDU_INT(Interrupt));
+    uint32_t int_val = 0;
+    IDU_INT_RAW_STATUS_TypeDef idu_reg_0x60 = {.d32 = IDU->INT_RAW_STATUS};
+    switch (Interrupt)
+    {
+    case IDU_DECOMPRESS_FINISH_INT:
+        int_val = idu_reg_0x60.b.idu_decompress_finish_int_raw_status;
+        break;
+    case IDU_LINE_DECOMPRESS_FINISH_INT:
+        int_val = idu_reg_0x60.b.line_decompress_finish_int_raw_status;
+        break;
+    case IDU_DECOMPRESS_ERROR_INT:
+        int_val = idu_reg_0x60.b.idu_decompress_error_int_raw_status;
+        break;
+    case IDU_RX_FIFO_OVERFLOW_INT:
+        int_val = idu_reg_0x60.b.rx_fifo_overflow_int_raw_status;
+        break;
+    case IDU_RX_FIFO_THRESHOLD_INT:
+        int_val = idu_reg_0x60.b.rx_fifo_threshold_int_raw_status;
+        break;
+    case IDU_TX_FIFO_UNDERFLOW_INT:
+        int_val = idu_reg_0x60.b.tx_fifo_underflow_int_raw_status;
+        break;
+    case IDU_TX_FIFO_THRESHOLD_INT:
+        int_val = idu_reg_0x60.b.tx_fifo_threshold_int_raw_status;
+        break;
+    }
+    if (int_val)
+    {
+        return SET;
+    }
+    else
+    {
+        return RESET;
+    }
+}
+
+
 void IDU_INTConfig(IDU_INTERRUPT_TYPE Interrupt, FunctionalState NewState)
 {
     /* Check the parameters */
@@ -239,7 +280,7 @@ void IDU_MaskINTConfig(IDU_INTERRUPT_TYPE Interrupt, FunctionalState NewState)
         idu_reg_0x5c.b.tx_fifo_threshold_int_msk = new_int_status;
         break;
     }
-    IDU->INT_ENABLE = idu_reg_0x5c.d32;
+    IDU->INT_MASK = idu_reg_0x5c.d32;
 }
 
 void IDU_ClearINTPendingBit(IDU_INTERRUPT_TYPE Interrupt)
@@ -635,7 +676,7 @@ IDU_ERROR IDU_Decode(uint8_t *file, IDU_decode_range *range, IDU_DMA_config *dma
 }
 
 IDU_ERROR IDU_Decode_With_Interrupt(uint8_t *file, IDU_decode_range *range, IDU_DMA_config *dma_cfg,
-                                    IDU_interrupt_config int_cfg)
+                                    IDU_interrupt_config int_cfg, IDU_State_Record *record)
 {
     IDU_ERROR err = IDU_SUCCESS;
     uint32_t decompress_start_line;
@@ -644,6 +685,10 @@ IDU_ERROR IDU_Decode_With_Interrupt(uint8_t *file, IDU_decode_range *range, IDU_
     uint32_t decompress_end_column;
     uint32_t decompress_target_stride;
     RCC_PeriphClockCmd(APBPeriph_IDU, APBPeriph_IDU_CLOCK, ENABLE);
+    if (record == NULL)
+    {
+        return IDU_ERROR_NULL_INT_REPORT;
+    }
     if (file == NULL)
     {
         return IDU_ERROR_NULL_INPUT;
@@ -767,10 +812,11 @@ IDU_ERROR IDU_Decode_With_Interrupt(uint8_t *file, IDU_decode_range *range, IDU_
     RX_GDMA_InitStruct.GDMA_DIR                 = GDMA_DIR_MemoryToPeripheral;
     RX_GDMA_InitStruct.GDMA_SourceInc           = DMA_SourceInc_Inc;
     RX_GDMA_InitStruct.GDMA_DestinationInc      = DMA_DestinationInc_Fix;
+
     if (rx_dma_depth == 16 || rx_dma_depth == 32)
     {
         RX_GDMA_InitStruct.GDMA_SourceMsize         =
-            GDMA_Msize_16;                         // 16 msize for source msize
+            GDMA_Msize_8;                         // 16 msize for source msize
         RX_GDMA_InitStruct.GDMA_DestinationMsize    =
             GDMA_Msize_8;                         // 8 msize for destiantion msize
     }
@@ -847,7 +893,8 @@ IDU_ERROR IDU_Decode_With_Interrupt(uint8_t *file, IDU_decode_range *range, IDU_
     if (decompress_target_stride != decompress_line_size)
     {
         tx_block_num = decompress_height;
-        tx_block_size = decompress_line_size;
+        tx_block_size = decompress_line_size / 4;
+        decompress_target_stride = decompress_target_stride / 4;
     }
     else if (DMA_decompressed_data_size_word >= MAX_DMA_BLOCK_SIZE)
     {
@@ -856,6 +903,7 @@ IDU_ERROR IDU_Decode_With_Interrupt(uint8_t *file, IDU_decode_range *range, IDU_
         {
             tx_block_num = tx_block_num + 1;
         }
+        decompress_target_stride = MAX_DMA_BLOCK_SIZE;
         tx_block_size = MAX_DMA_BLOCK_SIZE;
     }
     /*--------------GDMA init-----------------------------*/
@@ -874,14 +922,14 @@ IDU_ERROR IDU_Decode_With_Interrupt(uint8_t *file, IDU_decode_range *range, IDU_
         TX_GDMA_InitStruct.GDMA_SourceMsize         =
             GDMA_Msize_8;                         // 16 msize for source msize
         TX_GDMA_InitStruct.GDMA_DestinationMsize    =
-            GDMA_Msize_8;                         // 8 msize for destiantion msize
+            GDMA_Msize_16;                         // 8 msize for destiantion msize
     }
     else if (tx_dma_depth == 8)
     {
         TX_GDMA_InitStruct.GDMA_SourceMsize         =
             GDMA_Msize_8;                         // 8 msize for source msize
         TX_GDMA_InitStruct.GDMA_DestinationMsize    =
-            GDMA_Msize_4;                         // 8 msize for destiantion msize
+            GDMA_Msize_8;                         // 8 msize for destiantion msize
     }
     else
     {
@@ -898,7 +946,7 @@ IDU_ERROR IDU_Decode_With_Interrupt(uint8_t *file, IDU_decode_range *range, IDU_
     if (tx_block_num)
     {
         TX_GDMA_LLIStruct = (GDMA_LLIDef *)rtl_idu_malloc_int(tx_block_num * sizeof(GDMA_LLIDef));
-        TX_GDMA_InitStruct.GDMA_BufferSize = MAX_DMA_BLOCK_SIZE;
+        TX_GDMA_InitStruct.GDMA_BufferSize = tx_block_size;
         TX_GDMA_InitStruct.GDMA_Multi_Block_Mode = LLI_TRANSFER;
         TX_GDMA_InitStruct.GDMA_Multi_Block_En = 1;
         TX_GDMA_InitStruct.GDMA_Multi_Block_Struct = (uint32_t)TX_GDMA_LLIStruct;
@@ -911,7 +959,7 @@ IDU_ERROR IDU_Decode_With_Interrupt(uint8_t *file, IDU_decode_range *range, IDU_
             if (i == tx_block_num - 1)
             {
                 TX_GDMA_LLIStruct[i].SAR = (uint32_t)(&IDU->TX_FIFO);
-                TX_GDMA_LLIStruct[i].DAR = (uint32_t)dma_cfg->output_buf + MAX_DMA_BLOCK_SIZE * 4 * i;
+                TX_GDMA_LLIStruct[i].DAR = (uint32_t)dma_cfg->output_buf + decompress_target_stride * 4 * i;
                 TX_GDMA_LLIStruct[i].LLP = 0;
                 /* configure low 32 bit of CTL register */
                 TX_GDMA_LLIStruct[i].CTL_LOW = (BIT(0)
@@ -929,7 +977,7 @@ IDU_ERROR IDU_Decode_With_Interrupt(uint8_t *file, IDU_decode_range *range, IDU_
             else
             {
                 TX_GDMA_LLIStruct[i].SAR = (uint32_t)(&IDU->TX_FIFO);
-                TX_GDMA_LLIStruct[i].DAR = (uint32_t)dma_cfg->output_buf + MAX_DMA_BLOCK_SIZE * 4 * i;
+                TX_GDMA_LLIStruct[i].DAR = (uint32_t)dma_cfg->output_buf + decompress_target_stride * 4 * i;
                 TX_GDMA_LLIStruct[i].LLP = (uint32_t)&TX_GDMA_LLIStruct[i + 1];
                 /* configure low 32 bit of CTL register */
                 TX_GDMA_LLIStruct[i].CTL_LOW = rtl_idu_get_dma_ctl_low_int(TX_DMA);
@@ -938,10 +986,8 @@ IDU_ERROR IDU_Decode_With_Interrupt(uint8_t *file, IDU_decode_range *range, IDU_
             }
         }
     }
-
     GDMA_Cmd(dma_cfg->RX_DMA_channel_num, ENABLE);
     GDMA_Cmd(dma_cfg->TX_DMA_channel_num, ENABLE);
-
     if (int_cfg.idu_decompress_finish_int)
     {
         IDU_ClearINTPendingBit(IDU_DECOMPRESS_FINISH_INT);
@@ -996,15 +1042,42 @@ IDU_ERROR IDU_Decode_With_Interrupt(uint8_t *file, IDU_decode_range *range, IDU_
         IDU_MaskINTConfig(IDU_TX_FIFO_UNDERFLOW_INT, DISABLE);
     }
 
-    NVIC_InitTypeDef NVIC_InitStruct;
-    NVIC_InitStruct.NVIC_IRQChannel = IDU_IRQn;
-    NVIC_InitStruct.NVIC_IRQChannelPriority = 3;
-    NVIC_InitStruct.NVIC_IRQChannelCmd = ENABLE;
-    NVIC_Init(&NVIC_InitStruct);
-
+    record->rx_lli = RX_GDMA_LLIStruct;
+    record->tx_lli = TX_GDMA_LLIStruct;
+    record->rx_dma_num = dma_cfg->RX_DMA_channel_num;
+    record->tx_dma_num = dma_cfg->TX_DMA_channel_num;
     IDU_Cmd(ENABLE);
     IDU_Run(ENABLE);
-    return err;
+    return IDU_SUCCESS;
+}
+
+void IDU_Clean_State(IDU_State_Record *record)
+{
+    if (record == NULL)
+    {
+        return;
+    }
+    GDMA_ChannelTypeDef *RX_DMA = rtl_idu_get_dma_channel_int(record->rx_dma_num);
+    GDMA_ChannelTypeDef *TX_DMA = rtl_idu_get_dma_channel_int(record->tx_dma_num);
+    if (rtl_idu_get_dma_busy_state(record->rx_dma_num))
+    {
+        rtl_idu_wait_dma_idle(RX_DMA);
+        rtl_idu_wait_dma_idle(TX_DMA);
+        GDMA_Cmd(record->rx_dma_num, DISABLE);
+        GDMA_Cmd(record->tx_dma_num, DISABLE);
+    }
+    IDU_RxFifoClear();
+    IDU_Cmd(DISABLE);
+    while (!(IDU->IDU_CTL1 & BIT29));
+    IDU_TxFifoClear();
+    if (record->rx_lli)
+    {
+        rtl_idu_free_int(record->rx_lli);
+    }
+    if (record->tx_lli)
+    {
+        rtl_idu_free_int(record->tx_lli);
+    }
 }
 
 IDU_ERROR IDU_Decode_Direct(uint8_t *file, IDU_decode_range *range, IDU_DMA_config *dma_cfg)
