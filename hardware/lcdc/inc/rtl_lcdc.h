@@ -1347,6 +1347,48 @@ __STATIC_INLINE void LCDC_DMA_SetBufferSize(LCDC_DMA_ChannelTypeDef *LCDC_DMA_Ch
 }
 
 /**
+ * \brief  Get interrupt status of LCDC.
+ *
+ * \param[in] LCDC_INT: Index of interrupt.
+ * \return Interrupt status.
+ * \retval SET: Interrupt has been triggered.
+ * \retval RESET: Interrupt has not been triggered yet.
+ *
+ * <b>Example usage</b>
+ * \code{.c}
+ *
+ * void driver_lcdc_demo(void)
+ * {
+ *     if(LCDC_GetINTStatus(LCDC_STATUS_TX_AUTO_DONE_INT))
+ *     {
+ *          DBG_DIRECT("frame transfer done");
+ *     }
+ * }
+ * \endcode
+ */
+ITStatus LCDC_GetINTStatus(uint32_t LCDC_INT);
+
+/**
+ * \brief  Force DMA use burst data transfer.
+ *
+ * \param[in] LCDC_INT_MSK: Index of interrupt to be mask or unmask.
+ * \param[in] state: DMA burst fixed or not.
+ *            This parameter can be one of the following values:
+ *            - ENABLE:   Mask the interrupt.
+ *            - DISABLE:  Unmask the interrupt.
+ *
+ * <b>Example usage</b>
+ * \code{.c}
+ *
+ * void driver_lcdc_demo(void)
+ * {
+ *     LCDC_MaskINTConfig(LCDC_INT_MASK_TX_AUTO_DONE, ENABLE);
+ * }
+ * \endcode
+ */
+void LCDC_MaskINTConfig(uint32_t LCDC_INT_MSK, FunctionalState NewState);
+
+/**
  * \brief  Initialize LCDC structure with default values
  * \param  LCDC_InitStruct : Pointer to LCDC_InitTypeDef structure
  *
@@ -1544,3 +1586,7 @@ void LCDC_DMA_Infinite_Buf_Update(uint8_t *G1_SAR_buf, uint8_t *G2_SAR_buf);
 #endif
 
 #endif /*__RTL_LCDC_H*/
+
+
+/******************* (C) COPYRIGHT 2023 Realtek Semiconductor Corporation *****END OF FILE****/
+
