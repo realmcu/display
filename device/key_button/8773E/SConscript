@@ -1,0 +1,17 @@
+Import('TOOL_ROOT')
+
+from building import *
+
+cwd = GetCurrentDir()
+
+src = Split("""
+""")
+
+if GetDepend(['CONFIG_REALTEK_KEY_BUTTON_8773E']):
+    src += ['key_button_8773e.c']
+
+CPPPATH = [cwd]
+
+group = DefineGroup('key_button', src, depend = ['CONFIG_REALTEK_8773E_DEVICE'], CPPPATH = CPPPATH)
+
+Return('group')

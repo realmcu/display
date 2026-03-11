@@ -1,0 +1,25 @@
+from building import *
+
+Import('SDK_ROOT')
+# Import('RTK_IC_TYPE')
+
+cwd = GetCurrentDir()
+
+# add the general drivers.
+src = Split("""
+""")
+CPPPATH = [cwd]
+
+if GetDepend(['CONFIG_REALTEK_KNOB_ENCODER_PULSE']):
+    src += ['knob_encoder_pulse.c']
+
+if GetDepend(['CONFIG_REALTEK_KNOB_SWITCH']):
+    src += ['knob_switch.c']
+
+if GetDepend(['CONFIG_REALTEK_KNOB_EDGE']):
+    src += ['knob_encoder_edge.c']
+
+
+group = DefineGroup('knob_driver', src, depend = ['CONFIG_REALTEK_8773E_DEVICE'], CPPPATH = CPPPATH)
+
+Return('group')
