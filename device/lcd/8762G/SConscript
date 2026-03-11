@@ -1,0 +1,32 @@
+
+
+from building import *
+
+cwd = GetCurrentDir()
+
+# add the general drivers.
+src = Split("""
+""")
+
+if GetDepend(['CONFIG_REALTEK_INCA3311_280456_QSPI']):
+    src += ['icna3311_280x456_qspi.c']
+if GetDepend(['CONFIG_REALTEK_ST7796_320320_DBIB']):
+    src += ['st7796_320320_dbib.c']
+if GetDepend(['CONFIG_REALTEK_ST7701S_480480_RGB']):
+    src += ['st7701s_480480_rgb.c']
+# if GetDepend(['CONFIG_REALTEK_EK9716_800480_RGB']) or GetDepend(['CONFIG_REALTEK_EK9716_800480_RGB']):
+#     src += ['EK9716_800480_rgb.c']
+if GetDepend(['CONFIG_REALTEK_NV3047_480272_RGB']):
+    src += ['NV3047_480272_rgb.c']
+if GetDepend(['CONFIG_REALTEK_ST7701S_480640_RGB']):
+    src += ['st7701s_480640_rgb.c']
+if GetDepend(['CONFIG_REALTEK_NV3030B_76284_SPI']):
+    src += ['NV3030B_76x284_spi.c']
+
+CPPPATH = [cwd]
+
+group = DefineGroup('lcd_low_driver', src, depend = [''], CPPPATH = CPPPATH)
+# print(src)
+# print(group)
+
+Return('group')

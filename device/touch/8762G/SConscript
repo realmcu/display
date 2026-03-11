@@ -1,0 +1,24 @@
+Import('TOOL_ROOT')
+
+from building import *
+
+cwd = GetCurrentDir()
+
+src = Split("""
+""")
+
+
+if GetDepend(['CONFIG_REALTEK_BSP_TOUCH']):
+    if GetDepend(['CONFIG_REALTEK_BSP_TOUCH_ZT2717_8762G']):
+        src += ['touch_zt2717.c']
+    if GetDepend(['CONFIG_REALTEK_BSP_TOUCH_GT911_8762G']):
+        src += ['touch_gt911.c']
+    if GetDepend(['CONFIG_REALTEK_BSP_TOUCH_CST836U_8762G']):
+        src += ['touch_cst836u.c']
+
+
+CPPPATH = [cwd]
+
+group = DefineGroup('touch_driver', src, depend = [''], CPPPATH = CPPPATH)
+
+Return('group')

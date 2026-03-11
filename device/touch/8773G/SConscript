@@ -1,0 +1,24 @@
+Import('TOOL_ROOT')
+
+from building import *
+
+cwd = GetCurrentDir()
+
+src = Split("""
+""")
+
+if GetDepend(['CONFIG_REALTEK_TOUCH_CHSC6417']):
+    src += ['touch_CHSC6417.c']
+if GetDepend(['CONFIG_REALTEK_TOUCH_GT911']):
+    src += ['touch_gt911.c']
+if GetDepend(['CONFIG_REALTEK_TOUCH_LW']):
+    src += ['touch_lw.c']
+if GetDepend(['CONFIG_REALTEK_TOUCH_CS816T']):
+    src += ['touch_cs816t.c']
+
+
+CPPPATH = [cwd]
+
+group = DefineGroup('touch_driver', src, depend = ['CONFIG_REALTEK_8773G_DEVICE'], CPPPATH = CPPPATH)
+
+Return('group')
