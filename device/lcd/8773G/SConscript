@@ -18,6 +18,8 @@ if GetDepend(['CONFIG_REALTEK_LCD_SH8601Z_410_502_QSPI']):
     src += ['lcd_sh8601z_410_502_qspi.c']
 if GetDepend(['CONFIG_REALTEK_LCD_ST7265_800480_RGB']):
     src += ['lcd_st7265_800480_rgb.c']
+if GetDepend(['CONFIG_REALTEK_LCD_EK9716_800480_RGB']):
+    src += ['EK9716_800480_rgb.c']
 if GetDepend(['CONFIG_REALTEK_NV3041A_480_272_QSPI']):
     src += ['nv3041A_480_272_qspi.c']
 if GetDepend(['CONFIG_REALTEK_SH8601Z_454454_QSPI']):
@@ -26,6 +28,6 @@ if GetDepend(['CONFIG_REALTEK_ST7701S_480480_RGB']):
     src += ['st7701s_480480_rgb.c']
 
 
-group = DefineGroup('lcd_low_driver', src, depend = ['CONFIG_REALTEK_8773G_DEVICE'], CPPPATH = CPPPATH)
+group = DefineGroup('lcd_low_driver', src, depend = [''], CPPPATH = CPPPATH)
 
 Return('group')

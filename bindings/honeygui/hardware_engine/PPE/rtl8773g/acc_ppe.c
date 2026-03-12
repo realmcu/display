@@ -779,6 +779,16 @@ void hw_acc_blit_cache(draw_img_t *image, struct gui_dispdev *dc, struct gui_rec
     case XRGB8888:
         source.format = PPE_XRGB8888;
         break;
+    case ALPHAMASK:
+    case A8:
+        source.format = PPE_A8;
+        uint32_t c_a = (image->fg_color_set & 0xFF000000);
+        uint32_t c_r = (image->fg_color_set & 0x00FF0000);
+        uint32_t c_g = (image->fg_color_set & 0x0000FF00);
+        uint32_t c_b = (image->fg_color_set & 0x000000FF);
+        uint32_t ppe_abgr = (c_a | c_r >> 16 | c_g | (c_b << 16));
+        source.const_color = ppe_abgr;
+        break;
     default:
         return;
     }
@@ -985,25 +995,9 @@ void hw_acc_blit_cache(draw_img_t *image, struct gui_dispdev *dc, struct gui_rec
         source.color_key_config.key_range.B_min = 0;
         source.color_key_config.key_replace.key_replace = 0x00000000;
     }
-    else if (image->blend_mode == IMG_BYPASS_MODE)
-    {
-        source.color_key_config.key_enable.key_enable = false;
-    }
-    else if (image->blend_mode == IMG_SRC_OVER_MODE)
-    {
-        source.color_key_config.key_enable.key_enable = false;;
-    }
-    else if (image->blend_mode == IMG_RECT)
-    {
-        source.color_key_config.key_enable.key_enable = false;
-    }
-    else if (image->blend_mode == IMG_COVER_MODE)
-    {
-        source.color_key_config.key_enable.key_enable = false;
-    }
     else
     {
-        return;
+        source.color_key_config.key_enable.key_enable = false;
     }
     ppe_rect_t constraint, old_rect;
     int32_t tessalation_len = PPE_TESS_LENGTH;
@@ -1364,6 +1358,9 @@ void *hw_acc_idu_decode(void *input)
         pixel_size = 1;
         clut_num = *(uint32_t *)((uint32_t)input + sizeof(gui_rgb_data_head_t)) + 1;
         clut_offset = clut_num * 4;
+        break;
+    case A8:
+        pixel_size = 1;
         break;
     default:
         return NULL;

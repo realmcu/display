@@ -30,6 +30,6 @@ if GetDepend(['CONFIG_REALTEK_HX8369_480_480_RGB']):
     src += ['hx8369_480480_rgb.c']
 
 
-group = DefineGroup('lcd_low_driver', src, depend = ['CONFIG_REALTEK_8773E_DEVICE'], CPPPATH = CPPPATH)
+group = DefineGroup('lcd_low_driver', src, depend = [''], CPPPATH = CPPPATH)
 
 Return('group')

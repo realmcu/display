@@ -16,7 +16,7 @@ if GetDepend(['CONFIG_REALTEK_ST77916_320_385']):
 
 CPPPATH = [cwd]
 
-group = DefineGroup('lcd_low_driver', src, CPPPATH = CPPPATH, depend = ['CONFIG_REALTEK_8752H_DEVICE'])
+group = DefineGroup('lcd_low_driver', src, CPPPATH = CPPPATH, depend = [''])
 # print(src)
 # print(group)
 

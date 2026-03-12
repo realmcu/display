@@ -20,6 +20,6 @@ if GetDepend(['CONFIG_REALTEK_KNOB_EDGE']):
     src += ['knob_encoder_edge.c']
 
 
-group = DefineGroup('knob_driver', src, depend = ['CONFIG_REALTEK_8773E_DEVICE'], CPPPATH = CPPPATH)
+group = DefineGroup('knob_driver', src, depend = [''], CPPPATH = CPPPATH)
 
 Return('group')

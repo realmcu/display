@@ -197,7 +197,6 @@ static void lcd_pad_and_clk_init(void)
     Pad_HighSpeedMuxSel(LCDC_HSYNC, FROM_CORE_DOMAIN);
     Pad_HighSpeedMuxSel(LCDC_VSYNC, FROM_CORE_DOMAIN);
     Pad_HighSpeedMuxSel(LCDC_CSN_DE, FROM_CORE_DOMAIN);
-    ek9716_gpio_init();
     platform_delay_ms(1);
 }
 

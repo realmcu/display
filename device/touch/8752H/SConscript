@@ -24,6 +24,6 @@ if GetDepend(['CONFIG_REALTEK_BSP_TOUCH_CST816D']):
 
 CPPPATH = [cwd]
 
-group = DefineGroup('touch_driver', src, depend = ['CONFIG_REALTEK_8752H_DEVICE'], CPPPATH = CPPPATH)
+group = DefineGroup('touch_driver', src, depend = [''], CPPPATH = CPPPATH)
 
 Return('group')

@@ -13,6 +13,6 @@ if GetDepend(['CONFIG_REALTEK_BSP_PIN']) or GetDepend(['CONFIG_REALTEK_BSP_GPIO'
 
 CPPPATH = [cwd]
 
-group = DefineGroup('key_button', src, depend = ['CONFIG_REALTEK_8772F_DEVICE'], CPPPATH = CPPPATH)
+group = DefineGroup('key_button', src, depend = [''], CPPPATH = CPPPATH)
 
 Return('group')
