@@ -1624,3 +1624,19 @@ bool ppe_get_area(ppe_rect_t *result_rect, ppe_rect_t *source_rect, ppe_matrix_t
     }
     return true;
 }
+
+bool ppe_intersect_area(ppe_rect_t *result_rect, ppe_rect_t *prect_1, ppe_rect_t *prect_2)
+{
+    result_rect->x1 = prect_1->x1 > prect_2->x1 ? prect_1->x1 : prect_2->x1;
+    result_rect->y1 = prect_1->y1 > prect_2->y1 ? prect_1->y1 : prect_2->y1;
+    result_rect->x2 = prect_1->x2 < prect_2->x2 ? prect_1->x2 : prect_2->x2;
+    result_rect->y2 = prect_1->y2 < prect_2->y2 ? prect_1->y2 : prect_2->y2;
+
+    if ((result_rect->x1 > result_rect->x2) || (result_rect->y1 > result_rect->y2))
+    {
+        return false;
+    }
+
+    return true;
+}
+

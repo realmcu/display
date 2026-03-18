@@ -900,7 +900,7 @@ PPE_ERR PPE_Mask(ppe_buffer_t *dst, uint32_t color, ppe_rect_t *rect);
 /**
  * \brief  Clear the buffer with certain color in ABGR8888 format, no blending is performed.
  * \param[in] dst: Target buffer to be cleared.
- * \param[in] color: Specified color in ABGR8888 format \ref PPE_ABGR8888
+ * \param[in] color: Specified color in ABGR8888 format \ref PPE_ABGR8888 .
  * \param[in] rect: Rectangle region of clear area.
  * \return Operation result.
  * \retval PPE_SUCCESS   Operation success.
@@ -928,6 +928,28 @@ PPE_ERR PPE_Mask(ppe_buffer_t *dst, uint32_t color, ppe_rect_t *rect);
  * \endcode
  */
 PPE_ERR PPE_Clear(ppe_buffer_t *dst, uint32_t color, ppe_rect_t *rect);
+
+/**
+ * \brief  Get intersect area of 2 rectangles.
+ * \param[in] result_rect: Pointer to the output area.
+ * \param[in] prect_1: Pointer to first input rectangle.
+ * \param[in] prect_1: Pointer to second input rectangle.
+ * \return Intersect result.
+ * \retval true          Intersect area returned.
+ * \retval false         No intersect area between 2 input rectangles.
+ *
+ * <b>Example usage</b>
+ * \code{.c}
+    void test_code(ppe_rect_t *rect_1, ppe_rect_t *rect_2){
+        ppe_rect_t result;
+        if(!ppe_intersect_area(&result, rect_1, rect_2)
+        {
+            DBG_DIRECT("No intersect area, need no handle");
+        }
+    }
+ * \endcode
+ */
+bool ppe_intersect_area(ppe_rect_t *result_rect, ppe_rect_t *prect_1, ppe_rect_t *prect_2);
 
 /** End of PPE_Exported_Functions
   * \}
