@@ -1094,7 +1094,6 @@ void hw_acc_blit_simple(draw_img_t *image, struct gui_dispdev *dc, struct gui_re
         ppe_mat_multiply(&pre_trans, &inverse);
         ppe_translate(x_ref, y_ref, &pre_trans);
         memcpy(&inverse, &pre_trans, sizeof(float) * 9);
-
     }
     else
     {
@@ -1125,6 +1124,11 @@ void hw_acc_blit_simple(draw_img_t *image, struct gui_dispdev *dc, struct gui_re
         {
             PPE_Finish();
         }
+    }
+    if (need_clean_up && decode_buf != NULL)
+    {
+        acc_ppe_free(decode_buf);
+        return;
     }
 }
 
