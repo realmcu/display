@@ -25,7 +25,7 @@ if(NOT any_soc_selected)
   message(STATUS "No REALTEK SOC selected!!!")
 endif()
 
-set(HW_DISPLAY_TARGET_NAME reaktek_display_driver_library)
+set(HW_DISPLAY_TARGET_NAME realtek_display_driver_library)
 
 if(ZEPHYR_BASE)
   if(CONFIG_REALTEK_DISPLAY) #set to 1 to enable or variable to for depnedency
