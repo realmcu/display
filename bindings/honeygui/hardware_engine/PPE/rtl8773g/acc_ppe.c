@@ -849,7 +849,6 @@ void hw_acc_blit_rect(draw_img_t *image, struct gui_dispdev *dc, struct gui_rect
     constraint_rect.x2 -= dc->section.x1;
     constraint_rect.y2 -= dc->section.y1;
 
-
     source.win_x_min = 0;
     source.win_x_max = target.width - 1;
     source.win_y_min = 0;
@@ -1057,7 +1056,7 @@ void hw_acc_blit_simple(draw_img_t *image, struct gui_dispdev *dc, struct gui_re
     bool need_clean_up = false;
     if (cache_size < CACHE_BUF_SIZE)
     {
-        decode_buf = cache_buf;
+        decode_buf = cache_buf1;
     }
     else
     {
@@ -1077,13 +1076,11 @@ void hw_acc_blit_simple(draw_img_t *image, struct gui_dispdev *dc, struct gui_re
     if (head->compress)
     {
         uint32_t dst_stride =  source.width * PPE_Get_Pixel_Size(source.format) / 8;
-        uint32_t s = os_lock();
         if (source.format == PPE_A4)
         {
             source_rect.x2 = image->img_w / 2 - 1;
         }
         ret = hw_idu_decode(&source_rect, (uint8_t *)source.address, dst_stride, decode_buf);
-        os_unlock(s);
     }
     if (ret)
     {
@@ -1100,8 +1097,8 @@ void hw_acc_blit_simple(draw_img_t *image, struct gui_dispdev *dc, struct gui_re
         if (need_clean_up && decode_buf != NULL)
         {
             acc_ppe_free(decode_buf);
-            return;
         }
+        return;
     }
     source.high_quality = false;
     PPE_Finish();
@@ -1323,23 +1320,17 @@ void hw_acc_blit_cache(draw_img_t *image, struct gui_dispdev *dc, struct gui_rec
                     {
                         if (head->compress)
                         {
-                            uint32_t s;
-                            s = os_lock();
                             uint8_t pixel_size = PPE_Get_Pixel_Size(target.format) / 8;
                             uint32_t dst_stride = target.stride * pixel_size;
                             uint8_t *dest_address = (uint8_t *)(target.address + (dst_rect.y1 * target.stride + dst_rect.x1) *
                                                                 pixel_size);
                             PPE_Finish();
                             hw_idu_decode(&src_rect, (uint8_t *)source.address, dst_stride, dest_address);
-                            os_unlock(s);
                         }
                         else
                         {
-                            uint32_t s;
-                            s = os_lock();
                             PPE_Finish();
                             bare_blit_by_dma(&target, &source, &src_rect, &dst_rect);
-                            os_unlock(s);
                         }
                         return;
                     }
@@ -1676,17 +1667,13 @@ void hw_acc_blit_cache(draw_img_t *image, struct gui_dispdev *dc, struct gui_rec
 
             if (head->compress)
             {
-                uint32_t s = os_lock();
                 ret = memcpy_by_idu(&old_rect, &source);
-                os_unlock(s);
             }
             else
             {
                 if (dc->type == DC_RAMLESS)
                 {
-                    uint32_t s = os_lock();
                     ret = memcpy_by_dma(&old_rect, &source);
-                    os_unlock(s);
                 }
                 else
                 {
@@ -1787,6 +1774,7 @@ void *hw_acc_idu_decode(void *input)
         return NULL;
     }
     uint8_t pixel_size = 0;
+    uint8_t pixel_div = 1;
     const gui_rgb_data_head_t *head = (gui_rgb_data_head_t *)input;
     uint32_t clut_num = 0;
     uint32_t clut_offset = 0;
@@ -2204,6 +2192,7 @@ void hw_acc_init(void)
         GUI_ASSERT(cache_buf1 != NULL);
     }
     PPE_CLK_ENABLE(ENABLE);
+    RCC_PeriphClockCmd(APBPeriph_IDU, APBPeriph_IDU_CLOCK, ENABLE);
     GDMA_channel_request(&high_speed_dma_channel_num, NULL, true);
     if (CACHE_BUF_SIZE < (5 * 1024))
     {
@@ -2212,12 +2201,7 @@ void hw_acc_init(void)
     else
     {
         GDMA_channel_request(&low_speed_dma_channel_num, NULL, false);
-        extern void (* draw_img_acc_prepare_cb)(struct draw_img * image, gui_rect_t *rect);
-        extern void (* draw_img_acc_end_cb)(struct draw_img * image);
-//        draw_img_acc_prepare_cb = hw_acc_prepare_cb;
-//        draw_img_acc_end_cb = hw_acc_end_cb;
     }
-
     if (gui_get_acc() != NULL && gui_get_acc()->enable_thread_sync)
     {
         os_sem_create(&sync_sem, "sync_sem", 0, 1);
