@@ -81,6 +81,8 @@ void DBIC_Init(LCDC_DBICCfgTypeDef *DBIC_InitStruct)
     dcx_data_reg.b.data_head_val = DBICCfg->data_head_value;
     dcx_data_reg.b.data_tail_val = DBICCfg->data_tail_value;
     DBIC->DCX_DATA = dcx_data_reg.d32;
+
+    DBIC->DMATDLR = 0x20;
 #endif
 }
 
