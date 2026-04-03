@@ -1828,8 +1828,8 @@ void *hw_acc_idu_decode(void *input)
                (uint8_t *)input + sizeof(gui_rgb_data_head_t), clut_offset);
     }
     RCC_PeriphClockCmd(APBPeriph_IDU, APBPeriph_IDU_CLOCK, ENABLE);
-    ppe_rect_t decode_rect = {.x1 = 0, .y1 = 0, .x2 = head->w - 1, .y2 = head->h - 1};
-    uint32_t buffer_stride = head->w * pixel_size;
+    ppe_rect_t decode_rect = {.x1 = 0, .y1 = 0, .x2 = idu_info->raw_pic_width - 1, .y2 = idu_info->raw_pic_height - 1};
+    uint32_t buffer_stride = idu_info->raw_pic_width * pixel_size;
     if (hw_idu_decode(&decode_rect, (uint8_t *)idu_info, buffer_stride,
                       decode_img_data + sizeof(gui_rgb_data_head_t) + clut_offset))
     {
