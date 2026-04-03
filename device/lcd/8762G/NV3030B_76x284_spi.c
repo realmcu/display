@@ -184,8 +184,8 @@ void rtk_lcd_hal_start_transfer(uint8_t *buf, uint32_t len)
     LCDC_DMA_InitStruct.LCDC_DMA_DestinationInc      = LCDC_DMA_DestinationInc_Fix;
     LCDC_DMA_InitStruct.LCDC_DMA_SourceDataSize      = LCDC_DMA_DataSize_Word;
     LCDC_DMA_InitStruct.LCDC_DMA_DestinationDataSize = LCDC_DMA_DataSize_Word;
-    LCDC_DMA_InitStruct.LCDC_DMA_SourceMsize         = LCDC_DMA_Msize_8;
-    LCDC_DMA_InitStruct.LCDC_DMA_DestinationMsize    = LCDC_DMA_Msize_8;
+    LCDC_DMA_InitStruct.LCDC_DMA_SourceMsize         = LCDC_DMA_Msize_64;
+    LCDC_DMA_InitStruct.LCDC_DMA_DestinationMsize    = LCDC_DMA_Msize_64;
     LCDC_DMA_InitStruct.LCDC_DMA_SourceAddr          = (uint32_t)buf;
     LCDC_DMA_InitStruct.LCDC_DMA_Multi_Block_En     = 0;
     LCDC_DMA_Init(LCDC_DMA_CHANNEL_INDEX, &LCDC_DMA_InitStruct);
@@ -198,8 +198,8 @@ void rtk_lcd_hal_start_transfer(uint8_t *buf, uint32_t len)
     LCDC_DMA_InitStruct.LCDC_DMA_DestinationInc      = LCDC_DMA_DestinationInc_Fix;
     LCDC_DMA_InitStruct.LCDC_DMA_SourceDataSize      = LCDC_DMA_DataSize_Word;
     LCDC_DMA_InitStruct.LCDC_DMA_DestinationDataSize = LCDC_DMA_DataSize_Word;
-    LCDC_DMA_InitStruct.LCDC_DMA_SourceMsize         = LCDC_DMA_Msize_8;
-    LCDC_DMA_InitStruct.LCDC_DMA_DestinationMsize    = LCDC_DMA_Msize_8;
+    LCDC_DMA_InitStruct.LCDC_DMA_SourceMsize         = LCDC_DMA_Msize_64;
+    LCDC_DMA_InitStruct.LCDC_DMA_DestinationMsize    = LCDC_DMA_Msize_64;
     LCDC_DMA_InitStruct.LCDC_DMA_SourceAddr          = 0;
 
     LCDC_DMA_InitStruct.LCDC_DMA_Multi_Block_Mode   =
@@ -234,6 +234,7 @@ void rtk_lcd_hal_start_transfer(uint8_t *buf, uint32_t len)
 #if DMA_LINKLIST
     LCDC_DMA_MultiBlockCmd(ENABLE);
 #endif
+    LCDC_ForceBurst(ENABLE);
     LCDC_DMAChannelCmd(LCDC_DMA_CHANNEL_NUM, ENABLE);
     LCDC_DmaCmd(ENABLE);
 #if (TE_VALID == 1)
@@ -263,6 +264,7 @@ void rtk_lcd_hal_transfer_done(void)
     LCDC_ClearTxPixelCnt();
     LCDC_AXIMUXMode(LCDC_FW_MODE);
     LCDC_Cmd(DISABLE);
+    LCDC_ClearINTPendingBit(LCDC_CLR_WAVEFORM_FINISH);
 }
 
 void rtk_lcd_hal_rect_fill(uint16_t xStart, uint16_t yStart, uint16_t w, uint16_t h, uint32_t color)
@@ -291,6 +293,7 @@ void rtk_lcd_hal_rect_fill(uint16_t xStart, uint16_t yStart, uint16_t w, uint16_
 
     LCDC_Cmd(ENABLE);
 
+    LCDC_ForceBurst(ENABLE);
     LCDC_DMAChannelCmd(LCDC_DMA_CHANNEL_NUM, ENABLE);
     LCDC_DmaCmd(ENABLE);
 
@@ -349,6 +352,7 @@ void rtk_lcd_hal_update_framebuffer(uint8_t *buf, uint32_t len)
 
     LCDC_Cmd(ENABLE);
 
+    LCDC_ForceBurst(ENABLE);
     LCDC_DMAChannelCmd(LCDC_DMA_CHANNEL_NUM, ENABLE);
     LCDC_DmaCmd(ENABLE);
 #if (TE_VALID == 1)
@@ -470,15 +474,16 @@ void rtk_lcd_hal_init(void)
     lcdc_init.LCDC_TeInputMux = LCDC_TE_LCD_INPUT;
 #endif
     lcdc_init.LCDC_DmaThreshold =
-        8;    //only support threshold = 8 for DMA MSIZE = 8; the other threshold setting will be support later
+        64;    // MSize + threshold should be no larger than 128
     LCDC_Init(&lcdc_init);
+    LCDC_ClearINTPendingBit(LCDC_CLR_WAVEFORM_FINISH);
 
     DBG_DIRECT("func = %s, line = %d", __func__, __LINE__);
 
 
     LCDC_DBICCfgTypeDef dbic_init = {0};
     dbic_init.DBIC_SPEED_SEL         = 1;
-    dbic_init.DBIC_TxThr             = 0;//0 or 4
+    dbic_init.DBIC_TxThr             = 0;
     dbic_init.DBIC_RxThr             = 0;
     dbic_init.SCPOL                  = DBIC_SCPOL_LOW;
     dbic_init.SCPH                   = DBIC_SCPH_1Edge;

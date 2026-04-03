@@ -213,9 +213,10 @@ void rtk_lcd_hal_init(void)
     lcdc_init.LCDC_GroupSel = 0;
 
     lcdc_init.LCDC_DmaThreshold =
-        64;    //only support threshold = 8 for DMA MSIZE = 8; the other threshold setting will be support later
+        64;    // MSize + threshold should be no larger than 128
     lcdc_init.LCDC_InfiniteModeEn = 1;
     LCDC_Init(&lcdc_init);
+    LCDC_ClearINTPendingBit(LCDC_CLR_WAVEFORM_FINISH);
 
     uint32_t HSA = 48, HFP = 40, HBP = 40, HACT = EK9716_800480_LCD_WIDTH;
     uint32_t VSA = 1, VFP = 13, VBP = 31, VACT = EK9716_800480_LCD_HEIGHT;
@@ -302,6 +303,7 @@ void rtk_lcd_hal_start_transfer(uint8_t *buf, uint32_t len)
 void rtk_lcd_hal_transfer_done(void)
 {
     return;//todo by howie
+    LCDC_ClearINTPendingBit(LCDC_CLR_WAVEFORM_FINISH);
 }
 
 void rtk_lcd_hal_set_window(uint16_t xStart, uint16_t yStart, uint16_t w, uint16_t h)

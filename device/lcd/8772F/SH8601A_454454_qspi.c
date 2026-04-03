@@ -511,7 +511,7 @@ void rtk_lcd_hal_init(void)
     lcdc_init.LCDC_TeInputMux = LCDC_TE_LCD_INPUT;
 #endif
     lcdc_init.LCDC_DmaThreshold =
-        8;    //only support threshold = 8 for DMA MSIZE = 8; the other threshold setting will be support later
+        8;    // MSize + threshold should be no larger than 128
     LCDC_Init(&lcdc_init);
 
 //    LCDC_clk_src_sel(CKO1_PLL1_VCORE4, FROM_CLK_DISPLAY_SRC_MUX0, FRO_CLK_DISPLAY_SRC_MUX1,
@@ -520,7 +520,7 @@ void rtk_lcd_hal_init(void)
     LCDC_DBICCfgTypeDef dbic_init = {0};
     dbic_init.DBIC_SPEED_SEL         = 2;
 
-    dbic_init.DBIC_TxThr             = 0;//0 or 4
+    dbic_init.DBIC_TxThr             = 0;
     dbic_init.DBIC_RxThr             = 0;
     dbic_init.SCPOL                  = DBIC_SCPOL_LOW;
     dbic_init.SCPH                   = DBIC_SCPH_1Edge;

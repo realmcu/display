@@ -83,7 +83,7 @@ uint8_t ST7701S_Init(uint32_t ColorCoding, uint32_t orientation)
 
     lcdc_init.LCDC_InfiniteModeEn = ENABLE;
     lcdc_init.LCDC_DmaThreshold =
-        64;    //only support threshold = 8 for DMA MSIZE = 8; the other threshold setting will be support later
+        64;    // MSize + threshold should be no larger than 128
     LCDC_Init(&lcdc_init);
 
     LCDC_MaskINTConfig(LCDC_MASK_TX_AUTO_DONE_INT_MSK, DISABLE);

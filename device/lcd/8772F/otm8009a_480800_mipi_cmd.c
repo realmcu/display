@@ -217,7 +217,7 @@ uint8_t OTM8009A_Init(uint32_t ColorCoding, uint32_t orientation)
     lcdc_init.LCDC_PixelBitSwap = LCDC_SWAP_BYPASS; //lcdc_handler_cfg->LCDC_TeEn = LCDC_TE_DISABLE;
 
     lcdc_init.LCDC_DmaThreshold =
-        8;    //only support threshold = 8 for DMA MSIZE = 8; the other threshold setting will be support later
+        8;    // MSize + threshold should be no larger than 128
     LCDC_Init(&lcdc_init);
 
     LCDC_eDPICfgTypeDef eDPICfg;//836 * 550, 42FPS == 19311600

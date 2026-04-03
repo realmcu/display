@@ -211,6 +211,7 @@ static void st77903_framebuffer_init(uint8_t *buf)
 #if DMA_MULTIBLOCK
     LCDC_DMA_MultiBlockCmd(ENABLE);
 #endif
+    LCDC_ForceBurst(ENABLE);
     LCDC_DMAChannelCmd(LCDC_DMA_CHANNEL_NUM, ENABLE);
     LCDC_DmaCmd(ENABLE);
     LCDC_AutoWriteCmd(ENABLE);
@@ -291,9 +292,10 @@ void rtk_lcd_hal_init(void)
 #endif
     lcdc_init.LCDC_GroupSel = 2;
     lcdc_init.LCDC_DmaThreshold =
-        112;    //only support threshold = 8 for DMA MSIZE = 8; the other threshold setting will be support later
+        64;    // MSize + threshold should be no larger than 128
     lcdc_init.LCDC_InfiniteModeEn = 1;
     LCDC_Init(&lcdc_init);
+    LCDC_ClearINTPendingBit(LCDC_CLR_WAVEFORM_FINISH);
 //    LCDC_HANDLER->INFINITE_MODE_CTR |= BIT31;
     // LCDC_MaskINTConfig(LCDC_INT_MASK_TX_AUTO_DONE, ENABLE);
     // LCDC_ClearINTPendingBit(LCDC_CLR_TX_AUTO_DONE);
@@ -308,7 +310,7 @@ void rtk_lcd_hal_init(void)
 
     LCDC_DBICCfgTypeDef dbic_init = {0};
     dbic_init.DBIC_SPEED_SEL         = 1;
-    dbic_init.DBIC_TxThr             = 0;//0 or 4
+    dbic_init.DBIC_TxThr             = 0;
     dbic_init.DBIC_RxThr             = 0;
     dbic_init.SCPOL                  = DBIC_SCPOL_LOW;
     dbic_init.SCPH                   = DBIC_SCPH_1Edge;
@@ -365,6 +367,7 @@ void rtk_lcd_hal_start_transfer(uint8_t *buf, uint32_t len)
 void rtk_lcd_hal_transfer_done(void)
 {
     return;
+    LCDC_ClearINTPendingBit(LCDC_CLR_WAVEFORM_FINISH);
 }
 
 void rtk_lcd_hal_set_window(uint16_t xStart, uint16_t yStart, uint16_t w, uint16_t h)

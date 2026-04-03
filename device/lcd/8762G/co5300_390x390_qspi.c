@@ -235,6 +235,7 @@ void rtk_lcd_hal_transfer_done(void)
     DBIC_FLUSH_FIFO_TypeDef dbic_reg_0x128 = {.d32 = DBIC->FLUSH_FIFO};
     dbic_reg_0x128.b.flush_dr_fifo = 1;
     DBIC->FLUSH_FIFO = dbic_reg_0x128.d32;
+    LCDC_ClearINTPendingBit(LCDC_CLR_WAVEFORM_FINISH);
 }
 
 
@@ -311,8 +312,8 @@ void rtk_lcd_hal_update_framebuffer(uint8_t *buf, uint32_t len)
     LCDC_DMA_InitStruct.LCDC_DMA_DestinationInc      = LCDC_DMA_DestinationInc_Fix;
     LCDC_DMA_InitStruct.LCDC_DMA_SourceDataSize      = LCDC_DMA_DataSize_Word;
     LCDC_DMA_InitStruct.LCDC_DMA_DestinationDataSize = LCDC_DMA_DataSize_Word;
-    LCDC_DMA_InitStruct.LCDC_DMA_SourceMsize         = LCDC_DMA_Msize_8;
-    LCDC_DMA_InitStruct.LCDC_DMA_DestinationMsize    = LCDC_DMA_Msize_8;
+    LCDC_DMA_InitStruct.LCDC_DMA_SourceMsize         = LCDC_DMA_Msize_64;
+    LCDC_DMA_InitStruct.LCDC_DMA_DestinationMsize    = LCDC_DMA_Msize_64;
     LCDC_DMA_InitStruct.LCDC_DMA_SourceAddr          = (uint32_t)buf;
     LCDC_DMA_InitStruct.LCDC_DMA_Multi_Block_En     = 0;
     LCDC_DMA_Init(LCDC_DMA_CHANNEL_INDEX, &LCDC_DMA_InitStruct);
@@ -423,12 +424,13 @@ bool drv_lcd_power_on(void)
     lcdc_init.LCDC_TeInputMux = LCDC_TE_LCD_INPUT;
 #endif
     lcdc_init.LCDC_DmaThreshold =
-        64;    //only support threshold = 8 for DMA MSIZE = 8; the other threshold setting will be support later
+        64;    // MSize + threshold should be no larger than 128
     LCDC_Init(&lcdc_init);
+    LCDC_ClearINTPendingBit(LCDC_CLR_WAVEFORM_FINISH);
 
     LCDC_DBICCfgTypeDef dbic_init = {0};
     dbic_init.DBIC_SPEED_SEL         = 1;
-    dbic_init.DBIC_TxThr             = 0;//0 or 4
+    dbic_init.DBIC_TxThr             = 0;
     dbic_init.DBIC_RxThr             = 0;
     dbic_init.SCPOL                  = DBIC_SCPOL_LOW;
     dbic_init.SCPH                   = DBIC_SCPH_1Edge;
@@ -504,8 +506,9 @@ void rtk_lcd_hal_init(void)
     lcdc_init.LCDC_TeInputMux = LCDC_TE_LCD_INPUT;
 #endif
     lcdc_init.LCDC_DmaThreshold =
-        8;    //only support threshold = 8 for DMA MSIZE = 8; the other threshold setting will be support later
+        64;    // MSize + threshold should be no larger than 128
     LCDC_Init(&lcdc_init);
+    LCDC_ClearINTPendingBit(LCDC_CLR_WAVEFORM_FINISH);
 
     DBG_DIRECT("func = %s, line = %d", __func__, __LINE__);
 
@@ -522,7 +525,7 @@ void rtk_lcd_hal_init(void)
 //      LCDC_MaskINTConfig(LCDC_INT_MASK_WAVEFORM_FINISH, ENABLE);
     LCDC_DBICCfgTypeDef dbic_init = {0};
     dbic_init.DBIC_SPEED_SEL         = 1;
-    dbic_init.DBIC_TxThr             = 0;//0 or 4
+    dbic_init.DBIC_TxThr             = 0;
     dbic_init.DBIC_RxThr             = 0;
     dbic_init.SCPOL                  = DBIC_SCPOL_LOW;
     dbic_init.SCPH                   = DBIC_SCPH_1Edge;

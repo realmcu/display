@@ -171,7 +171,7 @@ void nt35510_init(void)
     lcdc_init.LCDC_PixelBitSwap = LCDC_SWAP_BYPASS; //lcdc_handler_cfg->LCDC_TeEn = LCDC_TE_DISABLE;
     lcdc_init.LCDC_TePolarity = LCDC_TE_EDGE_RISING;
     lcdc_init.LCDC_DmaThreshold =
-        8;    //only support threshold = 8 for DMA MSIZE = 8; the other threshold setting will be support later
+        8;    // MSize + threshold should be no larger than 128
     LCDC_Init(&lcdc_init);
 
 

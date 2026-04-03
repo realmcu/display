@@ -206,7 +206,7 @@ void rtk_lcd_hal_init(void)
     lcdc_init.LCDC_TeInputMux = LCDC_TE_LCD_INPUT;
 
     lcdc_init.LCDC_DmaThreshold =
-        8;    //only support threshold = 8 for DMA MSIZE = 8; the other threshold setting will be support later
+        8;    // MSize + threshold should be no larger than 128
     LCDC_Init(&lcdc_init);
 
     LCDC_eDPICfgTypeDef eDPICfg;//836 * 550, 42FPS == 19311600
@@ -708,7 +708,7 @@ uint32_t rtk_lcd_hal_dlps_restore(void)
     lcdc_init.LCDC_TeInputMux = LCDC_TE_LCD_INPUT;
 
     lcdc_init.LCDC_DmaThreshold =
-        8;    //only support threshold = 8 for DMA MSIZE = 8; the other threshold setting will be support later
+        8;    // MSize + threshold should be no larger than 128
     LCDC_Init(&lcdc_init);
 
     LCDC_eDPICfgTypeDef eDPICfg;//836 * 550, 42FPS == 19311600

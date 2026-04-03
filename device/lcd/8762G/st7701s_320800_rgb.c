@@ -206,6 +206,7 @@ static void st7701s_dma_init(uint8_t *init_buffer)
 
     LCDC_DMA_MultiBlockCmd(ENABLE);
 
+    LCDC_ForceBurst(ENABLE);
     LCDC_DMAChannelCmd(LCDC_DMA_CHANNEL_NUM, ENABLE);
 
     LCDC_DmaCmd(ENABLE);
@@ -307,9 +308,10 @@ void rtk_lcd_hal_init(void)
     lcdc_init.LCDC_GroupSel = 1;
 
     lcdc_init.LCDC_DmaThreshold =
-        8;    //only support threshold = 8 for DMA MSIZE = 8; the other threshold setting will be support later
+        64;    // MSize + threshold should be no larger than 128
     lcdc_init.LCDC_InfiniteModeEn = 1;
     LCDC_Init(&lcdc_init);
+    LCDC_ClearINTPendingBit(LCDC_CLR_WAVEFORM_FINISH);
 
     uint32_t HSA = 3, HFP = 20, HBP = 50, HACT = ST7701S_320800_LCD_WIDTH;
     uint32_t VSA = 6, VFP = 25, VBP = 40, VACT = ST7701S_320800_LCD_HEIGHT;
@@ -389,6 +391,7 @@ void rtk_lcd_hal_start_transfer(uint8_t *buf, uint32_t len)
 
 void rtk_lcd_hal_transfer_done(void)
 {
+    LCDC_ClearINTPendingBit(LCDC_CLR_WAVEFORM_FINISH);
     return;//todo by howie
 }
 

@@ -317,9 +317,10 @@ void rtk_lcd_hal_init(void)
     lcdc_init.LCDC_GroupSel = 1;
 
     lcdc_init.LCDC_DmaThreshold =
-        8;    //only support threshold = 8 for DMA MSIZE = 8; the other threshold setting will be support later
+        64;    // MSize + threshold should be no larger than 128
     lcdc_init.LCDC_InfiniteModeEn = 1;
     LCDC_Init(&lcdc_init);
+    LCDC_ClearINTPendingBit(LCDC_CLR_WAVEFORM_FINISH);
 
     uint32_t HSA = 10, HFP = 50, HBP = 50, HACT = ST7701S_480480_LCD_WIDTH;
     uint32_t VSA = 10, VFP = 20, VBP = 20, VACT = ST7701S_480480_LCD_HEIGHT;
@@ -408,6 +409,7 @@ void rtk_lcd_hal_start_transfer(uint8_t *buf, uint32_t len)
 
 void rtk_lcd_hal_transfer_done(void)
 {
+    LCDC_ClearINTPendingBit(LCDC_CLR_WAVEFORM_FINISH);
     return;//todo by howie
 }
 
@@ -456,7 +458,7 @@ bool rtk_lcd_hal_power_on(void)
     lcdc_init.LCDC_GroupSel = 1;
 
     lcdc_init.LCDC_DmaThreshold =
-        8;    //only support threshold = 8 for DMA MSIZE = 8; the other threshold setting will be support later
+        8;    // MSize + threshold should be no larger than 128
     lcdc_init.LCDC_InfiniteModeEn = 1;
     LCDC_Init(&lcdc_init);
 
