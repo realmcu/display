@@ -841,7 +841,6 @@ void hw_acc_blit_rect(draw_img_t *image, struct gui_dispdev *dc, struct gui_rect
     source.const_color = color.color.argb_full;
     source.opacity = 0xFF;
     source.high_quality = true;
-    source.const_color = 0xFFFFFFFF;
     struct gui_rgb_data_head *head = image->data;
 
     constraint_rect.x1 -= dc->section.x1;
@@ -993,7 +992,8 @@ void hw_acc_blit_simple(draw_img_t *image, struct gui_dispdev *dc, struct gui_re
     constraint_rect.x2 -= dc->section.x1;
     constraint_rect.y2 -= dc->section.y1;
     if ((source.format == PPE_RGB565 || source.format == PPE_RGB888) && source.opacity == 0xFF
-        && source.format == target.format && ((source_rect.x2 - source_rect.x1) % 2 != 0))
+        && source.format == target.format && ((source_rect.x2 - source_rect.x1) % 2 != 0) &&
+        image->blend_mode != IMG_FILTER_BLACK)
     {
 
         ppe_matrix_t inv_matrix;
