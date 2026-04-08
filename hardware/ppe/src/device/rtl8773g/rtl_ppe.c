@@ -1059,7 +1059,6 @@ PPE_ERR PPE_Clear(ppe_buffer_t *dst, uint32_t color, ppe_rect_t *rect)
     PPE_ResultLayer_Init(&PPE_ResultLayer0_Init);
 
     PPE_Cmd(ENABLE);
-//    while (((PPE_REG_GLB_STATUS_TypeDef)PPE->REG_GLB_STATUS).b.run_state);
     return PPE_SUCCESS;
 }
 

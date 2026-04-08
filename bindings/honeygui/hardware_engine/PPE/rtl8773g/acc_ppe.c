@@ -538,6 +538,119 @@ bool acc_get_src_rect_area(ppe_rect_t *src_rect, gui_rect_t *rect)
     }
 }
 
+static bool init_target_from_dc(ppe_buffer_t *target, struct gui_dispdev *dc)
+{
+    memset(target, 0, sizeof(ppe_buffer_t));
+    switch (dc->bit_depth)
+    {
+    case 16:
+        target->format = PPE_RGB565;
+        break;
+    case 24:
+        target->format = PPE_RGB888;
+        break;
+    case 32:
+        target->format = PPE_ARGB8888;
+        break;
+    default:
+        return false;
+    }
+    target->address = (uint32_t)dc->frame_buf;
+    target->width = dc->fb_width;
+    target->height = dc->fb_height;
+    target->stride = dc->fb_width;
+    target->const_color = 0xFFFFFFFF;
+    target->win_x_min = 0;
+    target->win_x_max = target->width - 1;
+    target->win_y_min = 0;
+    target->win_y_max = target->height - 1;
+    return true;
+}
+
+static bool init_source_format(ppe_buffer_t *source, draw_img_t *image,
+                               struct gui_rgb_data_head *head)
+{
+    switch (head->type)
+    {
+    case RGB565:
+        source->format = PPE_RGB565;
+        break;
+    case RGB888:
+        source->format = PPE_RGB888;
+        break;
+    case ARGB8888:
+        source->format = PPE_ARGB8888;
+        break;
+    case ARGB8565:
+        source->format = PPE_ARGB8565;
+        break;
+    case XRGB8888:
+        source->format = PPE_XRGB8888;
+        break;
+    case ALPHAMASK:
+    case A8:
+        {
+            source->format = PPE_A8;
+            uint32_t c_a = (image->fg_color_set & 0xFF000000);
+            uint32_t c_r = (image->fg_color_set & 0x00FF0000);
+            uint32_t c_g = (image->fg_color_set & 0x0000FF00);
+            uint32_t c_b = (image->fg_color_set & 0x000000FF);
+            uint32_t ppe_abgr = (c_a | (c_r >> 16) | c_g | (c_b << 16));
+            source->const_color = ppe_abgr;
+        }
+        break;
+    case A4:
+        {
+            source->format = PPE_A4;
+            uint32_t c_a = (image->fg_color_set & 0xFF000000);
+            uint32_t c_r = (image->fg_color_set & 0x00FF0000);
+            uint32_t c_g = (image->fg_color_set & 0x0000FF00);
+            uint32_t c_b = (image->fg_color_set & 0x000000FF);
+            uint32_t ppe_abgr = (c_a | (c_r >> 16) | c_g | (c_b << 16));
+            source->const_color = ppe_abgr;
+        }
+        break;
+    default:
+        return false;
+    }
+    return true;
+}
+
+static void setup_filter_black_color_key(ppe_buffer_t *source)
+{
+    source->color_key_config.key_enable.key_enable = true;
+    source->color_key_config.key_enable.channel_en.a_en = true;
+    source->color_key_config.key_enable.channel_en.b_en = true;
+    source->color_key_config.key_enable.channel_en.g_en = true;
+    source->color_key_config.key_enable.channel_en.r_en = true;
+    source->color_key_config.key_mode = PPE_COLOR_KEY_INSIDE;
+    source->color_key_config.key_range.R_max = 0;
+    source->color_key_config.key_range.R_min = 0;
+    source->color_key_config.key_range.G_max = 0;
+    source->color_key_config.key_range.G_min = 0;
+    source->color_key_config.key_range.B_max = 0;
+    source->color_key_config.key_range.B_min = 0;
+    source->color_key_config.key_replace.key_replace = 0x00000000;
+}
+
+static void ppe_wait_finish(void)
+{
+    if (!gui_get_acc()->enable_async)
+    {
+        if (gui_get_acc()->enable_thread_sync && sync_sem != NULL)
+        {
+            if (!os_sem_take(sync_sem, 1000))
+            {
+                PPE_Finish();
+            }
+        }
+        else
+        {
+            PPE_Finish();
+        }
+    }
+}
+
 void hw_acc_blit_direct(draw_img_t *image, struct gui_dispdev *dc, struct gui_rect *rect)
 {
     int32_t x_max = (image->img_target_w + image->img_target_x - 1);
@@ -555,33 +668,9 @@ void hw_acc_blit_direct(draw_img_t *image, struct gui_dispdev *dc, struct gui_re
     }
 
     ppe_buffer_t target, source;
-    memset(&target, 0, sizeof(ppe_buffer_t));
     memset(&source, 0, sizeof(ppe_buffer_t));
+    if (!init_target_from_dc(&target, dc)) { return; }
     PPE_BLEND_METHOD method = PPE_BLEND_PREMULTIPLY;
-
-    switch (dc->bit_depth)
-    {
-    case 16:
-        target.format = PPE_RGB565;
-        break;
-    case 24:
-        target.format = PPE_RGB888;
-        break;
-    case 32:
-        target.format = PPE_ARGB8888;
-        break;
-    default:
-        return;
-    }
-    target.address = (uint32_t)dc->frame_buf;
-    target.width = dc->fb_width;
-    target.height = dc->fb_height;
-    target.stride = dc->fb_width;
-    target.const_color = 0xFFFFFFFF;
-    target.win_x_min = 0;
-    target.win_x_max = target.width - 1;
-    target.win_y_min = 0;
-    target.win_y_max = target.height - 1;
 
     source.address = (uint32_t)image->data + sizeof(struct gui_rgb_data_head);
     source.opacity = image->opacity_value;
@@ -590,74 +679,33 @@ void hw_acc_blit_direct(draw_img_t *image, struct gui_dispdev *dc, struct gui_re
     source.stride = image->img_w;
     source.const_color = 0xFFFFFFFF;
     struct gui_rgb_data_head *head = image->data;
-    switch (head->type)
+    if (head->type == PALETTE)
     {
-    case RGB565:
-        source.format = PPE_RGB565;
-        break;
-    case RGB888:
-        source.format = PPE_RGB888;
-        break;
-    case ARGB8888:
-        source.format = PPE_ARGB8888;
-        break;
-    case ARGB8565:
-        source.format = PPE_ARGB8565;
-        break;
-    case XRGB8888:
-        source.format = PPE_XRGB8888;
-        break;
-    case ALPHAMASK:
-    case A8:
+        gui_palette_file_t *phead = (gui_palette_file_t *)image->data;
+        PPE->CLUT_INDEX = 0;
+        for (int i = 0; i < 256; i++)
         {
-            source.format = PPE_A8;
-            uint32_t c_a = (image->fg_color_set & 0xFF000000);
-            uint32_t c_r = (image->fg_color_set & 0x00FF0000);
-            uint32_t c_g = (image->fg_color_set & 0x0000FF00);
-            uint32_t c_b = (image->fg_color_set & 0x000000FF);
-            uint32_t ppe_abgr = (c_a | c_r >> 16 | c_g | (c_b << 16));
-            source.const_color = ppe_abgr;
+            PPE->CLUT_CONT = (0xFF000000 | (phead->palette_data[i * 3] << 16) | (phead->palette_data[i * 3 + 1]
+                                                                                 <<
+                                                                                 8) | phead->palette_data[i * 3 + 2]);
         }
-        break;
-    case A4:
+        source.address = (uint32_t)phead->palette_index;
+        source.format = PPE_I8;
+    }
+    else if (head->type == I8)
+    {
+        PPE->CLUT_INDEX = 0;
+        uint32_t *clut = (uint32_t *)((uint32_t)image->data + sizeof(gui_rgb_data_head_t));
+        uint32_t clut_num = *clut++;
+        for (int i = 0; i < clut_num; i++)
         {
-            source.format = PPE_A4;
-            uint32_t c_a = (image->fg_color_set & 0xFF000000);
-            uint32_t c_r = (image->fg_color_set & 0x00FF0000);
-            uint32_t c_g = (image->fg_color_set & 0x0000FF00);
-            uint32_t c_b = (image->fg_color_set & 0x000000FF);
-            uint32_t ppe_abgr = (c_a | c_r >> 16 | c_g | (c_b << 16));
-            source.const_color = ppe_abgr;
+            PPE->CLUT_CONT = *clut++;
         }
-        break;
-    case PALETTE:
-        {
-            gui_palette_file_t *head = (gui_palette_file_t *)image->data;
-            PPE->CLUT_INDEX = 0;
-            for (int i = 0; i < 256; i++)
-            {
-                PPE->CLUT_CONT = (0xFF000000 | (head->palette_data[i * 3] << 16) | (head->palette_data[i * 3 + 1] <<
-                                                                                    8) | head->palette_data[i * 3 + 2]);
-            }
-            source.address = (uint32_t)head->palette_index;
-            source.format = PPE_I8;
-            break;
-        }
-    case I8:
-        {
-            PPE->CLUT_INDEX = 0;
-            uint32_t *clut = (uint32_t *)((uint32_t)image->data + sizeof(gui_rgb_data_head_t));
-            uint32_t clut_num = *clut++;
-            for (int i = 0; i < clut_num; i++)
-            {
-                PPE->CLUT_CONT = *clut++;
-            }
-            source.address = (uint32_t)image->data + sizeof(gui_rgb_data_head_t) + (clut_num + 1) * 4;
-            source.format = PPE_I8;
-            break;
-        }
-        break;
-    default:
+        source.address = (uint32_t)image->data + sizeof(gui_rgb_data_head_t) + (clut_num + 1) * 4;
+        source.format = PPE_I8;
+    }
+    else if (!init_source_format(&source, image, head))
+    {
         return;
     }
     source.win_x_min = 0;
@@ -712,19 +760,7 @@ void hw_acc_blit_direct(draw_img_t *image, struct gui_dispdev *dc, struct gui_re
     source.high_quality = true;
     if (image->blend_mode == IMG_FILTER_BLACK)
     {
-        source.color_key_config.key_enable.key_enable = true;
-        source.color_key_config.key_enable.channel_en.a_en = true;
-        source.color_key_config.key_enable.channel_en.b_en = true;
-        source.color_key_config.key_enable.channel_en.g_en = true;
-        source.color_key_config.key_enable.channel_en.r_en = true;
-        source.color_key_config.key_mode = PPE_COLOR_KEY_INSIDE;
-        source.color_key_config.key_range.R_max = 0;
-        source.color_key_config.key_range.R_min = 0;
-        source.color_key_config.key_range.G_max = 0;
-        source.color_key_config.key_range.G_min = 0;
-        source.color_key_config.key_range.B_max = 0;
-        source.color_key_config.key_range.B_min = 0;
-        source.color_key_config.key_replace.key_replace = 0x00000000;
+        setup_filter_black_color_key(&source);
     }
     if (!ppe_matrix_is_complex(&inverse))
     {
@@ -738,21 +774,7 @@ void hw_acc_blit_direct(draw_img_t *image, struct gui_dispdev *dc, struct gui_re
     PPE_Finish();
     PPE_ERR err = PPE_Blit_Inverse(&target, &source, NULL, &inverse, &constraint,
                                    method);
-    if (!gui_get_acc()->enable_async)
-    {
-        if (gui_get_acc()->enable_thread_sync && sync_sem != NULL)
-        {
-            if (!os_sem_take(sync_sem, 1000))
-            {
-                PPE_Finish();
-                //TODO: err handle
-            }
-        }
-        else
-        {
-            PPE_Finish();
-        }
-    }
+    ppe_wait_finish();
     return;
 }
 
@@ -776,33 +798,9 @@ void hw_acc_blit_rect(draw_img_t *image, struct gui_dispdev *dc, struct gui_rect
     }
 
     ppe_buffer_t target, source;
-    memset(&target, 0, sizeof(ppe_buffer_t));
     memset(&source, 0, sizeof(ppe_buffer_t));
+    if (!init_target_from_dc(&target, dc)) { return; }
     PPE_BLEND_METHOD method = PPE_BLEND_SRC;
-
-    switch (dc->bit_depth)
-    {
-    case 16:
-        target.format = PPE_RGB565;
-        break;
-    case 24:
-        target.format = PPE_RGB888;
-        break;
-    case 32:
-        target.format = PPE_ARGB8888;
-        break;
-    default:
-        return;
-    }
-    target.address = (uint32_t)dc->frame_buf;
-    target.width = dc->fb_width;
-    target.height = dc->fb_height;
-    target.stride = dc->fb_width;
-    target.const_color = 0xFFFFFFFF;
-    target.win_x_min = 0;
-    target.win_x_max = target.width - 1;
-    target.win_y_min = 0;
-    target.win_y_max = target.height - 1;
 
     source.address = (uint32_t)image->data + sizeof(struct gui_rgb_data_head);
     source.format = PPE_ABGR8888;
@@ -841,7 +839,6 @@ void hw_acc_blit_rect(draw_img_t *image, struct gui_dispdev *dc, struct gui_rect
     source.const_color = color.color.argb_full;
     source.opacity = 0xFF;
     source.high_quality = true;
-    struct gui_rgb_data_head *head = image->data;
 
     constraint_rect.x1 -= dc->section.x1;
     constraint_rect.y1 -= dc->section.y1;
@@ -861,21 +858,7 @@ void hw_acc_blit_rect(draw_img_t *image, struct gui_dispdev *dc, struct gui_rect
     {
         DBG_DIRECT("PPE err %d", err);
     }
-    if (!gui_get_acc()->enable_async)
-    {
-        if (gui_get_acc()->enable_thread_sync && sync_sem != NULL)
-        {
-            if (!os_sem_take(sync_sem, 1000))
-            {
-                PPE_Finish();
-                //TODO: err handle
-            }
-        }
-        else
-        {
-            PPE_Finish();
-        }
-    }
+    ppe_wait_finish();
 }
 
 void hw_acc_blit_simple(draw_img_t *image, struct gui_dispdev *dc, struct gui_rect *rect)
@@ -908,33 +891,9 @@ void hw_acc_blit_simple(draw_img_t *image, struct gui_dispdev *dc, struct gui_re
     }
 
     ppe_buffer_t target, source;
-    memset(&target, 0, sizeof(ppe_buffer_t));
     memset(&source, 0, sizeof(ppe_buffer_t));
+    if (!init_target_from_dc(&target, dc)) { return; }
     PPE_BLEND_METHOD method = PPE_BLEND_SRC;
-
-    switch (dc->bit_depth)
-    {
-    case 16:
-        target.format = PPE_RGB565;
-        break;
-    case 24:
-        target.format = PPE_RGB888;
-        break;
-    case 32:
-        target.format = PPE_ARGB8888;
-        break;
-    default:
-        return;
-    }
-    target.address = (uint32_t)dc->frame_buf;
-    target.width = dc->fb_width;
-    target.height = dc->fb_height;
-    target.stride = dc->fb_width;
-    target.const_color = 0xFFFFFFFF;
-    target.win_x_min = 0;
-    target.win_x_max = target.width - 1;
-    target.win_y_min = 0;
-    target.win_y_max = target.height - 1;
 
     source.address = (uint32_t)image->data + sizeof(struct gui_rgb_data_head);
     source.opacity = image->opacity_value;
@@ -943,47 +902,7 @@ void hw_acc_blit_simple(draw_img_t *image, struct gui_dispdev *dc, struct gui_re
     source.stride = image->img_w;
     source.const_color = 0xFFFFFFFF;
     struct gui_rgb_data_head *head = image->data;
-    switch (head->type)
-    {
-    case RGB565:
-        source.format = PPE_RGB565;
-        break;
-    case RGB888:
-        source.format = PPE_RGB888;
-        break;
-    case ARGB8888:
-        source.format = PPE_ARGB8888;
-        break;
-    case ARGB8565:
-        source.format = PPE_ARGB8565;
-        break;
-    case XRGB8888:
-        source.format = PPE_XRGB8888;
-        break;
-    case ALPHAMASK:
-    case A8:
-        source.format = PPE_A8;
-        uint32_t c_a = (image->fg_color_set & 0xFF000000);
-        uint32_t c_r = (image->fg_color_set & 0x00FF0000);
-        uint32_t c_g = (image->fg_color_set & 0x0000FF00);
-        uint32_t c_b = (image->fg_color_set & 0x000000FF);
-        uint32_t ppe_abgr = (c_a | c_r >> 16 | c_g | (c_b << 16));
-        source.const_color = ppe_abgr;
-        break;
-    case A4:
-        {
-            source.format = PPE_A4;
-            uint32_t c_a = (image->fg_color_set & 0xFF000000);
-            uint32_t c_r = (image->fg_color_set & 0x00FF0000);
-            uint32_t c_g = (image->fg_color_set & 0x0000FF00);
-            uint32_t c_b = (image->fg_color_set & 0x000000FF);
-            uint32_t ppe_abgr = (c_a | c_r >> 16 | c_g | (c_b << 16));
-            source.const_color = ppe_abgr;
-        }
-        break;
-    default:
-        return;
-    }
+    if (!init_source_format(&source, image, head)) { return; }
     ppe_rect_t source_rect = {.x1 = constraint_rect.x1 - image->img_target_x, .x2 = constraint_rect.x2 - image->img_target_x,
                               .y1 = constraint_rect.y1 - image->img_target_y, .y2 = constraint_rect.y2 - image->img_target_y
                              };
@@ -1018,19 +937,7 @@ void hw_acc_blit_simple(draw_img_t *image, struct gui_dispdev *dc, struct gui_re
     }
     if (image->blend_mode == IMG_FILTER_BLACK)
     {
-        source.color_key_config.key_enable.key_enable = true;
-        source.color_key_config.key_enable.channel_en.a_en = true;
-        source.color_key_config.key_enable.channel_en.b_en = true;
-        source.color_key_config.key_enable.channel_en.g_en = true;
-        source.color_key_config.key_enable.channel_en.r_en = true;
-        source.color_key_config.key_mode = PPE_COLOR_KEY_INSIDE;
-        source.color_key_config.key_range.R_max = 0;
-        source.color_key_config.key_range.R_min = 0;
-        source.color_key_config.key_range.G_max = 0;
-        source.color_key_config.key_range.G_min = 0;
-        source.color_key_config.key_range.B_max = 0;
-        source.color_key_config.key_range.B_min = 0;
-        source.color_key_config.key_replace.key_replace = 0x00000000;
+        setup_filter_black_color_key(&source);
     }
     else
     {
@@ -1107,21 +1014,7 @@ void hw_acc_blit_simple(draw_img_t *image, struct gui_dispdev *dc, struct gui_re
     {
         DBG_DIRECT("PPE err %d", err);
     }
-    if (!gui_get_acc()->enable_async)
-    {
-        if (gui_get_acc()->enable_thread_sync && sync_sem != NULL)
-        {
-            if (!os_sem_take(sync_sem, 1000))
-            {
-                PPE_Finish();
-                //TODO: err handle
-            }
-        }
-        else
-        {
-            PPE_Finish();
-        }
-    }
+    ppe_wait_finish();
     if (need_clean_up && decode_buf != NULL)
     {
         acc_ppe_free(decode_buf);
@@ -1146,33 +1039,9 @@ void hw_acc_blit_cache(draw_img_t *image, struct gui_dispdev *dc, struct gui_rec
     }
 
     ppe_buffer_t target, source;
-    memset(&target, 0, sizeof(ppe_buffer_t));
     memset(&source, 0, sizeof(ppe_buffer_t));
+    if (!init_target_from_dc(&target, dc)) { return; }
     PPE_BLEND_METHOD method = PPE_BLEND_SRC;
-
-    switch (dc->bit_depth)
-    {
-    case 16:
-        target.format = PPE_RGB565;
-        break;
-    case 24:
-        target.format = PPE_RGB888;
-        break;
-    case 32:
-        target.format = PPE_ARGB8888;
-        break;
-    default:
-        return;
-    }
-    target.address = (uint32_t)dc->frame_buf;
-    target.width = dc->fb_width;
-    target.height = dc->fb_height;
-    target.stride = dc->fb_width;
-    target.const_color = 0xFFFFFFFF;
-    target.win_x_min = 0;
-    target.win_x_max = target.width - 1;
-    target.win_y_min = 0;
-    target.win_y_max = target.height - 1;
 
     source.address = (uint32_t)image->data + sizeof(struct gui_rgb_data_head);
     source.opacity = image->opacity_value;
@@ -1181,47 +1050,7 @@ void hw_acc_blit_cache(draw_img_t *image, struct gui_dispdev *dc, struct gui_rec
     source.stride = image->img_w;
     source.const_color = 0xFFFFFFFF;
     struct gui_rgb_data_head *head = image->data;
-    switch (head->type)
-    {
-    case RGB565:
-        source.format = PPE_RGB565;
-        break;
-    case RGB888:
-        source.format = PPE_RGB888;
-        break;
-    case ARGB8888:
-        source.format = PPE_ARGB8888;
-        break;
-    case ARGB8565:
-        source.format = PPE_ARGB8565;
-        break;
-    case XRGB8888:
-        source.format = PPE_XRGB8888;
-        break;
-    case ALPHAMASK:
-    case A8:
-        source.format = PPE_A8;
-        uint32_t c_a = (image->fg_color_set & 0xFF000000);
-        uint32_t c_r = (image->fg_color_set & 0x00FF0000);
-        uint32_t c_g = (image->fg_color_set & 0x0000FF00);
-        uint32_t c_b = (image->fg_color_set & 0x000000FF);
-        uint32_t ppe_abgr = (c_a | c_r >> 16 | c_g | (c_b << 16));
-        source.const_color = ppe_abgr;
-        break;
-    case A4:
-        {
-            source.format = PPE_A4;
-            uint32_t c_a = (image->fg_color_set & 0xFF000000);
-            uint32_t c_r = (image->fg_color_set & 0x00FF0000);
-            uint32_t c_g = (image->fg_color_set & 0x0000FF00);
-            uint32_t c_b = (image->fg_color_set & 0x000000FF);
-            uint32_t ppe_abgr = (c_a | c_r >> 16 | c_g | (c_b << 16));
-            source.const_color = ppe_abgr;
-        }
-        break;
-    default:
-        return;
-    }
+    if (!init_source_format(&source, image, head)) { return; }
 
 
     bool shape_transform = true;
@@ -1353,21 +1182,7 @@ void hw_acc_blit_cache(draw_img_t *image, struct gui_dispdev *dc, struct gui_rec
                     color.color.rgba.r = tmp;
                     PPE_Finish();
                     PPE_Mask(&target, color.color.argb_full, &dst_rect);
-                    if (!gui_get_acc()->enable_async)
-                    {
-                        if (gui_get_acc()->enable_thread_sync && sync_sem != NULL)
-                        {
-                            if (!os_sem_take(sync_sem, 1000))
-                            {
-                                PPE_Finish();
-                                //TODO: err handle
-                            }
-                        }
-                        else
-                        {
-                            PPE_Finish();
-                        }
-                    }
+                    ppe_wait_finish();
                     return;
                 }
             }
@@ -1416,19 +1231,7 @@ void hw_acc_blit_cache(draw_img_t *image, struct gui_dispdev *dc, struct gui_rec
 
     if (image->blend_mode == IMG_FILTER_BLACK)
     {
-        source.color_key_config.key_enable.key_enable = true;
-        source.color_key_config.key_enable.channel_en.a_en = true;
-        source.color_key_config.key_enable.channel_en.b_en = true;
-        source.color_key_config.key_enable.channel_en.g_en = true;
-        source.color_key_config.key_enable.channel_en.r_en = true;
-        source.color_key_config.key_mode = PPE_COLOR_KEY_INSIDE;
-        source.color_key_config.key_range.R_max = 0;
-        source.color_key_config.key_range.R_min = 0;
-        source.color_key_config.key_range.G_max = 0;
-        source.color_key_config.key_range.G_min = 0;
-        source.color_key_config.key_range.B_max = 0;
-        source.color_key_config.key_range.B_min = 0;
-        source.color_key_config.key_replace.key_replace = 0x00000000;
+        setup_filter_black_color_key(&source);
     }
     else
     {
@@ -1608,7 +1411,7 @@ void hw_acc_blit_cache(draw_img_t *image, struct gui_dispdev *dc, struct gui_rec
                 }
                 if (old_rect.y2 < image->img_h - 1)
                 {
-                    old_rect.x1 += 1;
+                    old_rect.y2 += 1;
                 }
 
             }
@@ -1736,7 +1539,6 @@ void hw_acc_blit_cache(draw_img_t *image, struct gui_dispdev *dc, struct gui_rec
             source.opacity = 0xFF;
             ppe_rect.y1 -= dc->section.y1;
             ppe_rect.y2 -= dc->section.y1;
-            source.high_quality = true;
         }
         source.high_quality = true;
         if ((image->matrix.m[0][0] == 1 && image->matrix.m[1][1] == 1 && \
@@ -1748,21 +1550,7 @@ void hw_acc_blit_cache(draw_img_t *image, struct gui_dispdev *dc, struct gui_rec
         }
         PPE_Finish();
         PPE_ERR err = PPE_Blit_Inverse(&target, &source, NULL, &inverse, &ppe_rect, method);
-        if (!gui_get_acc()->enable_async)
-        {
-            if (gui_get_acc()->enable_thread_sync && sync_sem != NULL)
-            {
-                if (!os_sem_take(sync_sem, 1000))
-                {
-                    PPE_Finish();
-                    //TODO: err handle
-                }
-            }
-            else
-            {
-                PPE_Finish();
-            }
-        }
+        ppe_wait_finish();
     }
 }
 
@@ -1949,9 +1737,10 @@ void hw_blit_font(draw_font_t *font, font_glyph_t *glyph)
     }
 }
 
-void hw_acc_memset(uint32_t color, struct gui_dispdev *dc)
+void hw_acc_memset(uint8_t *addr, gui_color_t color, uint32_t len/*pixel count*/)
 {
     ppe_buffer_t target;
+    gui_dispdev_t *dc = gui_get_dc();
     switch (dc->bit_depth)
     {
     case 16:
@@ -1966,17 +1755,18 @@ void hw_acc_memset(uint32_t color, struct gui_dispdev *dc)
     default:
         return;
     }
-    target.address = (uint32_t)dc->frame_buf;
-    target.width = dc->fb_width;
-    target.height = dc->fb_height;
-    target.stride = dc->fb_width;
+    target.address = (uint32_t)addr;
+    target.width = len;
+    target.height = 1;
+    target.stride = len;
     target.const_color = 0;
     target.win_x_min = 0;
     target.win_x_max = target.width - 1;
     target.win_y_min = 0;
     target.win_y_max = target.height - 1;
-
-    PPE_Clear(&target, color, NULL);
+    uint32_t abgr_color = color.rgba.a << 24 | color.rgba.b << 16 | color.rgba.g << 8 | color.rgba.r;
+    PPE_Clear(&target, abgr_color, NULL);
+    ppe_wait_finish();
 }
 
 void hw_acc_prepare_cb(draw_img_t *img, gui_rect_t *rect)
