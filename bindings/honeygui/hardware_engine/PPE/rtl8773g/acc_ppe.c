@@ -1764,7 +1764,8 @@ void hw_acc_memset(uint8_t *addr, gui_color_t color, uint32_t len/*pixel count*/
     target.win_x_max = target.width - 1;
     target.win_y_min = 0;
     target.win_y_max = target.height - 1;
-    uint32_t abgr_color = color.rgba.a << 24 | color.rgba.b << 16 | color.rgba.g << 8 | color.rgba.r;
+    uint32_t abgr_color = color.color.rgba.a << 24 | color.color.rgba.b << 16 | color.color.rgba.g << 8
+                          | color.color.rgba.r;
     PPE_Clear(&target, abgr_color, NULL);
     ppe_wait_finish();
 }
