@@ -450,7 +450,7 @@ static void lcdc_dbic_enter_data_output_mode(uint32_t len_byte)
 
     DBIC->DMACR = 2;
     /* change this value can not influence the result. the wave is split into two periods. the first is 32 bytes. */
-    DBIC->DMATDLR = 32; /* no any influence. */
+    DBIC->DMATDLR = 0x20;
 //    DBIC_Sequence_Write(ENABLE);
     DBIC->ICR = 1;
     LCDC_AXIMUXMode(LCDC_HW_MODE);

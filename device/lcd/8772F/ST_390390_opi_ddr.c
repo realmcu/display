@@ -83,7 +83,7 @@ void rtl_st_opi_enter_data_output_mode(uint32_t len_byte)
     DBIC->DMACR = 2;
 
     /* change this value can not influence the result. the wave is split into two periods. the first is 32 bytes. */
-    DBIC->DMATDLR = 4; /* no any influence. */
+    DBIC->DMATDLR = 0x20;
 
     LCDC_AXIMUXMode(LCDC_HW_MODE);
 }
