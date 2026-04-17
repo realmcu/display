@@ -98,6 +98,11 @@ static void gpio_keys_poll_pin(const struct device *dev, int key_index)
         pin_data->report_pin_state.current_state = GPIO_KEY_PRESSED;
         pin_data->report_pin_state.press_timestamp = k_uptime_get_32();
 
+        if (pin_data->user_callback != NULL)
+        {
+            pin_data->user_callback(&pin_data->report_pin_state);
+        }
+
         gpio_pin_interrupt_configure_dt(&pin_cfg->spec,
                                         pin_cfg->trigger_level_high ? GPIO_INT_LEVEL_LOW : GPIO_INT_LEVEL_HIGH);
         LOG_DBG("Report event %s new_pressed=%d, code=%d, press_timestamp=%d", dev->name, new_pressed,

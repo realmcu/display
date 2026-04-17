@@ -33,6 +33,18 @@ if(1) #set to 1 to enable or variable to for depnedency
         list(APPEND SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/lcd_sh8601z_466_466_qspi.c")
     endif()
 
+    if(CONFIG_REALTEK_LCD_C05300_390_450_QSPI)
+        list(APPEND SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/lcd_c05300_390_450_qspi.c")
+    endif()
+
+    if(CONFIG_REALTEK_LCD_NV3041A_480_272_QSPI)
+        list(APPEND SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/nv3041A_480_272_qspi.c")
+    endif()
+
+    if(CONFIG_REALTEK_ST7701S_480_480_RGB)
+        list(APPEND SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/st7701s_480480_rgb.c")
+    endif()
+
     # Determine if we should create a library
     if((NOT HEADERS) AND (NOT SOURCES))
         message(STATUS "No source or header files found in ${CMAKE_CURRENT_SOURCE_DIR}.")

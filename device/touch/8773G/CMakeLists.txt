@@ -45,6 +45,9 @@ if(1) #set to 1 to enable or variable to for depnedency
         target_include_directories(${LIBRARY_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
     endif()
 
+    # Always add include directory for this chip
+    target_include_directories(${LIBRARY_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+
     # Process subdirectories regardless
     file(GLOB SUBDIRS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/*)
 
