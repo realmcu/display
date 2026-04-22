@@ -275,7 +275,7 @@ int32_t gpio_button_register_callback(const struct device *dev, uint16_t key,
     \
     DEVICE_DT_INST_DEFINE(i, &gpio_keys_init, NULL,                        \
                           NULL, &gpio_keys_config_##i,                          \
-                          POST_KERNEL, CONFIG_REALTEK_INPUT_INIT_PRIORITY, NULL);
+                          POST_KERNEL, 60, NULL);
 
 DT_INST_FOREACH_STATUS_OKAY(GPIO_KEYS_INIT)
 

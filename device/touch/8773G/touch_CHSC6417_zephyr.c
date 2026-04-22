@@ -246,7 +246,7 @@ TOUCH_DATA get_raw_touch_data(const struct device *dev)
     };                                                                                         \
     static struct chsc6x_data chsc6x_data_##index;                                             \
     DEVICE_DT_INST_DEFINE(index, chsc6x_init, NULL, &chsc6x_data_##index,                      \
-                          &chsc6x_config_##index, POST_KERNEL, CONFIG_REALTEK_INPUT_INIT_PRIORITY,     \
+                          &chsc6x_config_##index, POST_KERNEL, 60,     \
                           NULL);
 
 DT_INST_FOREACH_STATUS_OKAY(CHSC6X_DEFINE)

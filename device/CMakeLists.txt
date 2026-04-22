@@ -39,9 +39,6 @@ set(LCD_CONFIG_CHIP_PAIRS
     "CONFIG_REALTEK_ST7701S_480_480_RGB|8773E"
 )
 
-# Device type subdirectories
-set(DEVICE_TYPES lcd touch knob key_button)
-
 # Touch specific config to chip directory mapping
 # Each entry is "CONFIG_NAME|CHIP_DIR"
 set(TOUCH_CONFIG_CHIP_PAIRS
@@ -53,6 +50,13 @@ set(TOUCH_CONFIG_CHIP_PAIRS
     "CONFIG_REALTEK_TOUCH_GT911|8773G"
     "CONFIG_REALTEK_TOUCH_GT911|8773E"
     "CONFIG_REALTEK_TOUCH_CST816D|8773E"
+)
+
+set(KEY_CONFIG_CHIP_PAIRS
+    "CONFIG_REALTEK_KEY_BUTTON_8773G|8773G"
+    "CONFIG_REALTEK_KEY_BUTTON_8773G|8773E"
+    "CONFIG_REALTEK_KEY_BUTTON_8773G|8772F"
+    "CONFIG_REALTEK_KEY_BUTTON_8773G_ZEPHYR|8773G"
 )
 
 # Process LCD configs to add chip subdirectories
@@ -82,22 +86,14 @@ foreach(pair IN LISTS TOUCH_CONFIG_CHIP_PAIRS)
 endforeach()
 
 # Process other device types (knob, key_button) with SOC-based logic
-foreach(pair IN LISTS SOC_CHIP_PAIRS)
+foreach(pair IN LISTS KEY_CONFIG_CHIP_PAIRS)
     string(REPLACE "|" ";" pair_list "${pair}")
-    list(GET pair_list 0 soc_config)
+    list(GET pair_list 0 key_config)
     list(GET pair_list 1 chip_dir)
-
-    if(${soc_config})
-        foreach(dev_type knob key_button)
-            string(TOUPPER ${dev_type} dev_type_upper)
-            set(dev_config "CONFIG_REALTEK_${chip_dir}_DEVICE_${dev_type_upper}")
-
-            if(${dev_config})
-                set(sub_path "${CMAKE_CURRENT_SOURCE_DIR}/${dev_type}/${chip_dir}")
-                if(EXISTS "${sub_path}/CMakeLists.txt")
-                    add_subdirectory("${dev_type}/${chip_dir}")
-                endif()
-            endif()
-        endforeach()
+    if(${key_config})
+        set(sub_path "${CMAKE_CURRENT_SOURCE_DIR}/key_button/${chip_dir}")
+        if(EXISTS "${sub_path}/CMakeLists.txt")
+            add_subdirectory("key_button/${chip_dir}")
+        endif()
     endif()
 endforeach()
