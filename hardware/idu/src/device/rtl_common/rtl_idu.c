@@ -420,15 +420,8 @@ IDU_ERROR IDU_Decode(uint8_t *file, IDU_decode_range *range, IDU_DMA_config *dma
                                                 header->algorithm_type.feature_1;
     IDU_struct_init.rx_fifo_dma_enable        = (uint32_t)ENABLE;
     IDU_struct_init.tx_fifo_dma_enable        = (uint32_t)ENABLE;
-    if (rx_dma_depth == 4)
-    {
-        IDU_struct_init.rx_fifo_dma_threshold     = 12;
-    }
-    else
-    {
-        IDU_struct_init.rx_fifo_dma_threshold     = 8;
-    }
-    IDU_struct_init.tx_fifo_dma_threshold = 8;
+    IDU_struct_init.rx_fifo_dma_threshold     = 8;
+    IDU_struct_init.tx_fifo_dma_threshold     = 8;
     IDU_struct_init.rx_fifo_int_threshold     = dma_cfg->RX_FIFO_INT_threshold;
     IDU_struct_init.tx_fifo_int_threshold     = dma_cfg->TX_FIFO_INT_threshold;
     rtl_idu_hw_handshake_init(&IDU_struct_init);
@@ -441,203 +434,16 @@ IDU_ERROR IDU_Decode(uint8_t *file, IDU_decode_range *range, IDU_DMA_config *dma
                                                 (decompressed_data_size / 4 + 1) : (decompressed_data_size / 4));
     /* Configure DMA */
     RCC_PeriphClockCmd(APBPeriph_GDMA, APBPeriph_GDMA_CLOCK, ENABLE);
-    GDMA_InitTypeDef RX_GDMA_InitStruct;
-    GDMA_ChannelTypeDef *RX_DMA = rtl_idu_get_dma_channel_int(dma_cfg->RX_DMA_channel_num);
-    GDMA_ChannelTypeDef *TX_DMA = rtl_idu_get_dma_channel_int(dma_cfg->TX_DMA_channel_num);
 
-    uint32_t rx_block_num = 0;
     GDMA_LLIDef *RX_GDMA_LLIStruct = NULL;
-    if (DMA_compressed_data_size_word >= MAX_DMA_BLOCK_SIZE)
-    {
-        rx_block_num = DMA_compressed_data_size_word / MAX_DMA_BLOCK_SIZE;
-        if (DMA_compressed_data_size_word % MAX_DMA_BLOCK_SIZE)
-        {
-            rx_block_num = rx_block_num + 1;
-        }
-    }
-    /*--------------GDMA init-----------------------------*/
-    GDMA_StructInit(&RX_GDMA_InitStruct);
-    RX_GDMA_InitStruct.GDMA_ChannelNum          = dma_cfg->RX_DMA_channel_num;
-    RX_GDMA_InitStruct.GDMA_BufferSize          = DMA_compressed_data_size_word;
-    RX_GDMA_InitStruct.GDMA_DIR                 = GDMA_DIR_MemoryToPeripheral;
-    RX_GDMA_InitStruct.GDMA_SourceInc           = DMA_SourceInc_Inc;
-    RX_GDMA_InitStruct.GDMA_DestinationInc      = DMA_DestinationInc_Fix;
+    rtl_idu_int_rx_dma_setting(start_line_address, compressed_data_size, dma_cfg->RX_DMA_channel_num,
+                               &RX_GDMA_LLIStruct);
 
-    if (rx_dma_depth == 16 || rx_dma_depth == 32)
-    {
-        RX_GDMA_InitStruct.GDMA_SourceMsize         =
-            GDMA_Msize_8;                         // 16 msize for source msize
-        RX_GDMA_InitStruct.GDMA_DestinationMsize    =
-            GDMA_Msize_8;                         // 8 msize for destiantion msize
-    }
-    else if (rx_dma_depth == 8)
-    {
-        RX_GDMA_InitStruct.GDMA_SourceMsize         =
-            GDMA_Msize_8;                         // 8 msize for source msize
-        RX_GDMA_InitStruct.GDMA_DestinationMsize    =
-            GDMA_Msize_8;                         // 8 msize for destiantion msize
-    }
-    else
-    {
-        RX_GDMA_InitStruct.GDMA_SourceMsize         =
-            GDMA_Msize_4;                         // 4 msize for source msize
-        RX_GDMA_InitStruct.GDMA_DestinationMsize    =
-            GDMA_Msize_4;                         // 4 msize for destiantion msize
-    }
-    RX_GDMA_InitStruct.GDMA_DestinationDataSize =
-        GDMA_DataSize_Word;                   // 32 bit width for destination transaction
-    RX_GDMA_InitStruct.GDMA_SourceDataSize      =
-        GDMA_DataSize_Word;                   // 32 bit width for source transaction
-    RX_GDMA_InitStruct.GDMA_SourceAddr          = (uint32_t)start_line_address;
-    RX_GDMA_InitStruct.GDMA_DestinationAddr     = (uint32_t)(&IDU->RX_FIFO);
-    rtl_idu_rx_handshake_init(&RX_GDMA_InitStruct);
-
-    if (rx_block_num)
-    {
-        RX_GDMA_LLIStruct = (GDMA_LLIDef *)rtl_idu_malloc_int(rx_block_num * sizeof(GDMA_LLIDef));
-        RX_GDMA_InitStruct.GDMA_BufferSize = MAX_DMA_BLOCK_SIZE;
-        RX_GDMA_InitStruct.GDMA_Multi_Block_Mode = LLI_TRANSFER;
-        RX_GDMA_InitStruct.GDMA_Multi_Block_En = 1;
-        RX_GDMA_InitStruct.GDMA_Multi_Block_Struct = (uint32_t)RX_GDMA_LLIStruct;
-    }
-    GDMA_Init(RX_DMA, &RX_GDMA_InitStruct);
-    if (rx_block_num && RX_GDMA_LLIStruct != NULL)
-    {
-        for (int i = 0; i < rx_block_num; i++)
-        {
-            if (i == rx_block_num - 1)
-            {
-                RX_GDMA_LLIStruct[i].SAR = RX_GDMA_InitStruct.GDMA_SourceAddr + MAX_DMA_BLOCK_SIZE * 4 * i;
-                RX_GDMA_LLIStruct[i].DAR = (uint32_t)(&IDU->RX_FIFO);
-                RX_GDMA_LLIStruct[i].LLP = 0;
-                /* configure low 32 bit of CTL register */
-                RX_GDMA_LLIStruct[i].CTL_LOW = (BIT(0)
-                                                | (RX_GDMA_InitStruct.GDMA_DestinationDataSize << 1)
-                                                | (GDMA_DataSize_Word << 4)
-                                                | (RX_GDMA_InitStruct.GDMA_DestinationInc << 7)
-                                                | (RX_GDMA_InitStruct.GDMA_SourceInc << 9)
-                                                | (RX_GDMA_InitStruct.GDMA_DestinationMsize << 11)
-                                                | (RX_GDMA_InitStruct.GDMA_SourceMsize << 14)
-                                                | (RX_GDMA_InitStruct.GDMA_DIR << 20));
-                /* configure high 32 bit of CTL register */
-                uint32_t block_size = DMA_compressed_data_size_word - MAX_DMA_BLOCK_SIZE * i;
-                RX_GDMA_LLIStruct[i].CTL_HIGH = block_size;
-            }
-            else
-            {
-                RX_GDMA_LLIStruct[i].SAR = RX_GDMA_InitStruct.GDMA_SourceAddr + MAX_DMA_BLOCK_SIZE * 4 * i;
-                RX_GDMA_LLIStruct[i].DAR = (uint32_t)(&IDU->RX_FIFO);
-                RX_GDMA_LLIStruct[i].LLP = (uint32_t)&RX_GDMA_LLIStruct[i + 1];
-                /* configure low 32 bit of CTL register */
-                RX_GDMA_LLIStruct[i].CTL_LOW = rtl_idu_get_dma_ctl_low_int(RX_DMA);
-                /* configure high 32 bit of CTL register */
-                RX_GDMA_LLIStruct[i].CTL_HIGH = MAX_DMA_BLOCK_SIZE;
-            }
-        }
-    }
-
-    GDMA_InitTypeDef TX_GDMA_InitStruct;
-    uint32_t tx_block_num = 0;
-    uint32_t tx_block_size = DMA_decompressed_data_size_word;
     GDMA_LLIDef *TX_GDMA_LLIStruct = NULL;
-    if (decompress_target_stride != decompress_line_size)
-    {
-        tx_block_num = decompress_height;
-        tx_block_size = decompress_line_size / 4;
-        decompress_target_stride = decompress_target_stride / 4;
-    }
-    else if (DMA_decompressed_data_size_word >= MAX_DMA_BLOCK_SIZE)
-    {
-        tx_block_num = DMA_decompressed_data_size_word / MAX_DMA_BLOCK_SIZE;
-        if (DMA_decompressed_data_size_word % MAX_DMA_BLOCK_SIZE)
-        {
-            tx_block_num = tx_block_num + 1;
-        }
-        decompress_target_stride = MAX_DMA_BLOCK_SIZE;
-        tx_block_size = MAX_DMA_BLOCK_SIZE;
-    }
-    /*--------------GDMA init-----------------------------*/
-    GDMA_StructInit(&TX_GDMA_InitStruct);
-    TX_GDMA_InitStruct.GDMA_ChannelNum          = dma_cfg->TX_DMA_channel_num;
-    TX_GDMA_InitStruct.GDMA_BufferSize          = tx_block_size;
-    TX_GDMA_InitStruct.GDMA_DIR                 = GDMA_DIR_PeripheralToMemory;
-    TX_GDMA_InitStruct.GDMA_SourceInc           = DMA_SourceInc_Fix;
-    TX_GDMA_InitStruct.GDMA_DestinationInc      = DMA_DestinationInc_Inc;
-    TX_GDMA_InitStruct.GDMA_DestinationDataSize =
-        GDMA_DataSize_Word;                   // 32 bit width for destination transaction
-    TX_GDMA_InitStruct.GDMA_SourceDataSize      =
-        GDMA_DataSize_Word;                   // 32 bit width for source transaction
-    if (tx_dma_depth == 16 || tx_dma_depth == 32)
-    {
-        TX_GDMA_InitStruct.GDMA_SourceMsize         =
-            GDMA_Msize_8;                         // 16 msize for source msize
-        TX_GDMA_InitStruct.GDMA_DestinationMsize    =
-            GDMA_Msize_16;                         // 8 msize for destiantion msize
-    }
-    else if (tx_dma_depth == 8)
-    {
-        TX_GDMA_InitStruct.GDMA_SourceMsize         =
-            GDMA_Msize_8;                         // 8 msize for source msize
-        TX_GDMA_InitStruct.GDMA_DestinationMsize    =
-            GDMA_Msize_8;                         // 8 msize for destiantion msize
-    }
-    else
-    {
-        TX_GDMA_InitStruct.GDMA_SourceMsize         =
-            GDMA_Msize_8;                         // 4 msize for source msize
-        TX_GDMA_InitStruct.GDMA_DestinationMsize    =
-            GDMA_Msize_4;                         // 4 msize for destiantion msize
-        TX_GDMA_InitStruct.GDMA_DestinationDataSize =
-            GDMA_DataSize_HalfWord;                   // 32 bit width for destination transaction
-    }
-    TX_GDMA_InitStruct.GDMA_SourceAddr          = (uint32_t)(&IDU->TX_FIFO);
-    TX_GDMA_InitStruct.GDMA_DestinationAddr     = (uint32_t)dma_cfg->output_buf;
-    rtl_idu_tx_handshake_init(&TX_GDMA_InitStruct);
-    if (tx_block_num)
-    {
-        TX_GDMA_LLIStruct = (GDMA_LLIDef *)rtl_idu_malloc_int(tx_block_num * sizeof(GDMA_LLIDef));
-        TX_GDMA_InitStruct.GDMA_BufferSize = tx_block_size;
-        TX_GDMA_InitStruct.GDMA_Multi_Block_Mode = LLI_TRANSFER;
-        TX_GDMA_InitStruct.GDMA_Multi_Block_En = 1;
-        TX_GDMA_InitStruct.GDMA_Multi_Block_Struct = (uint32_t)TX_GDMA_LLIStruct;
-    }
-    GDMA_Init(TX_DMA, &TX_GDMA_InitStruct);
-    if (tx_block_num && TX_GDMA_LLIStruct != NULL)
-    {
-        for (int i = 0; i < tx_block_num; i++)
-        {
-            if (i == tx_block_num - 1)
-            {
-                TX_GDMA_LLIStruct[i].SAR = (uint32_t)(&IDU->TX_FIFO);
-                TX_GDMA_LLIStruct[i].DAR = (uint32_t)dma_cfg->output_buf + decompress_target_stride * 4 * i;
-                TX_GDMA_LLIStruct[i].LLP = 0;
-                /* configure low 32 bit of CTL register */
-                TX_GDMA_LLIStruct[i].CTL_LOW = (BIT(0)
-                                                | (TX_GDMA_InitStruct.GDMA_DestinationDataSize << 1)
-                                                | (GDMA_DataSize_Word << 4)
-                                                | (TX_GDMA_InitStruct.GDMA_DestinationInc << 7)
-                                                | (TX_GDMA_InitStruct.GDMA_SourceInc << 9)
-                                                | (TX_GDMA_InitStruct.GDMA_DestinationMsize << 11)
-                                                | (TX_GDMA_InitStruct.GDMA_SourceMsize << 14)
-                                                | (TX_GDMA_InitStruct.GDMA_DIR << 20));
-                /* configure high 32 bit of CTL register */
-                uint32_t block_size = DMA_decompressed_data_size_word - tx_block_size * i;
-                TX_GDMA_LLIStruct[i].CTL_HIGH = block_size;
-            }
-            else
-            {
-                TX_GDMA_LLIStruct[i].SAR = (uint32_t)(&IDU->TX_FIFO);
-                TX_GDMA_LLIStruct[i].DAR = (uint32_t)dma_cfg->output_buf + decompress_target_stride * 4 * i;
-                TX_GDMA_LLIStruct[i].LLP = (uint32_t)&TX_GDMA_LLIStruct[i + 1];
-                /* configure low 32 bit of CTL register */
-                TX_GDMA_LLIStruct[i].CTL_LOW = rtl_idu_get_dma_ctl_low_int(TX_DMA);
-                /* configure high 32 bit of CTL register */
-                TX_GDMA_LLIStruct[i].CTL_HIGH = tx_block_size;
-            }
-        }
-    }
-    GDMA_Cmd(dma_cfg->RX_DMA_channel_num, ENABLE);
-    GDMA_Cmd(dma_cfg->TX_DMA_channel_num, ENABLE);
+    rtl_idu_int_tx_dma_setting(dma_cfg->TX_DMA_channel_num, tx_dma_depth,
+                               (uint32_t)dma_cfg->output_buf, DMA_decompressed_data_size_word,
+                               decompress_target_stride, decompress_line_size,
+                               decompress_height, &TX_GDMA_LLIStruct);
     IDU_ClearINTPendingBit(IDU_DECOMPRESS_FINISH_INT);
     IDU_INTConfig(IDU_DECOMPRESS_FINISH_INT, ENABLE);
     IDU_MaskINTConfig(IDU_DECOMPRESS_FINISH_INT, DISABLE);
@@ -648,18 +454,14 @@ IDU_ERROR IDU_Decode(uint8_t *file, IDU_decode_range *range, IDU_DMA_config *dma
 
     IDU_Cmd(ENABLE);
     IDU_Run(ENABLE);
+    uint32_t cnt = 0;
     while (IDU->IDU_CTL0 & BIT0);
     if (IDU_GetINTStatus(IDU_DECOMPRESS_ERROR_INT))
     {
         err =  IDU_ERROR_DECODE_FAIL;
     }
-    if (rtl_idu_get_dma_busy_state(dma_cfg->RX_DMA_channel_num))
-    {
-        rtl_idu_wait_dma_idle(RX_DMA);
-        rtl_idu_wait_dma_idle(TX_DMA);
-        GDMA_Cmd(dma_cfg->RX_DMA_channel_num, DISABLE);
-        GDMA_Cmd(dma_cfg->TX_DMA_channel_num, DISABLE);
-    }
+    while (!rtl_idu_int_is_rx_dma_done());
+    while (!rtl_idu_int_is_tx_dma_done());
     IDU_RxFifoClear();
     IDU_Cmd(DISABLE);
     while (!(IDU->IDU_CTL1 & BIT29));
@@ -672,6 +474,7 @@ IDU_ERROR IDU_Decode(uint8_t *file, IDU_decode_range *range, IDU_DMA_config *dma
     {
         rtl_idu_free_int(RX_GDMA_LLIStruct);
     }
+
     return err;
 }
 
@@ -781,7 +584,6 @@ IDU_ERROR IDU_Decode_With_Interrupt(uint8_t *file, IDU_decode_range *range, IDU_
     IDU_struct_init.tx_fifo_dma_threshold = 8;
     IDU_struct_init.rx_fifo_int_threshold     = dma_cfg->RX_FIFO_INT_threshold;
     IDU_struct_init.tx_fifo_int_threshold     = dma_cfg->TX_FIFO_INT_threshold;
-    rtl_idu_hw_handshake_init(&IDU_struct_init);
     IDU_Init(&IDU_struct_init);
 
 
@@ -791,203 +593,16 @@ IDU_ERROR IDU_Decode_With_Interrupt(uint8_t *file, IDU_decode_range *range, IDU_
                                                 (decompressed_data_size / 4 + 1) : (decompressed_data_size / 4));
     /* Configure DMA */
     RCC_PeriphClockCmd(APBPeriph_GDMA, APBPeriph_GDMA_CLOCK, ENABLE);
-    GDMA_InitTypeDef RX_GDMA_InitStruct;
-    GDMA_ChannelTypeDef *RX_DMA = rtl_idu_get_dma_channel_int(dma_cfg->RX_DMA_channel_num);
-    GDMA_ChannelTypeDef *TX_DMA = rtl_idu_get_dma_channel_int(dma_cfg->TX_DMA_channel_num);
 
-    uint32_t rx_block_num = 0;
     GDMA_LLIDef *RX_GDMA_LLIStruct = NULL;
-    if (DMA_compressed_data_size_word >= MAX_DMA_BLOCK_SIZE)
-    {
-        rx_block_num = DMA_compressed_data_size_word / MAX_DMA_BLOCK_SIZE;
-        if (DMA_compressed_data_size_word % MAX_DMA_BLOCK_SIZE)
-        {
-            rx_block_num = rx_block_num + 1;
-        }
-    }
-    /*--------------GDMA init-----------------------------*/
-    GDMA_StructInit(&RX_GDMA_InitStruct);
-    RX_GDMA_InitStruct.GDMA_ChannelNum          = dma_cfg->RX_DMA_channel_num;
-    RX_GDMA_InitStruct.GDMA_BufferSize          = DMA_compressed_data_size_word;
-    RX_GDMA_InitStruct.GDMA_DIR                 = GDMA_DIR_MemoryToPeripheral;
-    RX_GDMA_InitStruct.GDMA_SourceInc           = DMA_SourceInc_Inc;
-    RX_GDMA_InitStruct.GDMA_DestinationInc      = DMA_DestinationInc_Fix;
+    rtl_idu_int_rx_dma_setting(start_line_address, compressed_data_size, dma_cfg->RX_DMA_channel_num,
+                               &RX_GDMA_LLIStruct);
 
-    if (rx_dma_depth == 16 || rx_dma_depth == 32)
-    {
-        RX_GDMA_InitStruct.GDMA_SourceMsize         =
-            GDMA_Msize_8;                         // 16 msize for source msize
-        RX_GDMA_InitStruct.GDMA_DestinationMsize    =
-            GDMA_Msize_8;                         // 8 msize for destiantion msize
-    }
-    else if (rx_dma_depth == 8)
-    {
-        RX_GDMA_InitStruct.GDMA_SourceMsize         =
-            GDMA_Msize_8;                         // 8 msize for source msize
-        RX_GDMA_InitStruct.GDMA_DestinationMsize    =
-            GDMA_Msize_8;                         // 8 msize for destiantion msize
-    }
-    else
-    {
-        RX_GDMA_InitStruct.GDMA_SourceMsize         =
-            GDMA_Msize_4;                         // 4 msize for source msize
-        RX_GDMA_InitStruct.GDMA_DestinationMsize    =
-            GDMA_Msize_4;                         // 4 msize for destiantion msize
-    }
-    RX_GDMA_InitStruct.GDMA_DestinationDataSize =
-        GDMA_DataSize_Word;                   // 32 bit width for destination transaction
-    RX_GDMA_InitStruct.GDMA_SourceDataSize      =
-        GDMA_DataSize_Word;                   // 32 bit width for source transaction
-    RX_GDMA_InitStruct.GDMA_SourceAddr          = (uint32_t)start_line_address;
-    RX_GDMA_InitStruct.GDMA_DestinationAddr     = (uint32_t)(&IDU->RX_FIFO);
-    rtl_idu_rx_handshake_init(&RX_GDMA_InitStruct);
-
-    if (rx_block_num)
-    {
-        RX_GDMA_LLIStruct = (GDMA_LLIDef *)rtl_idu_malloc_int(rx_block_num * sizeof(GDMA_LLIDef));
-        RX_GDMA_InitStruct.GDMA_BufferSize = MAX_DMA_BLOCK_SIZE;
-        RX_GDMA_InitStruct.GDMA_Multi_Block_Mode = LLI_TRANSFER;
-        RX_GDMA_InitStruct.GDMA_Multi_Block_En = 1;
-        RX_GDMA_InitStruct.GDMA_Multi_Block_Struct = (uint32_t)RX_GDMA_LLIStruct;
-    }
-    GDMA_Init(RX_DMA, &RX_GDMA_InitStruct);
-    if (rx_block_num && RX_GDMA_LLIStruct != NULL)
-    {
-        for (int i = 0; i < rx_block_num; i++)
-        {
-            if (i == rx_block_num - 1)
-            {
-                RX_GDMA_LLIStruct[i].SAR = RX_GDMA_InitStruct.GDMA_SourceAddr + MAX_DMA_BLOCK_SIZE * 4 * i;
-                RX_GDMA_LLIStruct[i].DAR = (uint32_t)(&IDU->RX_FIFO);
-                RX_GDMA_LLIStruct[i].LLP = 0;
-                /* configure low 32 bit of CTL register */
-                RX_GDMA_LLIStruct[i].CTL_LOW = (BIT(0)
-                                                | (RX_GDMA_InitStruct.GDMA_DestinationDataSize << 1)
-                                                | (GDMA_DataSize_Word << 4)
-                                                | (RX_GDMA_InitStruct.GDMA_DestinationInc << 7)
-                                                | (RX_GDMA_InitStruct.GDMA_SourceInc << 9)
-                                                | (RX_GDMA_InitStruct.GDMA_DestinationMsize << 11)
-                                                | (RX_GDMA_InitStruct.GDMA_SourceMsize << 14)
-                                                | (RX_GDMA_InitStruct.GDMA_DIR << 20));
-                /* configure high 32 bit of CTL register */
-                uint32_t block_size = DMA_compressed_data_size_word - MAX_DMA_BLOCK_SIZE * i;
-                RX_GDMA_LLIStruct[i].CTL_HIGH = block_size;
-            }
-            else
-            {
-                RX_GDMA_LLIStruct[i].SAR = RX_GDMA_InitStruct.GDMA_SourceAddr + MAX_DMA_BLOCK_SIZE * 4 * i;
-                RX_GDMA_LLIStruct[i].DAR = (uint32_t)(&IDU->RX_FIFO);
-                RX_GDMA_LLIStruct[i].LLP = (uint32_t)&RX_GDMA_LLIStruct[i + 1];
-                /* configure low 32 bit of CTL register */
-                RX_GDMA_LLIStruct[i].CTL_LOW = rtl_idu_get_dma_ctl_low_int(RX_DMA);
-                /* configure high 32 bit of CTL register */
-                RX_GDMA_LLIStruct[i].CTL_HIGH = MAX_DMA_BLOCK_SIZE;
-            }
-        }
-    }
-
-    GDMA_InitTypeDef TX_GDMA_InitStruct;
-    uint32_t tx_block_num = 0;
-    uint32_t tx_block_size = DMA_decompressed_data_size_word;
     GDMA_LLIDef *TX_GDMA_LLIStruct = NULL;
-    if (decompress_target_stride != decompress_line_size)
-    {
-        tx_block_num = decompress_height;
-        tx_block_size = decompress_line_size / 4;
-        decompress_target_stride = decompress_target_stride / 4;
-    }
-    else if (DMA_decompressed_data_size_word >= MAX_DMA_BLOCK_SIZE)
-    {
-        tx_block_num = DMA_decompressed_data_size_word / MAX_DMA_BLOCK_SIZE;
-        if (DMA_decompressed_data_size_word % MAX_DMA_BLOCK_SIZE)
-        {
-            tx_block_num = tx_block_num + 1;
-        }
-        decompress_target_stride = MAX_DMA_BLOCK_SIZE;
-        tx_block_size = MAX_DMA_BLOCK_SIZE;
-    }
-    /*--------------GDMA init-----------------------------*/
-    GDMA_StructInit(&TX_GDMA_InitStruct);
-    TX_GDMA_InitStruct.GDMA_ChannelNum          = dma_cfg->TX_DMA_channel_num;
-    TX_GDMA_InitStruct.GDMA_BufferSize          = tx_block_size;
-    TX_GDMA_InitStruct.GDMA_DIR                 = GDMA_DIR_PeripheralToMemory;
-    TX_GDMA_InitStruct.GDMA_SourceInc           = DMA_SourceInc_Fix;
-    TX_GDMA_InitStruct.GDMA_DestinationInc      = DMA_DestinationInc_Inc;
-    TX_GDMA_InitStruct.GDMA_DestinationDataSize =
-        GDMA_DataSize_Word;                   // 32 bit width for destination transaction
-    TX_GDMA_InitStruct.GDMA_SourceDataSize      =
-        GDMA_DataSize_Word;                   // 32 bit width for source transaction
-    if (tx_dma_depth == 16 || tx_dma_depth == 32)
-    {
-        TX_GDMA_InitStruct.GDMA_SourceMsize         =
-            GDMA_Msize_8;                         // 16 msize for source msize
-        TX_GDMA_InitStruct.GDMA_DestinationMsize    =
-            GDMA_Msize_16;                         // 8 msize for destiantion msize
-    }
-    else if (tx_dma_depth == 8)
-    {
-        TX_GDMA_InitStruct.GDMA_SourceMsize         =
-            GDMA_Msize_8;                         // 8 msize for source msize
-        TX_GDMA_InitStruct.GDMA_DestinationMsize    =
-            GDMA_Msize_8;                         // 8 msize for destiantion msize
-    }
-    else
-    {
-        TX_GDMA_InitStruct.GDMA_SourceMsize         =
-            GDMA_Msize_8;                         // 4 msize for source msize
-        TX_GDMA_InitStruct.GDMA_DestinationMsize    =
-            GDMA_Msize_4;                         // 4 msize for destiantion msize
-        TX_GDMA_InitStruct.GDMA_DestinationDataSize =
-            GDMA_DataSize_HalfWord;                   // 32 bit width for destination transaction
-    }
-    TX_GDMA_InitStruct.GDMA_SourceAddr          = (uint32_t)(&IDU->TX_FIFO);
-    TX_GDMA_InitStruct.GDMA_DestinationAddr     = (uint32_t)dma_cfg->output_buf;
-    rtl_idu_tx_handshake_init(&TX_GDMA_InitStruct);
-    if (tx_block_num)
-    {
-        TX_GDMA_LLIStruct = (GDMA_LLIDef *)rtl_idu_malloc_int(tx_block_num * sizeof(GDMA_LLIDef));
-        TX_GDMA_InitStruct.GDMA_BufferSize = tx_block_size;
-        TX_GDMA_InitStruct.GDMA_Multi_Block_Mode = LLI_TRANSFER;
-        TX_GDMA_InitStruct.GDMA_Multi_Block_En = 1;
-        TX_GDMA_InitStruct.GDMA_Multi_Block_Struct = (uint32_t)TX_GDMA_LLIStruct;
-    }
-    GDMA_Init(TX_DMA, &TX_GDMA_InitStruct);
-    if (tx_block_num && TX_GDMA_LLIStruct != NULL)
-    {
-        for (int i = 0; i < tx_block_num; i++)
-        {
-            if (i == tx_block_num - 1)
-            {
-                TX_GDMA_LLIStruct[i].SAR = (uint32_t)(&IDU->TX_FIFO);
-                TX_GDMA_LLIStruct[i].DAR = (uint32_t)dma_cfg->output_buf + decompress_target_stride * 4 * i;
-                TX_GDMA_LLIStruct[i].LLP = 0;
-                /* configure low 32 bit of CTL register */
-                TX_GDMA_LLIStruct[i].CTL_LOW = (BIT(0)
-                                                | (TX_GDMA_InitStruct.GDMA_DestinationDataSize << 1)
-                                                | (GDMA_DataSize_Word << 4)
-                                                | (TX_GDMA_InitStruct.GDMA_DestinationInc << 7)
-                                                | (TX_GDMA_InitStruct.GDMA_SourceInc << 9)
-                                                | (TX_GDMA_InitStruct.GDMA_DestinationMsize << 11)
-                                                | (TX_GDMA_InitStruct.GDMA_SourceMsize << 14)
-                                                | (TX_GDMA_InitStruct.GDMA_DIR << 20));
-                /* configure high 32 bit of CTL register */
-                uint32_t block_size = DMA_decompressed_data_size_word - tx_block_size * i;
-                TX_GDMA_LLIStruct[i].CTL_HIGH = block_size;
-            }
-            else
-            {
-                TX_GDMA_LLIStruct[i].SAR = (uint32_t)(&IDU->TX_FIFO);
-                TX_GDMA_LLIStruct[i].DAR = (uint32_t)dma_cfg->output_buf + decompress_target_stride * 4 * i;
-                TX_GDMA_LLIStruct[i].LLP = (uint32_t)&TX_GDMA_LLIStruct[i + 1];
-                /* configure low 32 bit of CTL register */
-                TX_GDMA_LLIStruct[i].CTL_LOW = rtl_idu_get_dma_ctl_low_int(TX_DMA);
-                /* configure high 32 bit of CTL register */
-                TX_GDMA_LLIStruct[i].CTL_HIGH = tx_block_size;
-            }
-        }
-    }
-    GDMA_Cmd(dma_cfg->RX_DMA_channel_num, ENABLE);
-    GDMA_Cmd(dma_cfg->TX_DMA_channel_num, ENABLE);
+    rtl_idu_int_tx_dma_setting(dma_cfg->TX_DMA_channel_num, tx_dma_depth,
+                               (uint32_t)dma_cfg->output_buf, DMA_decompressed_data_size_word,
+                               decompress_target_stride, decompress_line_size,
+                               decompress_height, &TX_GDMA_LLIStruct);
     if (int_cfg.idu_decompress_finish_int)
     {
         IDU_ClearINTPendingBit(IDU_DECOMPRESS_FINISH_INT);
@@ -1057,15 +672,8 @@ void IDU_Clean_State(IDU_State_Record *record)
     {
         return;
     }
-    GDMA_ChannelTypeDef *RX_DMA = rtl_idu_get_dma_channel_int(record->rx_dma_num);
-    GDMA_ChannelTypeDef *TX_DMA = rtl_idu_get_dma_channel_int(record->tx_dma_num);
-    if (rtl_idu_get_dma_busy_state(record->rx_dma_num))
-    {
-        rtl_idu_wait_dma_idle(RX_DMA);
-        rtl_idu_wait_dma_idle(TX_DMA);
-        GDMA_Cmd(record->rx_dma_num, DISABLE);
-        GDMA_Cmd(record->tx_dma_num, DISABLE);
-    }
+    while (!rtl_idu_int_is_rx_dma_done());
+    while (!rtl_idu_int_is_tx_dma_done());
     IDU_RxFifoClear();
     IDU_Cmd(DISABLE);
     while (!(IDU->IDU_CTL1 & BIT29));

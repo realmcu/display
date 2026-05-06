@@ -63,8 +63,6 @@ typedef enum
 #define IS_IDU_PIXEL_BYTES(SIZE)            (SIZE == PIXEL_SIZE_16BIT || SIZE == PIXEL_SIZE_24BIT || \
                                              SIZE == PIXEL_SIZE_8BIT || SIZE == PIXEL_SIZE_32BIT)
 
-void rtl_idu_channel_init_int(uint8_t *high_speed_channel, uint8_t *low_speed_channel);
-
 GDMA_ChannelTypeDef *rtl_idu_get_dma_channel_int(uint8_t channel_num);
 
 uint32_t rtl_idu_get_dma_ctl_low_int(GDMA_ChannelTypeDef *dma);
@@ -95,3 +93,15 @@ uint8_t rtl_idu_get_decode_pixel_length(IDU_PIXEL_SIZE_INT pixel_size);
 uint8_t rtl_idu_get_actual_pixel_length(IDU_PIXEL_SIZE_INT pixel_size);
 
 uint8_t rtl_idu_get_dma_depth(uint8_t channel_num);
+
+bool rtl_idu_int_is_rx_dma_done(void);
+
+bool rtl_idu_int_is_tx_dma_done(void);
+
+void rtl_idu_int_rx_dma_setting(uint32_t src, uint32_t len, uint8_t dma_ch,
+                                GDMA_LLIDef **RX_GDMA_LLIStruct);
+
+void rtl_idu_int_tx_dma_setting(uint8_t tx_dma_ch, uint8_t tx_dma_depth,
+                                uint32_t dst_addr, uint32_t data_size_word,
+                                uint32_t line_stride, uint32_t line_size,
+                                uint32_t line_num, GDMA_LLIDef **TX_GDMA_LLIStruct);

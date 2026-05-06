@@ -89,3 +89,17 @@ void rtl_idu_free_int(void *p);
 uint8_t rtl_idu_get_decode_pixel_length(IDU_PIXEL_SIZE_INT pixel_size);
 
 uint8_t rtl_idu_get_actual_pixel_length(IDU_PIXEL_SIZE_INT pixel_size);
+
+bool rtl_idu_int_is_rx_dma_done(void);
+
+bool rtl_idu_int_is_tx_dma_done(void);
+
+void rtl_idu_int_rx_dma_setting(uint32_t src, uint32_t len, uint8_t dma_ch,
+                                GDMA_LLIDef **RX_GDMA_LLIStruct);
+
+void rtl_idu_int_tx_dma_setting(uint8_t tx_dma_ch, uint8_t tx_dma_depth,
+                                uint32_t dst_addr, uint32_t data_size_word,
+                                uint32_t line_stride, uint32_t line_size,
+                                uint32_t line_num, GDMA_LLIDef **TX_GDMA_LLIStruct);
+
+uint8_t rtl_idu_int_get_dma_ch(void);

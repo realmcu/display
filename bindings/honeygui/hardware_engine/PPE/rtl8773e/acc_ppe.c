@@ -665,14 +665,11 @@ void hw_acc_blit(draw_img_t *image, struct gui_dispdev *dc, struct gui_rect *rec
                 {
                     if (src_rect.w % 2 == 0 && head->compress)
                     {
-                        uint32_t s;
-                        s = os_lock();
                         uint8_t pixel_size = PPE_Get_Pixel_Size(target.format);
                         uint32_t dst_stride = target.stride * pixel_size;
                         uint8_t *dest_address = (uint8_t *)(target.address + (dst_rect.y * target.stride + dst_rect.x) *
                                                             pixel_size);
                         hw_idu_decode(&src_rect, (uint8_t *)source.address, dst_stride, dest_address);
-                        os_unlock(s);
                         return;
                     }
                     else if (!head->compress)
@@ -968,9 +965,7 @@ void hw_acc_blit(draw_img_t *image, struct gui_dispdev *dc, struct gui_rect *rec
 
             if (head->compress)
             {
-                uint32_t s = os_lock();
                 ret = memcpy_by_idu(&old_rect, &source);
-                os_unlock(s);
             }
             else
             {
