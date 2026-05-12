@@ -1094,6 +1094,12 @@ bool hw_acc_idu_decode(uint8_t *image, gui_rect_t *rect, uint8_t *output)
 
 void hw_acc_prepare_cb(draw_img_t *img, gui_rect_t *rect)
 {
+    if (img->acc_user != NULL)
+    {
+        gui_free(img->acc_user);
+        img->acc_user = NULL;
+    }
+
     if (img->matrix.m[2][2] != 1 || img->matrix.m[0][1] != 0 || \
         img->matrix.m[1][0] != 0 || img->matrix.m[2][0] != 0 || \
         img->matrix.m[2][1] != 0)
