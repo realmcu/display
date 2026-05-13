@@ -718,6 +718,53 @@ static void hw_bare_blit(draw_img_t *image, struct gui_dispdev *dc, gui_rect_t *
 }
 #endif
 
+void hw_ppe_fill_rect(draw_img_t *image, struct gui_dispdev *dc, gui_rect_t *rect)
+{
+    ppe_rect_t buf_area = {.x1 = dc->section.x1, .x2 = dc->section.x2, \
+                           .y1 = dc->section.y1, .y2 = dc->section.y2
+                          };
+    ppe_rect_t draw_area =
+    {
+        .x2 = (image->img_target_w + image->img_target_x - 1),
+        .y2 = (image->img_target_h + image->img_target_y - 1),
+        .x1 = image->img_target_x,
+        .y1 = image->img_target_y
+    };
+    ppe_rect_t constraint_area;
+    if (!ppe_rect_intersect(&constraint_area, &buf_area, &draw_area))
+    {
+        return;
+    }
+    constraint_area.x1 = constraint_area.x1 - buf_area.x1;
+    constraint_area.x2 = constraint_area.x2 - buf_area.x1;
+    constraint_area.y1 = constraint_area.y1 - buf_area.y1;
+    constraint_area.y2 = constraint_area.y2 - buf_area.y1;
+    ppe_buffer_t target;
+    memset(&target, 0, sizeof(ppe_buffer_t));
+
+    if (dc->bit_depth == 16)
+    {
+        target.format = PPE_RGB565;
+    }
+    else if (dc->bit_depth == 32)
+    {
+        target.format = PPE_ARGB8888;
+    }
+    else if (dc->bit_depth == 24)
+    {
+        target.format = PPE_RGB888;
+    }
+    target.memory = (void *)dc->frame_buf;
+    target.address = (uint32_t)dc->frame_buf;
+    target.width  = dc->fb_width;
+    target.height = dc->fb_height;
+    target.stride = dc->fb_width;
+    gui_rect_file_head_t *head = (gui_rect_file_head_t *)image->data;
+    uint32_t color = (head->color.color.rgba.a * image->opacity_value / 255 << 24) +
+                     (head->color.color.rgba.b << 16)
+                     + (head->color.color.rgba.b << 8) + (head->color.color.rgba.r);
+    PPE_Clear_Rect(&target, &constraint_area, color);
+}
 
 void hw_acc_blit(draw_img_t *image, struct gui_dispdev *dc, gui_rect_t *rect)
 {
@@ -726,6 +773,11 @@ void hw_acc_blit(draw_img_t *image, struct gui_dispdev *dc, gui_rect_t *rect)
         image->matrix.m[2][2] != 1)
     {
         sw_acc_blit(image, dc, rect);
+        return;
+    }
+    if (image->blend_mode == IMG_RECT)
+    {
+        hw_ppe_fill_rect(image, dc, rect);
         return;
     }
 #if USE_BARE_COPY_ACC
