@@ -5,7 +5,6 @@
  */
 #include "rtl_lcdc_dbic.h"
 #include "lcd_sh8601z_410_502_qspi.h"
-#include "board.h"
 #include "trace.h"
 #include "platform_utils.h"
 #include "os_mem.h"
