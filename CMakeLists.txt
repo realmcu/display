@@ -9,6 +9,7 @@ list(APPEND soc_series
     CONFIG_SOC_SERIES_RTL87X2G
     CONFIG_SOC_SERIES_RTL8772F
     CONFIG_SOC_SERIES_RTL8773E
+    CONFIG_SOC_SERIES_RTL87X3E
     CONFIG_SOC_SERIES_RTL87X3G
 )
 
@@ -42,10 +43,17 @@ if(ZEPHYR_BASE)
 	  add_subdirectory(bindings)
   endif()
 else()
-	add_library(${LIBRARY_NAME})
-	target_link_libraries(${LIBRARY_NAME} PRIVATE zephyr_interface)
-	target_link_libraries(${LIBRARY_NAME} PRIVATE realtek_display_driver_library)
-	add_subdirectory(device)
+  if(CONFIG_REALTEK_DISPLAY)
+    message(STATUS "[Display] Building for non-Zephyr environment")
+    add_library(${LIBRARY_NAME} STATIC)
+    add_subdirectory(hardware)
+    add_subdirectory(device)
+    add_subdirectory(bindings)
+    target_link_libraries(${LIBRARY_NAME} PUBLIC halLib)
+    if(CONFIG_REALTEK_DISPLAY_GUI_ACC)
+      target_link_libraries(${LIBRARY_NAME} PUBLIC guiLib)
+    endif()
+  endif()
 endif()
 
 

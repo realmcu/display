@@ -153,14 +153,36 @@ config REALTEK_TOUCH_CST816D
 	help
 		This config for realtek touch device driver
 
+config REALTEK_KEY_BUTTON
+	bool "Enable Realtek Key/Button Device"
+	default n
+	help
+		This config for realtek Key/Button device driver
+
 config REALTEK_KEY_BUTTON_8773G
-	bool "Enable Realtek Key/Button Deivce"
+	bool "Enable Realtek Key/Button Device (RTL8773G)"
+	select REALTEK_KEY_BUTTON
 	default n
 	help
 		This config for realtek Key/Button device driver
 
 config REALTEK_KEY_BUTTON_8773G_ZEPHYR
-	bool "Enable Realtek Key/Button Deivce with Zephyr code style"
+	bool "Enable Realtek Key/Button Device (RTL8773G, Zephyr code style)"
+	select REALTEK_KEY_BUTTON
+	default n
+	help
+		This config for realtek Key/Button device driver
+
+config REALTEK_KEY_BUTTON_8773E
+	bool "Enable Realtek Key/Button Device (RTL8773E)"
+	select REALTEK_KEY_BUTTON
+	default n
+	help
+		This config for realtek Key/Button device driver
+
+config REALTEK_KEY_BUTTON_8772F
+	bool "Enable Realtek Key/Button Device (RTL8772F)"
+	select REALTEK_KEY_BUTTON
 	default n
 	help
 		This config for realtek Key/Button device driver
