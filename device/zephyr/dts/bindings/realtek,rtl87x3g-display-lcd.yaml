@@ -1,0 +1,9 @@
+# Copyright (c) 2021 Nordic Semiconductor ASA
+# SPDX-License-Identifier: Apache-2.0
+
+description: 
+    Bindings for the Realtek RTL87x3G LCD display driver
+
+compatible: "realtek,rtl87x3g-display-lcd"
+
+include: display-controller.yaml

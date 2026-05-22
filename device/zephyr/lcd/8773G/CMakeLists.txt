@@ -10,23 +10,23 @@ if(1) #set to 1 to enable or variable to for depnedency
 	set(SOURCES "") # Initialize SOURCES
 	
     file(GLOB HEADERS "*.h" "*.hpp")
-	if(CONFIG_REALTEK_TOUCH_CHSC6417)
-		list(APPEND SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/touch_CHSC6417.c")
-	endif()
 
-    if(CONFIG_REALTEK_TOUCH_CHSC6413)
-		list(APPEND SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/touch_CHSC6413.c")
+    if(CONFIG_REALTEK_LCD_ST7265_800_480_RGB)
+		list(APPEND SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/rtl87x3g-display-lcd-rgb.c")
+    endif()
+    if(CONFIG_REALTEK_LCD_SH8601Z_410_502_QSPI)
+		list(APPEND SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/rtl87x3g-display-lcd-qspi.c")
 	endif()
-
-    if(CONFIG_REALTEK_TOUCH_CHSC6417_ZEPHYR)
-		list(APPEND SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/touch_CHSC6417_zephyr.c")
+	if(CONFIG_REALTEK_SH8601Z_454454_QSPI)
+		list(APPEND SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/rtl87x3g-display-lcd-qspi.c")
 	endif()
-
-    if(CONFIG_REALTEK_TOUCH_CHSC6413_ZEPHYR)
-		list(APPEND SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/touch_CHSC6413_zephyr.c")
+    if(CONFIG_REALTEK_LCD_ST77916_360_360_8080)
+		list(APPEND SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/rtl87x3g-display-lcd-8080.c")
 	endif()
-
-    # Determine if we should create a library
+    if(CONFIG_REALTEK_LCD_ST7789_170_320_SPI)
+		list(APPEND SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/rtl87x3g-display-lcd-spi.c")
+	endif()
+ # Determine if we should create a library
     if((NOT HEADERS) AND (NOT SOURCES))
         message(STATUS "No source or header files found in ${CMAKE_CURRENT_SOURCE_DIR}.")
 		target_include_directories(${LIBRARY_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
@@ -45,9 +45,6 @@ if(1) #set to 1 to enable or variable to for depnedency
         target_include_directories(${LIBRARY_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
     endif()
 
-    # Always add include directory for this chip
-    target_include_directories(${LIBRARY_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-
     # Process subdirectories regardless
     file(GLOB SUBDIRS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/*)
 
@@ -59,5 +56,5 @@ if(1) #set to 1 to enable or variable to for depnedency
                 message(STATUS "Skipping directory ${subdir} as it does not contain a CMakeLists.txt file.")
             endif()
         endif()
-    endforeach()
+    endforeach() 
 endif()

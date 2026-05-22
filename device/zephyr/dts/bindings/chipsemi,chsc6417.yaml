@@ -1,0 +1,31 @@
+#Copyright(c) 2025, Realtek Semiconductor Corporation.
+#SPDX-License-Identifier: Apache-2.0
+
+description: 
+    Bindings for CHSC6417 touchscreen sensor
+
+compatible: "chipsemi,chsc6417"
+
+include: i2c-device.yaml
+
+properties:
+  irq-gpios:
+    type: phandle-array
+    required: true
+    description: |
+      Interrupt GPIO. Used by the controller to signal touch data is
+      available. Active low.
+
+  rst-gpios: 
+    type: phandle-array
+    required: true
+    description: |
+      Reset GPIO. Used by the controller to reset the sensor. Active low.
+
+  gesture-release-timeout-ms:
+    type: int
+    default: 30
+    description: |
+        Timeout in milliseconds for gesture release.
+
+

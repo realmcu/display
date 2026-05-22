@@ -169,9 +169,15 @@ config REALTEK_KEY_BUTTON_8773G
 config REALTEK_KEY_BUTTON_8773G_ZEPHYR
 	bool "Enable Realtek Key/Button Device (RTL8773G, Zephyr code style)"
 	select REALTEK_KEY_BUTTON
+	select GPIO
+	select GPIO_ENABLE_DISABLE_INTERRUPT
 	default n
 	help
-		This config for realtek Key/Button device driver
+		This config for realtek Key/Button device driver.
+		The Zephyr-style driver uses gpio_pin_interrupt_configure_dt() with
+		GPIO_INT_MODE_ENABLE_ONLY/DISABLE_ONLY which require
+		CONFIG_GPIO_ENABLE_DISABLE_INTERRUPT (whose own dependency on
+		CONFIG_GPIO must also be satisfied).
 
 config REALTEK_KEY_BUTTON_8773E
 	bool "Enable Realtek Key/Button Device (RTL8773E)"

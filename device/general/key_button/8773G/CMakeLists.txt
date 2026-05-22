@@ -3,11 +3,13 @@
 
 cmake_minimum_required(VERSION 3.10)
 
-# Build key button driver for RTL8773G
+# Build general key button driver for RTL8773G.
+# When CONFIG_REALTEK_KEY_BUTTON_8773G_ZEPHYR is set, the Zephyr-style
+# variant is built from device/zephyr/key_button/8773G/ instead (mutually exclusive).
 set(SOURCES "")
 
 if(CONFIG_REALTEK_KEY_BUTTON_8773G_ZEPHYR)
-    list(APPEND SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/key_button_8773g_zephyr.c")
+    # Yield to device/zephyr/key_button/8773G/.
 elseif(CONFIG_REALTEK_KEY_BUTTON)
     list(APPEND SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/key_button_8773g.c")
 endif()

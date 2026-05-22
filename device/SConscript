@@ -26,8 +26,8 @@ for soc_config, chip_dir in SOC_SERIES_MAP.items():
         for dev_type in DEVICE_TYPES:
             # e.g. CONFIG_REALTEK_8773G_DEVICE_LCD
             dev_config = 'CONFIG_REALTEK_' + chip_dir + '_DEVICE_' + dev_type.upper()
-            sconscript = os.path.join(cwd, dev_type, chip_dir, 'SConscript')
+            sconscript = os.path.join(cwd, 'general', dev_type, chip_dir, 'SConscript')
             if GetDepend([dev_config]) and os.path.isfile(sconscript):
-                objs = objs + SConscript(os.path.join(dev_type, chip_dir, 'SConscript'))
+                objs = objs + SConscript(os.path.join('general', dev_type, chip_dir, 'SConscript'))
 
 Return('objs')
