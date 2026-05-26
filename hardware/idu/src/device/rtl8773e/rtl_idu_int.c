@@ -10,6 +10,7 @@
 #include "os_mem.h"
 #include "rtl876x_nvic.h"
 #include "vector_table.h"
+#include "section.h"
 
 void rtl_idu_channel_init_int(uint8_t *high_speed_channel, uint8_t *low_speed_channel)
 {
@@ -329,6 +330,7 @@ uint8_t current_rx_dma;
 uint8_t current_tx_dma;
 static GDMA_LLIDef *g_rx_dma_lli_struct = NULL;
 
+RAM_TEXT_SECTION
 void idu_rx_dma_callback(void)
 {
     GDMA_ClearAllTypeINT(current_rx_dma);
@@ -476,6 +478,7 @@ bool rtl_idu_int_is_tx_dma_done(void)
     return idu_tx_dma_done;
 }
 
+RAM_TEXT_SECTION
 void idu_tx_dma_callback(void)
 {
     GDMA_ClearAllTypeINT(current_tx_dma);

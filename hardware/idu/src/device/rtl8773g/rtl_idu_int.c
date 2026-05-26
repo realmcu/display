@@ -9,6 +9,7 @@
 #include "dma_channel.h"
 #include "trace.h"
 #include "rtl876x_nvic.h"
+#include "section.h"
 
 GDMA_ChannelTypeDef *rtl_idu_get_dma_channel_int(uint8_t channel_num)
 {
@@ -240,6 +241,7 @@ FLASH_NOR_RET_TYPE idu_rx_dma_setting(uint32_t src, uint32_t dst, uint32_t len, 
     return FLASH_NOR_RET_SUCCESS;
 }
 
+RAM_TEXT_SECTION
 void idu_rx_dma_callback(void)
 {
     GDMA_ClearAllTypeINT(current_rx_dma);
@@ -269,6 +271,7 @@ bool rtl_idu_int_is_tx_dma_done(void)
     return idu_tx_dma_done;
 }
 
+RAM_TEXT_SECTION
 void idu_tx_dma_callback(void)
 {
     GDMA_ClearAllTypeINT(current_tx_dma);
