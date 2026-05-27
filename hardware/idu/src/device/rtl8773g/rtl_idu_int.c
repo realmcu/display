@@ -10,6 +10,8 @@
 #include "trace.h"
 #include "rtl876x_nvic.h"
 #include "section.h"
+#include "fmc_platform.h"
+#include "vector_table.h"
 
 GDMA_ChannelTypeDef *rtl_idu_get_dma_channel_int(uint8_t channel_num)
 {
@@ -255,8 +257,17 @@ void rtl_idu_int_rx_dma_setting(uint32_t src, uint32_t len, uint8_t dma_ch,
     *RX_GDMA_LLIStruct = NULL;
     g_rx_dma_lli_struct = NULL;
     idu_rx_dma_done = false;
-    flash_nor_auto_dma_read_locked(src, (uint32_t)(&IDU->RX_FIFO), len, idu_rx_dma_setting,
-                                   idu_rx_dma_callback);
+
+    if (FMC_IS_SPIC0_ADDR(src))
+    {
+        flash_nor_auto_dma_read_locked(src, (uint32_t)(&IDU->RX_FIFO), len, idu_rx_dma_setting,
+                                       idu_rx_dma_callback);
+    }
+    else
+    {
+        RamVectorTableUpdate(DMA_CH_VECTOR(dma_ch), (IRQ_Fun)idu_rx_dma_callback);
+        idu_rx_dma_setting(src, (uint32_t)(&IDU->RX_FIFO), len, dma_ch);
+    }
     *RX_GDMA_LLIStruct = g_rx_dma_lli_struct;
 }
 
