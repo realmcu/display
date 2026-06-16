@@ -51,11 +51,4 @@ child-binding:
       description: Key code to emit.
       required: true
 
-    trigger-level-high:
-      type: boolean
-      description: |
-        Trigger level for the GPIO key. If set to true, the key will be
-        triggered when the GPIO pin is high. If set to false, the key
-        will be triggered when the GPIO pin is low.
-
 

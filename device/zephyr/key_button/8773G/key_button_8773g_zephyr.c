@@ -37,8 +37,6 @@ struct gpio_keys_pin_config
     struct gpio_dt_spec spec;
     /** Zephyr code from devicetree */
     uint32_t key_id;
-    /** True if trigger on high level, false if trigger on low level */
-    bool trigger_level_high;
 };
 
 struct gpio_keys_pin_data
@@ -68,31 +66,30 @@ static void gpio_keys_poll_pin(const struct device *dev, int key_index)
     const struct gpio_keys_config *cfg = dev->config;
     const struct gpio_keys_pin_config *pin_cfg = &cfg->pin_cfg[key_index];
     struct gpio_keys_pin_data *pin_data = &cfg->pin_data[key_index];
-    bool level = pin_cfg->trigger_level_high;
-    int new_pressed;
+    int pressed;
 
-    new_pressed = gpio_pin_get(pin_cfg->spec.port, pin_cfg->spec.pin);
+    pressed = gpio_pin_get_dt(&pin_cfg->spec);
 
-    LOG_DBG("%s: level %d new_pressed=%d, key_index=%d, pin=%d", dev->name,
-            level, new_pressed, key_index, pin_cfg->spec.pin);
+    LOG_DBG("%s: pressed=%d, key_index=%d, pin=%d", dev->name,
+            pressed, key_index, pin_cfg->spec.pin);
 
-    /* If gpio changed, report the event */
-    if (new_pressed != level)
+    /* RELEASED */
+    if (pressed <= 0)
     {
         pin_data->report_pin_state.current_state = GPIO_KEY_RELEASED;
         pin_data->report_pin_state.release_timestamp = k_uptime_get_32();
 
-        gpio_pin_interrupt_configure_dt(&pin_cfg->spec,
-                                        pin_cfg->trigger_level_high ? GPIO_INT_LEVEL_HIGH : GPIO_INT_LEVEL_LOW);
+        gpio_pin_interrupt_configure_dt(&pin_cfg->spec, GPIO_INT_LEVEL_ACTIVE);
 
         if (pin_data->user_callback != NULL)
         {
             pin_data->user_callback(&pin_data->report_pin_state);
         }
 
-        LOG_DBG("Report event %s new_pressed=%d, code=%d, release_timestamp=%d", dev->name, new_pressed,
+        LOG_DBG("Report event %s pressed=%d, code=%d, release_timestamp=%d", dev->name, pressed,
                 pin_cfg->key_id, pin_data->report_pin_state.release_timestamp);
     }
+    /* PRESSED */
     else
     {
         pin_data->report_pin_state.current_state = GPIO_KEY_PRESSED;
@@ -103,9 +100,8 @@ static void gpio_keys_poll_pin(const struct device *dev, int key_index)
             pin_data->user_callback(&pin_data->report_pin_state);
         }
 
-        gpio_pin_interrupt_configure_dt(&pin_cfg->spec,
-                                        pin_cfg->trigger_level_high ? GPIO_INT_LEVEL_LOW : GPIO_INT_LEVEL_HIGH);
-        LOG_DBG("Report event %s new_pressed=%d, code=%d, press_timestamp=%d", dev->name, new_pressed,
+        gpio_pin_interrupt_configure_dt(&pin_cfg->spec, GPIO_INT_LEVEL_INACTIVE);
+        LOG_DBG("Report event %s pressed=%d, code=%d, press_timestamp=%d", dev->name, pressed,
                 pin_cfg->key_id, pin_data->report_pin_state.press_timestamp);
     }
 
@@ -188,8 +184,7 @@ static int gpio_keys_init(const struct device *dev)
         LOG_DBG("port=%s, pin=%d, key_id=%d", gpio->port->name, gpio->pin,
                 cfg->pin_cfg[i].key_id);
 
-        ret = gpio_pin_interrupt_configure_dt(gpio,
-                                              cfg->pin_cfg[i].trigger_level_high ? GPIO_INT_LEVEL_HIGH : GPIO_INT_LEVEL_LOW);
+        ret = gpio_pin_interrupt_configure_dt(gpio, GPIO_INT_LEVEL_ACTIVE);
         if (ret < 0)
         {
             LOG_ERR("interrupt configuration failed: %d", ret);
@@ -253,7 +248,6 @@ int32_t gpio_button_register_callback(const struct device *dev, uint16_t key,
     {                                                                                          \
         .spec = GPIO_DT_SPEC_GET(node_id, gpios),                                          \
                 .key_id = DT_PROP(node_id, key_id),                                      \
-                          .trigger_level_high = DT_PROP(node_id, trigger_level_high),                      \
     }
 
 #define GPIO_KEYS_INIT(i)                                                                          \
