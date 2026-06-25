@@ -90,7 +90,7 @@ typedef struct
   * \{
   */
 
-/** \defgroup LCDC_BASE        LCDC Base
+/** \defgroup LCDC_BASE        LCDC
   * \brief    LCD Controller driver Basic Funtion
   * \{
   */
@@ -98,7 +98,7 @@ typedef struct
 /*============================================================================*
  *                         Constants
  *============================================================================*/
-/** \defgroup LCDC_Exported_Constants LCDC Exported Constants
+/** \defgroup LCDC_Exported_Constants LCDC Base Exported Constants
   * \brief
   * \{
   */
@@ -431,7 +431,7 @@ typedef enum
 /*============================================================================*
  *                         Types
  *============================================================================*/
-/** \defgroup LCDC_Exported_Types LCDC Exported Types
+/** \defgroup LCDC_Exported_Types LCDC Base Exported Types
   * \brief
   * \{
   */
@@ -510,7 +510,7 @@ typedef struct
 /*============================================================================*
  *                         Functions
  *============================================================================*/
-/** \defgroup LCDC_Exported_Functions LCDC Exported Functions
+/** \defgroup LCDC_Exported_Functions LCDC Base Exported Functions
   * \brief
   * \{
   */
