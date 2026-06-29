@@ -10,7 +10,7 @@
 #include "os_mem.h"
 #include "rtl876x_nvic.h"
 #include "vector_table.h"
-#include "section.h"
+#include "fmc_platform.h"
 
 void rtl_idu_channel_init_int(uint8_t *high_speed_channel, uint8_t *low_speed_channel)
 {
@@ -337,14 +337,9 @@ void idu_rx_dma_callback(void)
     idu_rx_dma_done = true;
 }
 
-#define FLASH_LOCK 1
 
-#if FLASH_LOCK
+
 FLASH_NOR_RET_TYPE idu_rx_dma_setting(uint32_t src, uint32_t dst, uint32_t len, uint8_t dma_ch)
-#else
-void idu_rx_dma_setting(uint32_t src, uint32_t len, uint8_t dma_ch,
-                        GDMA_LLIDef **RX_GDMA_LLIStruct)
-#endif
 {
     g_rx_dma_lli_struct = NULL;
     idu_rx_dma_done = false;
@@ -445,9 +440,7 @@ void idu_rx_dma_setting(uint32_t src, uint32_t len, uint8_t dma_ch,
     NVIC_Init(&GDMA_NVIC_InitStruct);
     GDMA_ClearAllTypeINT(dma_ch);
     GDMA_Cmd(dma_ch, ENABLE);
-#if FLASH_LOCK
     return FLASH_NOR_RET_SUCCESS;
-#endif
 }
 
 void rtl_idu_int_rx_dma_setting(uint32_t src, uint32_t len, uint8_t dma_ch,
@@ -457,13 +450,16 @@ void rtl_idu_int_rx_dma_setting(uint32_t src, uint32_t len, uint8_t dma_ch,
     *RX_GDMA_LLIStruct = NULL;
     g_rx_dma_lli_struct = NULL;
     idu_rx_dma_done = false;
-#if FLASH_LOCK
-    flash_nor_auto_dma_read_locked(src, (uint32_t)(&IDU->RX_FIFO), len, idu_rx_dma_setting,
-                                   idu_rx_dma_callback);
-#else
-    RamVectorTableUpdate(DMA_CH_VECTOR(dma_ch), (IRQ_Fun)idu_rx_dma_callback);
-    idu_rx_dma_setting(src, len, dma_ch, RX_GDMA_LLIStruct);
-#endif
+    if (FMC_IS_SPIC0_ADDR(src))
+    {
+        flash_nor_auto_dma_read_locked(src, (uint32_t)(&IDU->RX_FIFO), len, idu_rx_dma_setting,
+                                       idu_rx_dma_callback);
+    }
+    else
+    {
+        RamVectorTableUpdate(DMA_CH_VECTOR(dma_ch), (IRQ_Fun)idu_rx_dma_callback);
+        idu_rx_dma_setting(src, (uint32_t)(&IDU->RX_FIFO), len, dma_ch);
+    }
     *RX_GDMA_LLIStruct = g_rx_dma_lli_struct;
 }
 
