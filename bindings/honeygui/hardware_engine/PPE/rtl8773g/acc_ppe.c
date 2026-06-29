@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <gui_matrix.h>
+#include "gui_post_process.h"
 #include <rtl_ppe.h>
 #include <rtl_idu.h>
 #include <rtl_idu_int.h>
@@ -45,6 +46,11 @@ extern void sw_acc_blit(draw_img_t *image, struct gui_dispdev *dc, struct gui_re
 #define PPE_ACC_MIN_OPA             3
 #define PPE_TESS_LENGTH             92
 
+/* Default blur strength for IMG_A8_BLUR (matches gui_win / gui_view blur). */
+#ifndef GUI_A8_BLUR_DEGREE
+#define GUI_A8_BLUR_DEGREE 225
+#endif
+
 static uint8_t *cache_buf1;
 static uint8_t *cache_buf2;
 static uint8_t *cache_buf = NULL;
@@ -52,6 +58,10 @@ static int32_t last_cache_size = 0;
 static uint8_t high_speed_dma_channel_num = 0xFF;
 static uint8_t low_speed_dma_channel_num = 0xFF;
 static int32_t CACHE_BUF_SIZE = 0;
+
+void hw_acc_blur_a8(struct gui_dispdev *dc, gui_rect_t *rect, uint8_t blur_degree, void *cache_mem,
+                    const uint8_t *a8_base, int16_t a8_stride,
+                    int16_t a8_origin_x, int16_t a8_origin_y);
 
 static void change_cache_buf(uint32_t cache_size)
 {
@@ -1926,6 +1936,36 @@ void hw_acc_blit(draw_img_t *image, struct gui_dispdev *dc, struct gui_rect *rec
     }
     struct gui_rgb_data_head *head = image->data;
 
+    /* IMG_A8_BLUR: blur the framebuffer under the image, masked by the A8
+     * alpha.  The scratch memory (IIR accumulator state) is kept in
+     * image->acc_user across sections to avoid visible seams. */
+    if (image->blend_mode == IMG_A8_BLUR && head != NULL &&
+        (head->type == A8 || head->type == ALPHAMASK))
+    {
+        gui_rect_t img_rect =
+        {
+            .x1 = image->img_target_x,
+            .y1 = image->img_target_y,
+            .x2 = image->img_target_x + (int16_t)image->img_target_w - 1,
+            .y2 = image->img_target_y + (int16_t)image->img_target_h - 1,
+        };
+        if (image->acc_user == NULL)
+        {
+            blur_prepare(&img_rect, &image->acc_user);
+        }
+        const uint8_t *a8_base = (const uint8_t *)image->data + sizeof(gui_rgb_data_head_t);
+        hw_acc_blur_a8(dc, &img_rect, 190, image->acc_user,
+                       a8_base, (int16_t)image->img_w,
+                       image->img_target_x, image->img_target_y);
+
+        /* Free scratch memory after the last section. */
+        if (dc->section_count == dc->section_total - 1 && image->acc_user != NULL)
+        {
+            blur_depose(&image->acc_user);
+        }
+        return;
+    }
+
     if (image->blend_mode != IMG_RECT && image->data == NULL)
     {
         return;
@@ -1948,6 +1988,145 @@ void hw_acc_blit(draw_img_t *image, struct gui_dispdev *dc, struct gui_rect *rec
     }
 }
 
+void hw_acc_mix_a_rgb(uint8_t *a, uint8_t *rgb, uint8_t *argb, uint16_t w, uint16_t h)
+{
+    ppe_buffer_t mix_a, mix_rgb, output;
+    memset(&mix_a, 0, sizeof(ppe_buffer_t));
+    memset(&mix_rgb, 0, sizeof(ppe_buffer_t));
+    memset(&output, 0, sizeof(ppe_buffer_t));
+    PPE_BLEND_METHOD method = PPE_BLEND_SRC_IN;
+
+    mix_a.format = PPE_A8;
+    mix_a.address = (uint32_t)a;
+    mix_a.opacity = 0xFF;
+    mix_a.width = w;
+    mix_a.height = h;
+    mix_a.stride = w;
+    mix_a.const_color = 0xFF000000;
+    mix_a.win_x_min = 0;
+    mix_a.win_x_max = w - 1;
+    mix_a.win_y_min = 0;
+    mix_a.win_y_max = h - 1;
+
+    mix_rgb.format = PPE_RGB565;
+    mix_rgb.address = (uint32_t)rgb;
+    mix_rgb.opacity = 0xFF;
+    mix_rgb.width = w;
+    mix_rgb.height = h;
+    mix_rgb.stride = w;
+    mix_rgb.const_color = 0xFFFFFFFF;
+    mix_rgb.win_x_min = 0;
+    mix_rgb.win_x_max = w - 1;
+    mix_rgb.win_y_min = 0;
+    mix_rgb.win_y_max = h - 1;
+
+    output.format = PPE_ARGB8888;
+    output.address = (uint32_t)argb;
+    output.opacity = 0xFF;
+    output.width = w;
+    output.height = h;
+    output.stride = w;
+    output.const_color = 0xFFFFFFFF;
+    output.win_x_min = 0;
+    output.win_x_max = w - 1;
+    output.win_y_min = 0;
+    output.win_y_max = h - 1;
+
+    PPE_Mix_Alpha(&mix_a, &mix_rgb, &output);
+    PPE_Finish();
+}
+
+void hw_acc_blur_a8(struct gui_dispdev *dc, gui_rect_t *rect, uint8_t blur_degree, void *cache_mem,
+                    const uint8_t *a8_base, int16_t a8_stride,
+                    int16_t a8_origin_x, int16_t a8_origin_y)
+{
+    gui_rect_t blur_rect = {0};
+    if (!rect_intersect(&blur_rect, rect, &dc->section))
+    {
+        return;
+    }
+    gui_rect_t target_rect = {.x1 = 0, .x2 = dc->screen_width - 1, .y1 = 0, .y2 = dc->screen_height - 1};
+    if (!rect_intersect(&target_rect, &target_rect, rect))
+    {
+        return;
+    }
+    int16_t blur_w = blur_rect.x2 - blur_rect.x1 + 1;
+    int16_t blur_h = blur_rect.y2 - blur_rect.y1 + 1;
+    int16_t img_w  = rect->x2 - rect->x1 + 1;
+    int16_t img_h  = rect->y2 - rect->y1 + 1;
+    uint8_t  bpp   = dc->bit_depth / 8;
+
+    uint8_t *blur_copy = (uint8_t *)gui_malloc((uint32_t)blur_w * (uint32_t)blur_h * bpp);
+
+    uint8_t *buffer = dc->frame_buf +
+                      ((blur_rect.y1 - dc->section.y1) * dc->fb_width + blur_rect.x1) * bpp;
+    for (int16_t row = 0; row < blur_h; row++)
+    {
+        memcpy(blur_copy + (uint32_t)row * blur_w * bpp,
+               buffer   + (uint32_t)row * dc->fb_width * bpp,
+               (uint32_t)blur_w * bpp);
+    }
+
+    /* Use image-local coordinates so frame_buf points directly to blur_copy
+     * (no backward pointer arithmetic).  The arm2d IIR accumulator still
+     * carries across sections because target.{x,y1}=0 while the section
+     * origin shifts per section, giving tOffset.iY > 0. */
+    gui_rect_t local_rect = {0, 0, img_w - 1, img_h - 1};
+
+    gui_dispdev_t fake_dc = {0};
+    fake_dc.frame_buf     = blur_copy;
+    fake_dc.fb_width      = (uint16_t)blur_w;
+    fake_dc.screen_width  = (uint16_t)img_w;
+    fake_dc.screen_height = dc->screen_height;
+    fake_dc.bit_depth     = dc->bit_depth;
+    fake_dc.section.x1    = blur_rect.x1 - rect->x1;
+    fake_dc.section.y1    = blur_rect.y1 - rect->y1;
+    fake_dc.section.x2    = blur_rect.x2 - rect->x1;
+    fake_dc.section.y2    = blur_rect.y2 - rect->y1;
+
+    gui_get_acc()->blur(&fake_dc, &local_rect, blur_degree, cache_mem);
+
+    uint8_t *argb_combine = (uint8_t *)gui_malloc((uint32_t)blur_w * (uint32_t)blur_h * 4 + 8);
+    int16_t       screen_y = blur_rect.y1;
+    const uint8_t *a8_row  = a8_base + (screen_y - a8_origin_y) * a8_stride;
+    uint8_t       *p_out   = buffer;
+    uint8_t       *p_blur  = blur_copy;
+    hw_acc_mix_a_rgb((uint8_t *)a8_row, p_blur, argb_combine, blur_w, blur_h);
+
+    ppe_matrix_t inverse;
+    ppe_get_identity(&inverse);
+    ppe_buffer_t target, source;
+    memset(&source, 0, sizeof(ppe_buffer_t));
+    memset(&target, 0, sizeof(ppe_buffer_t));
+    target.width = blur_w;
+    target.height = blur_h;
+    target.stride = dc->fb_width;
+    target.format = PPE_RGB565;
+    target.opacity = 0xFF;
+    target.const_color = 0xFFFFFFFF;
+    target.address = (uint32_t)buffer;
+    target.win_x_min = 0;
+    target.win_x_max = blur_w - 1;
+    target.win_y_min = 0;
+    target.win_y_max = blur_h - 1;
+
+    source.width = blur_w;
+    source.height = blur_h;
+    source.stride = blur_w;
+    source.format = PPE_ARGB8888;
+    source.address = (uint32_t)argb_combine;
+    source.opacity = 0xFF;
+    source.const_color = 0xFFFFFFFF;
+    source.win_x_min = 0;
+    source.win_x_max = target.width - 1;
+    source.win_y_min = 0;
+    source.win_y_max = target.height - 1;
+
+    PPE_Blit_Inverse(&target, &source, NULL, &inverse, NULL, PPE_BLEND_SRC_OVER);
+    PPE_Finish();
+    gui_free(argb_combine);
+    gui_free(blur_copy);
+}
 
 static void ppe_handler(void)
 {
