@@ -11,6 +11,7 @@
 #include "rtl876x_nvic.h"
 #include "vector_table.h"
 #include "fmc_platform.h"
+#include "section.h"
 
 void rtl_idu_channel_init_int(uint8_t *high_speed_channel, uint8_t *low_speed_channel)
 {
