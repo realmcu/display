@@ -102,7 +102,7 @@ static void *arm2d_local_allocate_scratch_memory(uint32_t wSize,
     /* ensure nAlign is 2^n */
     GUI_ASSERT((((~nAlign) + 1) & nAlign) == nAlign);
 
-    void *pBuff = malloc(wSize);
+    void *pBuff = gui_malloc(wSize);
     GUI_ASSERT(0 == ((uintptr_t)pBuff & (nAlign - 1)));
 
     return pBuff;
@@ -110,7 +110,7 @@ static void *arm2d_local_allocate_scratch_memory(uint32_t wSize,
 
 static void arm2d_local_free_scratch_memory(void *pBuff)
 {
-    free(pBuff);
+    gui_free(pBuff);
 }
 
 
@@ -1162,15 +1162,18 @@ void mve_arm_2d_create(gui_rect_t *rect, void **mem)
     uint16_t h = rect->y2 - rect->y1 + 1;
     arm2d_local_scratch_mem_t *scratch_mem = gui_malloc(sizeof(arm2d_local_scratch_mem_t));
 
-    if (NULL ==  arm2d_local_scratch_memory_new(
-            scratch_mem,
-            sizeof(arm2d_color_rgb565_t),
-            (w + h
-             + 14
-            ),
-            __alignof__(arm2d_color_rgb565_t)))
+    if (scratch_mem != NULL)
     {
-        memset(scratch_mem, 0, sizeof(arm2d_local_scratch_mem_t));
+        if (NULL ==  arm2d_local_scratch_memory_new(
+                scratch_mem,
+                sizeof(arm2d_color_rgb565_t),
+                (w + h
+                 + 14
+                ),
+                __alignof__(arm2d_color_rgb565_t)))
+        {
+            memset(scratch_mem, 0, sizeof(arm2d_local_scratch_mem_t));
+        }
     }
     *mem = (void *)scratch_mem;
 }

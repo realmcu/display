@@ -91,8 +91,8 @@ void LCDC_Init(LCDC_InitTypeDef *cfg)
 {
     /* Check the parameters */
     assert_param(IS_LCDC_IF_SEL(cfg->LCDC_Interface));
-    assert_param(IS_LCDC_INPUT_FORMAT(cfg->LCDC_PixelInputFarmat));
-    assert_param(IS_LCDC_OUTPUT_FORMAT(cfg->LCDC_PixelOutpuFarmat));
+    assert_param(IS_LCDC_INPUT_FORMAT(cfg->LCDC_PixelInputFormat));
+    assert_param(IS_LCDC_OUTPUT_FORMAT(cfg->LCDC_PixelOutputFormat));
     assert_param(IS_LCDC_SWAP(cfg->LCDC_PixelBitSwap));
     assert_param(IS_LCDC_TE_CMD(cfg->LCDC_TeEn));
     assert_param(IS_LCDC_TE_SIGNAL_VALID(cfg->LCDC_TePolarity));

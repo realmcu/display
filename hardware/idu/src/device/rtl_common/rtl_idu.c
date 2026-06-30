@@ -64,7 +64,7 @@ static void IDU_Init(IDU_InitTypeDef *IDU_init_struct)
     idu_reg_0x50.b.rx_fifo_int_threshold = IDU_struct_init->rx_fifo_int_threshold;
     IDU->RX_FIFO_INT_THRESHOLD = idu_reg_0x50.d32;
 
-    IDU_TX_FIFO_INT_THRESHOLD_TypeDef idu_reg_0x54 = {.d32 = IDU->RX_FIFO_INT_THRESHOLD};
+    IDU_TX_FIFO_INT_THRESHOLD_TypeDef idu_reg_0x54 = {.d32 = IDU->TX_FIFO_INT_THRESHOLD};
     idu_reg_0x54.b.tx_fifo_int_threshold = IDU_struct_init->tx_fifo_int_threshold;
     IDU->TX_FIFO_INT_THRESHOLD = idu_reg_0x54.d32;
 }
@@ -621,6 +621,7 @@ IDU_ERROR IDU_Decode_With_Interrupt(uint8_t *file, IDU_decode_range *range, IDU_
         IDU_INTConfig(IDU_DECOMPRESS_ERROR_INT, ENABLE);
         IDU_MaskINTConfig(IDU_DECOMPRESS_ERROR_INT, DISABLE);
     }
+    else
     {
         IDU_ClearINTPendingBit(IDU_DECOMPRESS_ERROR_INT);
         IDU_INTConfig(IDU_DECOMPRESS_ERROR_INT, DISABLE);

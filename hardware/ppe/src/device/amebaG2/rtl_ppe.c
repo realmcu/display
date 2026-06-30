@@ -1190,8 +1190,7 @@ PPE_DISP_err PPE_DISP_Blend_Multi(ppe_buffer_t *dst, ppe_buffer_t *src_1,
     if (src_1 != NULL)
     {
         ppe_matrix_t matrix;
-//        memcpy(&matrix, &src_1->inv_matrix, sizeof(ppe_matrix_t));
-
+        ppe_get_identity(&matrix);
         uint32_t color = ((src_1->opacity << 24) | 0x000000);
 
         uint32_t comp[9];
@@ -1262,8 +1261,7 @@ PPE_DISP_err PPE_DISP_Blend_Multi(ppe_buffer_t *dst, ppe_buffer_t *src_1,
     if (src_2 != NULL)
     {
         ppe_matrix_t matrix;
-//        memcpy(&matrix, &src_2->inv_matrix, sizeof(ppe_matrix_t));
-
+        ppe_get_identity(&matrix);
         uint32_t color = ((src_2->opacity << 24) | 0x000000);
 
         uint32_t comp[9];
@@ -1334,8 +1332,7 @@ PPE_DISP_err PPE_DISP_Blend_Multi(ppe_buffer_t *dst, ppe_buffer_t *src_1,
     if (src_3 != NULL)
     {
         ppe_matrix_t matrix;
-//        memcpy(&matrix, &src_3->inv_matrix, sizeof(ppe_matrix_t));
-
+        ppe_get_identity(&matrix);
         uint32_t color = ((src_3->opacity << 24) | 0x000000);
 
         uint32_t comp[9];

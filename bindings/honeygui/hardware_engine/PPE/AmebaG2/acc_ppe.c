@@ -1,9 +1,3 @@
-/*
- * Copyright (c) 2026, Realtek Semiconductor Corporation
- *
- * SPDX-License-Identifier: Apache-2.0
- */
-
 
 #include <stdio.h>
 #include <stdint.h>
@@ -13,37 +7,105 @@
 #include "def_file.h"
 #include "draw_img.h"
 #include "acc_sw_rle.h"
+
+#ifndef BIT0
+#define BIT0    0x0001
+#endif
+#ifndef BIT1
+#define BIT1    0x0002
+#endif
+#ifndef BIT2
+#define BIT2    0x0004
+#endif
+#ifndef BIT3
+#define BIT3    0x0008
+#endif
+#ifndef BIT4
+#define BIT4    0x0010
+#endif
 #include "ameba_soc.h"
+#include "dma_api.h"
 
 #define PPE_DISP_ACC_MIN_OPA 0
+static gdma_t dma_obj;
+volatile bool dma_memcpy_done = false;
+static void gdma_wait_transfer_done(void)
+{
+    while (!dma_memcpy_done);
+}
 
 static void decode_RLE_16bit(imdc_file_t *file, gui_rect_t *range, uint8_t *output)
 {
     uint32_t stride = (range->x2 - range->x1 + 1) * 2;
-    for (int i = range->y1; i <= range->y2; i++)
+    uint32_t line_width = file->header.raw_pic_width * 2;
+    if (stride == line_width)
     {
-        uncompressed_rle_rgb565(file, i, output);
-        output += stride;
+        for (int i = range->y1; i <= range->y2; i++)
+        {
+            uncompressed_rle_rgb565(file, i, output);
+            output += stride;
+        }
+    }
+    else
+    {
+        uint8_t *line = gui_malloc(line_width);
+        for (int i = range->y1; i <= range->y2; i++)
+        {
+            uncompressed_rle_rgb565(file, i, line);
+            memcpy(output, line + range->x1 * 2, stride);
+            output += stride;
+        }
+        gui_free(line);
     }
 }
 
 static void decode_RLE_24bit(imdc_file_t *file, gui_rect_t *range, uint8_t *output)
 {
     uint32_t stride = (range->x2 - range->x1 + 1) * 3;
-    for (int i = range->y1; i <= range->y2; i++)
+    uint32_t line_width = file->header.raw_pic_width * 3;
+    if (stride == line_width)
     {
-        uncompressed_rle_rgb888(file, i, output);
-        output += stride;
+        for (int i = range->y1; i <= range->y2; i++)
+        {
+            uncompressed_rle_rgb888(file, i, output);
+            output += stride;
+        }
+    }
+    else
+    {
+        uint8_t *line = gui_malloc(line_width);
+        for (int i = range->y1; i <= range->y2; i++)
+        {
+            uncompressed_rle_rgb888(file, i, line);
+            memcpy(output, line + range->x1 * 3, stride);
+            output += stride;
+        }
+        gui_free(line);
     }
 }
 
 static void decode_RLE_32bit(imdc_file_t *file, gui_rect_t *range, uint8_t *output)
 {
     uint32_t stride = (range->x2 - range->x1 + 1) * 4;
-    for (int i = range->y1; i <= range->y2; i++)
+    uint32_t line_width = file->header.raw_pic_width * 4;
+    if (stride == file->header.raw_pic_width * 4)
     {
-        uncompressed_rle_argb8888(file, i, output);
-        output += stride;
+        for (int i = range->y1; i <= range->y2; i++)
+        {
+            uncompressed_rle_argb8888(file, i, output);
+            output += stride;
+        }
+    }
+    else
+    {
+        uint8_t *line = gui_malloc(line_width);
+        for (int i = range->y1; i <= range->y2; i++)
+        {
+            uncompressed_rle_argb8888(file, i, line);
+            memcpy(output, line + range->x1 * 4, stride);
+            output += stride;
+        }
+        gui_free(line);
     }
 }
 #if 1
@@ -114,91 +176,34 @@ static void decode_RLE_16bit_rect(imdc_file_t *file, gui_rect_t *range, uint8_t 
 static void decode_RLE_24bit_rect(imdc_file_t *file, gui_rect_t *range, uint8_t *output,
                                   uint32_t stride)
 {
-    // uint32_t stride = (range->x2 - range->x1 + 1) * 3;
+    uint32_t width = (range->x2 - range->x1 + 1) * 3;
+    uint8_t *middle = gui_malloc(file->header.raw_pic_width * 3);
     for (int i = range->y1; i <= range->y2; i++)
     {
-        uint32_t start = (uint32_t)(uintptr_t)file + file->compressed_addr[i];
-        uint32_t end = (uint32_t)(uintptr_t)file + file->compressed_addr[i + 1];
-        uint16_t *linebuf = (uint16_t *)output;
-        int16_t pixel_cnt = 0;
-        // gui_log("file->compressed_addr[%d] %d\n", line, file->compressed_addr[line]);
-        for (uint32_t addr = start; addr < end;)
-        {
-            imdc_rgb565_node_t *node = (imdc_rgb565_node_t *)(uintptr_t)addr;
-            uint8_t node_len = node->len;
-            int16_t pixel_cnt_end = pixel_cnt + node_len - 1;
-            if (range->x1 <= pixel_cnt && range->x2 >= pixel_cnt_end)
-            {
-                ;
-            }
-            else if (range->x1 >= pixel_cnt && range->x1 <= pixel_cnt_end)
-            {
-                uint8_t skip_pixel = range->x1 - pixel_cnt;
-                node_len -= skip_pixel;
-                linebuf += skip_pixel;
-            }
-            else if (range->x2 >= pixel_cnt && range->x2 <= pixel_cnt_end)
-            {
-                uint8_t skip_pixel = pixel_cnt_end;
-                node_len -= skip_pixel;
-
-            }
-            // gui_log("%d 0x%x\n", node->len, node->pixel16);
-            gui_memset16(linebuf, node->pixel16, node->len);
-
-            addr = addr + sizeof(imdc_rgb565_node_t);
-            linebuf = linebuf + node->len;
-            pixel_cnt = pixel_cnt_end + 1;
-        }
+        uncompressed_rle_rgb888(file, i, middle);
+        memcpy(output, middle + range->x1 * 3, width);
         output += stride;
     }
+    gui_free(middle);
 }
 
 static void decode_RLE_32bit_rect(imdc_file_t *file, gui_rect_t *range, uint8_t *output,
                                   uint32_t stride)
 {
-    // uint32_t stride = (range->x2 - range->x1 + 1) * 4;
+    uint32_t width = (range->x2 - range->x1 + 1) * 4;
+    uint8_t *middle = gui_malloc(file->header.raw_pic_width * 4);
     for (int i = range->y1; i <= range->y2; i++)
     {
-        uint32_t start = (uint32_t)(uintptr_t)file + file->compressed_addr[i];
-        uint32_t end = (uint32_t)(uintptr_t)file + file->compressed_addr[i + 1];
-        uint16_t *linebuf = (uint16_t *)output;
-        int16_t pixel_cnt = 0;
-        // gui_log("file->compressed_addr[%d] %d\n", line, file->compressed_addr[line]);
-        for (uint32_t addr = start; addr < end;)
-        {
-            imdc_rgb565_node_t *node = (imdc_rgb565_node_t *)(uintptr_t)addr;
-            uint8_t node_len = node->len;
-            int16_t pixel_cnt_end = pixel_cnt + node_len - 1;
-            if (range->x1 <= pixel_cnt && range->x2 >= pixel_cnt_end)
-            {
-                ;
-            }
-            else if (range->x1 >= pixel_cnt && range->x1 <= pixel_cnt_end)
-            {
-                uint8_t skip_pixel = range->x1 - pixel_cnt;
-                node_len -= skip_pixel;
-                linebuf += skip_pixel;
-            }
-            else if (range->x2 >= pixel_cnt && range->x2 <= pixel_cnt_end)
-            {
-                uint8_t skip_pixel = pixel_cnt_end;
-                node_len -= skip_pixel;
-
-            }
-            // gui_log("%d 0x%x\n", node->len, node->pixel16);
-            gui_memset16(linebuf, node->pixel16, node->len);
-
-            addr = addr + sizeof(imdc_rgb565_node_t);
-            linebuf = linebuf + node->len;
-        }
+        uncompressed_rle_argb8888(file, i, middle);
+        memcpy(output, middle + range->x1 * 4, width);
         output += stride;
     }
+    gui_free(middle);
 }
 
 static void get_area(gui_matrix_t *mat, gui_rect_t *rect, gui_rect_t *result)
 {
-    gui_point3f_t pox = {{0.0f}};
+    gui_point3f_t pox = {.x = 0.0f, .y = 0.0f, .z = 1.0f};
     float x_min = 0.0f;
     float x_max = 0.0f;
     float y_min = 0.0f;
@@ -209,76 +214,76 @@ static void get_area(gui_matrix_t *mat, gui_rect_t *rect, gui_rect_t *result)
     float x2 = rect->x2;
     float y2 = rect->y2;
 
-    pox.p[0] = x1;
-    pox.p[1] = y1;
-    pox.p[2] = 1.0f;
+    pox.x = x1;
+    pox.y = y1;
+    pox.z = 1.0f;
     matrix_multiply_point(mat, &pox);
-    x_min = pox.p[0];
-    x_max = pox.p[0];
-    y_min = pox.p[1];
-    y_max = pox.p[1];
+    x_min = pox.x;
+    x_max = pox.x;
+    y_min = pox.y;
+    y_max = pox.y;
 
-    pox.p[0] = x2;
-    pox.p[1] = y1;
-    pox.p[2] = 1.0f;
+    pox.x = x2;
+    pox.y = y1;
+    pox.z = 1.0f;
     matrix_multiply_point(mat, &pox);
-    if (x_min > pox.p[0])
+    if (x_min > pox.x)
     {
-        x_min = pox.p[0];
+        x_min = pox.x;
     }
-    if (x_max < pox.p[0])
+    if (x_max < pox.x)
     {
-        x_max = pox.p[0];
+        x_max = pox.x;
     }
-    if (y_min > pox.p[1])
+    if (y_min > pox.y)
     {
-        y_min = pox.p[1];
+        y_min = pox.y;
     }
-    if (y_max < pox.p[1])
+    if (y_max < pox.y)
     {
-        y_max = pox.p[1];
-    }
-
-    pox.p[0] = x2;
-    pox.p[1] = y2;
-    pox.p[2] = 1.0f;
-    matrix_multiply_point(mat, &pox);
-    if (x_min > pox.p[0])
-    {
-        x_min = pox.p[0];
-    }
-    if (x_max < pox.p[0])
-    {
-        x_max = pox.p[0];
-    }
-    if (y_min > pox.p[1])
-    {
-        y_min = pox.p[1];
-    }
-    if (y_max < pox.p[1])
-    {
-        y_max = pox.p[1];
+        y_max = pox.y;
     }
 
-    pox.p[0] = x1;
-    pox.p[1] = y2;
-    pox.p[2] = 1.0f;
+    pox.x = x2;
+    pox.y = y2;
+    pox.z = 1.0f;
     matrix_multiply_point(mat, &pox);
-    if (x_min > pox.p[0])
+    if (x_min > pox.x)
     {
-        x_min = pox.p[0];
+        x_min = pox.x;
     }
-    if (x_max < pox.p[0])
+    if (x_max < pox.x)
     {
-        x_max = pox.p[0];
+        x_max = pox.x;
     }
-    if (y_min > pox.p[1])
+    if (y_min > pox.y)
     {
-        y_min = pox.p[1];
+        y_min = pox.y;
     }
-    if (y_max < pox.p[1])
+    if (y_max < pox.y)
     {
-        y_max = pox.p[1];
+        y_max = pox.y;
+    }
+
+    pox.x = x1;
+    pox.y = y2;
+    pox.z = 1.0f;
+    matrix_multiply_point(mat, &pox);
+    if (x_min > pox.x)
+    {
+        x_min = pox.x;
+    }
+    if (x_max < pox.x)
+    {
+        x_max = pox.x;
+    }
+    if (y_min > pox.y)
+    {
+        y_min = pox.y;
+    }
+    if (y_max < pox.y)
+    {
+        y_max = pox.y;
     }
     result->x1 = x_min;
     result->y1 = y_min;
@@ -286,11 +291,14 @@ static void get_area(gui_matrix_t *mat, gui_rect_t *rect, gui_rect_t *result)
     result->y2 = y_max;
 }
 
-void hw_acc_clear(uint32_t color, struct gui_dispdev *dc)
+void hw_acc_clear(uint8_t *addr, gui_color_t color, uint32_t len/*pixel count*/)
 {
+    (void)len;
+    (void)addr;
     ppe_buffer_t target;
+    gui_dispdev_t *dc = gui_get_dc();
     memset(&target, 0, sizeof(ppe_buffer_t));
-    target.address = (uint32_t)dc->frame_buf;
+    target.address = (uint32_t)addr;
     target.width = dc->fb_width;
     target.height = dc->fb_height;
     target.stride = dc->fb_width;
@@ -314,8 +322,10 @@ void hw_acc_clear(uint32_t color, struct gui_dispdev *dc)
     target.win_x_max = target.width - 1;
     target.win_y_min = 0;
     target.win_y_max = target.height - 1;
-    ppe_rect_t rect1 = {.x = 0, .y = 0, .w = dc->fb_width, .h = dc->fb_height};
-    PPE_DISP_err err = PPE_DISP_Mask(&target, color, &rect1);
+    ppe_rect_t rect1 = {.x = 0, .y = 0, .w = target.width, .h = target.height};
+    uint32_t ppe_color = color.color.rgba.a << 24 | color.color.rgba.b << 16 | color.color.rgba.g << 8 |
+                         color.color.rgba.r << 8;
+    PPE_DISP_err err = PPE_DISP_Mask(&target, ppe_color, &rect1);
     if (err != PPE_DISP_SUCCESS)
     {
         gui_log("return %d err %d\n", __LINE__, err);
@@ -406,19 +416,16 @@ void hw_acc_blit_decode(draw_img_t *image, struct gui_dispdev *dc, struct gui_re
                             };
     if (!rect_intersect(&decode_area, &decode_area, &image_area))
     {
-        gui_log("return %d\n", __LINE__);
         return;
     }
     if (rect != NULL)
     {
-        if (!rect_intersect(&decode_area, &decode_area, &image_area))
+        gui_rect_t clip_rect = *rect;
+        if (!rect_intersect(&decode_area, &clip_rect, &decode_area))
         {
-            gui_log("return %d\n", __LINE__);
             return;
         }
     }
-    decode_area.x1 = 0;
-    decode_area.x2 = image->img_w - 1;
     PPE_DISP_BLEND_MODE mode = PPE_DISP_SRC_OVER_MODE;
 
     switch (dc->bit_depth)
@@ -475,8 +482,8 @@ void hw_acc_blit_decode(draw_img_t *image, struct gui_dispdev *dc, struct gui_re
     source.win_y_max = target.height - 1;
     source.width = image->img_w;
     source.height = decode_area.y2 - decode_area.y1 + 1;
-    uint8_t *decoded_data = gui_malloc(source.width * source.height * PPE_DISP_Get_Pixel_Size(
-                                           source.format));
+    uint32_t decode_size = source.width * source.height * PPE_DISP_Get_Pixel_Size(source.format);
+    uint8_t *decoded_data = gui_malloc(decode_size);
     source.address = (uint32_t)decoded_data;
     if (PPE_DISP_Get_Pixel_Size(source.format) == 2)
     {
@@ -495,18 +502,26 @@ void hw_acc_blit_decode(draw_img_t *image, struct gui_dispdev *dc, struct gui_re
         gui_free(decoded_data);
         return;
     };
+    if (decode_size > 16384)
+    {
+        DCache_CleanInvalidate(0xFFFFFFFF, 0xFFFFFFFF);
+    }
+    else
+    {
+        DCache_CleanInvalidate((uint32_t)decoded_data, decode_size);
+    }
+
     extern void gui_clean_cache(void);
     gui_clean_cache();
     ppe_matrix_t pre_trans;
     ppe_get_identity(&pre_trans);
     if (rect != NULL)
     {
-        source.address = (uint32_t)source.address + sizeof(struct gui_rgb_data_head) + rect->x1 *
-                         PPE_DISP_Get_Pixel_Size(source.format);
-        source.width = rect->x2 - rect->x1 + 1;
+        source.width = decode_area.x2 - decode_area.x1 + 1;
         source.height = decode_area.y2 - decode_area.y1 + 1;
-        pre_trans.m[0][2] = rect->x1 * -1.0f;
+        source.stride = source.width;
     }
+    pre_trans.m[0][2] = decode_area.x1 * -1.0f;
     pre_trans.m[1][2] = decode_area.y1 * -1.0f;
     ppe_mat_multiply(&pre_trans, &inverse);
     ppe_translate(0, dc->section.y1, &pre_trans);
@@ -535,7 +550,6 @@ void hw_acc_blit_decode(draw_img_t *image, struct gui_dispdev *dc, struct gui_re
             mode = PPE_DISP_BYPASS_MODE;
         }
     }
-    PPE_DISP_Finish();
     PPE_DISP_err err = PPE_DISP_Blit_Inverse(&target, &source, &pre_trans, &constraint,
                                              mode);
     if (err != PPE_DISP_SUCCESS)
@@ -692,9 +706,10 @@ void hw_acc_blit_direct(draw_img_t *image, struct gui_dispdev *dc, struct gui_re
             mode = PPE_DISP_BYPASS_MODE;
         }
     }
-    PPE_DISP_Finish();
+    DCache_CleanInvalidate(0xFFFFFFFF, 0xFFFFFFFF);
     PPE_DISP_err err = PPE_DISP_Blit_Inverse(&target, &source, &inverse, &constraint,
                                              mode);
+    PPE_DISP_Finish();
     if (err != PPE_DISP_SUCCESS)
     {
         return;
@@ -703,10 +718,12 @@ void hw_acc_blit_direct(draw_img_t *image, struct gui_dispdev *dc, struct gui_re
     {
         PPE_DISP_Finish();
     }
+    //uint32_t time2 = rtos_time_get_current_system_time_us();
     return;
 }
 void hw_acc_blit_cover(draw_img_t *image, struct gui_dispdev *dc, struct gui_rect *rect)
 {
+    gui_rgb_data_head_t *head = (gui_rgb_data_head_t *)image->data;
     gui_rect_t draw_area = { .x2 = (image->img_target_w + image->img_target_x - 1),
                              .y2 = (image->img_target_h + image->img_target_y - 1),
                              .x1 = image->img_target_x,
@@ -734,29 +751,42 @@ void hw_acc_blit_cover(draw_img_t *image, struct gui_dispdev *dc, struct gui_rec
     uint32_t x_offset = image_source_area.x1 + image->img_target_x - dc->section.x1;
     uint32_t y_offset = image_source_area.y1 + image->img_target_y - dc->section.y1;
     uint8_t *p_target_offset = dc->frame_buf + (y_offset * dc->fb_width + x_offset) * dc_byte_depth;
-    if (dc_byte_depth == 2)
+    if (head->compress)
     {
-        decode_RLE_16bit_rect((imdc_file_t *)((uintptr_t)image->data + 8), &image_source_area,
-                              p_target_offset, dc->fb_width * 2);
-    }
-    else if (dc_byte_depth == 3)
-    {
-        decode_RLE_24bit_rect((imdc_file_t *)((uintptr_t)image->data + 8), &image_source_area,
-                              p_target_offset, dc->fb_width * 2);
-    }
-    else if (dc_byte_depth == 4)
-    {
-        decode_RLE_32bit_rect((imdc_file_t *)((uintptr_t)image->data + 8), &image_source_area,
-                              p_target_offset, dc->fb_width * 2);
-    }
-    uint32_t fb_size = dc->fb_width * dc->fb_height * dc_byte_depth;
-    if (fb_size > 16384)
-    {
-        DCache_CleanInvalidate(0xFFFFFFFF, 0xFFFFFFFF);
+        if (dc_byte_depth == 2)
+        {
+            decode_RLE_16bit_rect((imdc_file_t *)((uintptr_t)image->data + 8), &image_source_area,
+                                  p_target_offset, dc->fb_width * 2);
+        }
+        else if (dc_byte_depth == 3)
+        {
+            decode_RLE_24bit_rect((imdc_file_t *)((uintptr_t)image->data + 8), &image_source_area,
+                                  p_target_offset, dc->fb_width * 3);
+        }
+        else if (dc_byte_depth == 4)
+        {
+            decode_RLE_32bit_rect((imdc_file_t *)((uintptr_t)image->data + 8), &image_source_area,
+                                  p_target_offset, dc->fb_width * 4);
+        }
+        uint32_t fb_size = dc->fb_width * dc->fb_height * dc_byte_depth;
+        if (fb_size > 16384)
+        {
+            DCache_CleanInvalidate(0xFFFFFFFF, 0xFFFFFFFF);
+        }
+        else
+        {
+            DCache_CleanInvalidate((uint32_t)dc->frame_buf, fb_size);
+        }
     }
     else
     {
-        DCache_CleanInvalidate((uint32_t)dc->frame_buf, fb_size);
+        uint8_t *p_source_offset = (uint8_t *)image->data + sizeof(gui_rgb_data_head_t) +
+                                   (image_source_area.y1 * image->img_w + image_source_area.x1) * dc_byte_depth;
+        uint32_t copy_size = (image_source_area.x2 - image_source_area.x1 + 1) *
+                             (image_source_area.y2 - image_source_area.y1 + 1) * dc_byte_depth;
+        dma_memcpy_done = false;
+        dma_memcpy(&dma_obj, p_target_offset, p_source_offset, copy_size);
+        gdma_wait_transfer_done();
     }
 }
 
@@ -782,7 +812,8 @@ void hw_acc_blit(draw_img_t *image, struct gui_dispdev *dc, struct gui_rect *rec
              ((dc->bit_depth == 16 && head->type == RGB565) || \
               (dc->bit_depth == 24 && head->type == RGB888) || \
               (dc->bit_depth == 32 && head->type == ARGB8888 && image->blend_mode == PPE_DISP_BYPASS_MODE)) && \
-             image->opacity_value == 0xFF && head->compress)
+             image->opacity_value == 0xFF && (head->compress || (image->img_target_w == dc->fb_width &&
+                                                                 image->img_target_x == 0)))
     {
         hw_acc_blit_cover(image, dc, rect);
     }
@@ -863,7 +894,15 @@ void *hw_acc_idu_decode(void *input)
     return decode_img_data;
 }
 
+static u32 memcpy_by_gdma_int(void *param)
+{
+    (void)param;
+    dma_memcpy_done = true;
+    return 0;
+}
+
 void hw_acc_init(void)
 {
     //PPE_DISP clock init
+    dma_memcpy_init(&dma_obj, memcpy_by_gdma_int, 0);
 }

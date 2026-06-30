@@ -263,6 +263,8 @@ typedef enum
     SEGCOM_UPDATE_DISPLAY_DONE_INT,         /*!< Update display done interrupt. */
     SEGCOM_START_OF_FRAME_INT,              /*!< Start of frame interrupt. */
 } SEGCOM_INTERRUPT;
+
+#define IS_SEGCOM_INTERRUPT(INT) (((INT) == SEGCOM_UPDATE_DISPLAY_DONE_INT) || ((INT) == SEGCOM_START_OF_FRAME_INT))
 /** End of SEGCOM_INTERRUPT
   * \}
   */
@@ -593,11 +595,11 @@ void SEGCOM_Init(SEGCOM_InitTypeDef *SEGCOM_InitStruct);
  *
  * void driver_segcom_init(void)
  * {
- *     SEGCOM_Update_Clk();
+ *     SEGCOM_Update_CLK();
  * }
  * \endcode
  */
-void SEGCOM_Update_Clk(void);
+void SEGCOM_Update_CLK(void);
 
 /**
  * \brief  Determine which pins to be used as SEGs and COMs.

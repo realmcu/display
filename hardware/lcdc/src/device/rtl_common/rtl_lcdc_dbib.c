@@ -29,9 +29,9 @@ void DBIB_Init(LCDC_DBIBCfgTypeDef *DBIBCfg)
     dbib_reg_0x00.b.init_guard_time = DBIBCfg->DBIB_InitGuardTimeCmd;
     dbib_reg_0x00.b.cmd_guard_time = DBIBCfg->DBIB_CmdGuardTime;
     dbib_reg_0x00.b.guard_time = DBIBCfg->DBIB_GuardTime;
-    dbib_reg_0x00.b.bypass_guard_time = DBIBCfg->DBIB_CmdGuardTimeCmd;
-    dbib_reg_0x00.b.bypass_cmd_guard_time = DBIBCfg->DBIB_CmdGuardTimeCmd;
-    dbib_reg_0x00.b.bypass_init_guard_time = DBIBCfg->DBIB_InitGuardTimeCmd;
+    dbib_reg_0x00.b.bypass_guard_time = DBIBCfg->DBIB_BypassGuardTime;
+    dbib_reg_0x00.b.bypass_cmd_guard_time = DBIBCfg->DBIB_BypassCmdGuardTime;
+    dbib_reg_0x00.b.bypass_init_guard_time = DBIBCfg->DBIB_BypassInitGuardTime;
     DBIB->DBIB_CTRL0 = dbib_reg_0x00.d32;
 
     /* Configure WR Delay */

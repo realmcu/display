@@ -170,7 +170,7 @@ typedef enum
     LCDC_OUTPUT_BGR565,           /*!< B(bit 15:11) G(bit 10:5) R(bit 4:0). */
 } LCDC_OUTPUT_FORMAT_T;
 
-#define IS_LCDC_OUTPUT_FORMAT(FORMAT) (((FORMAT) == LCDC_OUTPUT_RGB888) || ((FORMAT) == LCDC_OUTPUT_RGB565) || ((FORMAT) == LCDC_OUTPUT_BGR565))
+#define IS_LCDC_OUTPUT_FORMAT(FORMAT) (((FORMAT) == LCDC_OUTPUT_RGB888) || ((FORMAT) == LCDC_OUTPUT_RGB565) || ((FORMAT) == LCDC_OUTPUT_BGR565) || ((FORMAT) == LCDC_OUTPUT_BGR888))
 
 /** End of LCDC_Pixel_Output_Format
   * \}
@@ -1398,8 +1398,8 @@ void LCDC_MaskINTConfig(uint32_t LCDC_INT_MSK, FunctionalState NewState);
  * | LCDC_Interface         | \ref LCDC_IF_DPI                   | Interface type set to DPI          |
  * | LCDC_RamlessEn         | DISABLE                            | Ramless function disabled.         |
  * | LCDC_GroupSel          | 1                                  | Pin Group 1 selected.              |
- * | LCDC_PixelInputFarmat  | \ref LCDC_INPUT_RGB888             | Input format set to RGB888.        |
- * | LCDC_PixelOutpuFarmat  | \ref LCDC_OUTPUT_RGB888            | Output format set to RGB888.       |
+ * | LCDC_PixelInputFormat  | \ref LCDC_INPUT_RGB888             | Input format set to RGB888.        |
+ * | LCDC_PixelOutputFormat  | \ref LCDC_OUTPUT_RGB888            | Output format set to RGB888.       |
  * | LCDC_PixelBitSwap      | \ref LCDC_SWAP_BYPASS              | No bit swapping.                   |
  * | LCDC_TeEn              | DISABLE                            | Tear Effect function disabled.     |
  * | LCDC_TePolarity        | \ref LCDC_TE_EDGE_RISING           | Tear signal rising edge trigger.   |
@@ -1417,7 +1417,7 @@ void LCDC_MaskINTConfig(uint32_t LCDC_INT_MSK, FunctionalState NewState);
  *
  * // Modify default configuration as needed
  * LCDC_InitStruct.LCDC_Interface = LCDC_IF_DBIC;        // Use DBIC interface
- * LCDC_InitStruct.LCDC_PixelInputFarmat = LCDC_INPUT_RGB565;  // Set input format to RGB565
+ * LCDC_InitStruct.LCDC_PixelInputFormat = LCDC_INPUT_RGB565;  // Set input format to RGB565
  * LCDC_InitStruct.LCDC_DmaThreshold = 16;              // Modify DMA threshold
  *
  * // Initialize LCDC with modified configuration
@@ -1438,8 +1438,8 @@ void LCDC_StructInit(LCDC_InitTypeDef *LCDC_InitStruct);
  * {
  *     LCDC_InitTypeDef lcdc_init = {0};
  *     lcdc_init.LCDC_Interface = LCDC_IF_DBIC;
- *     lcdc_init.LCDC_PixelInputFarmat = LCDC_INPUT_RGB565;
- *     lcdc_init.LCDC_PixelOutpuFarmat = LCDC_OUTPUT_RGB565;
+ *     lcdc_init.LCDC_PixelInputFormat = LCDC_INPUT_RGB565;
+ *     lcdc_init.LCDC_PixelOutputFormat = LCDC_OUTPUT_RGB565;
  *     lcdc_init.LCDC_PixelBitSwap = LCDC_SWAP_BYPASS;
  *     lcdc_init.LCDC_GroupSel = 1;
  *     lcdc_init.LCDC_DmaThreshold = 112;

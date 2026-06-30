@@ -125,7 +125,7 @@ void DBIC_SendBuf(uint8_t *buf, uint32_t len)
     }
     while (dbic_reg_0x28.b.busy);  // wait bus busy
 
-    dbic_reg_0x08.b.spic_en = 1;
+    dbic_reg_0x08.b.spic_en = 0;
     DBIC->SSIENR = dbic_reg_0x08.d32;//disable DBIC
     //LCDC_AutoWriteCmd(ENABLE);
     //while (DBIC->SR & BIT0); // wait bus busy

@@ -146,6 +146,9 @@ typedef struct
     uint32_t DBIB_GuardTime;              /*!< Delay between command output and data input/output.
                                                  This parameter can be a value of \ref LCDC_DBIB_GuardTime. */
     uint32_t DBIB_WRDelay;                /*!< Specifies the delay time for WR. This parameter can be a value of \ref LCDC_DBIB_WRDelay. */
+    bool DBIB_BypassGuardTime;              /*!< Specifies whether to bypass guard time in auto mode. */
+    bool DBIB_BypassInitGuardTime;                /*!< Specifies whether to bypass init guard time in auto mode. */
+    bool DBIB_BypassCmdGuardTime;                 /*!< Specifies whether to bypass command guard time in auto mode. */
 } LCDC_DBIBCfgTypeDef;
 
 /** End of LCDC_DBIB_Exported_Types
@@ -254,6 +257,9 @@ void DBIB_SetDC(void);
  *     dbib_init.DBIB_GuardTimeCmd      = DBIB_GUARD_TIME_DISABLE;
  *     dbib_init.DBIB_GuardTime         = DBIB_GUARD_TIME_1T;
  *     dbib_init.DBIB_WRDelay           = DBIB_WR_HALF_DELAY;
+ *     dbib_init.DBIB_BypassGuardTime   = false;
+ *     dbib_init.DBIB_BypassInitGuardTime = false;
+ *     dbib_init.DBIB_BypassCmdGuardTime = false;
  *     DBIB_Init(&dbib_init);
  * }
  * \endcode

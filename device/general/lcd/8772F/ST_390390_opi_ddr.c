@@ -208,8 +208,8 @@ void lcd_st_opi_390_init(void)
 {
     LCDC_InitTypeDef lcdc_init = {0};
     lcdc_init.LCDC_Interface = LCDC_IF_DBIC;
-    lcdc_init.LCDC_PixelInputFarmat = LCDC_INPUT_ABGR888;
-    lcdc_init.LCDC_PixelOutpuFarmat = LCDC_OUTPUT_RGB888;
+    lcdc_init.LCDC_PixelInputFormat = LCDC_INPUT_ABGR888;
+    lcdc_init.LCDC_PixelOutputFormat = LCDC_OUTPUT_RGB888;
     lcdc_init.LCDC_PixelBitSwap = LCDC_SWAP_BYPASS; //lcdc_handler_cfg->LCDC_TeEn = LCDC_TE_DISABLE;
 #if TE_VALID
     lcdc_init.LCDC_TeEn = LCDC_TE_DISABLE;

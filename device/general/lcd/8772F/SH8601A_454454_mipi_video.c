@@ -47,9 +47,9 @@ uint8_t SH8601A_Init()
 {
     LCDC_InitTypeDef lcdc_init = {0};
     lcdc_init.LCDC_Interface = LCDC_IF_eDPI;
-    lcdc_init.LCDC_PixelInputFarmat = LCDC_INPUT_ARGB8888;
-    //lcdc_init.LCDC_PixelInputFarmat = LCDC_INPUT_RGB565;
-    lcdc_init.LCDC_PixelOutpuFarmat = LCDC_OUTPUT_RGB888;
+    lcdc_init.LCDC_PixelInputFormat = LCDC_INPUT_ARGB8888;
+    //lcdc_init.LCDC_PixelInputFormat = LCDC_INPUT_RGB565;
+    lcdc_init.LCDC_PixelOutputFormat = LCDC_OUTPUT_RGB888;
     lcdc_init.LCDC_PixelBitSwap = LCDC_SWAP_BYPASS; //lcdc_handler_cfg->LCDC_TeEn = LCDC_TE_DISABLE;
 
     lcdc_init.LCDC_InfiniteModeEn = ENABLE;

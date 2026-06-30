@@ -360,6 +360,7 @@ bool hw_idu_decode(ppe_rect_t *rect, uint8_t *input, uint32_t buffer_stride, uin
         IDU_ERROR err = IDU_Decode_With_Interrupt((uint8_t *)header, &range, &dma_cfg, int_cfg, &record);
         if (err != IDU_SUCCESS)
         {
+            IDU_Clean_State(&record);
             return false;
         }
         else
@@ -371,6 +372,7 @@ bool hw_idu_decode(ppe_rect_t *rect, uint8_t *input, uint32_t buffer_stride, uin
             }
             else
             {
+                IDU_Clean_State(&record);
                 return false;
             }
         }

@@ -190,7 +190,7 @@ void EDPI_MaskLineINTConfig(FunctionalState state)
 void EDPI_ClearLineINTPendingBit(void)
 {
     EDPI_INT_CLR_TypeDef edpi_reg_0x20 = {.d32 = EDPI->EDPI_INT_CLR};
-    edpi_reg_0x20.b.clif = 0;
+    edpi_reg_0x20.b.clif = 1;
     EDPI->EDPI_INT_CLR = edpi_reg_0x20.d32;
 }
 
