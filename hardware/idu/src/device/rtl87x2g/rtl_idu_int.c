@@ -404,3 +404,13 @@ void rtl_idu_int_tx_dma_setting(uint8_t tx_dma_ch, uint8_t tx_dma_depth,
     GDMA_Cmd(tx_dma_ch, ENABLE);
     current_tx_dma = tx_dma_ch;
 }
+
+uint8_t rtl_idu_int_get_rx_dma_channel(void)
+{
+    return current_rx_dma;
+}
+
+uint8_t rtl_idu_int_get_tx_dma_channel(void)
+{
+    return current_tx_dma;
+}

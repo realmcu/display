@@ -19,6 +19,47 @@
 #define ABS(x)               (((x) < 0)    ? -(x) :  (x))
 #define EPS                  1.1920929e-7f
 
+
+/*============================================================================*
+ *                 Busy-wait Timeout & Suspend-Abort
+ *============================================================================*/
+/* Hang-prevention bounded busy-wait. Calibrated loop-count safety net, NOT a
+ * precise deadline. See PPE_WAIT_TIMEOUT_MS to tune the budget. */
+#define PPE_DISP_CPU_CLOCK_HZ       333000000U   /* amebaG2 CPU: up to 333 MHz */
+#define PPE_DISP_WAIT_TIMEOUT_MS    1000U
+#define PPE_DISP_WAIT_MAX_ITER      ((PPE_DISP_CPU_CLOCK_HZ / 1000U) * PPE_DISP_WAIT_TIMEOUT_MS / 4U)
+
+#define PPE_DISP_BUSY_WAIT(cond, timed_out)             \
+    do {                                                \
+        uint32_t _cnt = 0;                              \
+        (timed_out) = false;                            \
+        while (cond) {                                  \
+            if (++_cnt > PPE_DISP_WAIT_MAX_ITER) {      \
+                (timed_out) = true;                     \
+                break;                                  \
+            }                                           \
+        }                                               \
+    } while (0)
+
+/* Suspend-abort the PPE engine after a timeout.
+ * GLB_STATUS.run_state[2:0] = 0x3 (suspend request), poll until == 0x2
+ * (suspended), then write 0x0 to clear. */
+static void ppe_disp_suspend_abort(void)
+{
+    bool poll_to;
+
+    /* Request suspend */
+    PPE_DISP->REG_GLB_STATUS = 0x3U;
+
+    /* Wait for the engine to acknowledge (run_state == 0x2). */
+    PPE_DISP_BUSY_WAIT(((PPE_DISP_REG_GLB_STATUS_TypeDef)PPE_DISP->REG_GLB_STATUS).b.run_state != 0x2U,
+                       poll_to);
+    (void)poll_to;  /* nothing more we can do if even suspend-ack times out */
+
+    /* Release */
+    PPE_DISP->REG_GLB_STATUS = 0x0U;
+}
+
 /*============================================================================*
  *                          Private Variables
  *============================================================================*/
@@ -562,7 +603,13 @@ uint8_t PPE_DISP_Get_Pixel_Size(PPE_DISP_PIXEL_FORMAT format)
 
 void PPE_DISP_Finish(void)
 {
-    while (((PPE_DISP_REG_GLB_STATUS_TypeDef)PPE_DISP->REG_GLB_STATUS).b.run_state);
+    bool timed_out;
+    PPE_DISP_BUSY_WAIT(((PPE_DISP_REG_GLB_STATUS_TypeDef)PPE_DISP->REG_GLB_STATUS).b.run_state,
+                       timed_out);
+    if (timed_out)
+    {
+        ppe_disp_suspend_abort();
+    }
 }
 
 PPE_DISP_err PPE_DISP_Blit(ppe_buffer_t *target, ppe_buffer_t *image, ppe_matrix_t *matrix,
@@ -1038,7 +1085,13 @@ PPE_DISP_err PPE_DISP_Blit_Inverse(ppe_buffer_t *dst, ppe_buffer_t *src, ppe_mat
     }
     PPE_DISP_ResultLayer_Init(&PPE_DISP_ResultLayer0_Init);
     HONEYGUI_PPE_DISP_Cmd(ENABLE);
-    while (((PPE_DISP_REG_GLB_STATUS_TypeDef)PPE_DISP->REG_GLB_STATUS).b.run_state);
+    bool to;
+    PPE_DISP_BUSY_WAIT(((PPE_DISP_REG_GLB_STATUS_TypeDef)PPE_DISP->REG_GLB_STATUS).b.run_state, to);
+    if (to)
+    {
+        ppe_disp_suspend_abort();
+        return PPE_DISP_ERR_TIMEOUT;
+    }
     return PPE_DISP_SUCCESS;
 }
 
@@ -1167,7 +1220,13 @@ PPE_DISP_err PPE_DISP_Mask(ppe_buffer_t *dst, uint32_t color, ppe_rect_t *rect)
     PPE_DISP_ResultLayer_Init(&PPE_DISP_ResultLayer0_Init);
 
     HONEYGUI_PPE_DISP_Cmd(ENABLE);
-    while (((PPE_DISP_REG_GLB_STATUS_TypeDef)PPE_DISP->REG_GLB_STATUS).b.run_state);
+    bool to;
+    PPE_DISP_BUSY_WAIT(((PPE_DISP_REG_GLB_STATUS_TypeDef)PPE_DISP->REG_GLB_STATUS).b.run_state, to);
+    if (to)
+    {
+        ppe_disp_suspend_abort();
+        return PPE_DISP_ERR_TIMEOUT;
+    }
     return PPE_DISP_SUCCESS;
 }
 
@@ -1491,7 +1550,13 @@ PPE_DISP_err PPE_DISP_Blend_Multi(ppe_buffer_t *dst, ppe_buffer_t *src_1,
     PPE_DISP_ResultLayer_Init(&PPE_DISP_ResultLayer0_Init);
 
     HONEYGUI_PPE_DISP_Cmd(ENABLE);
-    while (((PPE_DISP_REG_GLB_STATUS_TypeDef)PPE_DISP->REG_GLB_STATUS).b.run_state);
+    bool to;
+    PPE_DISP_BUSY_WAIT(((PPE_DISP_REG_GLB_STATUS_TypeDef)PPE_DISP->REG_GLB_STATUS).b.run_state, to);
+    if (to)
+    {
+        ppe_disp_suspend_abort();
+        return PPE_DISP_ERR_TIMEOUT;
+    }
     return PPE_DISP_SUCCESS;
 }
 

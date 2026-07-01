@@ -19,6 +19,46 @@
 #define MIN(x, y)           (((x)<(y))?(x):(y))
 #define MAX(x, y)           (((x)>(y))?(x):(y))
 
+
+/*============================================================================*
+ *                 Busy-wait Timeout & Suspend-Abort
+ *============================================================================*/
+/* Hang-prevention bounded busy-wait. Calibrated loop-count safety net, NOT a
+ * precise deadline. See PPE_WAIT_TIMEOUT_MS to tune the budget. */
+#define PPE_CPU_CLOCK_HZ        125000000U   /* rtl87x2g CPU: 125 MHz */
+#define PPE_WAIT_TIMEOUT_MS     1000U
+#define PPE_WAIT_MAX_ITER       ((PPE_CPU_CLOCK_HZ / 1000U) * PPE_WAIT_TIMEOUT_MS / 4U)
+
+#define PPE_BUSY_WAIT(cond, timed_out)                  \
+    do {                                                \
+        uint32_t _cnt = 0;                              \
+        (timed_out) = false;                            \
+        while (cond) {                                  \
+            if (++_cnt > PPE_WAIT_MAX_ITER) {           \
+                (timed_out) = true;                     \
+                break;                                  \
+            }                                           \
+        }                                               \
+    } while (0)
+
+/* Suspend-abort the PPE engine after a timeout.
+ * GLB_CTL.abort (BIT1, W1C) + susp (BIT2, W1C) are written together, then
+ * we wait for glb_en (BIT0) to be cleared by the hardware as confirmation. */
+static void ppe_suspend_abort(void)
+{
+    bool poll_to;
+
+    /* Trigger abort + suspend */
+    PPE_GLB_CTL_TypeDef ctl = {.d32 = PPE->GLB_CTL};
+    ctl.b.abort = 1;
+    ctl.b.susp  = 1;
+    PPE->GLB_CTL = ctl.d32;
+
+    /* Wait for glb_en to be cleared by the hardware */
+    PPE_BUSY_WAIT(PPE->GLB_CTL & BIT0, poll_to);
+    (void)poll_to;
+}
+
 /*============================================================================*
  *                           Public Functions
  *============================================================================*/
@@ -420,7 +460,13 @@ PPE_ERR PPE_Scale(ppe_buffer_t *image, ppe_buffer_t *buffer, float x_ratio, floa
 
     PPE_Secure(ENABLE);
     PPE_Cmd(ENABLE);
-    while (PPE->GLB_CTL & BIT0);
+    bool to;
+    PPE_BUSY_WAIT(PPE->GLB_CTL & BIT0, to);
+    if (to)
+    {
+        ppe_suspend_abort();
+        return PPE_ERROR_TIMEOUT;
+    }
 
     return PPE_SUCCESS;
 }
@@ -542,7 +588,13 @@ PPE_ERR PPE_Scale_Rect(ppe_buffer_t *image, ppe_buffer_t *buffer, float x_ratio,
 
     PPE_Secure(ENABLE);
     PPE_Cmd(ENABLE);
-    while (PPE->GLB_CTL & BIT0);
+    bool to;
+    PPE_BUSY_WAIT(PPE->GLB_CTL & BIT0, to);
+    if (to)
+    {
+        ppe_suspend_abort();
+        return PPE_ERROR_TIMEOUT;
+    }
 
     return PPE_SUCCESS;
 }
@@ -618,7 +670,13 @@ PPE_ERR PPE_Clear(ppe_buffer_t *buffer, uint32_t color)
 
     /*enable PPE*/
     PPE_Cmd(ENABLE);
-    while (PPE->GLB_CTL & BIT0);
+    bool to;
+    PPE_BUSY_WAIT(PPE->GLB_CTL & BIT0, to);
+    if (to)
+    {
+        ppe_suspend_abort();
+        return PPE_ERROR_TIMEOUT;
+    }
 
     return PPE_SUCCESS;
 }
@@ -754,7 +812,13 @@ PPE_ERR PPE_Clear_Rect(ppe_buffer_t *buffer, ppe_rect_t *rect, uint32_t color)
 
     /*enable PPE*/
     PPE_Cmd(ENABLE);
-    while (PPE->GLB_CTL & BIT0);
+    bool to;
+    PPE_BUSY_WAIT(PPE->GLB_CTL & BIT0, to);
+    if (to)
+    {
+        ppe_suspend_abort();
+        return PPE_ERROR_TIMEOUT;
+    }
     return PPE_SUCCESS;
 }
 
@@ -969,7 +1033,13 @@ PPE_ERR PPE_Blend(ppe_buffer_t *image, ppe_buffer_t *buffer, ppe_translate_t *tr
     PPE_Secure(ENABLE);  /*secure for all channel*/
     /*enable PPE*/
     PPE_Cmd(ENABLE);
-    while (PPE->GLB_CTL & BIT0);
+    bool to;
+    PPE_BUSY_WAIT(PPE->GLB_CTL & BIT0, to);
+    if (to)
+    {
+        ppe_suspend_abort();
+        return PPE_ERROR_TIMEOUT;
+    }
     return PPE_SUCCESS;
 }
 
@@ -1144,7 +1214,13 @@ PPE_ERR PPE_Blend_Rect(ppe_buffer_t *image, ppe_buffer_t *buffer, ppe_translate_
 
     /*enable PPE*/
     PPE_Cmd(ENABLE);
-    while (PPE->GLB_CTL & BIT0);
+    bool to;
+    PPE_BUSY_WAIT(PPE->GLB_CTL & BIT0, to);
+    if (to)
+    {
+        ppe_suspend_abort();
+        return PPE_ERROR_TIMEOUT;
+    }
 
     return PPE_SUCCESS;
 }
@@ -1574,7 +1650,13 @@ PPE_ERR PPE_Blend_Multi(ppe_input_list_t list)
     PPE_Secure(ENABLE);  /*secure for all channel*/
     /*enable PPE*/
     PPE_Cmd(ENABLE);
-    while (PPE->GLB_CTL & BIT0);
+    bool to;
+    PPE_BUSY_WAIT(PPE->GLB_CTL & BIT0, to);
+    if (to)
+    {
+        ppe_suspend_abort();
+        return PPE_ERROR_TIMEOUT;
+    }
     return PPE_SUCCESS;
 }
 
@@ -1690,6 +1772,12 @@ PPE_ERR PPE_Mask(ppe_buffer_t *src, ppe_buffer_t *target, ppe_rect_t *rect, uint
     PPE_Secure(ENABLE);  /*secure for all channel*/
     /*enable PPE*/
     PPE_Cmd(ENABLE);
-    while (PPE->GLB_CTL & BIT0);
+    bool to;
+    PPE_BUSY_WAIT(PPE->GLB_CTL & BIT0, to);
+    if (to)
+    {
+        ppe_suspend_abort();
+        return PPE_ERROR_TIMEOUT;
+    }
     return PPE_SUCCESS;
 }

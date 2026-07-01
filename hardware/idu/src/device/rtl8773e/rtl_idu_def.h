@@ -582,6 +582,21 @@ typedef union
         } IDU_INT_CLEAR_TypeDef;
 
 
+    /*============================================================================*
+     *                         IDU Busy-wait Timeout
+     *============================================================================*/
+    /* Hang-prevention budget for the polled IDU paths (see IDU_BUSY_WAIT in
+     * rtl_idu.c). Calibrated loop count, NOT a precise deadline: roughly
+     * IDU_WAIT_TIMEOUT_MS milliseconds worst case assuming ~4 CPU cycles per
+     * polling iteration, derived from this chip's CPU clock. Tune via
+     * IDU_WAIT_TIMEOUT_MS. */
+#ifndef IDU_WAIT_TIMEOUT_MS
+#define IDU_WAIT_TIMEOUT_MS     500U
+#endif
+#define IDU_CPU_CLOCK_HZ        100000000U   /* rtl8773e CPU: 100 MHz */
+#define IDU_WAIT_MAX_ITER       ((IDU_CPU_CLOCK_HZ / 1000U) * IDU_WAIT_TIMEOUT_MS / 4U)
+
+
 #ifdef  __cplusplus
 }
 #endif /* __cplusplus */

@@ -598,3 +598,13 @@ uint8_t rtl_idu_int_get_dma_ch(void)
 {
     return current_rx_dma;
 }
+
+uint8_t rtl_idu_int_get_rx_dma_channel(void)
+{
+    return current_rx_dma;
+}
+
+uint8_t rtl_idu_int_get_tx_dma_channel(void)
+{
+    return current_tx_dma;
+}

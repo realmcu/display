@@ -187,6 +187,7 @@ typedef enum
     IDU_ERROR_FILE_INVALID,             /*!< Parameters in input compressed file setting are invalid. */
     IDU_ERROR_LINE_NOT_ALIGNED,         /*!< Line width in bytes must be 4-byte aligned when target stride is larger than line width. */
     IDU_ERROR_NULL_INT_REPORT,          /*!< Record must be created when use IDU with interrupt. */
+    IDU_ERROR_TIMEOUT,                  /*!< IDU engine or DMA did not complete within the busy-wait budget. */
 } IDU_ERROR;
 /** End of IDU_ERROR
   * \}

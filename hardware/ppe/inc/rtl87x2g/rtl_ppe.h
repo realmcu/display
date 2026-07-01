@@ -116,6 +116,7 @@ typedef enum
     PPE_ERROR_NULL_SOURCE,          /*!< Blending source is invalid. */
     PPE_ERROR_NULL_TARGET,          /*!< Blending target is invalid. */
     PPE_ERROR_OUT_OF_RANGE,         /*!< Image is out of blending area. */
+    PPE_ERROR_TIMEOUT,              /*!< PPE engine did not complete within the busy-wait budget. */
 } PPE_ERR;
 /** End of PPE_ERR
   * \}

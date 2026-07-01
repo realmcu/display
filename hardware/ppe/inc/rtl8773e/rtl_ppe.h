@@ -353,6 +353,7 @@ typedef enum
     PPE_ERR_NULL_SOURCE,     /*!< PPE source is null. */
     PPE_ERR_INVALID_MATRIX,  /*!< Input matrix is invalid. */
     PPE_ERR_INVALID_RANGE,   /*!< Blend range is invalid. */
+    PPE_ERR_TIMEOUT,         /*!< PPE engine did not complete within the busy-wait budget. */
 } PPE_err;
 /** End of PPE_ERR
   * \}

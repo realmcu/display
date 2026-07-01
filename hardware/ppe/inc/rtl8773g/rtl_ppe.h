@@ -244,6 +244,7 @@ typedef enum
     PPE_ERR_INVALID_MATRIX,      /*!< Matrix is invalid. */
     PPE_ERR_INVALID_RANGE,       /*!< Blend region is invalid. */
     PPE_ERR_INVALID_PARAMETER,   /*!< Input parameter is invalid, such as buffer and color key. */
+    PPE_ERR_TIMEOUT,             /*!< PPE engine did not complete within the busy-wait budget. */
 } PPE_ERR;
 /** End of PPE_ERR
   * \}
@@ -928,6 +929,67 @@ PPE_ERR PPE_Mask(ppe_buffer_t *dst, uint32_t color, ppe_rect_t *rect);
  * \endcode
  */
 PPE_ERR PPE_Clear(ppe_buffer_t *dst, uint32_t color, ppe_rect_t *rect);
+
+/**
+ * \brief  Mix alpha and other format together.
+ * \param[in] alpha: Alpha buffer to be mixed.
+ * \param[in] src: Ohter picture.
+ * \param[in] output: Mix result.
+ * \return Operation result.
+ * \retval PPE_SUCCESS   Operation success.
+ * \retval Others        Operation failure, cause refers to @ref PPE_ERR .
+ *
+ * <b>Example usage</b>
+ * \code{.c}
+    void test_code(void){
+        ppe_buffer_t mix_a, mix_rgb, output;
+        memset(&mix_a, 0, sizeof(ppe_buffer_t));
+        memset(&mix_rgb, 0, sizeof(ppe_buffer_t));
+        memset(&output, 0, sizeof(ppe_buffer_t));
+        PPE_BLEND_METHOD method = PPE_BLEND_SRC_IN;
+
+        mix_a.format = PPE_A8;
+        mix_a.address = (uint32_t)a;
+        mix_a.opacity = 0xFF;
+        mix_a.width = w;
+        mix_a.height = h;
+        mix_a.stride = w;
+        mix_a.const_color = 0xFF000000;
+        mix_a.win_x_min = 0;
+        mix_a.win_x_max = w - 1;
+        mix_a.win_y_min = 0;
+        mix_a.win_y_max = h - 1;
+
+        mix_rgb.format = PPE_RGB565;
+        mix_rgb.address = (uint32_t)rgb;
+        mix_rgb.opacity = 0xFF;
+        mix_rgb.width = w;
+        mix_rgb.height = h;
+        mix_rgb.stride = w;
+        mix_rgb.const_color = 0xFFFFFFFF;
+        mix_rgb.win_x_min = 0;
+        mix_rgb.win_x_max = w - 1;
+        mix_rgb.win_y_min = 0;
+        mix_rgb.win_y_max = h - 1;
+
+        output.format = PPE_ARGB8888;
+        output.address = (uint32_t)argb;
+        output.opacity = 0xFF;
+        output.width = w;
+        output.height = h;
+        output.stride = w;
+        output.const_color = 0xFFFFFFFF;
+        output.win_x_min = 0;
+        output.win_x_max = w - 1;
+        output.win_y_min = 0;
+        output.win_y_max = h - 1;
+
+        PPE_Mix_Alpha(&mix_a, &mix_rgb, &output);
+        PPE_Finish();
+    }
+ * \endcode
+ */
+PPE_ERR PPE_Mix_Alpha(ppe_buffer_t *alpha, ppe_buffer_t *src, ppe_buffer_t *output);
 
 /**
  * \brief  Get intersect area of 2 rectangles.

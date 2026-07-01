@@ -98,6 +98,9 @@ bool rtl_idu_int_is_rx_dma_done(void);
 
 bool rtl_idu_int_is_tx_dma_done(void);
 
+uint8_t rtl_idu_int_get_rx_dma_channel(void);
+uint8_t rtl_idu_int_get_tx_dma_channel(void);
+
 void rtl_idu_int_rx_dma_setting(uint32_t src, uint32_t len, uint8_t dma_ch,
                                 GDMA_LLIDef **RX_GDMA_LLIStruct);
 

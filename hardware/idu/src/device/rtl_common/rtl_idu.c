@@ -13,6 +13,26 @@
 
 
 /*============================================================================*
+ *                           Busy-wait Timeout
+ *============================================================================*/
+/* Bounded busy-wait used by the polled IDU paths. (timed_out) is set to true
+ * if the wait exceeds IDU_WAIT_MAX_ITER iterations (defined per chip in
+ * rtl_idu_def.h, derived from that chip's CPU clock). This is a calibrated
+ * loop-count safety net to prevent a hardware hang from wedging the CPU
+ * forever, NOT a precise deadline. */
+#define IDU_BUSY_WAIT(cond, timed_out)                  \
+    do {                                                \
+        uint32_t _cnt = 0;                              \
+        (timed_out) = false;                            \
+        while (cond) {                                  \
+            if (++_cnt > IDU_WAIT_MAX_ITER) {           \
+                (timed_out) = true;                     \
+                break;                                  \
+            }                                           \
+        }                                               \
+    } while (0)
+
+/*============================================================================*
  *                           Static Functions
  *============================================================================*/
 static void IDU_Init(IDU_InitTypeDef *IDU_init_struct)
@@ -454,18 +474,51 @@ IDU_ERROR IDU_Decode(uint8_t *file, IDU_decode_range *range, IDU_DMA_config *dma
 
     IDU_Cmd(ENABLE);
     IDU_Run(ENABLE);
-    uint32_t cnt = 0;
-    while (IDU->IDU_CTL0 & BIT0);
+    bool timed_out;
+    IDU_BUSY_WAIT(IDU->IDU_CTL0 & BIT0, timed_out);
+    if (timed_out)
+    {
+        err = IDU_ERROR_TIMEOUT;
+        goto cleanup;
+    }
     if (IDU_GetINTStatus(IDU_DECOMPRESS_ERROR_INT))
     {
         err =  IDU_ERROR_DECODE_FAIL;
+        goto cleanup;
     }
-    while (!rtl_idu_int_is_rx_dma_done());
-    while (!rtl_idu_int_is_tx_dma_done());
+    IDU_BUSY_WAIT(!rtl_idu_int_is_rx_dma_done(), timed_out);
+    if (timed_out)
+    {
+        err = IDU_ERROR_TIMEOUT;
+        goto cleanup;
+    }
+    IDU_BUSY_WAIT(!rtl_idu_int_is_tx_dma_done(), timed_out);
+    if (timed_out)
+    {
+        err = IDU_ERROR_TIMEOUT;
+        goto cleanup;
+    }
     IDU_RxFifoClear();
     IDU_Cmd(DISABLE);
-    while (!(IDU->IDU_CTL1 & BIT29));
+    IDU_BUSY_WAIT(!(IDU->IDU_CTL1 & BIT29), timed_out);
+    if (timed_out)
+    {
+        err = IDU_ERROR_TIMEOUT;
+        goto cleanup;
+    }
     IDU_TxFifoClear();
+
+cleanup:
+    if (err != IDU_SUCCESS)
+    {
+        /* Decode failed or the engine/DMA never signalled completion. Force-stop
+         * IDU and abort both GDMA channels (GDMA_Cmd performs an internal safe
+         * suspend) so we leave no transfer in flight and do not wedge the next
+         * operation. */
+        IDU_Cmd(DISABLE);
+        GDMA_Cmd(rtl_idu_int_get_rx_dma_channel(), DISABLE);
+        GDMA_Cmd(rtl_idu_int_get_tx_dma_channel(), DISABLE);
+    }
     if (TX_GDMA_LLIStruct)
     {
         rtl_idu_free_int(TX_GDMA_LLIStruct);
@@ -660,8 +713,8 @@ IDU_ERROR IDU_Decode_With_Interrupt(uint8_t *file, IDU_decode_range *range, IDU_
 
     record->rx_lli = RX_GDMA_LLIStruct;
     record->tx_lli = TX_GDMA_LLIStruct;
-    record->rx_dma_num = dma_cfg->RX_DMA_channel_num;
-    record->tx_dma_num = dma_cfg->TX_DMA_channel_num;
+    record->rx_dma_num = rtl_idu_int_get_rx_dma_channel();
+    record->tx_dma_num = rtl_idu_int_get_tx_dma_channel();
     IDU_Cmd(ENABLE);
     IDU_Run(ENABLE);
     return IDU_SUCCESS;
@@ -673,12 +726,23 @@ void IDU_Clean_State(IDU_State_Record *record)
     {
         return;
     }
-    while (!rtl_idu_int_is_rx_dma_done());
-    while (!rtl_idu_int_is_tx_dma_done());
+    bool rx_timed_out, tx_timed_out, fifo_timed_out;
+    IDU_BUSY_WAIT(!rtl_idu_int_is_rx_dma_done(), rx_timed_out);
+    IDU_BUSY_WAIT(!rtl_idu_int_is_tx_dma_done(), tx_timed_out);
+    if (rx_timed_out || tx_timed_out)
+    {
+        /* This is the recovery path: the DMA never signalled completion, so we
+         * must abort the channels (safe suspend) instead of waiting forever -
+         * otherwise the very condition that triggered cleanup would hang here. */
+        GDMA_Cmd(record->rx_dma_num, DISABLE);
+        GDMA_Cmd(record->tx_dma_num, DISABLE);
+    }
     IDU_RxFifoClear();
     IDU_Cmd(DISABLE);
-    while (!(IDU->IDU_CTL1 & BIT29));
+    IDU_BUSY_WAIT(!(IDU->IDU_CTL1 & BIT29), fifo_timed_out);
+    (void)fifo_timed_out;
     IDU_TxFifoClear();
+    /* LLIs are freed unconditionally so a wedged engine can never leak them. */
     if (record->rx_lli)
     {
         rtl_idu_free_int(record->rx_lli);
