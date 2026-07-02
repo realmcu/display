@@ -360,7 +360,6 @@ bool hw_idu_decode(ppe_rect_t *rect, uint8_t *input, uint32_t buffer_stride, uin
         IDU_ERROR err = IDU_Decode_With_Interrupt((uint8_t *)header, &range, &dma_cfg, int_cfg, &record);
         if (err != IDU_SUCCESS)
         {
-            IDU_Clean_State(&record);
             return false;
         }
         else
@@ -372,7 +371,6 @@ bool hw_idu_decode(ppe_rect_t *rect, uint8_t *input, uint32_t buffer_stride, uin
             }
             else
             {
-                IDU_Clean_State(&record);
                 return false;
             }
         }
@@ -1990,7 +1988,8 @@ void hw_acc_blit(draw_img_t *image, struct gui_dispdev *dc, struct gui_rect *rec
     }
 }
 
-void hw_acc_mix_a_rgb(uint8_t *a, uint8_t *rgb, uint8_t *argb, uint16_t w, uint16_t h)
+void hw_acc_mix_a_rgb(uint8_t *a, uint16_t a_stride, uint8_t *rgb, uint8_t *argb, uint16_t w,
+                      uint16_t h)
 {
     ppe_buffer_t mix_a, mix_rgb, output;
     memset(&mix_a, 0, sizeof(ppe_buffer_t));
@@ -2003,7 +2002,7 @@ void hw_acc_mix_a_rgb(uint8_t *a, uint8_t *rgb, uint8_t *argb, uint16_t w, uint1
     mix_a.opacity = 0xFF;
     mix_a.width = w;
     mix_a.height = h;
-    mix_a.stride = w;
+    mix_a.stride = a_stride;
     mix_a.const_color = 0xFF000000;
     mix_a.win_x_min = 0;
     mix_a.win_x_max = w - 1;
@@ -2047,21 +2046,15 @@ void hw_acc_blur_a8(struct gui_dispdev *dc, gui_rect_t *rect, uint8_t blur_degre
     {
         return;
     }
-    gui_rect_t target_rect = {.x1 = 0, .x2 = dc->screen_width - 1, .y1 = 0, .y2 = dc->screen_height - 1};
-    if (!rect_intersect(&target_rect, &target_rect, rect))
-    {
-        return;
-    }
     int16_t blur_w = blur_rect.x2 - blur_rect.x1 + 1;
     int16_t blur_h = blur_rect.y2 - blur_rect.y1 + 1;
-    int16_t img_w  = rect->x2 - rect->x1 + 1;
-    int16_t img_h  = rect->y2 - rect->y1 + 1;
     uint8_t  bpp   = dc->bit_depth / 8;
 
     uint8_t *blur_copy = (uint8_t *)gui_malloc((uint32_t)blur_w * (uint32_t)blur_h * bpp);
 
     uint8_t *buffer = dc->frame_buf +
-                      ((blur_rect.y1 - dc->section.y1) * dc->fb_width + blur_rect.x1) * bpp;
+                      ((blur_rect.y1 - dc->section.y1) * dc->fb_width +
+                       (blur_rect.x1 - dc->section.x1)) * bpp;
     for (int16_t row = 0; row < blur_h; row++)
     {
         memcpy(blur_copy + (uint32_t)row * blur_w * bpp,
@@ -2069,31 +2062,33 @@ void hw_acc_blur_a8(struct gui_dispdev *dc, gui_rect_t *rect, uint8_t blur_degre
                (uint32_t)blur_w * bpp);
     }
 
-    /* Use image-local coordinates so frame_buf points directly to blur_copy
-     * (no backward pointer arithmetic).  The arm2d IIR accumulator still
-     * carries across sections because target.{x,y1}=0 while the section
-     * origin shifts per section, giving tOffset.iY > 0. */
-    gui_rect_t local_rect = {0, 0, img_w - 1, img_h - 1};
+    int16_t onscreen_top    = rect->y1 < 0 ? 0 : rect->y1;
+    int16_t onscreen_bottom = rect->y2 > (int16_t)dc->screen_height - 1
+                              ? (int16_t)dc->screen_height - 1 : rect->y2;
+    int16_t target_h        = onscreen_bottom - onscreen_top + 1;
+
+    gui_rect_t local_rect = {0, 0, blur_w - 1, target_h - 1};
 
     gui_dispdev_t fake_dc = {0};
     fake_dc.frame_buf     = blur_copy;
     fake_dc.fb_width      = (uint16_t)blur_w;
-    fake_dc.screen_width  = (uint16_t)img_w;
-    fake_dc.screen_height = dc->screen_height;
+    fake_dc.screen_width  = (uint16_t)blur_w;
+    fake_dc.screen_height = (uint16_t)target_h;
     fake_dc.bit_depth     = dc->bit_depth;
-    fake_dc.section.x1    = blur_rect.x1 - rect->x1;
-    fake_dc.section.y1    = blur_rect.y1 - rect->y1;
-    fake_dc.section.x2    = blur_rect.x2 - rect->x1;
-    fake_dc.section.y2    = blur_rect.y2 - rect->y1;
+    fake_dc.section.x1    = 0;
+    fake_dc.section.y1    = blur_rect.y1 - onscreen_top;
+    fake_dc.section.x2    = blur_w - 1;
+    fake_dc.section.y2    = blur_rect.y2 - onscreen_top;
 
     gui_get_acc()->blur(&fake_dc, &local_rect, blur_degree, cache_mem);
 
     uint8_t *argb_combine = (uint8_t *)gui_malloc((uint32_t)blur_w * (uint32_t)blur_h * 4 + 8);
-    int16_t       screen_y = blur_rect.y1;
-    const uint8_t *a8_row  = a8_base + (screen_y - a8_origin_y) * a8_stride;
+    const uint8_t *a8_row  = a8_base +
+                             (blur_rect.y1 - a8_origin_y) * a8_stride +
+                             (blur_rect.x1 - a8_origin_x);
     uint8_t       *p_out   = buffer;
     uint8_t       *p_blur  = blur_copy;
-    hw_acc_mix_a_rgb((uint8_t *)a8_row, p_blur, argb_combine, blur_w, blur_h);
+    hw_acc_mix_a_rgb((uint8_t *)a8_row, (uint16_t)a8_stride, p_blur, argb_combine, blur_w, blur_h);
 
     ppe_matrix_t inverse;
     ppe_get_identity(&inverse);
