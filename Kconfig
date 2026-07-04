@@ -57,6 +57,12 @@ config REALTEK_LCD_SH8601Z_410_502_QSPI
 	help
 		This config for realtek display lcd device driver
 
+config REALTEK_LCD_ST77916_360_360_QSPI
+	bool "Enable Realtek LCD Device Driver 360 360"
+	default n
+	help
+		This config for realtek display lcd device driver
+
 config REALTEK_SH8601Z_454454_QSPI
 	bool "Enable Realtek LCD Device Driver 454 454"
 	default n
@@ -149,6 +155,12 @@ config REALTEK_TOUCH_GT911
 
 config REALTEK_TOUCH_CST816D
 	bool "Enable Realtek Touch Device CST816D"
+	default n
+	help
+		This config for realtek touch device driver
+
+config REALTEK_TOUCH_CST816D_ZEPHYR
+	bool "Enable Realtek Touch Device CST816D with Zephyr code style"
 	default n
 	help
 		This config for realtek touch device driver
