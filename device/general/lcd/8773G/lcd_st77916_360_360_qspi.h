@@ -63,6 +63,8 @@ void rtk_lcd_hal_update_framebuffer(uint8_t *buf, uint32_t len);
 void rtk_lcd_hal_clear_screen(uint32_t ARGB_color);
 void rtk_lcd_hal_start_transfer(uint8_t *buf, uint32_t len);
 void rtk_lcd_hal_transfer_done(void);
+bool rtk_lcd_hal_power_on(void);
+bool rtk_lcd_hal_power_off(void);
 
 
 void rtk_lcd_hal_set_TE_type(T_LCDC_TE_TYPE state);

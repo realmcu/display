@@ -11,6 +11,9 @@
 #ifdef CONFIG_REALTEK_LCD_SH8601Z_410_502_QSPI
 #include "lcd_sh8601z_410_502_qspi.h"
 #endif
+#ifdef CONFIG_REALTEK_LCD_ST77916_360_360_QSPI
+#include "lcd_st77916_360_360_qspi.h"
+#endif
 
 #define DT_DRV_COMPAT realtek_rtl87x3g_display_lcd
 

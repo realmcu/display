@@ -693,9 +693,7 @@ void rtk_lcd_hal_init(void)
 {
     // return;
     DBG_DIRECT("%s %d", __FUNCTION__, __LINE__);
-    LCDC_Clock_Cfg(ENABLE);
-    RCC_DisplayClockConfig(DISPLAY_CLOCK_SOURCE_PLL1, DISPLAY_CLOCK_DIV_1);
-    RCC_PeriphClockCmd(APBPeriph_DISP, APBPeriph_DISP_CLOCK, ENABLE);
+    LCDC_Clock_Sel(LCDC_BUS_CLK_200M);
     //TODO
     qspi_pad_config();
 
@@ -799,3 +797,14 @@ uint32_t rtk_lcd_hal_get_pixel_bits(void)
 {
     return ST77916_360_360_DRV_PIXEL_BITS;
 }
+
+/*
+ * The ST77916 panel driver does not implement a dedicated power_on/off
+ * sequence (only init + transfer). Provide weak stubs so the upper
+ * blanking_on/off callers have symbols to link against. To add real
+ * sleep support later (e.g. 0x10 sleep-in / 0x11 sleep-out + backlight
+ * toggle), define same-named strong functions in this file and they
+ * will automatically override these weak defaults.
+ */
+__attribute__((weak)) bool rtk_lcd_hal_power_on(void)  { return true; }
+__attribute__((weak)) bool rtk_lcd_hal_power_off(void) { return true; }
