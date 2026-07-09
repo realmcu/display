@@ -652,6 +652,22 @@ void hw_acc_blit_direct(draw_img_t *image, struct gui_dispdev *dc, struct gui_re
         pre_trans.m[1][2] = rect->y1 * -1.0f;
         ppe_mat_multiply(&pre_trans, &inverse);
         memcpy(&inverse, &pre_trans, sizeof(float) * 9);
+        ppe_buffer_t virtual_target;
+        memset(&virtual_target, 0, sizeof(ppe_buffer_t));
+        virtual_target.width = dc->fb_width;
+        virtual_target.height = dc->fb_height;
+        ppe_rect_t src_rect = {.x = rect->x1, .y = rect->y1,
+                               .w = rect->x2 - rect->x1 + 1,
+                               .h = rect->y2 - rect->y1 + 1
+                              };
+        ppe_rect_t dst_rect;
+        if (ppe_get_area(&dst_rect, &src_rect, (ppe_matrix_t *)&image->matrix, &virtual_target))
+        {
+            x_min = dst_rect.x;
+            y_min = dst_rect.y;
+            x_max = dst_rect.x + dst_rect.w - 1;
+            y_max = dst_rect.y + dst_rect.h - 1;
+        }
     }
     else
     {
