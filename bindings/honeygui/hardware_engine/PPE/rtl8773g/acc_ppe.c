@@ -728,6 +728,21 @@ void hw_acc_blit_direct(draw_img_t *image, struct gui_dispdev *dc, struct gui_re
                               source.format) / PPE_BYTE_SIZE;
         source.width = rect->x2 - rect->x1 + 1;
         source.height = rect->y2 - rect->y1 + 1;
+        ppe_buffer_t virtual_target;
+        memset(&virtual_target, 0, sizeof(ppe_buffer_t));
+        virtual_target.width = dc->screen_width;
+        virtual_target.height = dc->screen_height;
+        ppe_rect_t src_rect = {.x1 = rect->x1, .y1 = rect->y1,
+                               .x2 = rect->x2, .y2 = rect->y2
+                              };
+        ppe_rect_t dst_rect;
+        if (ppe_get_area(&dst_rect, &src_rect, (ppe_matrix_t *)&image->matrix, &virtual_target))
+        {
+            x_min = dst_rect.x1;
+            y_min = dst_rect.y1;
+            x_max = dst_rect.x2;
+            y_max = dst_rect.y2;
+        }
     }
     ppe_rect_t constraint = (ppe_rect_t) {.x1 = x_min - dc->section.x1, .y1 = y_min - dc->section.y1, .x2 = dc->fb_width - 1, .y2 = dc->fb_height - 1};
     if (constraint.x1 < 0)
