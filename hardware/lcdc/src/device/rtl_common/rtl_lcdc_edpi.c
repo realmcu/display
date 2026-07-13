@@ -61,6 +61,11 @@ void EDPI_Init(LCDC_eDPICfgTypeDef *eDPICfg)
     assert_param(IS_EDPI_OP_MODE(eDPICfg->eDPI_OperateMode));
 
 
+    if (eDPICfg->eDPI_ClockDiv <= 2)
+    {
+        eDPICfg->eDPI_ClockDiv = 2;
+    }
+
     EDPI_DIV_PAR_TypeDef edpi_reg_0x50 = {.d32 = EDPI->EDPI_DIV_PAR};
     edpi_reg_0x50.b.edpi_div_par = eDPICfg->eDPI_ClockDiv;
     EDPI->EDPI_DIV_PAR = edpi_reg_0x50.d32;

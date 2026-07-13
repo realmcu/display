@@ -455,6 +455,8 @@ void rtk_lcd_hal_init(void)
     // st7789_chip_reset();
     LCDC_InitTypeDef lcdc_init = {0};
     lcdc_init.LCDC_Interface = LCDC_IF_DBIB;
+    lcdc_init.LCDC_GroupSel =
+        2;    // I8080 Group2 pins (D0-7=P0_4-7/P4_0-3, CS#=P0_0, WR#=P0_2, RD#=P1_6, DCX=P1_5), per RTL87x2G QFN88 pinmux
     lcdc_init.LCDC_PixelInputFormat = LCDC_INPUT_RGB565;
     lcdc_init.LCDC_PixelOutputFormat = LCDC_OUTPUT_RGB565;
     lcdc_init.LCDC_PixelBitSwap = LCDC_SWAP_BYPASS; //lcdc_handler_cfg->LCDC_TeEn = LCDC_TE_DISABLE;

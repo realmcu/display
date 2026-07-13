@@ -103,18 +103,15 @@ typedef struct
  * \{
  * \ingroup     LCDC_EDPI_Exported_Constants
  */
-#define EDPI_CLOCKDIV2          ((uint32_t)0x1)  /*!< Frequency division factor of eDPI clock is 2.*/
-#define EDPI_CLOCKDIV3          ((uint32_t)0x2)  /*!< Frequency division factor of eDPI clock is 3.*/
-#define EDPI_CLOCKDIV4          ((uint32_t)0x3)  /*!< Frequency division factor of eDPI clock is 4.*/
-#define EDPI_CLOCKDIV5          ((uint32_t)0x4)  /*!< Frequency division factor of eDPI clock is 5.*/
-#define EDPI_CLOCKDIV6          ((uint32_t)0x5)  /*!< Frequency division factor of eDPI clock is 6.*/
-#define EDPI_CLOCKDIV7          ((uint32_t)0x6)  /*!< Frequency division factor of eDPI clock is 7.*/
-#define EDPI_CLOCKDIV8          ((uint32_t)0x7)  /*!< Frequency division factor of eDPI clock is 8.*/
+#define EDPI_CLOCKDIV2          ((uint32_t)0x2)  /*!< Frequency division factor of eDPI clock is 2.*/
+#define EDPI_CLOCKDIV3          ((uint32_t)0x3)  /*!< Frequency division factor of eDPI clock is 3.*/
+#define EDPI_CLOCKDIV4          ((uint32_t)0x4)  /*!< Frequency division factor of eDPI clock is 4.*/
+#define EDPI_CLOCKDIV5          ((uint32_t)0x5)  /*!< Frequency division factor of eDPI clock is 5.*/
+#define EDPI_CLOCKDIV6          ((uint32_t)0x6)  /*!< Frequency division factor of eDPI clock is 6.*/
+#define EDPI_CLOCKDIV7          ((uint32_t)0x7)  /*!< Frequency division factor of eDPI clock is 7.*/
+#define EDPI_CLOCKDIV8          ((uint32_t)0x8)  /*!< Frequency division factor of eDPI clock is 8.*/
 
-#define IS_EDPI_CLOCKDIV(DIV)   (((DIV) == EDPI_CLOCKDIV2) || ((DIV) == EDPI_CLOCKDIV3) || \
-                                 ((DIV) == EDPI_CLOCKDIV4) || ((DIV) == EDPI_CLOCKDIV5) || \
-                                 ((DIV) == EDPI_CLOCKDIV6) || ((DIV) == EDPI_CLOCKDIV7) || \
-                                 ((DIV) == EDPI_CLOCKDIV8))
+#define IS_EDPI_CLOCKDIV(DIV)   (((DIV) >= 2) && ((DIV) <= 0xFFFF))
 
 /** End of LCDC_EDPI_Clock_Divider
   * \}
@@ -168,9 +165,9 @@ typedef struct
  * \ingroup     LCDC_EDPI_Exported_Constants
  */
 #define EDPI_PIXELFORMAT_RGB888            (0)               /*!< RGB888. */
-#define EDPI_PIXELFORMAT_RGB565_1          ((uint32_t)0x1)   /*!< RGB565_3(R[D15:D11]G[D10:D5]B[D4:D0]).*/
+#define EDPI_PIXELFORMAT_RGB565_1          ((uint32_t)0x1)   /*!< RGB565_1(R[D15:D11]G[D10:D5]B[D4:D0]).*/
 #define EDPI_PIXELFORMAT_RGB565_2          ((uint32_t)0x2)   /*!< RGB565_2(R[D20:D16]G[D13:D8]B[D4:D0]).*/
-#define EDPI_PIXELFORMAT_RGB565_3          ((uint32_t)0x3)   /*!< RGB565_1(R[D21:D17]G[D13:D8]B[D5:D1]).*/
+#define EDPI_PIXELFORMAT_RGB565_3          ((uint32_t)0x3)   /*!< RGB565_3(R[D21:D17]G[D13:D8]B[D5:D1]).*/
 
 #define IS_EDPI_PIXELFORMAT(FORMAT)   (((FORMAT) == EDPI_PIXELFORMAT_RGB888) || ((FORMAT) == EDPI_PIXELFORMAT_RGB565_1) || \
                                        ((FORMAT) == EDPI_PIXELFORMAT_RGB565_2) || ((FORMAT) == EDPI_PIXELFORMAT_RGB565_3))
@@ -516,7 +513,7 @@ void EDPI_OPMODE_CONFIG(uint32_t mode);
  * \note   The default settings for the eDPICfg member are shown in the following table:
  *         | Member                          | Default Value                 |
  *         |-------------------------------- |-------------------------------|
- *         | eDPI_ClockDiv                   | \ref EDPI_CLOCKDIV1           |
+ *         | eDPI_ClockDiv                   | \ref EDPI_CLOCKDIV2           |
  *         | eDPI_HoriSyncWidth              | 0                             |
  *         | eDPI_VeriSyncHeight             | 0                             |
  *         | eDPI_AccumulatedHBP             | 0                             |
