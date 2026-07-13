@@ -24,6 +24,7 @@ ci_check_config = {
         }
     },
     "ignore_file_encoding":[
+         r'.claude/skills/lcd-driver-gen',
     ],
     "ignore_cpp_astyle_check":[ 
 
