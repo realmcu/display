@@ -1,7 +1,6 @@
 # RTL8773G RGB(eDPI) Timing Parameters (HSA/HFP/HBP/HACT + VSA/VFP/VBP/VACT)
 
 Source: Reference file `device/general/lcd/8773G/st7701s_480480_rgb.c` (eDPI configuration section)
-+ Register sheet **eDPI** in the display controller register table xlsx
 + Hardware layer `rtl_lcdc_edpi.c` / `rtl_lcdc_edpi.h`.
 
 Only the **RGB / eDPI interface** requires these parameters; QSPI / SPI / DBIB do not involve them.
@@ -89,7 +88,7 @@ eDPICfg.eDPI_VeriSyncPolarity = 0;   /* 0 = active low  */
 eDPICfg.eDPI_DataEnPolarity   = 1;   /* 1 = active high */
 ```
 
-## Register semantics (xlsx eDPI sheet, for cross-reference)
+## Register semantics (eDPI register table, for cross-reference)
 
 `LCDC_eDPIInit` writes the above accumulated fields into these registers:
 

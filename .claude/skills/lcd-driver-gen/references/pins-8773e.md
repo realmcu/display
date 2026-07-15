@@ -3,7 +3,6 @@
 RTL8773E display pins: **RGB and QSPI each have 2 groups (Group0 / Group1), 8080 only has Group0**.
 After selecting a group, `lcdc_init.LCDC_GroupSel` must point to the same group (Group0→0 / Group1→1, pin group and GroupSel must match).
 
-> **Data source**: Pin mux xlsx, sheet "Digital pin mux", package column **QFN88** (column c4).
 > "**Display Controller Timing Constrain**" is a large cross-column section whose sub-headers (row 2) split it into 5 columns:
 >
 > | Column | Sub-header | Meaning |

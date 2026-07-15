@@ -57,7 +57,7 @@ All RGB reference drivers have `LCDC_GroupSel = 1`.
 > **Config1** packs 16 lines into lower P0_/P4_/P3_ pads (no P5_); **Config3** is similar to Config2 but shifted up by one bit.
 > The specific color order is determined by `eDPI_ColorMap` / `LCDC_PixelOutputFormat`, **the configured B/G/R line set must exactly match the selected Config**.
 
-**Config number ↔ `eDPI_ColorMap` register value (verified pin by pin against xlsx and `rtl_lcdc_edpi.h`)**:
+**Config number ↔ `eDPI_ColorMap` register value (verified against `rtl_lcdc_edpi.h`)**:
 Config number = register value = macro suffix, one-to-one correspondence, just use directly:
 
 | Selected Config | `eDPI_ColorMap` value (Macro / Value) | Pin set source |
@@ -112,7 +112,7 @@ Pinmux_Config(LCDC_RESET, DWGPIO);
 | LCD_RESX (Reset, active low) | `LCD_QSPI_RST` | P3_6 | P3_6 | (P3_6 is used as SIO3, see below) |
 
 - **Group1 / Group2 are quad only** (SIO0–3); **Group3 supports Octal (SIO0–7)**.
-- **RESX = P3_6** is valid for Group1/Group2 (xlsx shows P3_6 as `LCD_RESX` for these groups), all quad QSPI reference drivers have `RST=P3_6`.
+- **RESX = P3_6** is valid for Group1/Group2 (P3_6 is `LCD_RESX` for these groups), all quad QSPI reference drivers have `RST=P3_6`.
   **In Group3, P3_6 is used as SIO3**, so co5300 (Group3) has `LCD_QSPI_RST=P3_6` **commented out**, and reset must use a different free pin.
 - **RESET / BL are board-variant GPIOs**: reference drivers use **P1_4** (NV3030B / st7789_spi / icna3311) or **P1_2** (co5300 / ST77903) for BL.
 - ⚠️ **icna3311_280x456_qspi is a special case**: the `.h` file has **duplicate `#define`** for QSPI data macros (first Group1's P3_2/P3_3, then Group2's P0_6/P0_7, the latter takes effect),
@@ -181,7 +181,7 @@ Pad skeleton is the same as RGB: each line uses `Pad_Config(pin, PAD_PINMUX_MODE
    **8762G has no `Pad_HighSpeedFuncSel/MuxSel`** (this is the key difference from 8773E/8773G).
 
 **Self-Check**:
-- [ ] Pin macros match this table for **QFN88 (Column J)** one by one; if targeting non-QFN88, check the corresponding package column in the xlsx.
+- [ ] Pin macros match this table for **QFN88** one by one; if targeting non-QFN88, verify separately.
 - [ ] QSPI `LCDC_GroupSel` matches the **group number the pins belong to** (G1→1/G2→2/G3→3), **did not copy `//QFN88 2 - QFN68 1` comments**.
 - [ ] RGB `LCDC_GroupSel=1`; 8080 follows reference drivers (default 0).
 - [ ] RGB565 `eDPI_ColorMap` matches the selected Config number (Config1→`RGB565_1`/Config2→`RGB565_2`/Config3→`RGB565_3`),
