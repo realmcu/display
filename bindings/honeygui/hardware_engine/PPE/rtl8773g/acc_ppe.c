@@ -46,6 +46,10 @@ extern void sw_acc_blit(draw_img_t *image, struct gui_dispdev *dc, struct gui_re
 #define PPE_ACC_MIN_OPA             3
 #define PPE_TESS_LENGTH             92
 
+#ifndef PPE_RASTER_USE_SW_BLEND
+#define PPE_RASTER_USE_SW_BLEND     0
+#endif
+
 /* Default blur strength for IMG_A8_BLUR (matches gui_win / gui_view blur). */
 #ifndef GUI_A8_BLUR_DEGREE
 #define GUI_A8_BLUR_DEGREE 237
@@ -62,6 +66,12 @@ static int32_t CACHE_BUF_SIZE = 0;
 void hw_acc_blur_a8(struct gui_dispdev *dc, gui_rect_t *rect, uint8_t blur_degree, void *cache_mem,
                     const uint8_t *a8_base, int16_t a8_stride,
                     int16_t a8_origin_x, int16_t a8_origin_y, uint32_t recolor);
+bool hw_acc_mix_a_rgb(uint8_t *a, uint16_t a_stride, uint8_t *rgb,
+                      uint16_t rgb_stride, PPE_PIXEL_FORMAT rgb_format,
+                      uint8_t *argb, uint16_t w, uint16_t h);
+bool hw_acc_mix_a_rgb_vertical(uint8_t *a, uint8_t *rgb, uint16_t rgb_stride,
+                               PPE_PIXEL_FORMAT rgb_format, uint8_t *argb,
+                               uint16_t w, uint16_t h);
 
 static void change_cache_buf(uint32_t cache_size)
 {
@@ -643,21 +653,26 @@ static void setup_filter_black_color_key(ppe_buffer_t *source)
     source->color_key_config.key_replace.key_replace = 0x00000000;
 }
 
+static void ppe_wait_finish_blocking(void)
+{
+    if (gui_get_acc()->enable_thread_sync && sync_sem != NULL)
+    {
+        if (!os_sem_take(sync_sem, 1000))
+        {
+            PPE_Finish();
+        }
+    }
+    else
+    {
+        PPE_Finish();
+    }
+}
+
 static void ppe_wait_finish(void)
 {
     if (!gui_get_acc()->enable_async)
     {
-        if (gui_get_acc()->enable_thread_sync && sync_sem != NULL)
-        {
-            if (!os_sem_take(sync_sem, 1000))
-            {
-                PPE_Finish();
-            }
-        }
-        else
-        {
-            PPE_Finish();
-        }
+        ppe_wait_finish_blocking();
     }
 }
 
@@ -1974,6 +1989,475 @@ void hw_acc_blit_a8_blur(draw_img_t *image, struct gui_dispdev *dc, struct gui_r
     }
 }
 
+#if !PPE_RASTER_USE_SW_BLEND
+typedef struct
+{
+    uint8_t *cache;
+    uint32_t cache_size;
+    uint32_t cache_offset;
+} ppe_scratch_allocator_t;
+
+static uint8_t *ppe_scratch_alloc(ppe_scratch_allocator_t *allocator, uint32_t size,
+                                  bool *need_free)
+{
+    uint32_t aligned_offset = (allocator->cache_offset + 3U) & ~3U;
+    if (allocator->cache != NULL && aligned_offset <= allocator->cache_size &&
+        size <= allocator->cache_size - aligned_offset)
+    {
+        uint8_t *buffer = allocator->cache + aligned_offset;
+        allocator->cache_offset = aligned_offset + size;
+        *need_free = false;
+        return buffer;
+    }
+
+    *need_free = true;
+    return acc_ppe_malloc(size);
+}
+
+static void ppe_scratch_free(uint8_t *buffer, bool need_free)
+{
+    if (need_free && buffer != NULL)
+    {
+        acc_ppe_free(buffer);
+    }
+}
+
+static bool hw_acc_blit_raster_horizontal(draw_img_t *image, struct gui_dispdev *dc)
+{
+    struct gui_rgb_data_head *head = image->data;
+    if (head == NULL || image->raster_prog <= 0.0f)
+    {
+        return true;
+    }
+
+    if (image->matrix.m[0][0] != 1.0f || image->matrix.m[1][1] != 1.0f ||
+        image->matrix.m[0][1] != 0.0f || image->matrix.m[1][0] != 0.0f ||
+        image->matrix.m[2][0] != 0.0f || image->matrix.m[2][1] != 0.0f ||
+        image->matrix.m[2][2] != 1.0f)
+    {
+        return false;
+    }
+
+    int32_t x1 = _UI_MAX(image->img_target_x, dc->section.x1);
+    int32_t y1 = _UI_MAX(image->img_target_y, dc->section.y1);
+    int32_t x2 = _UI_MIN(image->img_target_x + image->img_target_w - 1, dc->section.x2);
+    int32_t y2 = _UI_MIN(image->img_target_y + image->img_target_h - 1, dc->section.y2);
+    x1 = _UI_MAX(x1, 0);
+    y1 = _UI_MAX(y1, 0);
+    x2 = _UI_MIN(x2, dc->screen_width - 1);
+    y2 = _UI_MIN(y2, dc->screen_height - 1);
+
+    int32_t src_x1 = x1 + (int32_t)image->inverse.m[0][2];
+    int32_t src_y1 = y1 + (int32_t)image->inverse.m[1][2];
+    int32_t src_x2 = x2 + (int32_t)image->inverse.m[0][2];
+    int32_t src_y2 = y2 + (int32_t)image->inverse.m[1][2];
+    if (src_x1 < 0)
+    {
+        x1 -= src_x1;
+        src_x1 = 0;
+    }
+    if (src_y1 < 0)
+    {
+        y1 -= src_y1;
+        src_y1 = 0;
+    }
+    if (src_x2 >= image->img_w)
+    {
+        x2 -= src_x2 - image->img_w + 1;
+        src_x2 = image->img_w - 1;
+    }
+    if (src_y2 >= image->img_h)
+    {
+        y2 -= src_y2 - image->img_h + 1;
+        src_y2 = image->img_h - 1;
+    }
+    if (x1 > x2 || y1 > y2)
+    {
+        return true;
+    }
+
+    if (image->raster_prog < 1.0f)
+    {
+        int32_t raster_length = (int32_t)(0.25f * dc->screen_width);
+        if (raster_length < 1) { raster_length = 1; }
+        int32_t raster_center = -raster_length / 2 +
+                                (int32_t)(image->raster_prog * (dc->screen_width + raster_length));
+        int32_t raster_end = raster_center + raster_length / 2;
+        if (x1 > raster_end)
+        {
+            return true;
+        }
+        x2 = _UI_MIN(x2, raster_end);
+        src_x2 = x2 + (int32_t)image->inverse.m[0][2];
+    }
+
+    uint16_t width = x2 - x1 + 1;
+    uint16_t height = y2 - y1 + 1;
+    ppe_buffer_t source;
+    memset(&source, 0, sizeof(source));
+    if (!init_source_format(&source, image, head))
+    {
+        return false;
+    }
+
+    uint8_t pixel_bits = PPE_Get_Pixel_Size(source.format);
+    if (pixel_bits < 8 || (pixel_bits % 8) != 0)
+    {
+        return false;
+    }
+    uint8_t pixel_bytes = pixel_bits / 8;
+    uint8_t *source_data = (uint8_t *)image->data + sizeof(gui_rgb_data_head_t);
+    uint16_t source_stride = image->img_w;
+    ppe_scratch_allocator_t scratch =
+    {
+        .cache = cache_buf1,
+        .cache_size = CACHE_BUF_SIZE > 0 ? (uint32_t)CACHE_BUF_SIZE : 0,
+        .cache_offset = 0,
+    };
+    uint8_t *decode_buf = NULL;
+    bool decode_need_free = false;
+    if (head->compress)
+    {
+        uint32_t decode_size = (uint32_t)width * height * pixel_bytes;
+        decode_buf = ppe_scratch_alloc(&scratch, decode_size, &decode_need_free);
+        if (decode_buf == NULL)
+        {
+            return true;
+        }
+        ppe_rect_t decode_rect = {.x1 = src_x1, .y1 = src_y1, .x2 = src_x2, .y2 = src_y2};
+        if (!hw_idu_decode(&decode_rect, source_data, (uint32_t)width * pixel_bytes, decode_buf))
+        {
+            ppe_scratch_free(decode_buf, decode_need_free);
+            return true;
+        }
+        source_data = decode_buf;
+        source_stride = width;
+    }
+    else
+    {
+        source_data += ((uint32_t)src_y1 * image->img_w + src_x1) * pixel_bytes;
+    }
+
+    ppe_buffer_t target;
+    if (!init_target_from_dc(&target, dc))
+    {
+        ppe_scratch_free(decode_buf, decode_need_free);
+        return true;
+    }
+    uint32_t target_base_address = target.address;
+
+    uint16_t direct_width = 0;
+    if (source.format == target.format)
+    {
+        if (image->raster_prog >= 1.0f)
+        {
+            direct_width = width;
+        }
+        else
+        {
+            int32_t raster_length = (int32_t)(0.25f * dc->screen_width);
+            if (raster_length < 1) { raster_length = 1; }
+            int32_t raster_center = -raster_length / 2 +
+                                    (int32_t)(image->raster_prog * (dc->screen_width + raster_length));
+            int32_t raster_start = raster_center - raster_length / 2;
+            if (raster_start >= x1)
+            {
+                direct_width = _UI_MIN(raster_start, x2) - x1 + 1;
+            }
+        }
+    }
+
+    if (direct_width > 0)
+    {
+        uint8_t target_bytes = PPE_Get_Pixel_Size(target.format) / 8;
+        uint8_t *target_data = (uint8_t *)target_base_address +
+                               ((uint32_t)(y1 - dc->section.y1) * target.stride +
+                                x1 - dc->section.x1) * target_bytes;
+        hw_dma_copy((uint32_t)direct_width * pixel_bytes, height,
+                    (uint32_t)source_stride * pixel_bytes,
+                    (uint32_t)target.stride * target_bytes,
+                    source_data, target_data);
+
+        source_data += (uint32_t)direct_width * pixel_bytes;
+        x1 += direct_width;
+        width -= direct_width;
+        if (width == 0)
+        {
+            ppe_scratch_free(decode_buf, decode_need_free);
+            return true;
+        }
+    }
+
+    bool alpha_need_free = false;
+    bool argb_need_free = false;
+    uint8_t *alpha = ppe_scratch_alloc(&scratch, width, &alpha_need_free);
+    uint8_t *argb = ppe_scratch_alloc(&scratch, (uint32_t)width * height * 4, &argb_need_free);
+    if (alpha == NULL || argb == NULL)
+    {
+        ppe_scratch_free(argb, argb_need_free);
+        ppe_scratch_free(alpha, alpha_need_free);
+        ppe_scratch_free(decode_buf, decode_need_free);
+        return true;
+    }
+
+    if (image->raster_prog >= 1.0f)
+    {
+        memset(alpha, 0xFF, width);
+    }
+    else
+    {
+        int32_t raster_length = (int32_t)(0.25f * dc->screen_width);
+        if (raster_length < 1) { raster_length = 1; }
+        int32_t raster_center = -raster_length / 2 +
+                                (int32_t)(image->raster_prog * (dc->screen_width + raster_length));
+        int32_t raster_start = raster_center - raster_length / 2;
+        int32_t raster_end = raster_center + raster_length / 2;
+        for (uint16_t i = 0; i < width; i++)
+        {
+            int32_t screen_x = x1 + i;
+            if (screen_x <= raster_start)
+            {
+                alpha[i] = 0xFF;
+            }
+            else
+            {
+                alpha[i] = (uint8_t)(0xFF * (raster_end - screen_x) / raster_length);
+            }
+        }
+    }
+
+    bool mixed = hw_acc_mix_a_rgb(alpha, 0, source_data, source_stride, source.format,
+                                  argb, width, height);
+    if (mixed)
+    {
+        uint8_t target_bytes = PPE_Get_Pixel_Size(target.format) / 8;
+        target.address = target_base_address;
+        target.address += ((uint32_t)(y1 - dc->section.y1) * target.stride +
+                           x1 - dc->section.x1) * target_bytes;
+        target.width = width;
+        target.height = height;
+        target.win_x_max = width - 1;
+        target.win_y_max = height - 1;
+
+        ppe_buffer_t raster_source;
+        memset(&raster_source, 0, sizeof(raster_source));
+        raster_source.address = (uint32_t)argb;
+        raster_source.width = width;
+        raster_source.height = height;
+        raster_source.stride = width;
+        raster_source.format = PPE_ARGB8888;
+        raster_source.opacity = 0xFF;
+        raster_source.const_color = 0xFFFFFFFF;
+        raster_source.win_x_max = width - 1;
+        raster_source.win_y_max = height - 1;
+
+        ppe_matrix_t inverse;
+        ppe_get_identity(&inverse);
+        PPE_ERR err = PPE_Blit_Inverse(&target, &raster_source, NULL, &inverse, NULL,
+                                       PPE_BLEND_PREMULTIPLY);
+        if (err != PPE_SUCCESS)
+        {
+            DBG_DIRECT("PPE raster err %d", err);
+        }
+        ppe_wait_finish_blocking();
+    }
+
+    ppe_scratch_free(argb, argb_need_free);
+    ppe_scratch_free(alpha, alpha_need_free);
+    ppe_scratch_free(decode_buf, decode_need_free);
+    return true;
+}
+
+static bool hw_acc_blit_raster_vertical(draw_img_t *image, struct gui_dispdev *dc)
+{
+    struct gui_rgb_data_head *head = image->data;
+    if (head == NULL || image->raster_prog <= 0.0f)
+    {
+        return true;
+    }
+
+    if (image->matrix.m[0][0] != 1.0f || image->matrix.m[1][1] != 1.0f ||
+        image->matrix.m[0][1] != 0.0f || image->matrix.m[1][0] != 0.0f ||
+        image->matrix.m[2][0] != 0.0f || image->matrix.m[2][1] != 0.0f ||
+        image->matrix.m[2][2] != 1.0f)
+    {
+        return false;
+    }
+
+    int32_t x1 = _UI_MAX(image->img_target_x, dc->section.x1);
+    int32_t y1 = _UI_MAX(image->img_target_y, dc->section.y1);
+    int32_t x2 = _UI_MIN(image->img_target_x + image->img_target_w - 1, dc->section.x2);
+    int32_t y2 = _UI_MIN(image->img_target_y + image->img_target_h - 1, dc->section.y2);
+    x1 = _UI_MAX(x1, 0);
+    y1 = _UI_MAX(y1, 0);
+    x2 = _UI_MIN(x2, dc->screen_width - 1);
+    y2 = _UI_MIN(y2, dc->screen_height - 1);
+
+    int32_t src_x1 = x1 + (int32_t)image->inverse.m[0][2];
+    int32_t src_y1 = y1 + (int32_t)image->inverse.m[1][2];
+    int32_t src_x2 = x2 + (int32_t)image->inverse.m[0][2];
+    int32_t src_y2 = y2 + (int32_t)image->inverse.m[1][2];
+    if (src_x1 < 0) { x1 -= src_x1; src_x1 = 0; }
+    if (src_y1 < 0) { y1 -= src_y1; src_y1 = 0; }
+    if (src_x2 >= image->img_w) { x2 -= src_x2 - image->img_w + 1; src_x2 = image->img_w - 1; }
+    if (src_y2 >= image->img_h) { y2 -= src_y2 - image->img_h + 1; src_y2 = image->img_h - 1; }
+    if (x1 > x2 || y1 > y2)
+    {
+        return true;
+    }
+
+    int32_t raster_length = (int32_t)(0.25f * dc->screen_height);
+    if (raster_length < 1) { raster_length = 1; }
+    int32_t raster_center = -raster_length / 2 +
+                            (int32_t)(image->raster_prog * (dc->screen_height + raster_length));
+    int32_t raster_start = raster_center - raster_length / 2;
+    int32_t raster_end = raster_center + raster_length / 2;
+    if (image->raster_prog < 1.0f)
+    {
+        if (y1 > raster_end) { return true; }
+        y2 = _UI_MIN(y2, raster_end);
+        src_y2 = y2 + (int32_t)image->inverse.m[1][2];
+    }
+
+    uint16_t width = x2 - x1 + 1;
+    uint16_t height = y2 - y1 + 1;
+    ppe_buffer_t source, target;
+    memset(&source, 0, sizeof(source));
+    if (!init_source_format(&source, image, head) || !init_target_from_dc(&target, dc))
+    {
+        return false;
+    }
+    uint8_t pixel_bits = PPE_Get_Pixel_Size(source.format);
+    if (pixel_bits < 8 || (pixel_bits % 8) != 0)
+    {
+        return false;
+    }
+    uint8_t pixel_bytes = pixel_bits / 8;
+    uint8_t target_bytes = PPE_Get_Pixel_Size(target.format) / 8;
+    uint8_t *source_data = (uint8_t *)image->data + sizeof(gui_rgb_data_head_t);
+    uint16_t source_stride = image->img_w;
+    ppe_scratch_allocator_t scratch =
+    {
+        .cache = cache_buf1,
+        .cache_size = CACHE_BUF_SIZE > 0 ? (uint32_t)CACHE_BUF_SIZE : 0,
+        .cache_offset = 0,
+    };
+    uint8_t *decode_buf = NULL;
+    bool decode_need_free = false;
+    if (head->compress)
+    {
+        uint32_t decode_size = (uint32_t)width * height * pixel_bytes;
+        decode_buf = ppe_scratch_alloc(&scratch, decode_size, &decode_need_free);
+        if (decode_buf == NULL) { return true; }
+        ppe_rect_t decode_rect = {.x1 = src_x1, .y1 = src_y1, .x2 = src_x2, .y2 = src_y2};
+        if (!hw_idu_decode(&decode_rect, source_data, (uint32_t)width * pixel_bytes, decode_buf))
+        {
+            ppe_scratch_free(decode_buf, decode_need_free);
+            return true;
+        }
+        source_data = decode_buf;
+        source_stride = width;
+    }
+    else
+    {
+        source_data += ((uint32_t)src_y1 * image->img_w + src_x1) * pixel_bytes;
+    }
+
+    uint32_t target_base_address = target.address;
+    uint16_t direct_height = 0;
+    if (source.format == target.format)
+    {
+        if (image->raster_prog >= 1.0f)
+        {
+            direct_height = height;
+        }
+        else if (raster_start >= y1)
+        {
+            direct_height = _UI_MIN(raster_start, y2) - y1 + 1;
+        }
+    }
+    if (direct_height > 0)
+    {
+        uint8_t *target_data = (uint8_t *)target_base_address +
+                               ((uint32_t)(y1 - dc->section.y1) * target.stride +
+                                x1 - dc->section.x1) * target_bytes;
+        hw_dma_copy((uint32_t)width * pixel_bytes, direct_height,
+                    (uint32_t)source_stride * pixel_bytes,
+                    (uint32_t)target.stride * target_bytes,
+                    source_data, target_data);
+        source_data += (uint32_t)direct_height * source_stride * pixel_bytes;
+        y1 += direct_height;
+        height -= direct_height;
+        if (height == 0)
+        {
+            ppe_scratch_free(decode_buf, decode_need_free);
+            return true;
+        }
+    }
+
+    bool alpha_need_free = false;
+    bool argb_need_free = false;
+    uint8_t *alpha = ppe_scratch_alloc(&scratch, height, &alpha_need_free);
+    uint8_t *argb = ppe_scratch_alloc(&scratch, (uint32_t)width * height * 4, &argb_need_free);
+    if (alpha == NULL || argb == NULL)
+    {
+        ppe_scratch_free(argb, argb_need_free);
+        ppe_scratch_free(alpha, alpha_need_free);
+        ppe_scratch_free(decode_buf, decode_need_free);
+        return true;
+    }
+    memset(alpha, 0xFF, height);
+    for (uint16_t i = 0; i < height; i++)
+    {
+        if (image->raster_prog < 1.0f)
+        {
+            int32_t screen_y = y1 + i;
+            if (screen_y > raster_start)
+            {
+                alpha[i] = (uint8_t)(0xFF * (raster_end - screen_y) / raster_length);
+            }
+        }
+    }
+
+    bool mixed = hw_acc_mix_a_rgb_vertical(alpha, source_data, source_stride, source.format,
+                                           argb, width, height);
+    if (mixed)
+    {
+        target.address = target_base_address +
+                         ((uint32_t)(y1 - dc->section.y1) * target.stride +
+                          x1 - dc->section.x1) * target_bytes;
+        target.width = width;
+        target.height = height;
+        target.win_x_max = width - 1;
+        target.win_y_max = height - 1;
+
+        ppe_buffer_t raster_source;
+        memset(&raster_source, 0, sizeof(raster_source));
+        raster_source.address = (uint32_t)argb;
+        raster_source.width = width;
+        raster_source.height = height;
+        raster_source.stride = width;
+        raster_source.format = PPE_ARGB8888;
+        raster_source.opacity = 0xFF;
+        raster_source.const_color = 0xFFFFFFFF;
+        raster_source.win_x_max = width - 1;
+        raster_source.win_y_max = height - 1;
+
+        ppe_matrix_t inverse;
+        ppe_get_identity(&inverse);
+        PPE_ERR err = PPE_Blit_Inverse(&target, &raster_source, NULL, &inverse, NULL,
+                                       PPE_BLEND_PREMULTIPLY);
+        if (err != PPE_SUCCESS) { DBG_DIRECT("PPE vertical raster err %d", err); }
+        ppe_wait_finish_blocking();
+    }
+
+    ppe_scratch_free(argb, argb_need_free);
+    ppe_scratch_free(alpha, alpha_need_free);
+    ppe_scratch_free(decode_buf, decode_need_free);
+    return true;
+}
+#endif
+
 void hw_acc_blit(draw_img_t *image, struct gui_dispdev *dc, struct gui_rect *rect)
 {
     if (dc->cache_need_clean)
@@ -1988,6 +2472,23 @@ void hw_acc_blit(draw_img_t *image, struct gui_dispdev *dc, struct gui_rect *rec
     {
         hw_acc_blit_a8_blur(image, dc, rect);
         return;
+    }
+
+    if (image->blend_mode == IMG_RASTER_HORIZONTAL ||
+        image->blend_mode == IMG_RASTER_VERTICAL)
+    {
+#if PPE_RASTER_USE_SW_BLEND
+        sw_acc_blit(image, dc, rect);
+        return;
+#else
+        bool handled = image->blend_mode == IMG_RASTER_HORIZONTAL ?
+                       hw_acc_blit_raster_horizontal(image, dc) :
+                       hw_acc_blit_raster_vertical(image, dc);
+        if (handled)
+        {
+            return;
+        }
+#endif
     }
 
     if (image->blend_mode != IMG_RECT && image->data == NULL)
@@ -2012,46 +2513,33 @@ void hw_acc_blit(draw_img_t *image, struct gui_dispdev *dc, struct gui_rect *rec
     }
 }
 
-void hw_acc_mix_a_rgb(uint8_t *a, uint16_t a_stride, uint8_t *rgb, uint8_t *argb, uint16_t w,
-                      uint16_t h)
+static bool hw_acc_mix_a_rgb_internal(uint8_t *a, uint16_t a_width, uint16_t a_height,
+                                      uint16_t a_stride, uint8_t *rgb, uint16_t rgb_stride,
+                                      PPE_PIXEL_FORMAT rgb_format, uint8_t *argb,
+                                      uint16_t w, uint16_t h, bool vertical)
 {
     ppe_buffer_t mix_a, mix_rgb, output;
     memset(&mix_a, 0, sizeof(ppe_buffer_t));
     memset(&mix_rgb, 0, sizeof(ppe_buffer_t));
     memset(&output, 0, sizeof(ppe_buffer_t));
-    PPE_BLEND_METHOD method = PPE_BLEND_SRC_IN;
 
     mix_a.format = PPE_A8;
     mix_a.address = (uint32_t)a;
     mix_a.opacity = 0xFF;
-    mix_a.width = w;
-    mix_a.height = h;
+    mix_a.width = a_width;
+    mix_a.height = a_height;
     mix_a.stride = a_stride;
     mix_a.const_color = 0xFF000000;
     mix_a.win_x_min = 0;
     mix_a.win_x_max = w - 1;
     mix_a.win_y_min = 0;
     mix_a.win_y_max = h - 1;
-
-    switch (gui_get_dc()->bit_depth)
-    {
-    case 16:
-        mix_rgb.format = PPE_RGB565;
-        break;
-    case 24:
-        mix_rgb.format = PPE_RGB888;
-        break;
-    case 32:
-        mix_rgb.format = PPE_ARGB8888;
-        break;
-    default:
-        mix_rgb.format = PPE_RGB565;
-    }
+    mix_rgb.format = rgb_format;
     mix_rgb.address = (uint32_t)rgb;
     mix_rgb.opacity = 0xFF;
     mix_rgb.width = w;
     mix_rgb.height = h;
-    mix_rgb.stride = w;
+    mix_rgb.stride = rgb_stride;
     mix_rgb.const_color = 0xFFFFFFFF;
     mix_rgb.win_x_min = 0;
     mix_rgb.win_x_max = w - 1;
@@ -2070,8 +2558,31 @@ void hw_acc_mix_a_rgb(uint8_t *a, uint16_t a_stride, uint8_t *rgb, uint8_t *argb
     output.win_y_min = 0;
     output.win_y_max = h - 1;
 
-    PPE_Mix_Alpha(&mix_a, &mix_rgb, &output);
     PPE_Finish();
+    PPE_ERR err = PPE_Mix_Alpha(&mix_a, &mix_rgb, &output, vertical);
+    if (err != PPE_SUCCESS)
+    {
+        DBG_DIRECT("PPE mix alpha err %d", err);
+        return false;
+    }
+    ppe_wait_finish_blocking();
+    return true;
+}
+
+bool hw_acc_mix_a_rgb(uint8_t *a, uint16_t a_stride, uint8_t *rgb,
+                      uint16_t rgb_stride, PPE_PIXEL_FORMAT rgb_format,
+                      uint8_t *argb, uint16_t w, uint16_t h)
+{
+    return hw_acc_mix_a_rgb_internal(a, w, h, a_stride, rgb, rgb_stride, rgb_format,
+                                     argb, w, h, false);
+}
+
+bool hw_acc_mix_a_rgb_vertical(uint8_t *a, uint8_t *rgb, uint16_t rgb_stride,
+                               PPE_PIXEL_FORMAT rgb_format, uint8_t *argb,
+                               uint16_t w, uint16_t h)
+{
+    return hw_acc_mix_a_rgb_internal(a, w, h, 1, rgb, rgb_stride, rgb_format,
+                                     argb, w, h, true);
 }
 
 void hw_acc_blur_a8(struct gui_dispdev *dc, gui_rect_t *rect, uint8_t blur_degree, void *cache_mem,
@@ -2125,7 +2636,25 @@ void hw_acc_blur_a8(struct gui_dispdev *dc, gui_rect_t *rect, uint8_t blur_degre
                              (blur_rect.x1 - a8_origin_x);
     uint8_t       *p_out   = buffer;
     uint8_t       *p_blur  = blur_copy;
-    hw_acc_mix_a_rgb((uint8_t *)a8_row, (uint16_t)a8_stride, p_blur, argb_combine, blur_w, blur_h);
+    PPE_PIXEL_FORMAT blur_format;
+    switch (dc->bit_depth)
+    {
+    case 16:
+        blur_format = PPE_RGB565;
+        break;
+    case 24:
+        blur_format = PPE_RGB888;
+        break;
+    case 32:
+        blur_format = PPE_ARGB8888;
+        break;
+    default:
+        gui_free(argb_combine);
+        gui_free(blur_copy);
+        return;
+    }
+    hw_acc_mix_a_rgb((uint8_t *)a8_row, (uint16_t)a8_stride, p_blur, blur_w, blur_format,
+                     argb_combine, blur_w, blur_h);
 
     ppe_matrix_t inverse;
     ppe_get_identity(&inverse);

@@ -1107,7 +1107,8 @@ PPE_ERR PPE_Clear(ppe_buffer_t *dst, uint32_t color, ppe_rect_t *rect)
     return PPE_SUCCESS;
 }
 
-PPE_ERR PPE_Mix_Alpha(ppe_buffer_t *alpha, ppe_buffer_t *src, ppe_buffer_t *output)
+PPE_ERR PPE_Mix_Alpha(ppe_buffer_t *alpha, ppe_buffer_t *src, ppe_buffer_t *output,
+                      bool vertical)
 {
     if (alpha->address == (uint32_t)NULL)
     {
@@ -1132,9 +1133,9 @@ PPE_ERR PPE_Mix_Alpha(ppe_buffer_t *alpha, ppe_buffer_t *src, ppe_buffer_t *outp
     /*PPE Global initialization*/
 
     /*input layer 2 initilization*/
-    PPE_InputLayer_enable(PPE_INPUT_2, ENABLE);           // logic enable of layer
+    PPE_InputLayer_enable(PPE_INPUT_1, ENABLE);           // logic enable of layer
     PPE_InputLayer_Init_Typedef PPE_input_layer2_init = {.Color_Key_Enable.key_enable = 0};
-    PPE_InputLayer_StructInit(PPE_INPUT_2, &PPE_input_layer2_init);
+    PPE_InputLayer_StructInit(PPE_INPUT_1, &PPE_input_layer2_init);
     PPE_input_layer2_init.Layer_Address                   = (uint32_t)src->address;
     PPE_input_layer2_init.Pic_Height                      = (uint32_t)src->height;
     PPE_input_layer2_init.Pic_Width                       = (uint32_t)src->width;
@@ -1143,7 +1144,7 @@ PPE_ERR PPE_Mix_Alpha(ppe_buffer_t *alpha, ppe_buffer_t *src, ppe_buffer_t *outp
     PPE_input_layer2_init.Pixel_Source                = PPE_LAYER_SRC_FROM_DMA;
     PPE_input_layer2_init.Const_Pixel                 = color;
     PPE_input_layer2_init.Pixel_Color_Format              = src->format;
-    PPE_input_layer2_init.Blend_Method = PPE_BLEND_SRC_IN;
+    PPE_input_layer2_init.Blend_Method = PPE_BLEND_SRC;
     PPE_input_layer2_init.Source_Interpolation                = PPV2_SRC_NEAREST_NEIGHBOUR;
     PPE_input_layer2_init.Color_Key_Enable.key_enable     = src->color_key_config.key_enable.key_enable;
     if (PPE_input_layer2_init.Color_Key_Enable.key_enable)
@@ -1189,12 +1190,12 @@ PPE_ERR PPE_Mix_Alpha(ppe_buffer_t *alpha, ppe_buffer_t *src, ppe_buffer_t *outp
     {
         PPE_input_layer2_init.Cache_Enable = false;
     }
-    PPE_InputLayer_Init(PPE_INPUT_2, &PPE_input_layer2_init);
+    PPE_InputLayer_Init(PPE_INPUT_1, &PPE_input_layer2_init);
     PPE_InputLayer_Init_Typedef PPE_input_layer1_init = {.Color_Key_Enable.key_enable = 0};
 
     /*input layer 1 initilization*/
-    PPE_InputLayer_enable(PPE_INPUT_1, ENABLE);           // logic enable of layer
-    PPE_InputLayer_StructInit(PPE_INPUT_1, &PPE_input_layer1_init);
+    PPE_InputLayer_enable(PPE_INPUT_2, ENABLE);           // logic enable of layer
+    PPE_InputLayer_StructInit(PPE_INPUT_2, &PPE_input_layer1_init);
     PPE_input_layer1_init.Layer_Address                   = alpha->address;
     PPE_input_layer1_init.Pic_Width                      = (uint32_t)alpha->width;
     PPE_input_layer1_init.Pic_Height                       = (uint32_t)alpha->height;
@@ -1206,9 +1207,9 @@ PPE_ERR PPE_Mix_Alpha(ppe_buffer_t *alpha, ppe_buffer_t *src, ppe_buffer_t *outp
     PPE_input_layer1_init.LayerBus_Inc                    = PPE_AWBURST_INC;
 
     PPE_input_layer1_init.Layer_Window_Xmin               = 0;
-    PPE_input_layer1_init.Layer_Window_Xmax               = alpha->width - 1;
+    PPE_input_layer1_init.Layer_Window_Xmax               = output->width - 1;
     PPE_input_layer1_init.Layer_Window_Ymin               = 0;
-    PPE_input_layer1_init.Layer_Window_Ymax               = alpha->height - 1;
+    PPE_input_layer1_init.Layer_Window_Ymax               = output->height - 1;
 
     if (PPE_input_layer1_init.Layer_Address >= 0x22000000)
     {
@@ -1218,10 +1219,10 @@ PPE_ERR PPE_Mix_Alpha(ppe_buffer_t *alpha, ppe_buffer_t *src, ppe_buffer_t *outp
     {
         PPE_input_layer1_init.Cache_Enable = false;
     }
-    PPE_input_layer1_init.Blend_Method                    = PPE_BLEND_SRC;
+    PPE_input_layer1_init.Blend_Method                    = PPE_BLEND_DST_IN;
     PPE_input_layer1_init.Color_Key_Enable.key_enable     = 0;
 
-    PPE_input_layer1_init.Transfer_Matrix_E11             = 0x10000;
+    PPE_input_layer1_init.Transfer_Matrix_E11             = vertical ? 0 : 0x10000;
     PPE_input_layer1_init.Transfer_Matrix_E12             = 0;
     PPE_input_layer1_init.Transfer_Matrix_E13             = 0;
     PPE_input_layer1_init.Transfer_Matrix_E21             = 0;
@@ -1230,7 +1231,7 @@ PPE_ERR PPE_Mix_Alpha(ppe_buffer_t *alpha, ppe_buffer_t *src, ppe_buffer_t *outp
     PPE_input_layer1_init.Transfer_Matrix_E31             = 0;
     PPE_input_layer1_init.Transfer_Matrix_E32             = 0;
     PPE_input_layer1_init.Transfer_Matrix_E33             = 0x10000;
-    PPE_InputLayer_Init(PPE_INPUT_1, &PPE_input_layer1_init);
+    PPE_InputLayer_Init(PPE_INPUT_2, &PPE_input_layer1_init);
     PPE_ResultLayer_Init_Typedef PPE_ResultLayer0_Init;
     PPE_ResultLayer_StructInit(&PPE_ResultLayer0_Init);
 

@@ -984,12 +984,13 @@ PPE_ERR PPE_Clear(ppe_buffer_t *dst, uint32_t color, ppe_rect_t *rect);
         output.win_y_min = 0;
         output.win_y_max = h - 1;
 
-        PPE_Mix_Alpha(&mix_a, &mix_rgb, &output);
+        PPE_Mix_Alpha(&mix_a, &mix_rgb, &output, false);
         PPE_Finish();
     }
  * \endcode
  */
-PPE_ERR PPE_Mix_Alpha(ppe_buffer_t *alpha, ppe_buffer_t *src, ppe_buffer_t *output);
+PPE_ERR PPE_Mix_Alpha(ppe_buffer_t *alpha, ppe_buffer_t *src, ppe_buffer_t *output,
+                      bool vertical);
 
 /**
  * \brief  Get intersect area of 2 rectangles.
