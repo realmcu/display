@@ -140,6 +140,16 @@ uint8_t current_rx_dma;
 uint8_t current_tx_dma;
 static GDMA_LLIDef *g_rx_dma_lli_struct = NULL;
 
+RAM_TEXT_SECTION
+static void idu_dma_cleanup(uint8_t dma_channel)
+{
+    GDMA_Cmd(dma_channel, DISABLE);
+    GDMA_INTConfig(dma_channel, GDMA_INT_Transfer, DISABLE);
+    NVIC_DisableIRQ(DMA_CH_IRQ(dma_channel));
+    NVIC_ClearPendingIRQ(DMA_CH_IRQ(dma_channel));
+    GDMA_ClearAllTypeINT(dma_channel);
+}
+
 FLASH_NOR_RET_TYPE idu_rx_dma_setting(uint32_t src, uint32_t dst, uint32_t len, uint8_t dma_ch)
 {
     (void)dst;  // dst not used, target is fixed to IDU RX_FIFO
@@ -247,7 +257,7 @@ FLASH_NOR_RET_TYPE idu_rx_dma_setting(uint32_t src, uint32_t dst, uint32_t len, 
 RAM_TEXT_SECTION
 void idu_rx_dma_callback(void)
 {
-    GDMA_ClearAllTypeINT(current_rx_dma);
+    idu_dma_cleanup(current_rx_dma);
     idu_rx_dma_done = true;
 }
 
@@ -286,7 +296,7 @@ bool rtl_idu_int_is_tx_dma_done(void)
 RAM_TEXT_SECTION
 void idu_tx_dma_callback(void)
 {
-    GDMA_ClearAllTypeINT(current_tx_dma);
+    idu_dma_cleanup(current_tx_dma);
     idu_tx_dma_done = true;
 }
 

@@ -220,7 +220,7 @@ typedef enum
     PPE_BLEND_SRC_OVER,       /*!< Result = S + D * (1 - Sa) */
     PPE_BLEND_DST_OVER,       /*!< Result = Da * S + D * (1 - Da) */
     PPE_BLEND_SRC_IN,         /*!< Result = Da * S */
-    PPE_BLEND_DST_IN,         /*!< Result = S * Da */
+    PPE_BLEND_DST_IN,         /*!< Result = Sa * D */
     PPE_BLEND_MULTIPLY,       /*!< Result = (1 - Da) * S + (1 - Sa) * D + S * D / 255 */
     PPE_BLEND_SCREEN,         /*!< Result = S + D + S * D / 255 */
     PPE_BLEND_ADD,            /*!< Result = S + D */

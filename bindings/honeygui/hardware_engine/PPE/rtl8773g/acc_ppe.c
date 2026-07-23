@@ -30,6 +30,8 @@
 #define PSRAM_GUI_HEAP_ADDR SPIC1_MEM_BASE
 void *sync_sem;
 
+static void ppe_wait_finish_blocking(void);
+
 static void *acc_ppe_malloc(size_t n)
 {
     return gui_lower_malloc(n);
@@ -62,6 +64,39 @@ static int32_t last_cache_size = 0;
 static uint8_t high_speed_dma_channel_num = 0xFF;
 static uint8_t low_speed_dma_channel_num = 0xFF;
 static int32_t CACHE_BUF_SIZE = 0;
+
+typedef struct
+{
+    uint8_t *cache;
+    uint32_t cache_size;
+    uint32_t cache_offset;
+} ppe_scratch_allocator_t;
+
+static uint8_t *ppe_scratch_alloc(ppe_scratch_allocator_t *allocator, uint32_t size,
+                                  bool *need_free)
+{
+    uint32_t aligned_offset = (allocator->cache_offset + 3U) & ~3U;
+    if (allocator->cache != NULL && aligned_offset <= allocator->cache_size &&
+        size <= allocator->cache_size - aligned_offset)
+    {
+        uint8_t *buffer = allocator->cache + aligned_offset;
+        allocator->cache_offset = aligned_offset + size;
+        *need_free = false;
+        return buffer;
+    }
+
+    *need_free = true;
+    uint8_t *buffer = acc_ppe_malloc(size);
+    return buffer;
+}
+
+static void ppe_scratch_free(uint8_t *buffer, bool need_free)
+{
+    if (need_free && buffer != NULL)
+    {
+        acc_ppe_free(buffer);
+    }
+}
 
 void hw_acc_blur_a8(struct gui_dispdev *dc, gui_rect_t *rect, uint8_t blur_degree, void *cache_mem,
                     const uint8_t *a8_base, int16_t a8_stride,
@@ -269,23 +304,18 @@ void hw_dma_copy(uint32_t length, uint32_t height, uint32_t src_stride,
     RCC_PeriphClockCmd(APBPeriph_GDMA, APBPeriph_GDMA_CLOCK, ENABLE);
     GDMA_ChannelTypeDef *dma_channel = rtl_idu_get_dma_channel_int(high_speed_dma_channel_num);
     GDMA_InitTypeDef RX_GDMA_InitStruct;
-    /*--------------GDMA init-----------------------------*/
     GDMA_StructInit(&RX_GDMA_InitStruct);
     RX_GDMA_InitStruct.GDMA_ChannelNum          = high_speed_dma_channel_num;
     RX_GDMA_InitStruct.GDMA_BufferSize          = buffer_size;
     RX_GDMA_InitStruct.GDMA_DIR                 = GDMA_DIR_MemoryToMemory;
     RX_GDMA_InitStruct.GDMA_SourceInc           = DMA_SourceInc_Inc;
     RX_GDMA_InitStruct.GDMA_DestinationInc      = DMA_DestinationInc_Inc;
-    RX_GDMA_InitStruct.GDMA_SourceMsize         =
-        m_size;                         // 8 msize for source msize
-    RX_GDMA_InitStruct.GDMA_DestinationMsize    =
-        m_size;                         // 8 msize for destiantion msize
-    RX_GDMA_InitStruct.GDMA_DestinationDataSize =
-        data_size;                   // 32 bit width for destination transaction
-    RX_GDMA_InitStruct.GDMA_SourceDataSize      =
-        data_size;                   // 32 bit width for source transaction
-    RX_GDMA_InitStruct.GDMA_SourceAddr          = (uint32_t)start_address;
-    RX_GDMA_InitStruct.GDMA_DestinationAddr     = (uint32_t)dest_address;
+    RX_GDMA_InitStruct.GDMA_SourceMsize         = m_size;
+    RX_GDMA_InitStruct.GDMA_DestinationMsize    = m_size;
+    RX_GDMA_InitStruct.GDMA_DestinationDataSize = data_size;
+    RX_GDMA_InitStruct.GDMA_SourceDataSize      = data_size;
+    RX_GDMA_InitStruct.GDMA_SourceAddr          = start_address;
+    RX_GDMA_InitStruct.GDMA_DestinationAddr     = dest_address;
 
     if (use_LLI)
     {
@@ -304,7 +334,6 @@ void hw_dma_copy(uint32_t length, uint32_t height, uint32_t src_stride,
                 GDMA_LLIStruct[i].SAR = start_address + src_stride * i;
                 GDMA_LLIStruct[i].DAR = (uint32_t)dest_address + dst_stride * i;
                 GDMA_LLIStruct[i].LLP = 0;
-                /* configure low 32 bit of CTL register */
                 GDMA_LLIStruct[i].CTL_LOW = (BIT(0)
                                              | (RX_GDMA_InitStruct.GDMA_DestinationDataSize << 1)
                                              | (RX_GDMA_InitStruct.GDMA_SourceDataSize << 4)
@@ -313,7 +342,6 @@ void hw_dma_copy(uint32_t length, uint32_t height, uint32_t src_stride,
                                              | (RX_GDMA_InitStruct.GDMA_DestinationMsize << 11)
                                              | (RX_GDMA_InitStruct.GDMA_SourceMsize << 14)
                                              | (RX_GDMA_InitStruct.GDMA_DIR << 20));
-                /* configure high 32 bit of CTL register */
                 if (total_size == 0)
                 {
                     GDMA_LLIStruct[i].CTL_HIGH = buffer_size;
@@ -328,14 +356,15 @@ void hw_dma_copy(uint32_t length, uint32_t height, uint32_t src_stride,
                 GDMA_LLIStruct[i].SAR = start_address + src_stride * i;
                 GDMA_LLIStruct[i].DAR = (uint32_t)dest_address + dst_stride * i;
                 GDMA_LLIStruct[i].LLP = (uint32_t)&GDMA_LLIStruct[i + 1];
-                /* configure low 32 bit of CTL register */
                 GDMA_LLIStruct[i].CTL_LOW = rtl_idu_get_dma_ctl_low_int(dma_channel);
-                /* configure high 32 bit of CTL register */
                 GDMA_LLIStruct[i].CTL_HIGH = buffer_size;
             }
         }
         SCB_CleanDCache_by_Addr(GDMA_LLIStruct, sizeof(GDMA_LLIDef) * dma_height);
     }
+    NVIC_DisableIRQ(DMA_CH_IRQ(high_speed_dma_channel_num));
+    NVIC_ClearPendingIRQ(DMA_CH_IRQ(high_speed_dma_channel_num));
+    GDMA_ClearAllTypeINT(high_speed_dma_channel_num);
     GDMA_INTConfig(high_speed_dma_channel_num, GDMA_INT_Transfer, ENABLE);
     GDMA_Cmd(high_speed_dma_channel_num, ENABLE);
     while (GDMA_GetTransferINTStatus(high_speed_dma_channel_num) != SET);
@@ -997,22 +1026,20 @@ void hw_acc_blit_simple(draw_img_t *image, struct gui_dispdev *dc, struct gui_re
         source_rect.x1 = 0;
         source_rect.x2 = image->img_w - 1;
     }
-    uint32_t cache_size = (source_rect.x2 - source_rect.x1 + 1) * (source_rect.y2 - source_rect.y1 + 1)\
-                          * PPE_Get_Pixel_Size(source.format) / 8 + 4;
-    uint8_t *decode_buf = NULL;
+    uint32_t cache_size = (source_rect.x2 - source_rect.x1 + 1) *
+                          (source_rect.y2 - source_rect.y1 + 1) *
+                          PPE_Get_Pixel_Size(source.format) / 8;
+    ppe_scratch_allocator_t scratch =
+    {
+        .cache = cache_buf1,
+        .cache_size = CACHE_BUF_SIZE > 0 ? (uint32_t)CACHE_BUF_SIZE : 0,
+        .cache_offset = 0,
+    };
     bool need_clean_up = false;
-    if (cache_size < CACHE_BUF_SIZE)
+    uint8_t *decode_buf = ppe_scratch_alloc(&scratch, cache_size, &need_clean_up);
+    if (decode_buf == NULL)
     {
-        decode_buf = cache_buf1;
-    }
-    else
-    {
-#if F_APP_GUI_USE_PSRAM
-        decode_buf = acc_ppe_malloc(cache_size);
-        need_clean_up = true;
-#else
         return;
-#endif
     }
     ppe_matrix_t inverse;
     memcpy(&inverse, &image->inverse, sizeof(float) * 9);
@@ -1041,10 +1068,7 @@ void hw_acc_blit_simple(draw_img_t *image, struct gui_dispdev *dc, struct gui_re
     }
     else
     {
-        if (need_clean_up && decode_buf != NULL)
-        {
-            acc_ppe_free(decode_buf);
-        }
+        ppe_scratch_free(decode_buf, need_clean_up);
         return;
     }
     source.high_quality = false;
@@ -1054,12 +1078,8 @@ void hw_acc_blit_simple(draw_img_t *image, struct gui_dispdev *dc, struct gui_re
     {
         DBG_DIRECT("PPE err %d", err);
     }
-    ppe_wait_finish();
-    if (need_clean_up && decode_buf != NULL)
-    {
-        acc_ppe_free(decode_buf);
-        return;
-    }
+    ppe_wait_finish_blocking();
+    ppe_scratch_free(decode_buf, need_clean_up);
 }
 
 void hw_acc_blit_cache(draw_img_t *image, struct gui_dispdev *dc, struct gui_rect *rect)
@@ -1644,8 +1664,13 @@ void *hw_acc_idu_decode(void *input)
     uint32_t image_size = idu_info->raw_pic_width
                           * idu_info->raw_pic_height * pixel_size;
 
-    uint8_t *decode_img_data = acc_ppe_malloc(sizeof(gui_rgb_data_head_t) + 4 + idu_info->raw_pic_width
-                                              * idu_info->raw_pic_height * pixel_size + clut_offset);
+    uint32_t alloc_size = sizeof(gui_rgb_data_head_t) + 4 + idu_info->raw_pic_width
+                          * idu_info->raw_pic_height * pixel_size + clut_offset;
+    uint8_t *decode_img_data = acc_ppe_malloc(alloc_size);
+    if (decode_img_data == NULL)
+    {
+        return NULL;
+    }
     gui_rgb_data_head_t *output_header = (gui_rgb_data_head_t *)decode_img_data;
     memcpy(output_header, head, sizeof(gui_rgb_data_head_t));
     output_header->compress = 0;
@@ -1990,38 +2015,6 @@ void hw_acc_blit_a8_blur(draw_img_t *image, struct gui_dispdev *dc, struct gui_r
 }
 
 #if !PPE_RASTER_USE_SW_BLEND
-typedef struct
-{
-    uint8_t *cache;
-    uint32_t cache_size;
-    uint32_t cache_offset;
-} ppe_scratch_allocator_t;
-
-static uint8_t *ppe_scratch_alloc(ppe_scratch_allocator_t *allocator, uint32_t size,
-                                  bool *need_free)
-{
-    uint32_t aligned_offset = (allocator->cache_offset + 3U) & ~3U;
-    if (allocator->cache != NULL && aligned_offset <= allocator->cache_size &&
-        size <= allocator->cache_size - aligned_offset)
-    {
-        uint8_t *buffer = allocator->cache + aligned_offset;
-        allocator->cache_offset = aligned_offset + size;
-        *need_free = false;
-        return buffer;
-    }
-
-    *need_free = true;
-    return acc_ppe_malloc(size);
-}
-
-static void ppe_scratch_free(uint8_t *buffer, bool need_free)
-{
-    if (need_free && buffer != NULL)
-    {
-        acc_ppe_free(buffer);
-    }
-}
-
 static bool hw_acc_blit_raster_horizontal(draw_img_t *image, struct gui_dispdev *dc)
 {
     struct gui_rgb_data_head *head = image->data;
@@ -2118,8 +2111,20 @@ static bool hw_acc_blit_raster_horizontal(draw_img_t *image, struct gui_dispdev 
     bool decode_need_free = false;
     if (head->compress)
     {
-        uint32_t decode_size = (uint32_t)width * height * pixel_bytes;
-        decode_buf = ppe_scratch_alloc(&scratch, decode_size, &decode_need_free);
+        IDU_file_header *idu_header = (IDU_file_header *)source_data;
+        uint8_t decode_pixel_bytes = IDU_Get_Pixel_Size(idu_header);
+        if (decode_pixel_bytes == 0xFF || decode_pixel_bytes != pixel_bytes)
+        {
+            return true;
+        }
+        if (src_x1 < 0 || src_y1 < 0 || src_x2 < src_x1 || src_y2 < src_y1 ||
+            src_x2 >= (int32_t)idu_header->raw_pic_width ||
+            src_y2 >= (int32_t)idu_header->raw_pic_height)
+        {
+            return true;
+        }
+        uint32_t decode_size = (uint32_t)width * height * decode_pixel_bytes;
+        decode_buf = ppe_scratch_alloc(&scratch, decode_size + 4U, &decode_need_free);
         if (decode_buf == NULL)
         {
             return true;
@@ -2137,7 +2142,6 @@ static bool hw_acc_blit_raster_horizontal(draw_img_t *image, struct gui_dispdev 
     {
         source_data += ((uint32_t)src_y1 * image->img_w + src_x1) * pixel_bytes;
     }
-
     ppe_buffer_t target;
     if (!init_target_from_dc(&target, dc))
     {
@@ -2346,8 +2350,20 @@ static bool hw_acc_blit_raster_vertical(draw_img_t *image, struct gui_dispdev *d
     bool decode_need_free = false;
     if (head->compress)
     {
-        uint32_t decode_size = (uint32_t)width * height * pixel_bytes;
-        decode_buf = ppe_scratch_alloc(&scratch, decode_size, &decode_need_free);
+        IDU_file_header *idu_header = (IDU_file_header *)source_data;
+        uint8_t decode_pixel_bytes = IDU_Get_Pixel_Size(idu_header);
+        if (decode_pixel_bytes == 0xFF || decode_pixel_bytes != pixel_bytes)
+        {
+            return true;
+        }
+        if (src_x1 < 0 || src_y1 < 0 || src_x2 < src_x1 || src_y2 < src_y1 ||
+            src_x2 >= (int32_t)idu_header->raw_pic_width ||
+            src_y2 >= (int32_t)idu_header->raw_pic_height)
+        {
+            return true;
+        }
+        uint32_t decode_size = (uint32_t)width * height * decode_pixel_bytes;
+        decode_buf = ppe_scratch_alloc(&scratch, decode_size + 4U, &decode_need_free);
         if (decode_buf == NULL) { return true; }
         ppe_rect_t decode_rect = {.x1 = src_x1, .y1 = src_y1, .x2 = src_x2, .y2 = src_y2};
         if (!hw_idu_decode(&decode_rect, source_data, (uint32_t)width * pixel_bytes, decode_buf))
@@ -2362,7 +2378,6 @@ static bool hw_acc_blit_raster_vertical(draw_img_t *image, struct gui_dispdev *d
     {
         source_data += ((uint32_t)src_y1 * image->img_w + src_x1) * pixel_bytes;
     }
-
     uint32_t target_base_address = target.address;
     uint16_t direct_height = 0;
     if (source.format == target.format)
@@ -2599,6 +2614,10 @@ void hw_acc_blur_a8(struct gui_dispdev *dc, gui_rect_t *rect, uint8_t blur_degre
     uint8_t  bpp   = dc->bit_depth / 8;
 
     uint8_t *blur_copy = (uint8_t *)gui_malloc((uint32_t)blur_w * (uint32_t)blur_h * bpp);
+    if (blur_copy == NULL)
+    {
+        return;
+    }
 
     uint8_t *buffer = dc->frame_buf +
                       ((blur_rect.y1 - dc->section.y1) * dc->fb_width +
@@ -2631,6 +2650,11 @@ void hw_acc_blur_a8(struct gui_dispdev *dc, gui_rect_t *rect, uint8_t blur_degre
     gui_get_acc()->blur(&fake_dc, &local_rect, blur_degree, cache_mem);
 
     uint8_t *argb_combine = (uint8_t *)gui_malloc((uint32_t)blur_w * (uint32_t)blur_h * 4 + 8);
+    if (argb_combine == NULL)
+    {
+        gui_free(blur_copy);
+        return;
+    }
     const uint8_t *a8_row  = a8_base +
                              (blur_rect.y1 - a8_origin_y) * a8_stride +
                              (blur_rect.x1 - a8_origin_x);
@@ -2676,6 +2700,8 @@ void hw_acc_blur_a8(struct gui_dispdev *dc, gui_rect_t *rect, uint8_t blur_degre
         target.format = PPE_ARGB8888;
         break;
     default:
+        gui_free(argb_combine);
+        gui_free(blur_copy);
         return;
     }
     target.opacity = 0xFF;
