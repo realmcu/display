@@ -315,7 +315,9 @@ void arm2d_local_rgb565_filter_iir_blur_mve(
                                                      (uint16x8_t *)&vaccB);
             }
 
-            for (iX = 0; iX < iWidth; iX++)
+            int32_t iXStart = (NULL != ptStatusV && tOffset.iX > 0) ? 0 : 1;
+            voffs += (uint16_t)iXStart;
+            for (iX = iXStart; iX < iWidth; iX++)
             {
                 uint16x8_t      in = vldrhq_gather_shifted_offset_u16(phwPixel, voffs);
                 uint16x8_t      vR, vG, vB;
@@ -372,7 +374,9 @@ void arm2d_local_rgb565_filter_iir_blur_mve(
             }
 
 
-            for (iX = 0; iX < iWidth; iX++)
+            int32_t iXStart = (NULL != ptStatusV && tOffset.iX > 0) ? 0 : 1;
+            voffs += (uint16_t)iXStart;
+            for (iX = iXStart; iX < iWidth; iX++)
             {
                 uint16x8_t      in = vldrhq_gather_shifted_offset_u16(phwPixel, voffs);
                 uint16x8_t      vR, vG, vB;
@@ -420,7 +424,8 @@ void arm2d_local_rgb565_filter_iir_blur_mve(
             arm2d_local_rgb565_unpack_single_vec(vacc, (uint16x8_t *)&vaccR, (uint16x8_t *)&vaccG,
                                                  (uint16x8_t *)&vaccB);
 
-            for (iX = 0; iX < iWidth; iX++)
+            voffs -= 1;
+            for (iX = 1; iX < iWidth; iX++)
             {
                 uint16x8_t      in = vldrhq_gather_shifted_offset_u16(phwPixel, voffs);
                 uint16x8_t      vR, vG, vB;
@@ -453,7 +458,8 @@ void arm2d_local_rgb565_filter_iir_blur_mve(
             arm2d_local_rgb565_unpack_single_vec(vacc, (uint16x8_t *)&vaccR, (uint16x8_t *)&vaccG,
                                                  (uint16x8_t *)&vaccB);
 
-            for (iX = 0; iX < iWidth; iX++)
+            voffs -= 1;
+            for (iX = 1; iX < iWidth; iX++)
             {
                 uint16x8_t      in = vldrhq_gather_shifted_offset_u16(phwPixel, voffs);
                 uint16x8_t      vR, vG, vB;
@@ -507,7 +513,9 @@ void arm2d_local_rgb565_filter_iir_blur_mve(
                                                      (uint16x8_t *)&vaccB);
             }
 
-            for (iY = 0; iY < iHeight; iY++)
+            int32_t iYStart = (NULL != ptStatusH && tOffset.iY > 0) ? 0 : 1;
+            phwChannel += iYStart * iTargetStride;
+            for (iY = iYStart; iY < iHeight; iY++)
             {
 
                 uint16x8_t      in = vldrhq_u16(phwChannel);
@@ -562,7 +570,9 @@ void arm2d_local_rgb565_filter_iir_blur_mve(
                                                      (uint16x8_t *)&vaccB);
             }
 
-            for (iY = 0; iY < iHeight; iY++)
+            int32_t iYStart = (NULL != ptStatusH && tOffset.iY > 0) ? 0 : 1;
+            phwChannel += iYStart * iTargetStride;
+            for (iY = iYStart; iY < iHeight; iY++)
             {
                 uint16x8_t      in = vldrhq_u16(phwChannel);
                 uint16x8_t      vR, vG, vB;
