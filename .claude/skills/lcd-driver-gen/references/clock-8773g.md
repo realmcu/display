@@ -7,14 +7,14 @@ Source: Hardware header files
 
 | Interface | Divider Field (Struct) | Frequency Formula | Divider Value Range | Clock Source Selection API |
 |-----------|-----------------------|------------------|---------------------|----------------------------|
-| QSPI     | `LCDC_DBICCfgTypeDef.DBIC_SPEED_SEL` | `src / (2 x SEL)` | Integer, default 1 | `LCDC_Clock_Sel(200M/280M)` |
-| RGB/eDPI | `LCDC_eDPICfgTypeDef.eDPI_ClockDiv`  | `src / DIV` (See ⚠️) | **Integer factor, input IS the divider value (no +/-1)** | `RCC_DisplayClockConfig(...)` |
-| DBIB/8080| `LCDC_DBIBCfgTypeDef.DBIB_Clock_Divider` | `src / (2 x DIV)` | 2-64 | `RCC_DisplayClockConfig(...)` |
+| QSPI     | `LCDC_DBICCfgTypeDef.DBIC_SPEED_SEL` | `src / (2 x SEL)` | Integer, default 1 | `LCDC_Clock_Sel(200M/280M)` or `RCC_DisplayClockConfig(40M)` |
+| RGB/eDPI | `LCDC_eDPICfgTypeDef.eDPI_ClockDiv`  | `src / DIV` (See ⚠️) | **Integer factor, input IS the divider value (no +/-1)** | `LCDC_Clock_Sel(200M/280M)` or `RCC_DisplayClockConfig(40M)` |
+| DBIB/8080| `LCDC_DBIBCfgTypeDef.DBIB_Clock_Divider` | `src / (2 x DIV)` | 2-64 | `LCDC_Clock_Sel(200M/280M)` or `RCC_DisplayClockConfig(40M)` |
 
 - Source + divider are determined by **the customer panel spec**: **as close to typical as possible, not exceeding max**.
-- ⚠️ **"The two sources 200M/280M, selected via `LCDC_Clock_Sel`" is how QSPI (DBIC) works**. RGB / DBIB select the source via
-  `RCC_DisplayClockConfig`, and the code has used **PLL1=200M** and **40MHz** (see below), not limited to 200/280.
-  When generating code, use the source that appears in the reference driver for the same interface.
+- The display clock source is shared by the LCDC rather than restricted by interface. All interfaces may consider the chip's
+  **40M/200M/280M** sources. Use `LCDC_Clock_Sel` for 200M/280M; use `RCC_DisplayClockConfig` for 40M.
+  Select the source and interface divider together from the panel's confirmed maximum/typical clock requirements.
 
 ## QSPI (DBIC)
 
@@ -97,7 +97,7 @@ python .claude/skills/lcd-driver-gen/scripts/clock_calc.py --chip 8773g --iface 
 (`--chip` defaults to `8773g`; for 8773E/8762G see their respective clock documents `clock-8773e.md` / `clock-8762g.md`)
 Calculates register values in reverse from the formula and divider range of the selected interface, outputs directly pasteable code lines, and lists candidates on stderr for manual verification.
 RGB mode outputs the **raw integer divider factor** (`eDPI_ClockDiv` input IS the divider value, minimum 2; the named macros now equal the factor too, but values >8 can only be written as raw integers);
-For RGB/DBIB, the source defaults to values seen in existing code, and can be overridden with `--src`.
+By default, every hardware-supported source is considered for the selected chip and interface; use `--src` to narrow the candidate list when board or power constraints require it.
 
 ## Selection Rule
 

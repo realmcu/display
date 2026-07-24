@@ -32,8 +32,8 @@ Only ask the customer to read the spec when ① optimizing boot time (shortening
 - `t1 = 10 ms`, `t2 = 10 ms` (far exceeding the 10 µs minimum), `t3 = 120 ms` (covers most panels).
 
 ### Repository Measured Reference (All conservative working values)
-- `lcd_st77916_360_360_qspi.c`：100 / 50 / 130 ms
-- `lcd_c05300_390_450_qspi.c`：20 / 20 / 120 ms
+- `lcd_st77916_360_360_qspi.c`:100 / 50 / 130 ms
+- `lcd_c05300_390_450_qspi.c`:20 / 20 / 120 ms
 
 ## Generation Template (This repo uses `Pad_Config` for level control, not GPIO_WriteBit)
 

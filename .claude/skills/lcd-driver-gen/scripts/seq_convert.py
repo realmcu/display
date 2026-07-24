@@ -7,7 +7,7 @@ to driver init sequence code.
 Pipeline: datasheet paragraph text --> normalized intermediate representation
 [(cmd, [params...], delay_ms)] --> target style rendering.
 
-Supported input forms (auto-detected, can be mixed):
+Supported input forms (auto-detected; do not mix styles in one input):
   A. Function-call style (common in repo .txt files):
        write_command(0x11);
        platform_delay_ms(120);
@@ -30,10 +30,10 @@ Usage:
   python seq_convert.py --in seq.txt --style qspi-table --prefix ST77916
   cat seq.txt | python seq_convert.py --style inline --cmd-fn st7789_cmd --data-fn st7789_data
 
-Note: This script handles "translation", does not guarantee correctness.
-Always verify delays (0x11/0x29), parameter counts, and color depth command
-(0x3A) after generation. This is an initial scaffold; parsing rules will be
-refined with real datasheet cases.
+Note: This script handles representation conversion, not panel-sequence design.
+Verify every generated command, parameter count, and delay against the confirmed
+panel-specific sequence. Do not add or preserve commands merely because another
+panel uses them. Parsing rules must remain conservative for ambiguous input.
 """
 
 import argparse
@@ -121,10 +121,20 @@ def parse_table_style(text):
 
 
 def parse(text):
-    seq = parse_function_style(text)
-    if seq:
-        return seq
-    seq = parse_table_style(text)
+    has_function_style = _TOKEN_RE.search(text) is not None
+    has_table_style = any(
+        re.match(r"^(?:0x[0-9a-fA-F]+|\d+)(?:\s|,|$)", line.strip())
+        for line in text.splitlines()
+        if line.strip() and not line.lstrip().startswith(("#", "//"))
+    )
+    if has_function_style and has_table_style:
+        sys.stderr.write(
+            "error: mixed function-call and table/hex input is ambiguous; "
+            "convert one style at a time\n"
+        )
+        sys.exit(2)
+
+    seq = parse_function_style(text) if has_function_style else parse_table_style(text)
     if seq:
         return seq
     sys.stderr.write("error: could not identify any init commands from input\n")

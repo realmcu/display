@@ -14,8 +14,8 @@ chip):
     dbib : DBIB_clock = src / (2 * DBIB_Clock_Divider) (DBIB_Clock_Divider 2..64)
 
 Each chip clock source and selection method:
-    8773g : Sources 200M/280M(+40M); QSPI uses LCDC_Clock_Sel, RGB/DBIB use
-            RCC_DisplayClockConfig
+    8773g : Sources 40M/200M/280M; 200M/280M use LCDC_Clock_Sel for every
+            interface, while 40M uses RCC_DisplayClockConfig
     8773e : Sources PLL1=200M/PLL2=160M/XTAL=40M (no PLL3); all three
             interfaces use RCC_DisplayClockConfig
     8762g : Sources PLL1=125M/PLL2=160M/XTAL=40M; no API, write bitfield
@@ -70,11 +70,11 @@ IFACES = {
     },
 }
 
-# Default candidate sources per chip per interface (MHz); --src can override
+# Hardware-supported candidate sources per chip/interface (MHz); --src can narrow the list
 CHIP_IFACE_SRC = {
-    "8773g": {"qspi": [200, 280], "rgb": [200],      "dbib": [40, 200, 280]},
-    "8773e": {"qspi": [200, 160], "rgb": [200, 160], "dbib": [40, 200, 160]},
-    "8762g": {"qspi": [125, 160], "rgb": [125, 160], "dbib": [40, 125, 160]},
+    "8773g": {"qspi": [40, 200, 280], "rgb": [40, 200, 280], "dbib": [40, 200, 280]},
+    "8773e": {"qspi": [40, 160, 200], "rgb": [40, 160, 200], "dbib": [40, 160, 200]},
+    "8762g": {"qspi": [40, 125, 160], "rgb": [40, 125, 160], "dbib": [40, 125, 160]},
 }
 
 # All valid sources per chip (for --src validation)
@@ -84,7 +84,7 @@ CHIP_VALID_SRC = {
     "8762g": {40, 125, 160},
 }
 
-# RCC_DisplayClockConfig source enum (used by 8773g rgb/dbib, all 8773e interfaces)
+# RCC_DisplayClockConfig source enum (used for 8773g 40M and all 8773e sources)
 RCC_ENUM = {
     ("8773g", 200): "DISPLAY_CLOCK_SOURCE_PLL1",
     ("8773g", 40):  "DISPLAY_CLOCK_SOURCE_40MHZ",
@@ -99,16 +99,14 @@ def default_src(chip, iface):
 
 
 def valid_src(chip, iface):
-    """Return the set of allowed sources for the given chip and interface."""
-    if chip == "8773g" and iface == "qspi":
-        return {200, 280}          # LCDC_Clock_Sel only supports 200/280
+    """Return all hardware-supported display clock sources for a chip."""
     return CHIP_VALID_SRC[chip]
 
 
 def emit_src(chip, iface, src):
-    """Emit source selection code lines (list of str), varies by chip/interface."""
+    """Emit source selection code lines (list of str), varies by chip."""
     src = int(src)
-    if chip == "8773g" and iface == "qspi":
+    if chip == "8773g" and src in (200, 280):
         return ["LCDC_Clock_Sel(LCDC_BUS_CLK_%dM);" % src]
     if chip == "8762g":
         lines = [
@@ -127,11 +125,11 @@ def emit_src(chip, iface, src):
                 "PERIBLKCTRL_PERI_CLK->u_324.BITS_324.r_disp_div_sel      = 1;  /* Delegate division to interface */",
             ]
         return lines
-    # Everything else uses RCC_DisplayClockConfig (8773g rgb/dbib, all 8773e)
+    # 8773g 40M and all 8773e sources use RCC_DisplayClockConfig.
     enum = RCC_ENUM.get((chip, src))
-    if enum:
-        return ["RCC_DisplayClockConfig(%s, DISPLAY_CLOCK_DIV_1);" % enum]
-    return ["/* Source %dMHz: use RCC_DisplayClockConfig to select this source (no matching enum, please confirm manually) */" % src]
+    if enum is None:
+        raise ValueError("no source-selection code for %s/%s at %d MHz" % (chip, iface, src))
+    return ["RCC_DisplayClockConfig(%s, DISPLAY_CLOCK_DIV_1);" % enum]
 
 
 def candidates(iface, sources):
@@ -193,9 +191,13 @@ def main():
         allowed = valid_src(chip, iface)
         bad = [s for s in req if s not in allowed]
         if bad:
-            sys.stderr.write("warn: [%s/%s] sources can only be %s, ignoring %s\n"
+            sys.stderr.write("error: [%s/%s] sources must be selected from %s; unsupported: %s\n"
                              % (chip, iface, sorted(allowed), bad))
-        sources = [s for s in req if s in allowed] or default_src(chip, iface)
+            sys.exit(2)
+        if not req:
+            sys.stderr.write("error: --src must contain at least one frequency\n")
+            sys.exit(2)
+        sources = req
     else:
         sources = default_src(chip, iface)
 
@@ -206,11 +208,15 @@ def main():
     best = choose(cands, args.max_mhz, args.typical_mhz)
     if best is None:
         sys.stderr.write("error: [%s/%s] no combination <= %.3g MHz found in sources %s\n"
-                         % (chip, iface, sources, args.max_mhz))
+                         % (chip, iface, args.max_mhz, sources))
         sys.exit(2)
 
-    shortlist = sorted([c for c in cands if c["freq"] <= args.max_mhz + 1e-9],
-                       key=lambda c: (-c["freq"], c["div"]))[:args.top]
+    valid_cands = [c for c in cands if c["freq"] <= args.max_mhz + 1e-9]
+    if args.typical_mhz is not None:
+        shortlist_key = lambda c: (abs(c["freq"] - args.typical_mhz), -c["freq"], c["div"])
+    else:
+        shortlist_key = lambda c: (-c["freq"], c["div"])
+    shortlist = sorted(valid_cands, key=shortlist_key)[:max(args.top, 1)]
     sys.stderr.write("[%s/%s] %s, candidates (freq <= %.3g MHz):\n"
                      % (chip, iface, IFACES[iface]["formula"], args.max_mhz))
     for c in shortlist:

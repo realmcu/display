@@ -71,7 +71,7 @@ T_LCDC_TE_TYPE rtk_lcd_hal_get_TE_type(void);
 #endif
 ```
 
-Same `#if` pattern used in `clear_screen` (pack per INPUT) and init sequence `0x3A` (select per OUTPUT: 565=0x55 / 888=0x77) — must be consistent.
+Use the same INPUT-dependent packing in `clear_screen`. Panel initialization commands are panel-specific: include only commands present in the confirmed sequence, and do not infer a command from the selected pixel format.
 
 ## 4. `set_window` (QSPI/SPI/8080 with GRAM)
 
@@ -100,7 +100,7 @@ RGB exports the same function set, but with different implementations:
 | `set_window` | empty `return;` | No GRAM, no window addressing |
 | `clear_screen` | empty `return;` | Upper layer clears framebuffer directly |
 | `start_transfer` | empty `return;` | **NOT** the RGB data path (QSPI uses it for DMA) |
-| `transfer_done` | empty `return;` | Same — RGB doesn't use it |
+| `transfer_done` | clear `LCDC_CLR_WAVEFORM_FINISH`, then `return;` | Acknowledge a pending waveform-finish interrupt without starting a transfer |
 | `update_framebuffer` | **Real data entry**: first call inits DMA, later calls swap address | This IS the RGB data path |
 
 **Data path = `<panel>_dma_init()` LLI linked list + `update_framebuffer` address swap:**

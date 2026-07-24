@@ -24,21 +24,21 @@ Pick the one with the **same interface and closest resolution** as a template.
 > take the corresponding complete code snippet by interface+chip, and replace the template variables.
 
 ### 8773G (`device/general/lcd/8773G/`)
-- QSPI：`lcd_st77916_360_360_qspi.c` / `lcd_sh8601z_410_502_qspi.c` / `lcd_c05300_390_450_qspi.c` / `nv3041A_480_272_qspi.c`
-- RGB：`st7701s_480480_rgb.c` / `EK9716_800480_rgb.c` / `lcd_st7265_800480_rgb.c`
-- SPI：`st7789_170_320_lcdc_spi.c`
-- 8080：`st77916_360_360_dbib_8080.c`
+- QSPI:`lcd_st77916_360_360_qspi.c` / `lcd_sh8601z_410_502_qspi.c` / `lcd_c05300_390_450_qspi.c` / `nv3041A_480_272_qspi.c`
+- RGB:`st7701s_480480_rgb.c` / `EK9716_800480_rgb.c` / `lcd_st7265_800480_rgb.c`
+- SPI:`st7789_170_320_lcdc_spi.c`
+- 8080:`st77916_360_360_dbib_8080.c`
 
 ### 8773E (`device/general/lcd/8773E/`)
-- QSPI：`lcd_st77916_360_360_qspi.c` / `SH8601Z_454454_qspi.c` / `lcd_c05300_390_450_qspi.c` / `nv3041A_480_272_qspi.c`
-- RGB：`st7701s_480480_rgb.c` / `hx8369_480480_rgb.c` / `lcd_st7265_800480_rgb.c`
+- QSPI:`lcd_st77916_360_360_qspi.c` / `SH8601Z_454454_qspi.c` / `lcd_c05300_390_450_qspi.c` / `nv3041A_480_272_qspi.c`
+- RGB:`st7701s_480480_rgb.c` / `hx8369_480480_rgb.c` / `lcd_st7265_800480_rgb.c`
 
 ### 8762G (`device/general/lcd/8762G/`)
-- QSPI：`co5300_390x390_qspi.c` / `icna3311_280x456_qspi.c`
-- RGB：`st7701s_480480_rgb.c` / `NV3047_480272_rgb.c` / `ST7282_480272_rgb.c` / `EK9716_800480_rgb.c`
-- SPI：`st7789_170_320_lcdc_spi.c` / `NV3030B_76x284_spi.c`
-- 8080/DBIB：`st7789_320_240_8080.c` / `st7796_320320_dbib.c` / `nt35510_480800_dbib.c`
-- RLSPI：`ST77903_400400_RLSPI.c`
+- QSPI:`co5300_390x390_qspi.c` / `icna3311_280x456_qspi.c`
+- RGB:`st7701s_480480_rgb.c` / `NV3047_480272_rgb.c` / `ST7282_480272_rgb.c` / `EK9716_800480_rgb.c`
+- SPI:`st7789_170_320_lcdc_spi.c` / `NV3030B_76x284_spi.c`
+- 8080/DBIB:`st7789_320_240_8080.c` / `st7796_320320_dbib.c` / `nt35510_480800_dbib.c`
+- RLSPI:`ST77903_400400_RLSPI.c`
 
 ## QSPI Init Table Structure (Reference for Adaptation)
 
@@ -53,9 +53,8 @@ typedef struct _<PANEL>_CMD_DESC {
 
 static const <PANEL>_CMD_DESC <PANEL>_POWERON_SEQ_CMD[] = {
     {0x02, 0xF0, 0,   1, {0x28}},
-    {0x02, 0x3A, 0,   1, {0x55}},         // 0x55=565, 0x66=666(888)
-    {0x02, 0x11, 120, 0, {0x00}},         // sleep out + 120ms
-    {0x02, 0x29, 20,  0, {0x00}},         // display on + 20ms
+    {0x02, <CMD>, <DELAY>, <COUNT>, {<PANEL_SPECIFIC_PAYLOAD>}},
+    /* Add only commands, parameters, and delays from the confirmed panel-specific sequence. */
     {0x00, 0,    0,   0, {0}},            // SEQ_FINISH_CODE termination row
 };
 ```

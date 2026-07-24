@@ -44,6 +44,6 @@ if GetDepend(['CONFIG_REALTEK_LCD_<MODEL>_<W>_<H>_<IFACE>']):
 
 ## Verification Steps (Execute after generation)
 
-1. `grep -rn "REALTEK_LCD_<MODEL>_<W>_<H>_<IFACE>"` should appear in all three locations: **Kconfig / CMakeLists.txt / SConscript**, with identical spelling.
+1. Search recursively for `REALTEK_LCD_<MODEL>_<W>_<H>_<IFACE>` using the environment's available content-search tool. It should appear in all three locations: **Kconfig / CMakeLists.txt / SConscript**, with identical spelling.
 2. The `.c` filename referenced in CMakeLists and SConscript == actual generated filename.
 3. Header files `.h` don't need to be in SOURCES (CMake auto-collects them via `file(GLOB HEADERS "*.h")`).

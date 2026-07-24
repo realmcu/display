@@ -123,8 +123,8 @@ typedef struct { uint8_t instruction; uint8_t index; uint16_t delay; uint16_t wo
 ```
 
 After generating with `seq_convert.py --style qspi-table`, change `instruction` to the panel's ramless write opcode
-(e.g., 0xDE), and keep 0x11(sleep-out)+120ms, 0x29(display-on), 0x3A(color depth: 565=0x05 / 888=0x07).
-The last row typically includes `0x2C` (memory write, enter pixel stream).
+(e.g., 0xDE). Preserve exactly the commands, parameters, order, and delays in the confirmed panel-specific sequence;
+do not add commands copied from another ramless panel. If the panel specification defines a command that enters pixel streaming, preserve it in its specified position.
 
 ## How to Obtain Timing Parameters (Same Logic as RGB)
 
@@ -141,7 +141,7 @@ The last row typically includes `0x2C` (memory write, enter pixel stream).
 - [ ] `LCDC_Interface=LCDC_IF_DBIC` + `LCDC_RamlessEn=ENABLE` + `LCDC_InfiniteModeEn=1`
 - [ ] RLSPI struct fields complete (VSA/VBP/VFP, width/height, per-phase *_CMD/*_ADDR, DUMMY_CMD), commands/addresses from spec
 - [ ] `total_height ≤ 2047`, `active_width ≤ 4095`
-- [ ] Init command table `instruction` uses panel ramless write opcode (e.g., 0xDE), command byte in `index`; keep 0x11/0x29/0x3A
+- [ ] Init command table `instruction` uses the panel's ramless write opcode, command byte is in `index`, and all commands/delays match the confirmed panel-specific sequence
 - [ ] Framebuffer in DMA-able memory (PSRAM), `LCDC_DMA_Infinite_Buf_Update` swaps frames, `LCDC_AutoWriteCmd(ENABLE)` continuous push
 - [ ] Three platform-dependent items updated per target chip: clock enable (RCC_DisplayClockConfig), pad, `LCDC_GroupSel`
 - [ ] `set_window`/`start_transfer`/`transfer_done` are empty implementations for RLSPI (don't fill like regular QSPI)

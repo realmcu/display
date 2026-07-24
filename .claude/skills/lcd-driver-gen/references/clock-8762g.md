@@ -78,5 +78,5 @@ Active driver measurements (`device/general/lcd/8762G/`):
 Same as 8773G (see [`clock-8773g.md`](clock-8773g.md)): Main input = the **interface maximum clock frequency**
 (max, optionally typical) confirmed by the customer reading the panel spec; actual frequency ≤ max, if typical is given, pick the closest to typical. Use
 `scripts/clock_calc.py --chip 8762g --iface <qspi|rgb|dbib> --max <MHz>` to calculate the divider value and directly output
-8762G's source selection code (`BITS_324` bitfield block, including `src_sel0/1`); `--chip 8762g` limits candidate sources to PLL1=125M/PLL2=160M/40M.
+8762G's source selection code (`BITS_324` bitfield block, including `src_sel0/1`); `--chip 8762g` considers PLL1=125M/PLL2=160M/40M for every interface.
 To narrow to a single source, add `--src 125`/`--src 160`/`--src 40`.

@@ -1,7 +1,7 @@
 # Code Skeleton (for use when no reference driver is available)
 
-When there is no same-interface reference driver to clone under `device/general/lcd/<chip>/`, take the complete code skeleton directly from here.
-Replace template variables and it's ready to compile -- no need to depend on existing drivers in the repo.
+When there is no same-interface reference driver to clone under `device/general/lcd/<chip>/`, use the relevant section here as an adaptation guide.
+Some chip/interface sections intentionally refer back to a complete base section or contain explicit replacement markers; expand every referenced section and remove all placeholders before compiling.
 
 > **When NOT to use this section**: When there is a reference driver (existing `.c/.h` with similar resolution) for the same chip and same interface in the repo, **clone the reference driver first**,
 > because the reference driver has been verified on actual hardware. This section is a "fallback when no reference driver is available".
@@ -130,7 +130,7 @@ T_LCDC_TE_TYPE rtk_lcd_hal_get_TE_type(void);
 
 ### 2.1 8773G RGB
 
-Complete code, just replace template variables.
+Base RGB skeleton. Replace every template variable and verify it against the target chip's pin, clock, reset, and timing references.
 
 ```c
 #include "<panel>_<w>_<h>_rgb.h"

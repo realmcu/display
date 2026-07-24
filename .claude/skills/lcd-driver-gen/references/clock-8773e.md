@@ -20,7 +20,7 @@ Source: Verified on active 8773E drivers.
 ## Source Selection API (Key difference between 8773E and 8773G)
 
 **On 8773E, all three interfaces (QSPI/RGB/DBIB) uniformly use `RCC_DisplayClockConfig` for source selection**,
-unlike 8773G where QSPI uses `LCDC_Clock_Sel` and RGB/DBIB use `RCC_DisplayClockConfig`.
+unlike 8773G where every interface may use `LCDC_Clock_Sel` for 200M/280M and `RCC_DisplayClockConfig` for 40M.
 `DIV` is fixed to `DISPLAY_CLOCK_DIV_1` (no top-level divider), **actual division is handled by each interface itself** (same as 8773G).
 
 Standard usage (all 8773E drivers use these two lines):
@@ -55,5 +55,5 @@ Verified on active drivers (`device/general/lcd/8773E/`): QSPI (`lcd_c05300`, `l
 Consistent with 8773G (see [`clock-8773g.md`](clock-8773g.md)): Main input = maximum interface clock frequency confirmed by customer reading the panel spec
 (max, optional typical); actual frequency <= max, if typical is provided, pick the closest to typical. Use
 `scripts/clock_calc.py --chip 8773e --iface <qspi|rgb|dbib> --max <MHz>` to back-calculate register values and directly output
-8773E source selection code (`RCC_DisplayClockConfig(...)`); `--chip 8773e` limits candidate sources to PLL1=200M/PLL2=160M/40M,
-add `--src 200`/`--src 160`/`--src 40` to narrow down to a single source.
+8773E source selection code (`RCC_DisplayClockConfig(...)`); `--chip 8773e` considers PLL1=200M/PLL2=160M/40M for every interface,
+and `--src 200`/`--src 160`/`--src 40` narrows the calculation to a single source.
