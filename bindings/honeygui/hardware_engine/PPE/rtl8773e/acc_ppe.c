@@ -732,7 +732,8 @@ void hw_acc_blit(draw_img_t *image, struct gui_dispdev *dc, struct gui_rect *rec
     {
         mode = PPE_BYPASS_MODE;
     }
-    else if (image->blend_mode == IMG_SRC_OVER_MODE || image->blend_mode == IMG_FILTER_BLACK)
+    else if (image->blend_mode == IMG_SRC_MODE || image->blend_mode == IMG_SRC_OVER_MODE ||
+             image->blend_mode == IMG_FILTER_BLACK)
     {
         mode = PPE_SRC_OVER_MODE;
     }
@@ -747,7 +748,7 @@ void hw_acc_blit(draw_img_t *image, struct gui_dispdev *dc, struct gui_rect *rec
     {
         source.color_key_enable = PPE_COLOR_KEY_DISABLE;
     }
-    else if (image->blend_mode == IMG_SRC_OVER_MODE)
+    else if (image->blend_mode == IMG_SRC_MODE || image->blend_mode == IMG_SRC_OVER_MODE)
     {
         source.color_key_enable = PPE_COLOR_KEY_DISABLE;
     }

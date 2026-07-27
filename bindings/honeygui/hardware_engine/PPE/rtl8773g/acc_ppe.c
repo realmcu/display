@@ -724,7 +724,8 @@ void hw_acc_blit_direct(draw_img_t *image, struct gui_dispdev *dc, struct gui_re
     ppe_buffer_t target, source;
     memset(&source, 0, sizeof(ppe_buffer_t));
     if (!init_target_from_dc(&target, dc)) { return; }
-    PPE_BLEND_METHOD method = PPE_BLEND_PREMULTIPLY;
+    PPE_BLEND_METHOD method = image->blend_mode == IMG_SRC_MODE ? PPE_BLEND_SRC :
+                              PPE_BLEND_PREMULTIPLY;
 
     source.address = (uint32_t)image->data + sizeof(struct gui_rgb_data_head);
     source.opacity = image->opacity_value;
@@ -1002,7 +1003,7 @@ void hw_acc_blit_simple(draw_img_t *image, struct gui_dispdev *dc, struct gui_re
     }
     else
     {
-        method = PPE_BLEND_PREMULTIPLY;
+        method = image->blend_mode == IMG_SRC_MODE ? PPE_BLEND_SRC : PPE_BLEND_PREMULTIPLY;
     }
     if (image->blend_mode == IMG_FILTER_BLACK)
     {
@@ -1284,7 +1285,11 @@ void hw_acc_blit_cache(draw_img_t *image, struct gui_dispdev *dc, struct gui_rec
         method = PPE_BLEND_PREMULTIPLY;
     }
 
-    if (image->blend_mode == IMG_RECT)
+    if (image->blend_mode == IMG_SRC_MODE)
+    {
+        method = PPE_BLEND_SRC;
+    }
+    else if (image->blend_mode == IMG_RECT)
     {
         method = PPE_BLEND_CONST_COLOR;
     }
