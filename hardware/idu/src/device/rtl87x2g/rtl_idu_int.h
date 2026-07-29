@@ -103,3 +103,6 @@ void rtl_idu_int_tx_dma_setting(uint8_t tx_dma_ch, uint8_t tx_dma_depth,
                                 uint32_t line_stride, uint32_t line_size,
                                 uint32_t line_num, GDMA_LLIDef **TX_GDMA_LLIStruct);
 
+uint32_t rtl_idu_lock_int(void);
+
+void rtl_idu_unlock_int(uint32_t s);

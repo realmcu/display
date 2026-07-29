@@ -105,3 +105,7 @@ void rtl_idu_int_tx_dma_setting(uint8_t tx_dma_ch, uint8_t tx_dma_depth,
 uint8_t rtl_idu_int_get_dma_ch(void);
 uint8_t rtl_idu_int_get_rx_dma_channel(void);
 uint8_t rtl_idu_int_get_tx_dma_channel(void);
+
+uint32_t rtl_idu_lock_int(void);
+
+void rtl_idu_unlock_int(uint32_t s);

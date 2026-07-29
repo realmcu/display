@@ -9,6 +9,15 @@
 #if 1
 #include "os_mem.h"
 #endif
+uint32_t rtl_idu_lock_int(void)
+{
+    return 0;
+}
+
+void rtl_idu_unlock_int(uint32_t s)
+{
+    (void)s;
+}
 
 GDMA_ChannelTypeDef *rtl_idu_get_dma_channel_int(uint8_t channel_num)
 {

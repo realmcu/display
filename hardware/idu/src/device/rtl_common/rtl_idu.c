@@ -454,7 +454,7 @@ IDU_ERROR IDU_Decode(uint8_t *file, IDU_decode_range *range, IDU_DMA_config *dma
                                                 (decompressed_data_size / 4 + 1) : (decompressed_data_size / 4));
     /* Configure DMA */
     RCC_PeriphClockCmd(APBPeriph_GDMA, APBPeriph_GDMA_CLOCK, ENABLE);
-
+    uint32_t s = rtl_idu_lock_int();
     GDMA_LLIDef *RX_GDMA_LLIStruct = NULL;
     rtl_idu_int_rx_dma_setting(start_line_address, compressed_data_size, dma_cfg->RX_DMA_channel_num,
                                &RX_GDMA_LLIStruct);
@@ -474,6 +474,7 @@ IDU_ERROR IDU_Decode(uint8_t *file, IDU_decode_range *range, IDU_DMA_config *dma
 
     IDU_Cmd(ENABLE);
     IDU_Run(ENABLE);
+    rtl_idu_unlock_int(s);
     bool timed_out;
     IDU_BUSY_WAIT(IDU->IDU_CTL0 & BIT0, timed_out);
     if (timed_out)
@@ -646,7 +647,7 @@ IDU_ERROR IDU_Decode_With_Interrupt(uint8_t *file, IDU_decode_range *range, IDU_
                                                 (decompressed_data_size / 4 + 1) : (decompressed_data_size / 4));
     /* Configure DMA */
     RCC_PeriphClockCmd(APBPeriph_GDMA, APBPeriph_GDMA_CLOCK, ENABLE);
-
+    uint32_t s = rtl_idu_lock_int();
     GDMA_LLIDef *RX_GDMA_LLIStruct = NULL;
     rtl_idu_int_rx_dma_setting(start_line_address, compressed_data_size, dma_cfg->RX_DMA_channel_num,
                                &RX_GDMA_LLIStruct);
@@ -717,6 +718,7 @@ IDU_ERROR IDU_Decode_With_Interrupt(uint8_t *file, IDU_decode_range *range, IDU_
     record->tx_dma_num = rtl_idu_int_get_tx_dma_channel();
     IDU_Cmd(ENABLE);
     IDU_Run(ENABLE);
+    rtl_idu_unlock_int(s);
     return IDU_SUCCESS;
 }
 

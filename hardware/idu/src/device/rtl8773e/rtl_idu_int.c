@@ -12,6 +12,18 @@
 #include "vector_table.h"
 #include "fmc_platform.h"
 #include "section.h"
+#include "os_sync.h"
+
+uint32_t rtl_idu_lock_int(void)
+{
+    uint32_t s = os_lock();
+    return s;
+}
+
+void rtl_idu_unlock_int(uint32_t s)
+{
+    os_unlock(s);
+}
 
 void rtl_idu_channel_init_int(uint8_t *high_speed_channel, uint8_t *low_speed_channel)
 {

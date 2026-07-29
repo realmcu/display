@@ -13,6 +13,18 @@
 #include "section.h"
 #include "fmc_platform.h"
 #include "vector_table.h"
+#include "os_sync.h"
+
+uint32_t rtl_idu_lock_int(void)
+{
+    uint32_t s = os_lock();
+    return s;
+}
+
+void rtl_idu_unlock_int(uint32_t s)
+{
+    os_unlock(s);
+}
 
 GDMA_ChannelTypeDef *rtl_idu_get_dma_channel_int(uint8_t channel_num)
 {
