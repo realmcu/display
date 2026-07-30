@@ -720,7 +720,7 @@ void hw_acc_blit_direct(draw_img_t *image, struct gui_dispdev *dc, struct gui_re
     {
         return;
     }
-
+    struct gui_rgb_data_head *head = image->data;
     ppe_buffer_t target, source;
     memset(&source, 0, sizeof(ppe_buffer_t));
     if (!init_target_from_dc(&target, dc)) { return; }
@@ -728,12 +728,23 @@ void hw_acc_blit_direct(draw_img_t *image, struct gui_dispdev *dc, struct gui_re
                               PPE_BLEND_PREMULTIPLY;
 
     source.address = (uint32_t)image->data + sizeof(struct gui_rgb_data_head);
-    source.opacity = image->opacity_value;
     source.width = image->img_w;
     source.height = image->img_h;
     source.stride = image->img_w;
-    source.const_color = 0xFFFFFFFF;
-    struct gui_rgb_data_head *head = image->data;
+    if (image->blend_mode == IMG_SRC_MODE)
+    {
+        source.const_color = image->opacity_value * 0x010101 + 0xFF000000;
+        source.opacity = 0xFF;
+        if (head->type == ARGB8565 || head->type == ARGB8888 || head->type == XRGB8888)
+        {
+            method = PPE_BLEND_PREMULTIPLY;
+        }
+    }
+    else
+    {
+        source.const_color = 0xFFFFFFFF;
+        source.opacity = image->opacity_value;
+    }
     if (head->type == PALETTE)
     {
         gui_palette_file_t *phead = (gui_palette_file_t *)image->data;
@@ -1098,19 +1109,31 @@ void hw_acc_blit_cache(draw_img_t *image, struct gui_dispdev *dc, struct gui_rec
     {
         return;
     }
-
+    struct gui_rgb_data_head *head = image->data;
     ppe_buffer_t target, source;
     memset(&source, 0, sizeof(ppe_buffer_t));
     if (!init_target_from_dc(&target, dc)) { return; }
     PPE_BLEND_METHOD method = PPE_BLEND_SRC;
 
     source.address = (uint32_t)image->data + sizeof(struct gui_rgb_data_head);
-    source.opacity = image->opacity_value;
     source.width = image->img_w;
     source.height = image->img_h;
     source.stride = image->img_w;
-    source.const_color = 0xFFFFFFFF;
-    struct gui_rgb_data_head *head = image->data;
+    if (image->blend_mode == IMG_SRC_MODE)
+    {
+        source.const_color = image->opacity_value * 0x010101 + 0xFF000000;
+        source.opacity = 0xFF;
+        if (head->type == ARGB8565 || head->type == ARGB8888 || head->type == XRGB8888)
+        {
+            method = PPE_BLEND_PREMULTIPLY;
+        }
+    }
+    else
+    {
+        source.const_color = 0xFFFFFFFF;
+        source.opacity = image->opacity_value;
+    }
+
     if (!init_source_format(&source, image, head)) { return; }
 
 
