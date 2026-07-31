@@ -1310,7 +1310,14 @@ void hw_acc_blit_cache(draw_img_t *image, struct gui_dispdev *dc, struct gui_rec
 
     if (image->blend_mode == IMG_SRC_MODE)
     {
-        method = PPE_BLEND_SRC;
+        if (head->type == ARGB8565 || head->type == ARGB8888 || head->type == XRGB8888)
+        {
+            method = PPE_BLEND_PREMULTIPLY;
+        }
+        else
+        {
+            method = PPE_BLEND_SRC;
+        }
     }
     else if (image->blend_mode == IMG_RECT)
     {
