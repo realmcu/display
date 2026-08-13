@@ -26,6 +26,13 @@ if(1) #set to 1 to enable or variable to for depnedency
 		list(APPEND SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/touch_CHSC6413.c")
 	endif()
 
+    # CST820: same yield pattern as CHSC6417.
+	if(CONFIG_REALTEK_TOUCH_CST820_ZEPHYR)
+		# Yield.
+	elseif(CONFIG_REALTEK_TOUCH_CST820)
+		list(APPEND SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/touch_cst820.c")
+	endif()
+
     # Determine if we should create a library
     if((NOT HEADERS) AND (NOT SOURCES))
         message(STATUS "No source or header files found in ${CMAKE_CURRENT_SOURCE_DIR}.")

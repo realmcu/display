@@ -15,7 +15,8 @@ if GetDepend(['CONFIG_REALTEK_TOUCH_LW']):
     src += ['touch_lw.c']
 if GetDepend(['CONFIG_REALTEK_TOUCH_CS816T']):
     src += ['touch_cs816t.c']
-
+if GetDepend(['CONFIG_REALTEK_TOUCH_CST820']):
+    src += ['touch_cst820.c']
 
 CPPPATH = [cwd]
 

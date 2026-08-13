@@ -81,6 +81,12 @@ config REALTEK_LCD_SH8601Z_466_466_QSPI
 	help
 		This config for realtek display lcd device driver
 
+config REALTEK_LCD_ST7801N_466_466_QSPI
+	bool "Enable Realtek LCD Device Driver 466 466"
+	default n
+	help
+		This config for realtek display lcd device driver
+		
 config REALTEK_LCD_ST7265_800_480_RGB
 	bool "Enable Realtek LCD Device Driver ST7265 800 480"
 	default n
@@ -165,8 +171,20 @@ config REALTEK_TOUCH_CST816D
 	help
 		This config for realtek touch device driver
 
+config REALTEK_TOUCH_CST820
+	bool "Enable Realtek Touch Device CST820"
+	default n
+	help
+		This config for realtek touch device driver
+
 config REALTEK_TOUCH_CST816D_ZEPHYR
 	bool "Enable Realtek Touch Device CST816D with Zephyr code style"
+	default n
+	help
+		This config for realtek touch device driver
+
+config REALTEK_TOUCH_CST820_ZEPHYR
+	bool "Enable Realtek Touch Device CST820 with Zephyr code style"
 	default n
 	help
 		This config for realtek touch device driver
