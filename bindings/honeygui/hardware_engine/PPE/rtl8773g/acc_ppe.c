@@ -762,7 +762,7 @@ void hw_acc_blit_direct(draw_img_t *image, struct gui_dispdev *dc, struct gui_re
     {
         PPE->CLUT_INDEX = 0;
         uint32_t *clut = (uint32_t *)((uint32_t)image->data + sizeof(gui_rgb_data_head_t));
-        uint32_t clut_num = *clut++;
+        uint32_t clut_num = (*clut++ >> 16) + 1;
         for (int i = 0; i < clut_num; i++)
         {
             PPE->CLUT_CONT = *clut++;
@@ -1677,8 +1677,8 @@ void *hw_acc_idu_decode(void *input)
         break;
     case I8:
         pixel_size = 1;
-        clut_num = *(uint32_t *)((uint32_t)input + sizeof(gui_rgb_data_head_t)) + 1;
-        clut_offset = clut_num * 4;
+        clut_num = (*(uint32_t *)((uint32_t)input + sizeof(gui_rgb_data_head_t)) >> 16) + 1;
+        clut_offset = clut_num * 4 + sizeof(uint32_t);
         break;
     case A8:
     case A4:
