@@ -638,6 +638,7 @@ IDU_ERROR IDU_Decode_With_Interrupt(uint8_t *file, IDU_decode_range *range, IDU_
     IDU_struct_init.tx_fifo_dma_threshold = 8;
     IDU_struct_init.rx_fifo_int_threshold     = dma_cfg->RX_FIFO_INT_threshold;
     IDU_struct_init.tx_fifo_int_threshold     = dma_cfg->TX_FIFO_INT_threshold;
+    rtl_idu_hw_handshake_init(&IDU_struct_init);
     IDU_Init(&IDU_struct_init);
 
 
