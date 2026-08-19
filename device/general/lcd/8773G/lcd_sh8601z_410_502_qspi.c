@@ -19,6 +19,7 @@
 
 #include "indirect_access.h"
 
+#define QSPI_PIN_GROUP    1
 
 #define LCDC_DMA_CHANNEL_NUM              0
 #define LCDC_DMA_CHANNEL_INDEX            LCDC_DMA_Channel0
@@ -31,6 +32,7 @@
 #define BIT_TXSIM               (0x00000001 << 9)
 #define BIT_SEQ_EN              (0x00000001 << 3)
 
+#if (QSPI_PIN_GROUP == 1)
 #define LCD_QSPI_CS                       P9_2
 #define LCD_QSPI_CLK                      P9_4
 #define LCD_QSPI_D0                       P9_3
@@ -41,6 +43,17 @@
 #define LCD_QSPI_TE                       P2_2
 #define LCD_AVDD_EN                       P2_3
 
+#elif (QSPI_PIN_GROUP == 0)
+#define LCD_QSPI_CS                       P2_5
+#define LCD_QSPI_CLK                      P2_3
+#define LCD_QSPI_D0                       P2_6
+#define LCD_QSPI_D1                       P2_7
+#define LCD_QSPI_D2                       P4_0
+#define LCD_QSPI_D3                       P4_1
+#define LCD_QSPI_RST                      P4_4
+#define LCD_QSPI_TE                       P2_2
+#define LCD_AVDD_EN                       P2_1
+#endif
 
 /* SH8601Z QSPI Instruction Code */
 #define SH8601Z_QSPI_INST_CMD_WRITE                     (0x02)
@@ -306,7 +319,7 @@ void rtk_lcd_hal_init(void)
     lcdc_init.LCDC_TePolarity = LCDC_TE_EDGE_FALLING;
     lcdc_init.LCDC_TeInputMux = LCDC_TE_LCD_INPUT;
 #endif
-    lcdc_init.LCDC_GroupSel = 1;
+    lcdc_init.LCDC_GroupSel = QSPI_PIN_GROUP;
     lcdc_init.LCDC_DmaThreshold =
         64;    // MSize + threshold should be no larger than 128
     lcdc_init.LCDC_PhaseShift = 0x2; // set PHI delay
