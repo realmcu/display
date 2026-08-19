@@ -318,6 +318,16 @@ static void hw_ppe_blit(draw_img_t *image, struct gui_dispdev *dc, gui_rect_t *r
     {
         return;
     }
+    if (rect != NULL)
+    {
+        ppe_rect_t clip_area = {.x1 = rect->x1, .y1 = rect->y1,
+                                .x2 = rect->x2, .y2 = rect->y2
+                               };
+        if (!ppe_rect_intersect(&constraint_area, &constraint_area, &clip_area))
+        {
+            return;
+        }
+    }
 
     struct gui_rgb_data_head *head = image->data;
 
@@ -422,20 +432,6 @@ static void hw_ppe_blit(draw_img_t *image, struct gui_dispdev *dc, gui_rect_t *r
             scale_rect.right = image->img_w - 1;
         }
 
-        if (rect != NULL)
-        {
-            draw_area.x1 = image->img_target_x + rect->x1 * scale_x;
-            draw_area.x2 = image->img_target_x + ceil(rect->x2 * scale_x);
-            draw_area.y1 = image->img_target_y + rect->y1 * scale_y;
-            draw_area.y2 = image->img_target_y + ceil(rect->y2 * scale_y);
-            ppe_rect_t scope_area = {.x1 = rect->x1, .x2 = rect->x2, \
-                                     .y1 = rect->y1, .y2 = rect->y2
-                                    };
-            if (!ppe_rect_intersect(&constraint_area, &buf_area, &draw_area))
-            {
-                return;
-            }
-        }
         scaled_img.width = (uint32_t)((scale_rect.right - scale_rect.left + 1) * scale_x);
         scaled_img.height = (uint32_t)((scale_rect.bottom - scale_rect.top + 1) * scale_y);
         scaled_img.stride = scaled_img.width;
@@ -478,19 +474,12 @@ static void hw_ppe_blit(draw_img_t *image, struct gui_dispdev *dc, gui_rect_t *r
         PPE_ERR err = PPE_Scale_Rect(&source, &scaled_img, scale_x, scale_y, &scale_rect);
         if (err == PPE_SUCCESS)
         {
-            if (rect != NULL)
-            {
-                ppe_rect_t final = {.x1 = constraint_area.x1 - dc->section.x1,
-                                    .x2 = constraint_area.x2 - dc->section.x1,
-                                    .y1 = constraint_area.y1 - dc->section.y1,
-                                    .y2 = constraint_area.y2 - dc->section.y1
-                                   };
-                err = PPE_Blend_Rect(&scaled_img, &target, &trans, &final, mode);
-            }
-            else
-            {
-                err = PPE_Blend(&scaled_img, &target, &trans, mode);
-            }
+            ppe_rect_t final = {.x1 = constraint_area.x1 - dc->section.x1,
+                                .x2 = constraint_area.x2 - dc->section.x1,
+                                .y1 = constraint_area.y1 - dc->section.y1,
+                                .y2 = constraint_area.y2 - dc->section.y1
+                               };
+            err = PPE_Blend_Rect(&scaled_img, &target, &trans, &final, mode);
         }
         if (head->compress)
         {
@@ -503,18 +492,6 @@ static void hw_ppe_blit(draw_img_t *image, struct gui_dispdev *dc, gui_rect_t *r
         ppe_translate_t trans = {.x = draw_area.x1 - dc->section.x1, .y = draw_area.y1 - dc->section.y1};
         if (head->compress)
         {
-            if (rect != NULL)
-            {
-                ppe_rect_t scope_area = {.x1 = rect->x1 + image->img_target_x, \
-                                         .x2 = rect->x2 + image->img_target_x, \
-                                         .y1 = rect->y1 + image->img_target_y, \
-                                         .y2 = rect->y2 + image->img_target_y
-                                        };
-                if (!ppe_rect_intersect(&constraint_area, &constraint_area, &scope_area))
-                {
-                    return;
-                }
-            }
             RCC_PeriphClockCmd(APBPeriph_IDU, APBPeriph_IDU_CLOCK, ENABLE);
 
             const IDU_file_header *header = (IDU_file_header *)((uint32_t)image->data + sizeof(
@@ -542,28 +519,21 @@ static void hw_ppe_blit(draw_img_t *image, struct gui_dispdev *dc, gui_rect_t *r
         }
         else
         {
-            if (rect != NULL)
-            {
-                ppe_rect_t scope_area = {.x1 = rect->x1 + image->img_target_x, \
-                                         .x2 = rect->x2 + image->img_target_x, \
-                                         .y1 = rect->y1 + image->img_target_y, \
-                                         .y2 = rect->y2 + image->img_target_y
-                                        };
-                if (!ppe_rect_intersect(&constraint_area, &constraint_area, &scope_area))
-                {
-                    return;
-                }
-                trans.x = constraint_area.x1 - dc->section.x1;
-                trans.y = constraint_area.y1 - dc->section.y1;
-                source.address = source.address + ((constraint_area.x1 - image->img_target_x) +
-                                                   (constraint_area.y1 - image->img_target_y)
-                                                   * image->img_w) * ppe_get_format_data_len(source.format);
-                source.memory = (uint32_t *)source.address;
-                source.width = constraint_area.x2 - constraint_area.x1 + 1;
-                source.height = constraint_area.y2 - constraint_area.y1 + 1;
-            }
+            trans.x = constraint_area.x1 - dc->section.x1;
+            trans.y = constraint_area.y1 - dc->section.y1;
+            source.address = source.address + ((constraint_area.x1 - image->img_target_x) +
+                                               (constraint_area.y1 - image->img_target_y)
+                                               * image->img_w) * ppe_get_format_data_len(source.format);
+            source.memory = (uint32_t *)source.address;
+            source.width = constraint_area.x2 - constraint_area.x1 + 1;
+            source.height = constraint_area.y2 - constraint_area.y1 + 1;
         }
-        PPE_ERR err = PPE_Blend(&source, &target, &trans, PPE_SRC_OVER_MODE);
+        ppe_rect_t final = {.x1 = constraint_area.x1 - dc->section.x1,
+                            .x2 = constraint_area.x2 - dc->section.x1,
+                            .y1 = constraint_area.y1 - dc->section.y1,
+                            .y2 = constraint_area.y2 - dc->section.y1
+                           };
+        PPE_ERR err = PPE_Blend_Rect(&source, &target, &trans, &final, PPE_SRC_OVER_MODE);
         if (head->compress)
         {
             gui_free(source.memory);
@@ -591,12 +561,10 @@ static void hw_bare_blit(draw_img_t *image, struct gui_dispdev *dc, gui_rect_t *
     }
     if (rect != NULL)
     {
-        ppe_rect_t scope_area = {.x1 = rect->x1 + image->img_target_x, \
-                                 .x2 = rect->x2 + image->img_target_x, \
-                                 .y1 = rect->y1 + image->img_target_y, \
-                                 .y2 = rect->y2 + image->img_target_y
-                                };
-        if (!ppe_rect_intersect(&constraint_area, &constraint_area, &scope_area))
+        ppe_rect_t clip_area = {.x1 = rect->x1, .y1 = rect->y1,
+                                .x2 = rect->x2, .y2 = rect->y2
+                               };
+        if (!ppe_rect_intersect(&constraint_area, &constraint_area, &clip_area))
         {
             return;
         }
@@ -668,15 +636,17 @@ static void hw_bare_blit(draw_img_t *image, struct gui_dispdev *dc, gui_rect_t *
         uint32_t length = (constraint_area.x2 - constraint_area.x1 + 1) * pixel_size;
         if (length % 4)
         {
-            if (constraint_area.x2 - draw_area.x1 + 1 < image->img_w && constraint_area.x2 + 1 <= buf_area.x2)
+            int32_t clip_x2 = rect != NULL ? rect->x2 : buf_area.x2;
+            if (constraint_area.x2 - draw_area.x1 + 1 < image->img_w &&
+                constraint_area.x2 + 1 <= buf_area.x2 && constraint_area.x2 + 1 <= clip_x2)
             {
                 constraint_area.x2 += 1;
                 length += pixel_size;
             }
             else
             {
-                constraint_area.x2 -= 1;
-                length -= pixel_size;
+                hw_ppe_blit(image, dc, rect);
+                return;
             }
         }
         if (length == 0)
@@ -734,6 +704,16 @@ void hw_ppe_fill_rect(draw_img_t *image, struct gui_dispdev *dc, gui_rect_t *rec
     if (!ppe_rect_intersect(&constraint_area, &buf_area, &draw_area))
     {
         return;
+    }
+    if (rect != NULL)
+    {
+        ppe_rect_t clip_area = {.x1 = rect->x1, .y1 = rect->y1,
+                                .x2 = rect->x2, .y2 = rect->y2
+                               };
+        if (!ppe_rect_intersect(&constraint_area, &constraint_area, &clip_area))
+        {
+            return;
+        }
     }
     constraint_area.x1 = constraint_area.x1 - buf_area.x1;
     constraint_area.x2 = constraint_area.x2 - buf_area.x1;

@@ -461,45 +461,6 @@ void acc_get_intersect_area(draw_img_t *image, ppe_rect_t *new_rect, ppe_rect_t 
     }
 }
 
-bool acc_get_src_rect_area(ppe_rect_t *src_rect, gui_rect_t *rect)
-{
-    int32_t src_hor_end = src_rect->x + src_rect->w - 1;
-    int32_t src_ver_end = src_rect->y + src_rect->h - 1;
-    if (src_rect->x > rect->x2 || src_rect->y > rect->y2 || src_hor_end < rect->x1 ||
-        src_ver_end < rect->y1)
-    {
-        return false;
-    }
-    if (src_rect->x < rect->x1)
-    {
-        src_rect->x = rect->x1;
-    }
-    if (src_rect->y < rect->y1)
-    {
-        src_rect->y = rect->y1;
-    }
-    if (src_hor_end > rect->x2)
-    {
-        src_hor_end = rect->x2;
-    }
-    if (src_ver_end > rect->y2)
-    {
-        src_ver_end = rect->y2;
-    }
-    int new_w = src_hor_end - src_rect->x + 1;
-    int new_h = src_ver_end - src_rect->y + 1;
-    if (new_w <= 0 || new_h <= 0)
-    {
-        return false;
-    }
-    else
-    {
-        src_rect->w = new_w;
-        src_rect->h = new_h;
-        return true;
-    }
-}
-
 void hw_acc_blit(draw_img_t *image, struct gui_dispdev *dc, struct gui_rect *rect)
 {
     int32_t x_max = (image->img_target_w + image->img_target_x - 1);
@@ -588,38 +549,24 @@ void hw_acc_blit(draw_img_t *image, struct gui_dispdev *dc, struct gui_rect *rec
                 image->blend_mode == IMG_RECT || image->blend_mode == IMG_COVER_MODE)
             {
 
-                if ((x_max < dc->section.x1) || (y_max < dc->section.y1)
-                    || (x_min >= dc->section.x1 + dc->fb_width) || (y_min >= dc->section.y1 + dc->fb_height))
+                ppe_rect_t dst_rect = {.x = _UI_MAX(x_min, dc->section.x1),
+                                       .y = _UI_MAX(y_min, dc->section.y1)
+                                      };
+                int32_t dst_x2 = _UI_MIN(x_max, dc->section.x2);
+                int32_t dst_y2 = _UI_MIN(y_max, dc->section.y2);
+                if (rect != NULL)
+                {
+                    dst_rect.x = _UI_MAX(dst_rect.x, rect->x1);
+                    dst_rect.y = _UI_MAX(dst_rect.y, rect->y1);
+                    dst_x2 = _UI_MIN(dst_x2, rect->x2);
+                    dst_y2 = _UI_MIN(dst_y2, rect->y2);
+                }
+                if (dst_rect.x > dst_x2 || dst_rect.y > dst_y2)
                 {
                     return;
                 }
-                ppe_rect_t dst_rect = {.x = x_min - dc->section.x1, .y = y_min - dc->section.y1, .w = dc->fb_width, .h = dc->fb_height};
-                if (dst_rect.x < 0)
-                {
-                    dst_rect.x = 0;
-                }
-                if (dst_rect.y < 0)
-                {
-                    dst_rect.y = 0;
-                }
-                if (x_max >= dc->section.x1 + dc->fb_width)
-                {
-                    dst_rect.w = dc->fb_width - dst_rect.x;
-                }
-                else
-                {
-                    dst_rect.w = x_max - dc->section.x1 - dst_rect.x + 1;
-                }
-                if (y_max >= dc->section.y1 + dc->fb_height)
-                {
-                    dst_rect.h = dc->fb_height - dst_rect.y;
-                }
-                else
-                {
-                    dst_rect.h = y_max - dc->section.y1 - dst_rect.y + 1;
-                }
-                dst_rect.x += dc->section.x1;
-                dst_rect.y += dc->section.y1;
+                dst_rect.w = dst_x2 - dst_rect.x + 1;
+                dst_rect.h = dst_y2 - dst_rect.y + 1;
                 ppe_rect_t src_rect;
                 ppe_matrix_t inv_matrix;
                 if (image->blend_mode == IMG_BYPASS_MODE || image->blend_mode == IMG_COVER_MODE)
@@ -644,19 +591,6 @@ void hw_acc_blit(draw_img_t *image, struct gui_dispdev *dc, struct gui_rect *rec
                     {
                         //DBG_DIRECT("MAT err! addr %x, section %x", image->data, dc->section_count);
                         return;
-                    }
-                    if (rect != NULL)
-                    {
-                        int16_t x0 = src_rect.x;
-                        int16_t y0 = src_rect.y;
-                        if (!acc_get_src_rect_area(&src_rect, rect))
-                        {
-                            return;
-                        }
-                        dst_rect.x += (src_rect.x - x0);
-                        dst_rect.y += (src_rect.y - y0);
-                        dst_rect.w = src_rect.w;
-                        dst_rect.h = src_rect.h;
                     }
                 }
                 dst_rect.x -= dc->section.x1;
@@ -836,6 +770,23 @@ void hw_acc_blit(draw_img_t *image, struct gui_dispdev *dc, struct gui_rect *rec
         }
         constraint.y += dc->section.y1;
     }
+    if (rect != NULL)
+    {
+        int32_t constraint_x2 = constraint.x + constraint.w - 1 + dc->section.x1;
+        int32_t constraint_y2 = constraint.y + constraint.h - 1;
+        int32_t constraint_x1 = _UI_MAX(constraint.x + dc->section.x1, rect->x1);
+        int32_t constraint_y1 = _UI_MAX(constraint.y, rect->y1);
+        constraint_x2 = _UI_MIN(constraint_x2, rect->x2);
+        constraint_y2 = _UI_MIN(constraint_y2, rect->y2);
+        if (constraint_x1 > constraint_x2 || constraint_y1 > constraint_y2)
+        {
+            return;
+        }
+        constraint.x = constraint_x1 - dc->section.x1;
+        constraint.y = constraint_y1;
+        constraint.w = constraint_x2 - constraint_x1 + 1;
+        constraint.h = constraint_y2 - constraint_y1 + 1;
+    }
     bool ret = false;
     if ((image->matrix.m[2][0] == 0 && image->matrix.m[2][1] == 0))
     {
@@ -901,21 +852,6 @@ void hw_acc_blit(draw_img_t *image, struct gui_dispdev *dc, struct gui_rect *rec
             {
                 ret = ppe_get_area(&old_rect, &ppe_rect, &inverse, &source);
                 if (!ret)
-                {
-                    if (i == block_num - 1)
-                    {
-                        return;
-                    }
-                    else
-                    {
-                        continue;
-                    }
-                }
-            }
-            if (rect != NULL)
-            {
-                bool res = acc_get_src_rect_area(&old_rect, rect);
-                if (!res)
                 {
                     if (i == block_num - 1)
                     {
@@ -1006,15 +942,6 @@ void hw_acc_blit(draw_img_t *image, struct gui_dispdev *dc, struct gui_rect *rec
         }
         else
         {
-            if (rect != NULL)
-            {
-                ppe_get_identity(&pre_trans);
-                pre_trans.m[0][2] = rect->x1 * -1.0f;
-                pre_trans.m[1][2] = rect->y1 * -1.0f;
-                ppe_mat_multiply(&pre_trans, &inverse);
-                source.width = rect->x2 - rect->x1 + 1;
-                source.height = rect->y2 - rect->y1 + 1;
-            }
             ppe_translate(0, dc->section.y1, &inverse);
             gui_rect_file_head_t *rect_header = (gui_rect_file_head_t *)image->data;
             gui_color_t color = {.color.argb_full = rect_header->color.color.argb_full};
@@ -1095,6 +1022,7 @@ bool hw_acc_idu_decode(uint8_t *image, gui_rect_t *rect, uint8_t *output)
 
 void hw_acc_prepare_cb(draw_img_t *img, gui_rect_t *rect)
 {
+    (void)rect;
     if (img->acc_user != NULL)
     {
         gui_free(img->acc_user);
@@ -1113,20 +1041,10 @@ void hw_acc_prepare_cb(draw_img_t *img, gui_rect_t *rect)
         float x2 = 0;
         float y2 = 0;
 
-        if (rect == NULL)
-        {
-            x1 = 0;
-            y1 = 0;
-            x2 = img->img_w - 1;
-            y2 = img->img_h - 1;
-        }
-        else
-        {
-            x1 = _UI_MAX(0, rect->x1);
-            y1 = _UI_MAX(0, rect->y1);
-            x2 = _UI_MIN(img->img_w - 1, rect->x2);
-            y2 = _UI_MIN(img->img_h - 1, rect->y2);
-        }
+        x1 = 0;
+        y1 = 0;
+        x2 = img->img_w - 1;
+        y2 = img->img_h - 1;
 
         pox.x = x1;
         pox.y = y1;

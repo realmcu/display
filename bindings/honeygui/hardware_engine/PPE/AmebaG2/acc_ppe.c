@@ -324,7 +324,7 @@ void hw_acc_clear(uint8_t *addr, gui_color_t color, uint32_t len/*pixel count*/)
     target.win_y_max = target.height - 1;
     ppe_rect_t rect1 = {.x = 0, .y = 0, .w = target.width, .h = target.height};
     uint32_t ppe_color = color.color.rgba.a << 24 | color.color.rgba.b << 16 | color.color.rgba.g << 8 |
-                         color.color.rgba.r << 8;
+                         color.color.rgba.r;
     PPE_DISP_err err = PPE_DISP_Mask(&target, ppe_color, &rect1);
     if (err != PPE_DISP_SUCCESS)
     {
@@ -404,6 +404,10 @@ void hw_acc_blit_decode(draw_img_t *image, struct gui_dispdev *dc, struct gui_re
     {
         return;
     }
+    if (rect != NULL && !rect_intersect(&constraint_area, &constraint_area, rect))
+    {
+        return;
+    }
     ppe_buffer_t target, source;
     memset(&target, 0, sizeof(ppe_buffer_t));
     memset(&source, 0, sizeof(ppe_buffer_t));
@@ -417,14 +421,6 @@ void hw_acc_blit_decode(draw_img_t *image, struct gui_dispdev *dc, struct gui_re
     if (!rect_intersect(&decode_area, &decode_area, &image_area))
     {
         return;
-    }
-    if (rect != NULL)
-    {
-        gui_rect_t clip_rect = *rect;
-        if (!rect_intersect(&decode_area, &clip_rect, &decode_area))
-        {
-            return;
-        }
     }
     PPE_DISP_BLEND_MODE mode = PPE_DISP_SRC_OVER_MODE;
 
@@ -480,7 +476,7 @@ void hw_acc_blit_decode(draw_img_t *image, struct gui_dispdev *dc, struct gui_re
     source.win_x_max = target.width - 1;
     source.win_y_min = 0;
     source.win_y_max = target.height - 1;
-    source.width = image->img_w;
+    source.width = decode_area.x2 - decode_area.x1 + 1;
     source.height = decode_area.y2 - decode_area.y1 + 1;
     uint32_t decode_size = source.width * source.height * PPE_DISP_Get_Pixel_Size(source.format);
     uint8_t *decoded_data = gui_malloc(decode_size);
@@ -515,12 +511,9 @@ void hw_acc_blit_decode(draw_img_t *image, struct gui_dispdev *dc, struct gui_re
     gui_clean_cache();
     ppe_matrix_t pre_trans;
     ppe_get_identity(&pre_trans);
-    if (rect != NULL)
-    {
-        source.width = decode_area.x2 - decode_area.x1 + 1;
-        source.height = decode_area.y2 - decode_area.y1 + 1;
-        source.stride = source.width;
-    }
+    source.width = decode_area.x2 - decode_area.x1 + 1;
+    source.height = decode_area.y2 - decode_area.y1 + 1;
+    source.stride = source.width;
     pre_trans.m[0][2] = decode_area.x1 * -1.0f;
     pre_trans.m[1][2] = decode_area.y1 * -1.0f;
     ppe_mat_multiply(&pre_trans, &inverse);
@@ -640,40 +633,24 @@ void hw_acc_blit_direct(draw_img_t *image, struct gui_dispdev *dc, struct gui_re
     source.win_x_max = target.width - 1;
     source.win_y_min = 0;
     source.win_y_max = target.height - 1;
+    source.address = (uint32_t)image->data + sizeof(struct gui_rgb_data_head);
+    source.width = image->img_w;
+    source.height = image->img_h;
     if (rect != NULL)
     {
-        source.address = (uint32_t)image->data + sizeof(struct gui_rgb_data_head) +
-                         (rect->y1 * source.stride + rect->x1) * PPE_DISP_Get_Pixel_Size(source.format);
-        source.width = rect->x2 - rect->x1 + 1;
-        source.height = rect->y2 - rect->y1 + 1;
-        ppe_matrix_t pre_trans;
-        ppe_get_identity(&pre_trans);
-        pre_trans.m[0][2] = rect->x1 * -1.0f;
-        pre_trans.m[1][2] = rect->y1 * -1.0f;
-        ppe_mat_multiply(&pre_trans, &inverse);
-        memcpy(&inverse, &pre_trans, sizeof(float) * 9);
-        ppe_buffer_t virtual_target;
-        memset(&virtual_target, 0, sizeof(ppe_buffer_t));
-        virtual_target.width = dc->fb_width;
-        virtual_target.height = dc->fb_height;
-        ppe_rect_t src_rect = {.x = rect->x1, .y = rect->y1,
-                               .w = rect->x2 - rect->x1 + 1,
-                               .h = rect->y2 - rect->y1 + 1
-                              };
-        ppe_rect_t dst_rect;
-        if (ppe_get_area(&dst_rect, &src_rect, (ppe_matrix_t *)&image->matrix, &virtual_target))
+        x_min = _UI_MAX(x_min, rect->x1);
+        y_min = _UI_MAX(y_min, rect->y1);
+        x_max = _UI_MIN(x_max, rect->x2);
+        y_max = _UI_MIN(y_max, rect->y2);
+        if (x_min > x_max || y_min > y_max)
         {
-            x_min = dst_rect.x;
-            y_min = dst_rect.y;
-            x_max = dst_rect.x + dst_rect.w - 1;
-            y_max = dst_rect.y + dst_rect.h - 1;
+            return;
         }
     }
-    else
+    if (x_min > dc->section.x2 || x_max < dc->section.x1 ||
+        y_min > dc->section.y2 || y_max < dc->section.y1)
     {
-        source.address = (uint32_t)image->data + sizeof(struct gui_rgb_data_head);
-        source.width = image->img_w;
-        source.height = image->img_h;
+        return;
     }
     int32_t x1 = x_min - dc->section.x1;
     int32_t y1 = y_min - dc->section.y1;
@@ -689,7 +666,7 @@ void hw_acc_blit_direct(draw_img_t *image, struct gui_dispdev *dc, struct gui_re
     }
     if (x_max >= dc->section.x1 + dc->fb_width)
     {
-        x2 = dc->section.x1 + dc->fb_width - 1;
+        x2 = dc->fb_width - 1;
     }
     else
     {
@@ -750,18 +727,15 @@ void hw_acc_blit_cover(draw_img_t *image, struct gui_dispdev *dc, struct gui_rec
     {
         return;
     }
+    if (rect != NULL && !rect_intersect(&draw_area, &draw_area, rect))
+    {
+        return;
+    }
     gui_rect_t image_source_area;
     rect_move(&image_source_area, &draw_area, -image->img_target_x, -image->img_target_y);
     if (!rect_intersect(&image_source_area, &image_area, &image_source_area))
     {
         return;
-    }
-    if (rect != NULL)
-    {
-        if (!rect_intersect(&image_source_area, rect, &image_source_area))
-        {
-            return;
-        }
     }
     uint8_t dc_byte_depth = (dc->bit_depth >> 3);
     uint32_t x_offset = image_source_area.x1 + image->img_target_x - dc->section.x1;
@@ -798,11 +772,15 @@ void hw_acc_blit_cover(draw_img_t *image, struct gui_dispdev *dc, struct gui_rec
     {
         uint8_t *p_source_offset = (uint8_t *)image->data + sizeof(gui_rgb_data_head_t) +
                                    (image_source_area.y1 * image->img_w + image_source_area.x1) * dc_byte_depth;
-        uint32_t copy_size = (image_source_area.x2 - image_source_area.x1 + 1) *
-                             (image_source_area.y2 - image_source_area.y1 + 1) * dc_byte_depth;
-        dma_memcpy_done = false;
-        dma_memcpy(&dma_obj, p_target_offset, p_source_offset, copy_size);
-        gdma_wait_transfer_done();
+        uint32_t copy_size = (image_source_area.x2 - image_source_area.x1 + 1) * dc_byte_depth;
+        uint32_t height = image_source_area.y2 - image_source_area.y1 + 1;
+        for (uint32_t row = 0; row < height; row++)
+        {
+            dma_memcpy_done = false;
+            dma_memcpy(&dma_obj, p_target_offset + row * dc->fb_width * dc_byte_depth,
+                       p_source_offset + row * image->img_w * dc_byte_depth, copy_size);
+            gdma_wait_transfer_done();
+        }
     }
 }
 
