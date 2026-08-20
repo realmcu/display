@@ -23,7 +23,7 @@ extern "C" {
 #include <stdint.h>
 #include <stdbool.h>
 
-#define TE_VALID                            1
+#define TE_VALID                            0
 
 #define OUTPUT_PIXEL_BYTES                  2
 

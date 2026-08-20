@@ -73,7 +73,7 @@ typedef struct _ST7801N_CMD_DESC
 static void qspi_pad_config(void)
 {
     // power en
-    Pad_Config(P1_0, PAD_SW_MODE, PAD_IS_PWRON, PAD_PULL_NONE, PAD_OUT_ENABLE, PAD_OUT_HIGH);
+    // Pad_Config(P1_0, PAD_SW_MODE, PAD_IS_PWRON, PAD_PULL_NONE, PAD_OUT_ENABLE, PAD_OUT_HIGH);
     // Pad_Config(LCD_QSPI_RS, PAD_SW_MODE, PAD_IS_PWRON, PAD_PULL_NONE, PAD_OUT_ENABLE, PAD_OUT_HIGH);
 
     /*QSPI Config*/
@@ -167,7 +167,7 @@ static const ST7801N_CMD_DESC ST7801N_POST_OTP_POWERON_SEQ_CMD[] =
 {
     {ST7801N_QSPI_INST_CMD_WRITE, 0x11, 100, 0, {0x00}},
     {ST7801N_QSPI_INST_CMD_WRITE, 0x53, 0, 1, {0x20}},
-    {ST7801N_QSPI_INST_CMD_WRITE, 0x51, 0, 1, {0xFF}},
+    {ST7801N_QSPI_INST_CMD_WRITE, 0x51, 0, 1, {0xF0}}, // lightning
     {ST7801N_QSPI_INST_CMD_WRITE, 0x3A, 0, 1, {0x55}},// RGB565
     {ST7801N_QSPI_INST_CMD_WRITE, 0x35, 0, 1, {0x00}},
     {ST7801N_QSPI_INST_CMD_WRITE, 0x29, 20, 0, {0x00}},
@@ -633,8 +633,8 @@ void rtk_lcd_hal_init(void)
     DBIC_IMR_TypeDef dbic_reg_0x2c = {.d32 = DBIC->IMR};
     dbic_reg_0x2c.b.dreim = 1;
     DBIC->IMR = dbic_reg_0x2c.d32;
-    // rtk_lcd_hal_clear_screen(0x00FF0000);  // blue
-    rtk_lcd_hal_clear_screen(0x000000FF);    // red
+    rtk_lcd_hal_clear_screen(0x00FF0000);  // blue
+    // rtk_lcd_hal_clear_screen(0x000000FF);    // red
     // rtk_lcd_hal_clear_screen(0x00FFFFFF);
     // rtk_lcd_hal_clear_screen(0x00000000);
 

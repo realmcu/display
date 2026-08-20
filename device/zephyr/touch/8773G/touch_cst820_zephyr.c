@@ -18,6 +18,8 @@ struct cst820_config
     struct i2c_dt_spec i2c;
     const struct gpio_dt_spec int_gpio;
     const struct gpio_dt_spec rst_gpio;
+    const struct gpio_dt_spec pwr_en_gpio;
+    const struct gpio_dt_spec pwr_gpio;
     uint32_t timeout_ms;
 };
 
@@ -33,6 +35,10 @@ struct cst820_data
 #define CST820_REG_CHIP_ID          0xA7
 #define CST820_READ_LENGTH          24
 #define CST820_DEFAULT_TIMEOUT_MS   30
+/* Settle time after asserting the supply rail, before touching reset. */
+#define CST820_PWR_ON_DELAY_MS      10
+/* Settle time after asserting the board-level rail, before the sensor rail. */
+#define CST820_PWR_EN_DELAY_MS      5
 
 LOG_MODULE_REGISTER(cst820, CONFIG_LOG_DEFAULT_LEVEL);
 
@@ -129,6 +135,47 @@ static int cst820_init(const struct device *dev)
     data->dev = dev;
     k_work_init(&data->work, cst820_work_handler);
 
+    /* Power the sensor rail before anything else: this init runs at
+     * POST_KERNEL prio 60, i.e. before main(), so nothing in the
+     * application has enabled the supply yet. pwr-en is the board-level
+     * rail and comes up first, then the sensor's own supply.
+     */
+    if (config->pwr_en_gpio.port != NULL)
+    {
+        if (!gpio_is_ready_dt(&config->pwr_en_gpio))
+        {
+            LOG_ERR("GPIO port %s not ready", config->pwr_en_gpio.port->name);
+            return -ENODEV;
+        }
+
+        ret = gpio_pin_configure_dt(&config->pwr_en_gpio, GPIO_OUTPUT_ACTIVE);
+        if (ret < 0)
+        {
+            LOG_ERR("Could not configure main supply GPIO pin: %d", ret);
+            return ret;
+        }
+
+        k_busy_wait(CST820_PWR_EN_DELAY_MS * 1000);
+    }
+
+    if (config->pwr_gpio.port != NULL)
+    {
+        if (!gpio_is_ready_dt(&config->pwr_gpio))
+        {
+            LOG_ERR("GPIO port %s not ready", config->pwr_gpio.port->name);
+            return -ENODEV;
+        }
+
+        ret = gpio_pin_configure_dt(&config->pwr_gpio, GPIO_OUTPUT_ACTIVE);
+        if (ret < 0)
+        {
+            LOG_ERR("Could not configure power GPIO pin: %d", ret);
+            return ret;
+        }
+
+        k_busy_wait(CST820_PWR_ON_DELAY_MS * 1000);
+    }
+
     if (!i2c_is_ready_dt(&config->i2c))
     {
         LOG_ERR("I2C bus %s not ready", config->i2c.bus->name);
@@ -177,19 +224,16 @@ static int cst820_init(const struct device *dev)
         return ret;
     }
 
-    /* Reset sequence -- align with 8762D rtk_touch_hal_init() double-pulse:
-     * 1st pulse: low 10ms / high 100ms (power-on / wake).
-     * 2nd pulse: low 10ms / high 120ms (enter work mode before chip-id read).
-     */
-    gpio_pin_set_dt(&config->rst_gpio, 0);
-    k_busy_wait(10 * 1000);
+
     gpio_pin_set_dt(&config->rst_gpio, 1);
-    k_busy_wait(100 * 1000);
+    k_busy_wait(120 * 1000);
 
     gpio_pin_set_dt(&config->rst_gpio, 0);
     k_busy_wait(10 * 1000);
     gpio_pin_set_dt(&config->rst_gpio, 1);
     k_busy_wait(120 * 1000);
+
+
 
     (void)cst820_read_chip_id(dev);
 
@@ -214,10 +258,12 @@ TOUCH_DATA get_raw_touch_data(const struct device *dev)
 #define CST820_DEFINE(index)                                                                       \
     static const struct cst820_config cst820_config_##index = {                                    \
         .i2c = I2C_DT_SPEC_INST_GET(index),                                                        \
-               .int_gpio = GPIO_DT_SPEC_INST_GET(index, irq_gpios),                                \
-                           .rst_gpio = GPIO_DT_SPEC_INST_GET(index, rst_gpios),                    \
-                                       .timeout_ms = DT_INST_PROP_OR(index, gesture_release_timeout_ms, \
-                                                                     CST820_DEFAULT_TIMEOUT_MS),   \
+               .int_gpio = GPIO_DT_SPEC_INST_GET(index, irq_gpios),                                       \
+                           .rst_gpio = GPIO_DT_SPEC_INST_GET(index, rst_gpios),                                       \
+                                       .pwr_en_gpio = GPIO_DT_SPEC_INST_GET_OR(index, pwr_en_gpios, {0}),                         \
+                                                      .pwr_gpio = GPIO_DT_SPEC_INST_GET_OR(index, pwr_gpios, {0}),                               \
+                                                                  .timeout_ms = DT_INST_PROP_OR(index, gesture_release_timeout_ms,                           \
+                                                                                CST820_DEFAULT_TIMEOUT_MS),                                  \
     };                                                                                             \
     static struct cst820_data cst820_data_##index;                                                 \
     DEVICE_DT_INST_DEFINE(index, cst820_init, NULL, &cst820_data_##index,                          \
