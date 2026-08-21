@@ -172,20 +172,6 @@ static const ST7801N_CMD_DESC ST7801N_POST_OTP_POWERON_SEQ_CMD[] =
     {ST7801N_QSPI_INST_CMD_WRITE, 0x35, 0, 1, {0x00}},
     {ST7801N_QSPI_INST_CMD_WRITE, 0x29, 20, 0, {0x00}},
 
-// {ST7801N_QSPI_INST_CMD_WRITE, 0x1C, 0, 0, {0x00}},
-
-
-// #if (ENABLE_TE_FOR_LCD == 1)
-//     {ST7801N_QSPI_INST_CMD_WRITE,  0x44, 0,  2,  {0x00, 0x00}},
-//     {ST7801N_QSPI_INST_CMD_WRITE,  0x35, 0,  1,  {0x00}},
-// #else
-//     {ST7801N_QSPI_INST_CMD_WRITE,  0x34, 0,  0,  {0x00}},
-// #endif
-//     {ST7801N_QSPI_INST_CMD_WRITE,  0x3A, 0,  1,  {0x55}},
-//     {ST7801N_QSPI_INST_CMD_WRITE,  0x11, 120, 0,  {0x00}},
-//     {ST7801N_QSPI_INST_CMD_WRITE,  0x29, 20, 0,  {0x00}},
-//     {ST7801N_QSPI_INST_CMD_WRITE,  0x36, 0,  1,  {0xA0}},
-
 
     {ST7801N_QSPI_SEQ_FINISH_CODE, 0,    0,  0,  {0}},
 };
@@ -267,6 +253,33 @@ void rtk_lcd_hal_exit_partial_mode(void)
 
     lcdc_dbic_write(sdat, 0 + 4);
 }
+
+void rtk_lcd_hal_set_brightness(uint8_t brightness)
+{
+    uint8_t sdat[20] = {0};
+    sdat[0] = ST7801N_QSPI_INST_CMD_WRITE;
+
+    sdat[1] = 0;
+    sdat[2] = 0x51;
+    sdat[3] = 0;
+
+    sdat[4] = brightness;
+
+    lcdc_dbic_write(sdat, 1 + 4);
+}
+
+void rtk_lcd_hal_set_display(bool on)
+{
+    uint8_t sdat[20] = {0};
+    sdat[0] = ST7801N_QSPI_INST_CMD_WRITE;
+
+    sdat[1] = 0;
+    sdat[2] = on ? 0x29 : 0x28;
+    sdat[3] = 0;
+
+    lcdc_dbic_write(sdat, 0 + 4);
+}
+
 
 void ST7801N_Init_Post_OTP(void)
 {
