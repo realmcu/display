@@ -214,6 +214,61 @@ typedef struct
     uint8_t  LCDC_DMA_Secure_En;                /*!< Enable or disable Secure DMA function. */
 } LCDC_DMA_InitTypeDef;
 
+#if defined(CONFIG_SOC_SERIES_RTL8773K) || defined(RTL8773K)
+#define LCDC_DMA_LINE_BUFFER_GROUP_COUNT 4U
+
+typedef enum
+{
+    LCDC_DMA_TRANSFORM_NONE = 0,
+    LCDC_DMA_TRANSFORM_MIRROR_HORIZONTAL,
+    LCDC_DMA_TRANSFORM_ROTATE_180,
+} LCDC_DMA_TRANSFORM_T;
+
+typedef enum
+{
+    LCDC_DMA_TRANSFORM_SUCCESS = 0,
+    LCDC_DMA_TRANSFORM_INVALID_PARAMETER = -1,
+    LCDC_DMA_TRANSFORM_UNSUPPORTED_PIXEL_SIZE = -2,
+    LCDC_DMA_TRANSFORM_OUT_OF_RANGE = -3,
+    LCDC_DMA_TRANSFORM_ALIGNMENT_ERROR = -4,
+} LCDC_DMA_TRANSFORM_RESULT_T;
+
+/**
+ * \brief       LCDC DMA link-list descriptor definition.
+ */
+typedef struct
+{
+    uint32_t SAR;
+    uint32_t DAR;
+    uint32_t LLP;
+    uint32_t CTL_LOW;
+    uint32_t CTL_HIGH;
+} LCDC_DMA_LLIDef;
+
+/**
+ * \brief       Source image configuration for DMA output transformation.
+ */
+typedef struct
+{
+    uint32_t LCDC_DMA_SourceAddr;       /*!< Address of the first pixel in the source image. */
+    uint32_t LCDC_DMA_SourceStride;     /*!< Distance in bytes between adjacent source lines. */
+    uint32_t LCDC_DMA_Width;            /*!< Source image width in pixels. */
+    uint32_t LCDC_DMA_Height;           /*!< Source image height in pixels. */
+    uint8_t LCDC_DMA_PixelBytes;        /*!< Bytes per pixel. Supported values are 1, 2 and 4. */
+    LCDC_DMA_TRANSFORM_T LCDC_DMA_Transform; /*!< Output transformation mode. */
+} LCDC_DMA_TransformConfigTypeDef;
+
+/**
+ * \brief       Four-group scanline descriptor buffer.
+ */
+typedef struct
+{
+    LCDC_DMA_LLIDef group[LCDC_DMA_LINE_BUFFER_GROUP_COUNT];
+    uint32_t first_output_line; /*!< First output line represented by the descriptors. */
+    uint32_t line_count;        /*!< Number of valid descriptors, from 1 to 4. */
+} LCDC_DMA_LineBufferTypeDef;
+#endif
+
 /** End of LCDC_DMA_Exported_Types
   * \}
   */
@@ -299,6 +354,50 @@ void LCDC_DMA_Init(LCDC_DMA_ChannelTypeDef *LCDC_DMA_Channelx,
  * \endcode
  */
 void LCDC_DMA_StructInit(LCDC_DMA_InitTypeDef *LCDC_DMA_InitStruct);
+
+#if defined(CONFIG_SOC_SERIES_RTL8773K) || defined(RTL8773K)
+/**
+ * \brief  Configure LCDC DMA for a transformed four-line descriptor batch.
+ *
+ * \param[in,out] LCDC_DMA_InitStruct: DMA initialization structure to update.
+ * \param[in] LCDC_DMA_TransformConfig: Source image and transform configuration.
+ * \param[out] LCDC_DMA_LineBuffer: Four-group descriptor buffer.
+ *
+ * \return Transform configuration result.
+ *
+ * \note Packed 3-byte pixels are not supported because decrement mode would reverse
+ *       bytes within each pixel. Use a 4-byte framebuffer format for RGB888 output.
+ * \note LCDC_DMA_LineBuffer must remain valid until the DMA batch finishes. The
+ *       caller is responsible for cleaning modified source framebuffer cache lines.
+ */
+LCDC_DMA_TRANSFORM_RESULT_T LCDC_DMA_TransformConfig(
+    LCDC_DMA_InitTypeDef *LCDC_DMA_InitStruct,
+    const LCDC_DMA_TransformConfigTypeDef *LCDC_DMA_TransformConfig,
+    LCDC_DMA_LineBufferTypeDef *LCDC_DMA_LineBuffer);
+
+/**
+ * \brief  Build up to four scanline descriptors beginning at an output line.
+ *
+ * \param[in,out] LCDC_DMA_InitStruct: DMA settings previously prepared by
+ *                                    \ref LCDC_DMA_TransformConfig.
+ * \param[in] LCDC_DMA_TransformConfig: Source image and transform configuration.
+ * \param[in] first_output_line: First output line represented by this batch.
+ * \param[out] LCDC_DMA_LineBuffer: Four-group descriptor buffer to fill.
+ *
+ * \return Transform configuration result.
+ *
+ * \note The final valid descriptor terminates the list. A caller must wait for
+ *       the current DMA batch to finish before reusing the buffer, then build,
+ *       initialize and start another batch when more than four lines remain.
+ *       Reinitialize the DMA channel with the updated LCDC_DMA_InitStruct before
+ *       starting each later batch.
+ */
+LCDC_DMA_TRANSFORM_RESULT_T LCDC_DMA_TransformLineBufferBuild(
+    LCDC_DMA_InitTypeDef *LCDC_DMA_InitStruct,
+    const LCDC_DMA_TransformConfigTypeDef *LCDC_DMA_TransformConfig,
+    uint32_t first_output_line,
+    LCDC_DMA_LineBufferTypeDef *LCDC_DMA_LineBuffer);
+#endif
 
 /**
  * \brief  Enable or disable the selected LCDC DMA channel.
