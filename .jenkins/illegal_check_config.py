@@ -10,4 +10,5 @@ ignore_declaration_check = [
 
 ignore_illgeal_check = [
     ".jenkins",
+    "hardware/vcdj/src/ctrlsw",
 ]
