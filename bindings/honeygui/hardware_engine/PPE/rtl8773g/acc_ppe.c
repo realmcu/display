@@ -25,10 +25,12 @@
 #include "trace.h"
 #include "font_rendering_utils.h"
 #include "def_file.h"
+#include "fmc_platform.h"
 
 #define F_APP_GUI_USE_PSRAM 1
 #define PSRAM_GUI_HEAP_ADDR SPIC1_MEM_BASE
-void *sync_sem;
+static void *ppe_sync_sem;
+static void *idu_sync_sem;
 
 static void ppe_wait_finish_blocking(void);
 
@@ -57,8 +59,8 @@ extern void sw_acc_blit(draw_img_t *image, struct gui_dispdev *dc, struct gui_re
 #define GUI_A8_BLUR_DEGREE 237
 #endif
 
-static uint8_t *cache_buf1;
-static uint8_t *cache_buf2;
+static uint8_t *cache_buf1 = NULL;
+static uint8_t *cache_buf2 = NULL;
 static uint8_t *cache_buf = NULL;
 static int32_t last_cache_size = 0;
 static uint8_t high_speed_dma_channel_num = 0xFF;
@@ -403,7 +405,7 @@ bool hw_idu_decode(ppe_rect_t *rect, uint8_t *input, uint32_t buffer_stride, uin
         }
         else
         {
-            if (sync_sem && os_sem_take(sync_sem, 10000))
+            if (idu_sync_sem && os_sem_take(idu_sync_sem, 10000))
             {
                 IDU_Clean_State(&record);
                 return true;
@@ -664,24 +666,20 @@ static void setup_filter_black_color_key(ppe_buffer_t *source)
 
 static void ppe_wait_finish_blocking(void)
 {
-    if (gui_get_acc()->enable_thread_sync && sync_sem != NULL)
+    if (gui_get_acc()->enable_thread_sync && ppe_sync_sem != NULL)
     {
-        if (!os_sem_take(sync_sem, 1000))
+        while (PPE_Is_Busy())
         {
-            PPE_Finish();
+            if (!os_sem_take(ppe_sync_sem, 1000))
+            {
+                PPE_Finish();
+                break;
+            }
         }
     }
     else
     {
         PPE_Finish();
-    }
-}
-
-static void ppe_wait_finish(void)
-{
-    if (!gui_get_acc()->enable_async)
-    {
-        ppe_wait_finish_blocking();
     }
 }
 
@@ -793,10 +791,9 @@ void hw_acc_blit_direct(draw_img_t *image, struct gui_dispdev *dc, struct gui_re
             method = PPE_BLEND_BYPASS;
         }
     }
-    PPE_Finish();
     PPE_ERR err = PPE_Blit_Inverse(&target, &source, NULL, &inverse, &constraint,
                                    method);
-    ppe_wait_finish();
+    ppe_wait_finish_blocking();
     return;
 }
 
@@ -860,14 +857,13 @@ void hw_acc_blit_rect(draw_img_t *image, struct gui_dispdev *dc, struct gui_rect
     source.win_y_max = target.height - 1;
     source.address = (uint32_t)image->data + sizeof(struct gui_rgb_data_head);
 
-    PPE_Finish();
     PPE_ERR err = PPE_Blit_Inverse(&target, &source, NULL, &inverse, &constraint_rect,
                                    PPE_BLEND_CONST_COLOR);
     if (err != PPE_SUCCESS)
     {
         DBG_DIRECT("PPE err %d", err);
     }
-    ppe_wait_finish();
+    ppe_wait_finish_blocking();
 }
 
 void hw_acc_blit_simple(draw_img_t *image, struct gui_dispdev *dc, struct gui_rect *rect)
@@ -1006,7 +1002,6 @@ void hw_acc_blit_simple(draw_img_t *image, struct gui_dispdev *dc, struct gui_re
         return;
     }
     source.high_quality = false;
-    PPE_Finish();
     PPE_ERR err = PPE_Blit_Inverse(&target, &source, NULL, &inverse, &constraint_rect, method);
     if (err != PPE_SUCCESS)
     {
@@ -1139,7 +1134,7 @@ void hw_acc_blit_cache(draw_img_t *image, struct gui_dispdev *dc, struct gui_rec
                     color.color.rgba.r = tmp;
                     PPE_Finish();
                     PPE_Mask(&target, color.color.argb_full, &dst_rect);
-                    ppe_wait_finish();
+                    ppe_wait_finish_blocking();
                     return;
                 }
             }
@@ -1374,7 +1369,7 @@ void hw_acc_blit_cache(draw_img_t *image, struct gui_dispdev *dc, struct gui_rec
                 {
                     if (i == block_num - 1)
                     {
-                        return;
+                        break;
                     }
                     else
                     {
@@ -1432,7 +1427,7 @@ void hw_acc_blit_cache(draw_img_t *image, struct gui_dispdev *dc, struct gui_rec
                 if (head->compress)
                 {
                     GUI_ASSERT(new_cache_size < CACHE_BUF_SIZE);
-                    return;
+                    break;
                 }
             }
 #endif
@@ -1473,7 +1468,7 @@ void hw_acc_blit_cache(draw_img_t *image, struct gui_dispdev *dc, struct gui_rec
                 restore_cache_buf();
                 if (head->compress)
                 {
-                    return;
+                    break;
                 }
                 if (dc->type == DC_RAMLESS)
                 {
@@ -1510,8 +1505,9 @@ void hw_acc_blit_cache(draw_img_t *image, struct gui_dispdev *dc, struct gui_rec
         }
         PPE_Finish();
         PPE_ERR err = PPE_Blit_Inverse(&target, &source, NULL, &inverse, &ppe_rect, method);
-        ppe_wait_finish();
+        PPE_Mask_Interrupt(PPE_ALL_OVER_INT, ENABLE);
     }
+    PPE_Finish();
 }
 
 void *hw_acc_idu_decode(void *input)
@@ -1692,10 +1688,7 @@ void hw_blit_font(draw_font_t *font, font_glyph_t *glyph)
     PPE_Finish();
     PPE_ERR err = PPE_Blit_Inverse(&target, &source, NULL, &inverse, &constraint,
                                    PPE_BLEND_PREMULTIPLY);
-    //if(!gui_get_acc()->enable_async)
-    {
-        PPE_Finish();
-    }
+    PPE_Finish();
     if (err != PPE_SUCCESS)
     {
         DBG_DIRECT("font err %d", err);
@@ -1731,8 +1724,9 @@ void hw_acc_memset(uint8_t *addr, gui_color_t color, uint32_t len/*pixel count*/
     target.win_y_max = target.height - 1;
     uint32_t abgr_color = color.color.rgba.a << 24 | color.color.rgba.b << 16 | color.color.rgba.g << 8
                           | color.color.rgba.r;
+    ppe_wait_finish_blocking();
     PPE_Clear(&target, abgr_color, NULL);
-    ppe_wait_finish();
+    ppe_wait_finish_blocking();
 }
 
 void hw_acc_prepare_cb(draw_img_t *img, gui_rect_t *rect)
@@ -2434,7 +2428,8 @@ void hw_acc_blit(draw_img_t *image, struct gui_dispdev *dc, struct gui_rect *rec
     {
         hw_acc_blit_rect(image, dc, rect);
     }
-    else if (!head->compress)
+    else if (!head->compress && (!FMC_IS_SPIC0_ADDR((uint32_t)image->data) || CACHE_BUF_SIZE == 0 ||
+                                 cache_buf1 == NULL))
     {
         hw_acc_blit_direct(image, dc, rect);
     }
@@ -2493,7 +2488,6 @@ static bool hw_acc_mix_a_rgb_internal(uint8_t *a, uint16_t a_width, uint16_t a_h
     output.win_y_min = 0;
     output.win_y_max = h - 1;
 
-    PPE_Finish();
     PPE_ERR err = PPE_Mix_Alpha(&mix_a, &mix_rgb, &output, vertical);
     if (err != PPE_SUCCESS)
     {
@@ -2645,7 +2639,7 @@ void hw_acc_blur_a8(struct gui_dispdev *dc, gui_rect_t *rect, uint8_t blur_degre
     source.win_y_max = target.height - 1;
 
     PPE_Blit_Inverse(&target, &source, NULL, &inverse, NULL, PPE_BLEND_PREMULTIPLY);
-    PPE_Finish();
+    ppe_wait_finish_blocking();
     gui_free(argb_combine);
     gui_free(blur_copy);
 
@@ -2656,7 +2650,7 @@ void hw_acc_blur_a8(struct gui_dispdev *dc, gui_rect_t *rect, uint8_t blur_degre
         source.const_color = recolor;
         source.format = PPE_A8;
         PPE_Blit_Inverse(&target, &source, NULL, &inverse, NULL, PPE_BLEND_PREMULTIPLY);
-        PPE_Finish();
+        ppe_wait_finish_blocking();
     }
 }
 
@@ -2666,7 +2660,10 @@ static void ppe_handler(void)
     {
         PPE_Mask_All_Interrupt(ENABLE);
         PPE_Clear_Interrupt(PPE_ALL_OVER_INT);
-        os_sem_give(sync_sem);
+        if (ppe_sync_sem != NULL)
+        {
+            os_sem_give(ppe_sync_sem);
+        }
     }
 }
 
@@ -2677,7 +2674,10 @@ static void idu_handler(void)
         IDU_INTConfig(IDU_DECOMPRESS_FINISH_INT, DISABLE);
         IDU_MaskINTConfig(IDU_DECOMPRESS_FINISH_INT, ENABLE);
         IDU_ClearINTPendingBit(IDU_DECOMPRESS_FINISH_INT);
-        os_sem_give(sync_sem);
+        if (idu_sync_sem != NULL)
+        {
+            os_sem_give(idu_sync_sem);
+        }
     }
 }
 
@@ -2706,11 +2706,17 @@ void hw_acc_init(void)
     }
     if (gui_get_acc() != NULL && gui_get_acc()->enable_thread_sync)
     {
-        os_sem_create(&sync_sem, "sync_sem", 0, 1);
+        if (!os_sem_create(&ppe_sync_sem, "ppe_sync_sem", 0, 1))
+        {
+            ppe_sync_sem = NULL;
+        }
+        if (!os_sem_create(&idu_sync_sem, "idu_sync_sem", 0, 1))
+        {
+            idu_sync_sem = NULL;
+        }
         RamVectorTableUpdate(PPE_VECTORn, ppe_handler);
         PPE_Clear_Interrupt(PPE_ALL_OVER_INT);
         PPE_Mask_All_Interrupt(ENABLE);
-        PPE_Mask_Interrupt(PPE_ALL_OVER_INT, DISABLE);
         NVIC_InitTypeDef PPE_NVIC_InitStruct;
         PPE_NVIC_InitStruct.NVIC_IRQChannel = PPE_IRQn;
         PPE_NVIC_InitStruct.NVIC_IRQChannelPriority = 3;

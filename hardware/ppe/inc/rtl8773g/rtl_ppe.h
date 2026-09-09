@@ -641,6 +641,13 @@ PPE_ERR PPE_Blit_Inverse(ppe_buffer_t *dst, ppe_buffer_t *src, uint8_t *output,
 void PPE_Finish(void);
 
 /**
+ * \brief  Check whether the PPE hardware is processing an operation.
+ *
+ * \return true when PPE is running or suspended, false when it is idle.
+ */
+bool PPE_Is_Busy(void);
+
+/**
  * \brief  Get pixel size of specified format.
  * \param[in] format: Pixel format of PPE from @ref PPE_PIXEL_FORMAT .
  * \return Pixel size in bits.

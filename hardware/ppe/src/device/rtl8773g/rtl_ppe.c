@@ -145,10 +145,18 @@ void PPE_Cmd(FunctionalState NewState)
     }
     else
     {
+        PPE_Clear_Interrupt(PPE_ALL_OVER_INT);
+        PPE_Mask_All_Interrupt(ENABLE);
+        PPE_Mask_Interrupt(PPE_ALL_OVER_INT, DISABLE);
         ppe_reg_glb_status_0x00.b.run_state = 0x1;
     }
 
     PPE->REG_GLB_STATUS = ppe_reg_glb_status_0x00.d32;
+}
+
+bool PPE_Is_Busy(void)
+{
+    return ((PPE_REG_GLB_STATUS_TypeDef)PPE->REG_GLB_STATUS).b.run_state != PPE_DISABLE;
 }
 
 void PPE_ResultLayer_Init(PPE_ResultLayer_Init_Typedef *PPE_ResultLyaer_Init_Struct)
@@ -826,9 +834,6 @@ PPE_ERR PPE_Blit_Inverse(ppe_buffer_t *dst, ppe_buffer_t *src, uint8_t *output,
                                              PPE_ResultLayer0_Init.Layer_Window_Ymin + 1;
     }
     PPE_ResultLayer_Init(&PPE_ResultLayer0_Init);
-    PPE_Clear_Interrupt(PPE_ALL_OVER_INT);
-    PPE_Mask_All_Interrupt(ENABLE);
-    PPE_Mask_Interrupt(PPE_ALL_OVER_INT, DISABLE);
     PPE_Cmd(ENABLE);
 //    while (((PPE_REG_GLB_STATUS_TypeDef)PPE->REG_GLB_STATUS).b.run_state)
 
@@ -1010,7 +1015,6 @@ PPE_ERR PPE_Mask(ppe_buffer_t *dst, uint32_t color, ppe_rect_t *rect)
     PPE_ResultLayer_Init(&PPE_ResultLayer0_Init);
 
     PPE_Cmd(ENABLE);
-//    while (((PPE_REG_GLB_STATUS_TypeDef)PPE->REG_GLB_STATUS).b.run_state);
     return PPE_SUCCESS;
 }
 
@@ -1268,9 +1272,6 @@ PPE_ERR PPE_Mix_Alpha(ppe_buffer_t *alpha, ppe_buffer_t *src, ppe_buffer_t *outp
                                              PPE_ResultLayer0_Init.Layer_Window_Ymin + 1;
     }
     PPE_ResultLayer_Init(&PPE_ResultLayer0_Init);
-    PPE_Clear_Interrupt(PPE_ALL_OVER_INT);
-    PPE_Mask_All_Interrupt(ENABLE);
-    PPE_Mask_Interrupt(PPE_ALL_OVER_INT, DISABLE);
     PPE_Cmd(ENABLE);
 
     return PPE_SUCCESS;

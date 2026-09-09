@@ -627,14 +627,7 @@ IDU_ERROR IDU_Decode_With_Interrupt(uint8_t *file, IDU_decode_range *range, IDU_
                                                 header->algorithm_type.feature_1;
     IDU_struct_init.rx_fifo_dma_enable        = (uint32_t)ENABLE;
     IDU_struct_init.tx_fifo_dma_enable        = (uint32_t)ENABLE;
-    if (rx_dma_depth == 4)
-    {
-        IDU_struct_init.rx_fifo_dma_threshold     = 12;
-    }
-    else
-    {
-        IDU_struct_init.rx_fifo_dma_threshold     = 8;
-    }
+    IDU_struct_init.rx_fifo_dma_threshold     = 8;
     IDU_struct_init.tx_fifo_dma_threshold = 8;
     IDU_struct_init.rx_fifo_int_threshold     = dma_cfg->RX_FIFO_INT_threshold;
     IDU_struct_init.tx_fifo_int_threshold     = dma_cfg->TX_FIFO_INT_threshold;
