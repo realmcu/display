@@ -276,10 +276,11 @@ uint8_t OTM8009A_Init(uint32_t ColorCoding, uint32_t orientation)
     /***********for irq setting***********/
 
     DSI_DeInit(DSI);
-    DSI_InitTypeDef   DSI_InitStruct;
+    DSI_InitTypeDef   DSI_InitStruct = {0};
     DSI_InitStruct.VirtualChannelID             = 0;
 
-    DSI_InitStruct.ColorCoding                  = 0;
+    DSI_InitStruct.ColorCoding                  = 5;
+    DSI_InitStruct.LPMaxReadPacket              = DSI_LP_MRDP_DISABLE;
     DSI_InitStruct.DEPolarity                   = 0;
     DSI_InitStruct.HSPolarity                   = 0;
     DSI_InitStruct.VSPolarity                   = 0;
@@ -343,7 +344,7 @@ uint8_t OTM8009A_Init(uint32_t ColorCoding, uint32_t orientation)
     DSI_InitStruct.LPDcsLongWrite               =   DSI_LP_DLW_ENABLE;
     DSI_Init(DSI, &DSI_InitStruct);
 
-    DSI_AdaptedCmdCfgTypeDef   AdaptedCmd_InitStruct;
+    DSI_AdaptedCmdCfgTypeDef   AdaptedCmd_InitStruct = {0};
 
     AdaptedCmd_InitStruct.TEAcknowledgeRequest         = DSI_TE_ACKNOWLEDGE_DISABLE;
     AdaptedCmd_InitStruct.hw_tear_effect_gen       = 0;
@@ -354,7 +355,7 @@ uint8_t OTM8009A_Init(uint32_t ColorCoding, uint32_t orientation)
     DSI_ConfigAdaptedCommandMode(DSI, &AdaptedCmd_InitStruct);
 
 
-    DSI_PhyCfgTypeDef dsi_phy;
+    DSI_PhyCfgTypeDef dsi_phy = {0};
     dsi_phy.phy_forepll  = PHY_FORCEPLL_DISABLE;
     dsi_phy.phy_enableclk  = PHY_CLK_ENABLE;
     dsi_phy.phy_rstz   = PHY_RST_ENABLE;
@@ -364,26 +365,6 @@ uint8_t OTM8009A_Init(uint32_t ColorCoding, uint32_t orientation)
     DSI_Start(DSI);
 #include "otm8009a_init_cmd.txt"
 
-#if 0
-    DSI_Init(DSI, &DSI_InitStruct);
-    AdaptedCmd_InitStruct.LPGenShortWriteNoP           = DSI_LP_GSW0P_ENABLE;
-    AdaptedCmd_InitStruct.LPGenShortWriteOneP          = DSI_LP_GSW1P_ENABLE;
-    AdaptedCmd_InitStruct.LPGenShortWriteTwoP          = DSI_LP_GSW2P_ENABLE;
-    AdaptedCmd_InitStruct.LPGenShortReadNoP            = DSI_LP_GSR0P_ENABLE;
-    AdaptedCmd_InitStruct.LPGenShortReadOneP           = DSI_LP_GSR1P_ENABLE;
-    AdaptedCmd_InitStruct.LPGenShortReadTwoP           = DSI_LP_GSR2P_ENABLE;
-    AdaptedCmd_InitStruct.LPGenLongWrite               =   DSI_LP_GLW_ENABLE;
-    AdaptedCmd_InitStruct.LPDcsShortWriteNoP           = DSI_LP_DSW0P_ENABLE;
-    AdaptedCmd_InitStruct.LPDcsShortWriteOneP          = DSI_LP_DSW1P_ENABLE;
-    AdaptedCmd_InitStruct.LPDcsShortReadNoP            = DSI_LP_DSR0P_ENABLE;
-    AdaptedCmd_InitStruct.LPDcsLongWrite               =   DSI_LP_DLW_ENABLE;
-    DSI_ConfigAdaptedCommandMode(DSI, &AdaptedCmd_InitStruct);
-    DSI_ConfigPhy(DSI, &dsi_phy);
-
-    DSI_Start(DSI);
-#else
-    *(uint32_t *)(0x40602000 + 0x68) &= ~BIT19;
-#endif
     return 0;
 }
 

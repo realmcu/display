@@ -118,6 +118,7 @@ uint8_t SH8601A_Init()
     DSI_InitStruct.VirtualChannelID             = 0;
 
     DSI_InitStruct.ColorCoding                  = 5;
+    DSI_InitStruct.LPMaxReadPacket              = DSI_LP_MRDP_DISABLE;
     DSI_InitStruct.DEPolarity                   = 1;
     DSI_InitStruct.HSPolarity                   = 1;
     DSI_InitStruct.VSPolarity                   = 1;
@@ -207,13 +208,11 @@ uint8_t SH8601A_Init()
     DSI_ConfigVideoMode(DSI, &VideoCmd_InitStruct);
 
 
-    DSI_PhyCfgTypeDef dsi_phy;
+    DSI_PhyCfgTypeDef dsi_phy = {0};
     dsi_phy.phy_forepll  = PHY_FORCEPLL_DISABLE;
     dsi_phy.phy_enableclk  = PHY_CLK_ENABLE;
     dsi_phy.phy_rstz   = PHY_RST_ENABLE;
     dsi_phy.phy_shutdownz   = PHY_SHUTDOWN_ENABLE;
-    DSI_ConfigPhy(DSI, &dsi_phy);
-
     DSI_ConfigPhy(DSI, &dsi_phy);
 
     DSI_Start(DSI);

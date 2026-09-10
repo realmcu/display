@@ -246,6 +246,7 @@ void LCDC_Init(LCDC_InitTypeDef *cfg)
     handler_reg_0x1c.b.tx_fifo_empty_int_msk = 1;
     handler_reg_0x1c.b.tx_fifo_overflow_int_msk = 1;
     handler_reg_0x1c.b.tx_fifo_threshold_int_msk = 1;
+    LCDC_HANDLER->DMA_FIFO_IMR = handler_reg_0x1c.d32;
 
     LCDC_HANDLER_FT_IN_TypeDef handler_reg_0x04 = {.d32 = LCDC_HANDLER->FT_IN};
     handler_reg_0x04.b.input_format = cfg->LCDC_PixelInputFormat;

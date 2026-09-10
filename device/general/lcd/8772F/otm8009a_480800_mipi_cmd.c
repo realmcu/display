@@ -276,10 +276,11 @@ uint8_t OTM8009A_Init(uint32_t ColorCoding, uint32_t orientation)
     /***********for irq setting***********/
 
     DSI_DeInit(DSI);
-    DSI_InitTypeDef   DSI_InitStruct;
+    DSI_InitTypeDef   DSI_InitStruct = {0};
     DSI_InitStruct.VirtualChannelID             = 0;
 
-    DSI_InitStruct.ColorCoding                  = 0;
+    DSI_InitStruct.ColorCoding                  = 5;
+    DSI_InitStruct.LPMaxReadPacket              = DSI_LP_MRDP_DISABLE;
     DSI_InitStruct.DEPolarity                   = 0;
     DSI_InitStruct.HSPolarity                   = 0;
     DSI_InitStruct.VSPolarity                   = 0;
@@ -343,7 +344,7 @@ uint8_t OTM8009A_Init(uint32_t ColorCoding, uint32_t orientation)
     DSI_InitStruct.LPDcsLongWrite               =   DSI_LP_DLW_ENABLE;
     DSI_Init(DSI, &DSI_InitStruct);
 
-    DSI_AdaptedCmdCfgTypeDef   AdaptedCmd_InitStruct;
+    DSI_AdaptedCmdCfgTypeDef   AdaptedCmd_InitStruct = {0};
 
     AdaptedCmd_InitStruct.TEAcknowledgeRequest         = DSI_TE_ACKNOWLEDGE_DISABLE;
     AdaptedCmd_InitStruct.hw_tear_effect_gen       = 0;
@@ -354,7 +355,7 @@ uint8_t OTM8009A_Init(uint32_t ColorCoding, uint32_t orientation)
     DSI_ConfigAdaptedCommandMode(DSI, &AdaptedCmd_InitStruct);
 
 
-    DSI_PhyCfgTypeDef dsi_phy;
+    DSI_PhyCfgTypeDef dsi_phy = {0};
     dsi_phy.phy_forepll  = PHY_FORCEPLL_DISABLE;
     dsi_phy.phy_enableclk  = PHY_CLK_ENABLE;
     dsi_phy.phy_rstz   = PHY_RST_ENABLE;

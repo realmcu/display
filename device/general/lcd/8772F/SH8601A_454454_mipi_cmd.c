@@ -250,7 +250,8 @@ void rtk_lcd_hal_init(void)
     DSI_InitTypeDef   DSI_InitStruct = {0};
     DSI_InitStruct.VirtualChannelID             = 0;
 
-    DSI_InitStruct.ColorCoding                  = 0;
+    DSI_InitStruct.ColorCoding                  = 5;
+    DSI_InitStruct.LPMaxReadPacket              = DSI_LP_MRDP_DISABLE;
     DSI_InitStruct.DEPolarity                   = 0;
     DSI_InitStruct.HSPolarity                   = 0;
     DSI_InitStruct.VSPolarity                   = 0;
@@ -325,8 +326,6 @@ void rtk_lcd_hal_init(void)
     dsi_phy.phy_enableclk  = PHY_CLK_ENABLE;
     dsi_phy.phy_rstz   = PHY_RST_ENABLE;
     dsi_phy.phy_shutdownz   = PHY_SHUTDOWN_ENABLE;
-    DSI_ConfigPhy(DSI, &dsi_phy);
-
     DSI_ConfigPhy(DSI, &dsi_phy);
 
     DSI_Start(DSI);
@@ -752,7 +751,8 @@ uint32_t rtk_lcd_hal_dlps_restore(void)
     DSI_InitTypeDef   DSI_InitStruct = {0};
     DSI_InitStruct.VirtualChannelID             = 0;
 
-    DSI_InitStruct.ColorCoding                  = 0;
+    DSI_InitStruct.ColorCoding                  = 5;
+    DSI_InitStruct.LPMaxReadPacket              = DSI_LP_MRDP_DISABLE;
     DSI_InitStruct.DEPolarity                   = 0;
     DSI_InitStruct.HSPolarity                   = 0;
     DSI_InitStruct.VSPolarity                   = 0;
@@ -827,8 +827,6 @@ uint32_t rtk_lcd_hal_dlps_restore(void)
     dsi_phy.phy_enableclk  = PHY_CLK_ENABLE;
     dsi_phy.phy_rstz   = PHY_RST_ENABLE;
     dsi_phy.phy_shutdownz   = PHY_SHUTDOWN_ENABLE;
-    DSI_ConfigPhy(DSI, &dsi_phy);
-
     DSI_ConfigPhy(DSI, &dsi_phy);
 
     DSI_Start(DSI);

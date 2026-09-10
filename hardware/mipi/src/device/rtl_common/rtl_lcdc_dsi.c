@@ -10,178 +10,386 @@
 #include "rtl_lcdc_dsi.h"
 
 /*============================================================================*
- *                          Private Macros
+ *                          Private Functions
  *============================================================================*/
-#define DSI_READ32(addr)               HAL_READ32(0, addr)
-#define DSI_WRITE32(addr, value32)     HAL_WRITE32(0, addr, value32)
+static FlagStatus DSI_WaitCmdFifoNotFull(DSI_TypeDef *DSIx)
+{
+    uint32_t timeout = DSI_POLL_TIMEOUT;
 
-#define DSI_UPDATE32(addr, mask, offset, value)  DSI_WRITE32(addr, (DSI_READ32(addr) &(~(mask<<offset))) | ((value<<offset)&(mask<<offset))   )
+    while (timeout-- != 0U)
+    {
+        DSI_CMD_PKT_STATUS_TypeDef status = {.d32 = DSIx->CMD_PKT_STATUS};
+        if (status.b.gen_cmd_full == 0U)
+        {
+            return DSI_STATUS_OK;
+        }
+    }
+
+    return DSI_STATUS_ERROR;
+}
+
+static FlagStatus DSI_WaitPayloadFifoNotFull(DSI_TypeDef *DSIx)
+{
+    uint32_t timeout = DSI_POLL_TIMEOUT;
+
+    while (timeout-- != 0U)
+    {
+        DSI_CMD_PKT_STATUS_TypeDef status = {.d32 = DSIx->CMD_PKT_STATUS};
+        if (status.b.gen_pld_w_full == 0U)
+        {
+            return DSI_STATUS_OK;
+        }
+    }
+
+    return DSI_STATUS_ERROR;
+}
+
+static FlagStatus DSI_WaitPhyStopState(DSI_TypeDef *DSIx)
+{
+    uint32_t timeout = DSI_POLL_TIMEOUT;
+    uint32_t lane_count;
+    DSI_PHY_IF_CFG_TypeDef phy_if = {.d32 = DSIx->PHY_IF_CFG};
+
+    lane_count = phy_if.b.n_lanes + 1U;
+    while (timeout-- != 0U)
+    {
+        DSI_PHY_STATUS_TypeDef status = {.d32 = DSIx->PHY_STATUS};
+
+        if ((status.b.phy_stopstateclklane != 0U) &&
+            (status.b.phy_stopstate0lane != 0U) &&
+            ((lane_count < 2U) || (status.b.phy_stopstate1lane != 0U)) &&
+            ((lane_count < 3U) || (status.b.phy_stopstate2lane != 0U)) &&
+            ((lane_count < 4U) || (status.b.phy_stopstate3lane != 0U)))
+        {
+            return DSI_STATUS_OK;
+        }
+    }
+
+    return DSI_STATUS_ERROR;
+}
 
 /*============================================================================*
  *                           Public Functions
  *============================================================================*/
+
 void DSI_DeInit(DSI_TypeDef *DSIx)
 {
-    DSIx->PWR_UP = 0x00;    //reset dsi host controller
-}
-void DSI_Init(DSI_TypeDef *DSIx,  DSI_InitTypeDef *DSI_Init)
-{
-    DSIx->PWR_UP = 0x00;//3
-    DSIx->PHY_MODE = DSI_Init->phy_mode;//4
-
-    DSI_UPDATE32(&DSIx->PHY_IF_CFG, 0x3, 0, (DSI_Init->NumberOfLanes - 1));//5
-
-    DSI_UPDATE32(&DSIx->PHY_IF_CFG, 0xff, 8, DSI_Init->StopWaitTime);//5
-    DSI_UPDATE32(&DSIx->INT_MSK0, 0x1fffff, 0, DSI_Init->InterruptMask0);//6
-    DSI_UPDATE32(&DSIx->INT_MSK1, 0x1fffff, 0, DSI_Init->InterruptMask1);//7
-
-
-    DSI_UPDATE32(&DSIx->TO_CNT_CFG, (uint32_t)0xffff, 16, DSI_Init->HS_TX_CNT);//8
-    DSI_UPDATE32(&DSIx->TO_CNT_CFG, 0xffff, 0, DSI_Init->LP_RX_CNT);//8
-
-    DSI_UPDATE32(&DSIx->CLKMGR_CFG, 0xff, 8, DSI_Init->TOCkdiv);//9
-
-    DSI_UPDATE32(&DSIx->CLKMGR_CFG, 0xff, 0, DSI_Init->TXEscapeCkdiv);//9
-
-    DSI_UPDATE32(&DSIx->MODE_CFG, 0x1, 0, DSI_Init->ModeCfg);//10
-
-    DSI_UPDATE32(&DSIx->DPI_VCID, 0x3, 0, DSI_Init->VirtualChannelID);//15
-
-    DSI_UPDATE32(&DSIx->DPI_COLOR_CODING, 0x3, 0, DSI_Init->ColorCoding);//16
-
-    DSI_UPDATE32(&DSIx->DPI_CFG_POL, 0x1, 4, DSI_Init->ColorModePolarity);//31
-    DSI_UPDATE32(&DSIx->DPI_CFG_POL, 0x1, 3, DSI_Init->ShutDownPolarity);//31
-    DSI_UPDATE32(&DSIx->DPI_CFG_POL, 0x1, 2, DSI_Init->HSPolarity);//31
-    DSI_UPDATE32(&DSIx->DPI_CFG_POL, 0x1, 1, DSI_Init->VSPolarity);//31
-    DSI_UPDATE32(&DSIx->DPI_CFG_POL, 0x1, 0, DSI_Init->DEPolarity);//31
-    DSI_UPDATE32(&DSIx->EDPI_CMD_SIZE, 0xFFFF, 0, DSI_Init->CommandSize);//33
-
-    DSI_UPDATE32(&DSIx->CMD_MODE_CFG, 1, 1, DSI_Init->AcknowledgeRequest);//34
-    DSI_UPDATE32(&DSIx->HS_RD_TO_CNT, 0xFFFF, 0, DSI_Init->HSGenReadTime);//35
-    DSI_UPDATE32(&DSIx->LP_RD_TO_CNT, 0xFFFF, 0, DSI_Init->LPGenReadTime);//36
-    DSI_UPDATE32(&DSIx->HS_WR_TO_CNT, 0xFFFF, 0, DSI_Init->HSGenWriteTime);//37
-    DSI_UPDATE32(&DSIx->LP_WR_TO_CNT, 0xFFFF, 0, DSI_Init->LPGenWriteTime);//38
-    DSI_UPDATE32(&DSIx->BTA_TO_CNT, 0xFFFF, 0, DSI_Init->BTATime);//39
-    DSI_UPDATE32(&DSIx->EDPI_TE_HW_CFG, (uint32_t)0xFFFF, 16, DSI_Init->BTATime);//41
-
-    DSI_UPDATE32(&DSIx->PCKHDL_CFG, 0x3F, 0, DSI_Init->PeripherCharacteristics);//42
-    DSI_UPDATE32(&DSIx->GEN_VCID, 0x3, 16, DSI_Init->GenericPacketVCID);//43
-    DSI_UPDATE32(&DSIx->GEN_VCID, 0x3, 8, DSI_Init->GenericTearVCID);//43
-    DSI_UPDATE32(&DSIx->GEN_VCID, 0x3, 0, DSI_Init->GenericReadBackVCID);//43
-
-    DSI_UPDATE32(&DSIx->LPCLK_CTRL, 0x1, 1, DSI_Init->AutoHS2LPEnable);//44
-    DSI_UPDATE32(&DSIx->LPCLK_CTRL, 0x1, 0, DSI_Init->TxRequestCLKEnable);//44
-
-
-    DSI_UPDATE32(&DSIx->PHY_TMR_LPCLK_CFG, 0x3FF, 16, DSI_Init->ClockLaneHS2LPTime);//45
-    DSI_UPDATE32(&DSIx->PHY_TMR_LPCLK_CFG, 0x3FF, 0, DSI_Init->ClockLaneLP2HSTime);//45
-    DSI_UPDATE32(&DSIx->PHY_TMR_CFG, 0x3FF, 16, DSI_Init->DataLaneHS2LPTime);//46
-    DSI_UPDATE32(&DSIx->PHY_TMR_CFG, 0x3FF, 0, DSI_Init->DataLaneLP2HSTime);//46
-    DSI_UPDATE32(&DSIx->PHY_TMR_RD_CFG, 0x7FFF, 0, DSI_Init->DataLaneMaxReadTime);//47
-
-    DSI_UPDATE32(&DSIx->PHY_RSTZ, 0x1, 0, DSI_Init->phy_shutdownz);//48
-    DSI_UPDATE32(&DSIx->PHY_TST_CTRL0, 0x1, 0, DSI_Init->phy_testclr);//49
-    DSI_UPDATE32(&DSIx->PHY_TST_CTRL1, 0x1, 16, DSI_Init->phy_testen);//50
-    DSI_UPDATE32(&DSIx->PHY_RSTZ, 0x1, 2, DSI_Init->phy_enableclk);//51
-    DSI_UPDATE32(&DSIx->PHY_TST_CTRL1, 0xFF, 8, DSI_Init->phy_testdout);//52
-    DSI_UPDATE32(&DSIx->PHY_TST_CTRL1, 0xFF, 0, DSI_Init->phy_testin);//52
-    DSI_UPDATE32(&DSIx->PHY_TST_CTRL0, 0x1, 1, DSI_Init->phy_testclk);//53
-    DSI_UPDATE32(&DSIx->PHY_RSTZ, 0x1, 0, DSI_Init->phy_shutdownz);//48
-
-    DSI_UPDATE32(&DSIx->PHY_RSTZ, 0x1, 3, DSI_Init->phy_forcepll);//54
-    DSI_UPDATE32(&DSIx->PHY_RSTZ, 0x1, 1, DSI_Init->phy_rstz);//55
-
-//    //do verify //57
-
-//    DSI_UPDATE32(&DSIx->AUTO_ULPS_MODE, 0x1, 0, DSI_Init->phy_auto_ulps);//58
-//    DSI_UPDATE32(&DSIx->AUTO_ULPS_MODE, 0x1, 16, DSI_Init->phy_pll_off_ulps);//59
-//    DSI_UPDATE32(&DSIx->AUTO_ULPS_MODE, 0x1, 17, DSI_Init->phy_pre_pll_off_req);//59
-
-//    DSI_UPDATE32(&DSIx->AUTO_ULPS_ENTRY_DELAY, 0xFFFF, 0, DSI_Init->phy_auto_ulps_delay);//60
-//    DSI_UPDATE32(&DSIx->AUTO_ULPS_WAKEUP_TIME, 0xFFFF, 0, DSI_Init->phy_auto_ulps_time);//61
-    DSI_UPDATE32(&DSIx->DPI_COLOR_CODING, 0xFFFF, 0, 0x5);
-
-    DSI_UPDATE32(&DSIx->CMD_MODE_CFG, 1, 8, DSI_Init->LPGenShortWriteNoP);//34
-    DSI_UPDATE32(&DSIx->CMD_MODE_CFG, 1, 9, DSI_Init->LPGenShortWriteOneP);//34
-    DSI_UPDATE32(&DSIx->CMD_MODE_CFG, 1, 10, DSI_Init->LPGenShortWriteTwoP);//34
-    DSI_UPDATE32(&DSIx->CMD_MODE_CFG, 1, 11, DSI_Init->LPGenShortReadNoP);//34
-    DSI_UPDATE32(&DSIx->CMD_MODE_CFG, 1, 12, DSI_Init->LPGenShortReadOneP);//34
-    DSI_UPDATE32(&DSIx->CMD_MODE_CFG, 1, 13, DSI_Init->LPGenShortReadTwoP);//34
-    DSI_UPDATE32(&DSIx->CMD_MODE_CFG, 1, 14, DSI_Init->LPGenLongWrite);//34
-    DSI_UPDATE32(&DSIx->CMD_MODE_CFG, 1, 16, DSI_Init->LPDcsShortWriteNoP);//34
-    DSI_UPDATE32(&DSIx->CMD_MODE_CFG, 1, 17, DSI_Init->LPDcsShortWriteOneP);//34
-    DSI_UPDATE32(&DSIx->CMD_MODE_CFG, 1, 18, DSI_Init->LPDcsShortReadNoP);//34
-    DSI_UPDATE32(&DSIx->CMD_MODE_CFG, 1, 19, DSI_Init->LPDcsLongWrite);//34
-
+    if (DSIx != NULL)
+    {
+        DSI_PWR_UP_TypeDef reg_0x04 = {.d32 = DSIx->PWR_UP};
+        reg_0x04.b.shutdownz = 0;           // reset dsi host controller
+        DSIx->PWR_UP = reg_0x04.d32;
+    }
 }
 
-
-
-void DSI_ConfigVideoMode(DSI_TypeDef *DSIx,  DSI_VidCfgTypeDef *VidCfg)
+FlagStatus DSI_Init(DSI_TypeDef *DSIx, const DSI_InitTypeDef *DSI_Init)
 {
-    DSI_UPDATE32(&DSIx->VID_MODE_CFG, 0x3, 0, VidCfg->Mode);//13
+    if ((DSIx == NULL) || (DSI_Init == NULL) ||
+        (DSI_Init->NumberOfLanes == 0U) || (DSI_Init->NumberOfLanes > 4U) ||
+        (DSI_Init->ColorCoding > 0xFU))
+    {
+        return DSI_STATUS_ERROR;
+    }
 
-    DSI_UPDATE32(&DSIx->VID_MODE_CFG, 0x1, 15, VidCfg->LPCommandEnable);//14
-    DSI_UPDATE32(&DSIx->VID_MODE_CFG, 0x1, 14, VidCfg->FrameBTAAcknowledgeEnable);//14
-    DSI_UPDATE32(&DSIx->VID_MODE_CFG, 0x1, 8, VidCfg->LPVerticalSyncActiveEnable);//14
-    DSI_UPDATE32(&DSIx->VID_MODE_CFG, 0x1, 9, VidCfg->LPVerticalBackPorchEnable);//14
-    DSI_UPDATE32(&DSIx->VID_MODE_CFG, 0x1, 10, VidCfg->LPVerticalFrontPorchEnable);//14
-    DSI_UPDATE32(&DSIx->VID_MODE_CFG, 0x1, 11, VidCfg->LPVerticalActiveEnable);//14
-    DSI_UPDATE32(&DSIx->VID_MODE_CFG, 0x1, 12, VidCfg->LPHorizontalBackPorchEnable);//14
-    DSI_UPDATE32(&DSIx->VID_MODE_CFG, 0x1, 13, VidCfg->LPHorizontalFrontPorchEnable);//14
+    DSI_PWR_UP_TypeDef pwr_up = {.d32 = DSIx->PWR_UP};
+    pwr_up.b.shutdownz = 0;             // (3) reset dsi host controller
+    DSIx->PWR_UP = pwr_up.d32;
 
-    DSI_UPDATE32(&DSIx->DPI_LP_CMD_TIM, 0xff, 0, VidCfg->invact_lpcmd_size);//17
-    DSI_UPDATE32(&DSIx->DPI_LP_CMD_TIM, 0xff, 16, VidCfg->outvact_lpcmd_size);//17
+    DSI_PHY_MODE_TypeDef phy_mode = {.d32 = DSIx->PHY_MODE};
+    phy_mode.b.phy_mode = DSI_Init->phy_mode;           // (4) D-PHY / D-PHY combo
+    DSIx->PHY_MODE = phy_mode.d32;
 
-    DSI_UPDATE32(&DSIx->VID_PKT_SIZE, 0x3fff, 0, VidCfg->PacketSize);//18
-    DSI_UPDATE32(&DSIx->VID_NUM_CHUNKS, 0x1fff, 0, VidCfg->NumberOfChunks);//19
-    DSI_UPDATE32(&DSIx->VID_NULL_SIZE, 0x1fff, 0, VidCfg->NullPacketSize);//20
+    DSI_PHY_IF_CFG_TypeDef phy_if = {.d32 = DSIx->PHY_IF_CFG};
+    phy_if.b.n_lanes = DSI_Init->NumberOfLanes - 1;     // (5) data lane count (encoded: 0 = 1 lane)
+    phy_if.b.phy_stop_wait_time = DSI_Init->StopWaitTime;
+    DSIx->PHY_IF_CFG = phy_if.d32;
 
-    DSI_UPDATE32(&DSIx->VID_HLINE_TIME, 0x7fff, 0, VidCfg->HorizontalLine);//21
-    DSI_UPDATE32(&DSIx->VID_HSA_TIME, 0xfff, 0, VidCfg->HorizontalSyncActive);//22
-    DSI_UPDATE32(&DSIx->VID_HBP_TIME, 0xfff, 0, VidCfg->HorizontalBackPorch);//23
-    DSI_UPDATE32(&DSIx->VID_VSA_LINES, 0x3ff, 0, VidCfg->VerticalSyncActive);//24
-    DSI_UPDATE32(&DSIx->VID_VBP_LINES, 0x3ff, 0, VidCfg->VerticalBackPorch);//25
-    DSI_UPDATE32(&DSIx->VID_VFP_LINES, 0x3ff, 0, VidCfg->VerticalFrontPorch);//26
-    DSI_UPDATE32(&DSIx->VID_VACTIVE_LINES, 0x3fff, 0, VidCfg->VerticalActive);//27
+    DSI_INT_MSK0_TypeDef int_msk0 = {.d32 = DSIx->INT_MSK0};
+    int_msk0.b.int_msk0 = DSI_Init->InterruptMask0;     // (6)
+    DSIx->INT_MSK0 = int_msk0.d32;
 
-    DSI_UPDATE32(&DSIx->VID_MODE_CFG, 0x1, 20, VidCfg->VPGMode);//28
-    DSI_UPDATE32(&DSIx->VID_MODE_CFG, 0x1, 24, VidCfg->VPGOrientation);//29
-    DSI_UPDATE32(&DSIx->VID_MODE_CFG, 0x1, 16, VidCfg->VPGEnable);//30
+    DSI_INT_MSK1_TypeDef int_msk1 = {.d32 = DSIx->INT_MSK1};
+    int_msk1.b.int_msk1 = DSI_Init->InterruptMask1;     // (7)
+    DSIx->INT_MSK1 = int_msk1.d32;
+
+    DSI_TO_CNT_CFG_TypeDef to_cnt = {.d32 = DSIx->TO_CNT_CFG};
+    to_cnt.b.hstx_to_cnt = DSI_Init->HS_TX_CNT;         // (8) HS TX timeout
+    to_cnt.b.lprx_to_cnt = DSI_Init->LP_RX_CNT;         // (8) LP RX timeout
+    DSIx->TO_CNT_CFG = to_cnt.d32;
+
+    DSI_CLKMGR_CFG_TypeDef clkmgr = {.d32 = DSIx->CLKMGR_CFG};
+    clkmgr.b.to_clk_division = DSI_Init->TOCkdiv;       // (9) timeout clock division
+    clkmgr.b.tx_esc_clk_division = DSI_Init->TXEscapeCkdiv; // (9) TxClkEsc division (2-20MHz)
+    DSIx->CLKMGR_CFG = clkmgr.d32;
+
+    DSI_MODE_CFG_TypeDef mode_cfg = {.d32 = DSIx->MODE_CFG};
+    mode_cfg.b.cmd_video_mode = DSI_Init->ModeCfg;      // (10) 0=video / 1=command
+    DSIx->MODE_CFG = mode_cfg.d32;
+
+    DSI_DPI_VCID_TypeDef dpi_vcid = {.d32 = DSIx->DPI_VCID};
+    dpi_vcid.b.dpi_vcid = DSI_Init->VirtualChannelID;   // (15)
+    DSIx->DPI_VCID = dpi_vcid.d32;
+
+    DSI_DPI_COLOR_CODING_TypeDef dpi_color = {.d32 = DSIx->DPI_COLOR_CODING};
+    dpi_color.b.dpi_color_coding = DSI_Init->ColorCoding; // (16)
+    DSIx->DPI_COLOR_CODING = dpi_color.d32;
+
+    DSI_DPI_CFG_POL_TypeDef dpi_pol = {.d32 = DSIx->DPI_CFG_POL};
+    dpi_pol.b.colorm_active_low = DSI_Init->ColorModePolarity; // (31)
+    dpi_pol.b.shutd_active_low = DSI_Init->ShutDownPolarity;
+    dpi_pol.b.hsync_active_low = DSI_Init->HSPolarity;
+    dpi_pol.b.vsync_active_low = DSI_Init->VSPolarity;
+    dpi_pol.b.dataen_active_low = DSI_Init->DEPolarity;
+    DSIx->DPI_CFG_POL = dpi_pol.d32;
+
+    DSI_EDPI_CMD_SIZE_TypeDef edpi_cmd = {.d32 = DSIx->EDPI_CMD_SIZE};
+    edpi_cmd.b.edpi_allowed_cmd_size = DSI_Init->CommandSize; // (33)
+    DSIx->EDPI_CMD_SIZE = edpi_cmd.d32;
+
+    DSI_CMD_MODE_CFG_TypeDef cmd_mode = {.d32 = DSIx->CMD_MODE_CFG};
+    cmd_mode.b.ack_rqst_en = DSI_Init->AcknowledgeRequest; // (34)
+    cmd_mode.b.max_rd_pkt_size = DSI_Init->LPMaxReadPacket;
+    cmd_mode.b.gen_sw_0p_tx = DSI_Init->LPGenShortWriteNoP;
+    cmd_mode.b.gen_sw_1p_tx = DSI_Init->LPGenShortWriteOneP;
+    cmd_mode.b.gen_sw_2p_tx = DSI_Init->LPGenShortWriteTwoP;
+    cmd_mode.b.gen_sr_0p_tx = DSI_Init->LPGenShortReadNoP;
+    cmd_mode.b.gen_sr_1p_tx = DSI_Init->LPGenShortReadOneP;
+    cmd_mode.b.gen_sr_2p_tx = DSI_Init->LPGenShortReadTwoP;
+    cmd_mode.b.gen_lw_tx = DSI_Init->LPGenLongWrite;
+    cmd_mode.b.dcs_sw_0p_tx = DSI_Init->LPDcsShortWriteNoP;
+    cmd_mode.b.dcs_sw_1p_tx = DSI_Init->LPDcsShortWriteOneP;
+    cmd_mode.b.dcs_sr_0p_tx = DSI_Init->LPDcsShortReadNoP;
+    cmd_mode.b.dcs_lw_tx = DSI_Init->LPDcsLongWrite;
+    DSIx->CMD_MODE_CFG = cmd_mode.d32;
+
+    DSI_HS_RD_TO_CNT_TypeDef hs_rd = {.d32 = DSIx->HS_RD_TO_CNT};
+    hs_rd.b.hs_rd_to_cnt = DSI_Init->HSGenReadTime;     // (35)
+    DSIx->HS_RD_TO_CNT = hs_rd.d32;
+
+    DSI_LP_RD_TO_CNT_TypeDef lp_rd = {.d32 = DSIx->LP_RD_TO_CNT};
+    lp_rd.b.lp_rd_to_cnt = DSI_Init->LPGenReadTime;     // (36)
+    DSIx->LP_RD_TO_CNT = lp_rd.d32;
+
+    DSI_HS_WR_TO_CNT_TypeDef hs_wr = {.d32 = DSIx->HS_WR_TO_CNT};
+    hs_wr.b.hs_wr_to_cnt = DSI_Init->HSGenWriteTime;    // (37)
+    DSIx->HS_WR_TO_CNT = hs_wr.d32;
+
+    DSI_LP_WR_TO_CNT_TypeDef lp_wr = {.d32 = DSIx->LP_WR_TO_CNT};
+    lp_wr.b.lp_wr_to_cnt = DSI_Init->LPGenWriteTime;    // (38)
+    DSIx->LP_WR_TO_CNT = lp_wr.d32;
+
+    DSI_BTA_TO_CNT_TypeDef bta = {.d32 = DSIx->BTA_TO_CNT};
+    bta.b.bta_to_cnt = DSI_Init->BTATime;               // (39)
+    DSIx->BTA_TO_CNT = bta.d32;
+
+    DSI_PCKHDL_CFG_TypeDef pckhdl = {.d32 = DSIx->PCKHDL_CFG};
+    pckhdl.b.eotp_tx_en = DSI_Init->PeripherCharacteristics & 0x1;        // (42) 0x3F mask
+    pckhdl.b.eotp_rx_en = (DSI_Init->PeripherCharacteristics >> 1) & 0x1;
+    pckhdl.b.bta_en = ((DSI_Init->PeripherCharacteristics >> 2) & 0x1) |
+                      (DSI_Init->AcknowledgeRequest != 0U);
+    pckhdl.b.ecc_rx_en = (DSI_Init->PeripherCharacteristics >> 3) & 0x1;
+    pckhdl.b.crc_rx_en = (DSI_Init->PeripherCharacteristics >> 4) & 0x1;
+    pckhdl.b.eotp_tx_lp_en = (DSI_Init->PeripherCharacteristics >> 5) & 0x1;
+    DSIx->PCKHDL_CFG = pckhdl.d32;
+
+    DSI_GEN_VCID_TypeDef gen_vcid = {.d32 = DSIx->GEN_VCID};
+    gen_vcid.b.gen_vcid_tx_auto = DSI_Init->GenericPacketVCID; // (43)
+    gen_vcid.b.gen_vcid_tear_auto = DSI_Init->GenericTearVCID;
+    gen_vcid.b.gen_vcid_rx = DSI_Init->GenericReadBackVCID;
+    DSIx->GEN_VCID = gen_vcid.d32;
+
+    DSI_LPCLK_CTRL_TypeDef lpclk = {.d32 = DSIx->LPCLK_CTRL};
+    lpclk.b.auto_clklane_ctrl = DSI_Init->AutoHS2LPEnable; // (44)
+    lpclk.b.phy_txrequestclkhs = DSI_Init->TxRequestCLKEnable;
+    DSIx->LPCLK_CTRL = lpclk.d32;
+
+    DSI_PHY_TMR_LPCLK_CFG_TypeDef tmr_lpclk = {.d32 = DSIx->PHY_TMR_LPCLK_CFG};
+    tmr_lpclk.b.phy_clkhs2lp_time = DSI_Init->ClockLaneHS2LPTime; // (45)
+    tmr_lpclk.b.phy_clklp2hs_time = DSI_Init->ClockLaneLP2HSTime;
+    DSIx->PHY_TMR_LPCLK_CFG = tmr_lpclk.d32;
+
+    DSI_PHY_TMR_CFG_TypeDef tmr = {.d32 = DSIx->PHY_TMR_CFG};
+    tmr.b.phy_hs2lp_time = DSI_Init->DataLaneHS2LPTime; // (46)
+    tmr.b.phy_lp2hs_time = DSI_Init->DataLaneLP2HSTime;
+    DSIx->PHY_TMR_CFG = tmr.d32;
+
+    DSI_PHY_TMR_RD_CFG_TypeDef tmr_rd = {.d32 = DSIx->PHY_TMR_RD_CFG};
+    tmr_rd.b.max_rd_time = DSI_Init->DataLaneMaxReadTime; // (47)
+    DSIx->PHY_TMR_RD_CFG = tmr_rd.d32;
+    return DSI_STATUS_OK;
 }
 
-void DSI_ConfigAdaptedCommandMode(DSI_TypeDef *DSIx,  DSI_AdaptedCmdCfgTypeDef *AdaptedCmdCfg)
+FlagStatus DSI_ConfigVideoMode(DSI_TypeDef *DSIx, const DSI_VidCfgTypeDef *VidCfg)
 {
+    if ((DSIx == NULL) || (VidCfg == NULL))
+    {
+        return DSI_STATUS_ERROR;
+    }
 
-    DSI_UPDATE32(&DSIx->CMD_MODE_CFG, 1, 0, AdaptedCmdCfg->TEAcknowledgeRequest);//34
+    DSI_VID_MODE_CFG_TypeDef vid = {.d32 = DSIx->VID_MODE_CFG};
+    vid.b.vid_mode_type = VidCfg->Mode;                 // (13) burst / non-burst
+    vid.b.lp_cmd_en = VidCfg->LPCommandEnable;          // (14)
+    vid.b.frame_bta_ack_en = VidCfg->FrameBTAAcknowledgeEnable;
+    vid.b.lp_vsa_en = VidCfg->LPVerticalSyncActiveEnable;
+    vid.b.lp_vbp_en = VidCfg->LPVerticalBackPorchEnable;
+    vid.b.lp_vfp_en = VidCfg->LPVerticalFrontPorchEnable;
+    vid.b.lp_vact_en = VidCfg->LPVerticalActiveEnable;
+    vid.b.lp_hbp_en = VidCfg->LPHorizontalBackPorchEnable;
+    vid.b.lp_hfp_en = VidCfg->LPHorizontalFrontPorchEnable;
+    DSIx->VID_MODE_CFG = vid.d32;
 
+    DSI_DPI_LP_CMD_TIM_TypeDef lp_cmd_tim = {.d32 = DSIx->DPI_LP_CMD_TIM};
+    lp_cmd_tim.b.invact_lpcmd_time = VidCfg->invact_lpcmd_size;   // (17)
+    lp_cmd_tim.b.outvact_lpcmd_time = VidCfg->outvact_lpcmd_size;
+    DSIx->DPI_LP_CMD_TIM = lp_cmd_tim.d32;
 
-    DSI_UPDATE32(&DSIx->EDPI_TE_HW_CFG, (uint32_t)0xFFFF, 16, AdaptedCmdCfg->scan_line_parameter);//40
-    DSI_UPDATE32(&DSIx->EDPI_TE_HW_CFG, 0x1, 4, AdaptedCmdCfg->hw_set_scan_line);//40
-    DSI_UPDATE32(&DSIx->EDPI_TE_HW_CFG, 0x1, 1, AdaptedCmdCfg->hw_tear_effect_gen);//40
-    DSI_UPDATE32(&DSIx->EDPI_TE_HW_CFG, 0x1, 0, AdaptedCmdCfg->hw_tear_effect_on);//40
+    DSI_VID_PKT_SIZE_TypeDef vid_pkt = {.d32 = DSIx->VID_PKT_SIZE};
+    vid_pkt.b.vid_pkt_size = VidCfg->PacketSize;        // (18)
+    DSIx->VID_PKT_SIZE = vid_pkt.d32;
 
+    DSI_VID_NUM_CHUNKS_TypeDef vid_chunks = {.d32 = DSIx->VID_NUM_CHUNKS};
+    vid_chunks.b.vid_num_chunks = VidCfg->NumberOfChunks; // (19)
+    DSIx->VID_NUM_CHUNKS = vid_chunks.d32;
 
+    DSI_VID_NULL_SIZE_TypeDef vid_null = {.d32 = DSIx->VID_NULL_SIZE};
+    vid_null.b.vid_null_size = VidCfg->NullPacketSize;  // (20)
+    DSIx->VID_NULL_SIZE = vid_null.d32;
 
+    DSI_VID_HLINE_TIME_TypeDef vid_hline = {.d32 = DSIx->VID_HLINE_TIME};
+    vid_hline.b.vid_hline_time = VidCfg->HorizontalLine; // (21)
+    DSIx->VID_HLINE_TIME = vid_hline.d32;
+
+    DSI_VID_HSA_TIME_TypeDef vid_hsa = {.d32 = DSIx->VID_HSA_TIME};
+    vid_hsa.b.vid_hsa_time = VidCfg->HorizontalSyncActive; // (22)
+    DSIx->VID_HSA_TIME = vid_hsa.d32;
+
+    DSI_VID_HBP_TIME_TypeDef vid_hbp = {.d32 = DSIx->VID_HBP_TIME};
+    vid_hbp.b.vid_hbp_time = VidCfg->HorizontalBackPorch; // (23)
+    DSIx->VID_HBP_TIME = vid_hbp.d32;
+
+    DSI_VID_VSA_LINES_TypeDef vid_vsa = {.d32 = DSIx->VID_VSA_LINES};
+    vid_vsa.b.vsa_lines = VidCfg->VerticalSyncActive; // (24)
+    DSIx->VID_VSA_LINES = vid_vsa.d32;
+
+    DSI_VID_VBP_LINES_TypeDef vid_vbp = {.d32 = DSIx->VID_VBP_LINES};
+    vid_vbp.b.vbp_lines = VidCfg->VerticalBackPorch; // (25)
+    DSIx->VID_VBP_LINES = vid_vbp.d32;
+
+    DSI_VID_VFP_LINES_TypeDef vid_vfp = {.d32 = DSIx->VID_VFP_LINES};
+    vid_vfp.b.vfp_lines = VidCfg->VerticalFrontPorch; // (26)
+    DSIx->VID_VFP_LINES = vid_vfp.d32;
+
+    DSI_VID_VACTIVE_LINES_TypeDef vid_vact = {.d32 = DSIx->VID_VACTIVE_LINES};
+    vid_vact.b.v_active_lines = VidCfg->VerticalActive; // (27)
+    DSIx->VID_VACTIVE_LINES = vid_vact.d32;
+
+    vid.d32 = DSIx->VID_MODE_CFG;
+    vid.b.vpg_mode = VidCfg->VPGMode;                   // (28)
+    vid.b.vpg_orientation = VidCfg->VPGOrientation;     // (29)
+    vid.b.vpg_en = VidCfg->VPGEnable;                   // (30)
+    DSIx->VID_MODE_CFG = vid.d32;
+
+    return DSI_STATUS_OK;
 }
 
-void DSI_ConfigPhy(DSI_TypeDef *DSIx,  DSI_PhyCfgTypeDef *PhyCfg)
+FlagStatus DSI_ConfigAdaptedCommandMode(DSI_TypeDef *DSIx,
+                                        const DSI_AdaptedCmdCfgTypeDef *AdaptedCmdCfg)
 {
-//    DSI_UPDATE32(&DSIx->PHY_RSTZ, 0x1, 3, PhyCfg->phy_forepll);
-//    DSI_UPDATE32(&DSIx->PHY_RSTZ, 0x1, 2, PhyCfg->phy_enableclk);
-//    DSI_UPDATE32(&DSIx->PHY_RSTZ, 0x1, 1, PhyCfg->phy_rstz);
-//    DSI_UPDATE32(&DSIx->PHY_RSTZ, 0x1, 0, PhyCfg->phy_shutdownz);
+    if ((DSIx == NULL) || (AdaptedCmdCfg == NULL))
+    {
+        return DSI_STATUS_ERROR;
+    }
 
-    DSI_UPDATE32(&DSIx->PHY_RSTZ, 0xF, 0, 0x04);
+    DSI_CMD_MODE_CFG_TypeDef cmd_mode = {.d32 = DSIx->CMD_MODE_CFG};
+    cmd_mode.b.tear_fx_en = AdaptedCmdCfg->TEAcknowledgeRequest; // (34)
+    DSIx->CMD_MODE_CFG = cmd_mode.d32;
 
-    DSI_UPDATE32(&DSIx->PHY_RSTZ, 0xF, 0,
-                 PhyCfg->phy_shutdownz << 3 | PhyCfg->phy_enableclk << 2 | PhyCfg->phy_rstz << 1 |
-                 PhyCfg->phy_shutdownz);
+    DSI_PCKHDL_CFG_TypeDef pckhdl = {.d32 = DSIx->PCKHDL_CFG};
+    if (AdaptedCmdCfg->TEAcknowledgeRequest != 0U)
+    {
+        pckhdl.b.bta_en = 1U;
+        DSIx->PCKHDL_CFG = pckhdl.d32;
+    }
 
-    while ((DSI->PHY_STATUS & BIT2) == 0U);
-    while ((DSI->PHY_STATUS & BIT4) == 0U);
-    while ((DSI->PHY_STATUS & BIT7) == 0U);
+    DSI_EDPI_TE_HW_CFG_TypeDef edpi_te = {.d32 = DSIx->EDPI_TE_HW_CFG};
+    edpi_te.b.scan_line_parameter = AdaptedCmdCfg->scan_line_parameter; // (40)
+    edpi_te.b.hw_set_scan_line = AdaptedCmdCfg->hw_set_scan_line;
+    edpi_te.b.hw_tear_effect_gen = AdaptedCmdCfg->hw_tear_effect_gen;
+    edpi_te.b.hw_tear_effect_on = AdaptedCmdCfg->hw_tear_effect_on;
+    DSIx->EDPI_TE_HW_CFG = edpi_te.d32;
 
+    return DSI_STATUS_OK;
+}
+
+FlagStatus DSI_ConfigPhy(DSI_TypeDef *DSIx, const DSI_PhyCfgTypeDef *PhyCfg)
+{
+    if ((DSIx == NULL) || (PhyCfg == NULL))
+    {
+        return DSI_STATUS_ERROR;
+    }
+
+    /* The RTL-specific D-PHY PLL must be configured before this host-side step. */
+    {
+        DSI_PHY_RSTZ_TypeDef phy_rstz = {.d32 = DSIx->PHY_RSTZ};
+        phy_rstz.b.phy_shutdownz = 0;
+        phy_rstz.b.phy_rstz = 0;
+        phy_rstz.b.phy_enableclk = 1;
+        phy_rstz.b.phy_forcepll = 0;
+        DSIx->PHY_RSTZ = phy_rstz.d32;
+    }
+
+    {
+        DSI_PHY_RSTZ_TypeDef phy_rstz = {.d32 = DSIx->PHY_RSTZ};
+        phy_rstz.b.phy_forcepll = PhyCfg->phy_forepll;
+        phy_rstz.b.phy_enableclk = PhyCfg->phy_enableclk;
+        phy_rstz.b.phy_rstz = PhyCfg->phy_rstz;
+        phy_rstz.b.phy_shutdownz = PhyCfg->phy_shutdownz;
+        DSIx->PHY_RSTZ = phy_rstz.d32;
+    }
+
+    return DSI_WaitPhyStopState(DSIx);
+}
+
+FlagStatus DSI_ConfigAutoUlps(DSI_TypeDef *DSIx,
+                              const DSI_AutoUlpsCfgTypeDef *AutoUlpsCfg)
+{
+    if ((DSIx == NULL) || (AutoUlpsCfg == NULL) ||
+        (AutoUlpsCfg->WakeupClockDiv == 0U) || (AutoUlpsCfg->WakeupCount == 0U) ||
+        (AutoUlpsCfg->MinimumTime > 0x0FFFU))
+    {
+        return DSI_STATUS_ERROR;
+    }
+
+    DSI_AUTO_ULPS_ENTRY_DELAY_TypeDef entry_delay = {.d32 = DSIx->AUTO_ULPS_ENTRY_DELAY};
+    entry_delay.b.ulps_entry_delay = AutoUlpsCfg->EntryDelay;
+    DSIx->AUTO_ULPS_ENTRY_DELAY = entry_delay.d32;
+
+    DSI_AUTO_ULPS_WAKEUP_TIME_TypeDef wakeup_time = {.d32 = DSIx->AUTO_ULPS_WAKEUP_TIME};
+    wakeup_time.b.twakeup_clk_div = AutoUlpsCfg->WakeupClockDiv;
+    wakeup_time.b.twakeup_cnt = AutoUlpsCfg->WakeupCount;
+    DSIx->AUTO_ULPS_WAKEUP_TIME = wakeup_time.d32;
+
+    DSI_AUTO_ULPS_MIN_TIME_TypeDef min_time = {.d32 = DSIx->AUTO_ULPS_MIN_TIME};
+    min_time.b.ulps_min_time = AutoUlpsCfg->MinimumTime;
+    DSIx->AUTO_ULPS_MIN_TIME = min_time.d32;
+
+    DSI_AUTO_ULPS_MODE_TypeDef mode = {.d32 = DSIx->AUTO_ULPS_MODE};
+    mode.b.pll_off_ulps = AutoUlpsCfg->PllOffInUlps;
+    mode.b.pre_pll_off_req = AutoUlpsCfg->PrePllOffRequest;
+    mode.b.auto_ulps = 1U;
+    DSIx->AUTO_ULPS_MODE = mode.d32;
+
+    return DSI_STATUS_OK;
+}
+
+void DSI_DisableAutoUlps(DSI_TypeDef *DSIx)
+{
+    if (DSIx != NULL)
+    {
+        DSI_AUTO_ULPS_MODE_TypeDef mode = {.d32 = DSIx->AUTO_ULPS_MODE};
+        mode.b.auto_ulps = 0U;
+        DSIx->AUTO_ULPS_MODE = mode.d32;
+    }
 }
 
 static void DSI_ConfigPacketHeader(DSI_TypeDef *DSIx,
@@ -190,8 +398,13 @@ static void DSI_ConfigPacketHeader(DSI_TypeDef *DSIx,
                                    uint32_t Data0,
                                    uint32_t Data1)
 {
+    DSI_GEN_HDR_TypeDef gen_hdr = {.d32 = DSIx->GEN_HDR};
     /* Update the DSI packet header with new information */
-    DSIx->GEN_HDR = (DataType | (ChannelID << 6U) | (Data0 << 8U) | (Data1 << 16U));
+    gen_hdr.b.gen_dt = DataType;
+    gen_hdr.b.gen_vc = ChannelID;
+    gen_hdr.b.gen_wc_lsbyte = Data0;
+    gen_hdr.b.gen_wc_msbyte = Data1;
+    DSIx->GEN_HDR = gen_hdr.d32;
 }
 
 FlagStatus DSI_ShortWrite(DSI_TypeDef *DSIx,
@@ -200,15 +413,29 @@ FlagStatus DSI_ShortWrite(DSI_TypeDef *DSIx,
                           uint32_t Param1,
                           uint32_t Param2)
 {
-    FlagStatus status = 0;
+    if (DSIx == NULL)
+    {
+        return DSI_STATUS_ERROR;
+    }
 
-    /* Wait for Command FIFO Empty */
-    while ((DSIx->CMD_PKT_STATUS & BIT0) == 0U); //refs databook page 230
+    if ((Mode == DSI_DCS_SHORT_PKT_WRITE_P0) || (Mode == DSI_GEN_SHORT_PKT_WRITE_P0))
+    {
+        Param2 = 0U;
+    }
 
+    if (DSI_WaitCmdFifoNotFull(DSIx) != DSI_STATUS_OK)
+    {
+        return DSI_STATUS_ERROR;
+    }
+
+    DSI_GEN_HDR_TypeDef gen_hdr = {.d32 = DSIx->GEN_HDR};
     /* Configure the packet to send a short DCS command with 0 or 1 parameter */
-    /* Update the DSI packet header with new information */
-    DSIx->GEN_HDR = (Mode | (ChannelID << 6U) | (Param1 << 8U) | (Param2 << 16U));
-    return status;
+    gen_hdr.b.gen_dt = Mode;
+    gen_hdr.b.gen_vc = ChannelID;
+    gen_hdr.b.gen_wc_lsbyte = Param1;
+    gen_hdr.b.gen_wc_msbyte = Param2;
+    DSIx->GEN_HDR = gen_hdr.d32;
+    return DSI_STATUS_OK;
 }
 
 FlagStatus DSI_LongWrite(DSI_TypeDef *DSIx,
@@ -218,18 +445,15 @@ FlagStatus DSI_LongWrite(DSI_TypeDef *DSIx,
                          uint32_t Param1,
                          uint8_t *ParametersTable)
 {
-    FlagStatus status = 0;
     uint32_t uicounter, nbBytes, count;
-    uint32_t tickstart;
     uint32_t fifoword;
     uint8_t *pparams = ParametersTable;
 
-    if (NbParams > (200 - 1))
+    if ((DSIx == NULL) || (NbParams > (200U - 1U)) ||
+        ((NbParams != 0U) && (ParametersTable == NULL)))
     {
-        return 0;
+        return DSI_STATUS_ERROR;
     }
-    /* Wait for Command FIFO Empty */
-    while ((DSIx->CMD_PKT_STATUS & BIT0) == 0U);
 
     /* Set the DCS code on payload byte 1, and the other parameters on the write FIFO command*/
     fifoword = Param1;
@@ -238,6 +462,10 @@ FlagStatus DSI_LongWrite(DSI_TypeDef *DSIx,
     for (count = 0U; count < nbBytes; count++)
     {
         fifoword |= (((uint32_t)(*(pparams + count))) << (8U + (8U * count)));
+    }
+    if (DSI_WaitPayloadFifoNotFull(DSIx) != DSI_STATUS_OK)
+    {
+        return DSI_STATUS_ERROR;
     }
     DSIx->GEN_PLD_DATA = fifoword;
 
@@ -252,10 +480,19 @@ FlagStatus DSI_LongWrite(DSI_TypeDef *DSIx,
         {
             fifoword |= (((uint32_t)(*(pparams + count))) << (8U * count));
         }
+        if (DSI_WaitPayloadFifoNotFull(DSIx) != DSI_STATUS_OK)
+        {
+            return DSI_STATUS_ERROR;
+        }
         DSIx->GEN_PLD_DATA = fifoword;
 
         uicounter -= nbBytes;
         pparams += nbBytes;
+    }
+
+    if (DSI_WaitCmdFifoNotFull(DSIx) != DSI_STATUS_OK)
+    {
+        return DSI_STATUS_ERROR;
     }
 
     /* Configure the packet to send a long DCS command */
@@ -265,13 +502,18 @@ FlagStatus DSI_LongWrite(DSI_TypeDef *DSIx,
                            ((NbParams + 1U) & 0x00FFU),
                            (((NbParams + 1U) & 0xFF00U) >> 8U));
 
-    return status;
+    return DSI_STATUS_OK;
 }
 
 FlagStatus DSI_Start(DSI_TypeDef *DSIx)
 {
-    FlagStatus status = 0;
-    DSIx->PWR_UP = 0x01;//3
+    if (DSIx == NULL)
+    {
+        return DSI_STATUS_ERROR;
+    }
 
-    return status;
+    DSI_PWR_UP_TypeDef pwr_up = {.d32 = DSIx->PWR_UP};
+    pwr_up.b.shutdownz = 1;             // power-up the DW DSI controller
+    DSIx->PWR_UP = pwr_up.d32;
+    return DSI_STATUS_OK;
 }

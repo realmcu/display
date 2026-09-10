@@ -34,6 +34,7 @@ ci_check_config = {
      r'hardware\lcdc\src\device\rtl87x2g',
      r'hardware\lcdc\src\device\rtl8773e',
      r'hardware\lcdc\src\device\rtl8773g',
+     r'hardware\lcdc\src\device\rtl8773k',
      r'hardware\idu\src\device\rtl87x2g',
      r'hardware\idu\src\device\rtl8773e',
      r'hardware\idu\src\device\rtl8773g',
@@ -41,6 +42,7 @@ ci_check_config = {
      r'hardware\segcom\src\device\rtl87x2g',
      r'hardware\segcom\src\device\rtl8772f',
      r'hardware\vcdj\src\ctrlsw',
+     r'hardware\mipi\inc',
     ],
     "ignore_cppcheck_check":[
      r'hardware\vcdj\src\ctrlsw',

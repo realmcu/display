@@ -7,8 +7,6 @@
 #ifndef RTL_eDPI_DEF_H
 #define RTL_eDPI_DEF_H
 
-#include <stdint.h>
-#include <stdbool.h>
 #include "rtl876x.h"
 
 #ifdef  __cplusplus
