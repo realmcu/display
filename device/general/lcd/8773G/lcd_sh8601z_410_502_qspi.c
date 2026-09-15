@@ -297,7 +297,7 @@ void rtk_lcd_hal_init(void)
 {
     qspi_pad_config();
 
-    LCDC_Clock_Sel(LCDC_BUS_CLK_200M);
+    LCDC_Clock_Sel(LCDC_BUS_CLK_280M);
     LCDC_InitTypeDef lcdc_init = {0};
     lcdc_init.LCDC_Interface = LCDC_IF_DBIC;
 #if INPUT_PIXEL_BYTES == 4
