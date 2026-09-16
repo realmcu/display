@@ -48,6 +48,10 @@ extern "C" {
 #define  SH8601A_LCD_HEIGHT   (454U)
 //#define  SH8601A_LCD_WIDTH    (480)
 //#define  SH8601A_LCD_HEIGHT   (480)
+/*
+ * Host-side video timing. The module specification confirms 454 x 454 and
+ * one MIPI lane, but leaves the video porch values to the host integration.
+ */
 #define  SH8601A_LCD_HSYNC    (20U)
 #define  SH8601A_LCD_HBP      (10U)
 #define  SH8601A_LCD_HFP      (10U)
@@ -73,7 +77,8 @@ extern "C" {
 #define OUTPUT_PIXEL_BYTES                  3
 
 
-uint8_t SH8601A_Init();
+void rtk_lcd_hal_init(void);
+void sh8601a_video_mode_init(void);
 void lcd_sh8601a_mipi_video_init_framebuffer(uint8_t *buf, uint32_t len);
 void lcd_sh8601a_mipi_video_update_framebuffer(uint8_t *buf, uint32_t len);
 

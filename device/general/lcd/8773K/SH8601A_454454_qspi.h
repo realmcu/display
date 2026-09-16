@@ -33,6 +33,12 @@ typedef struct _SH8601A_CMD_DESC
     uint8_t  payload[SH8601A_MAX_PARA_COUNT];
 } SH8601A_CMD_DESC;
 
+typedef enum
+{
+    LCDC_TE_TYPE_NO_TE = 0x00,
+    LCDC_TE_TYPE_HW_TE = 0x01,
+    LCDC_TE_TYPE_SW_TE = 0x02,
+} T_LCDC_TE_TYPE;
 
 void rtk_lcd_hal_set_window(uint16_t xStart, uint16_t yStart, uint16_t w, uint16_t h);
 void rtk_lcd_hal_init(void);

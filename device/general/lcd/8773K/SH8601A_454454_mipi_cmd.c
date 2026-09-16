@@ -63,17 +63,17 @@ uint32_t rtk_lcd_hal_get_pixel_bits(void)
 void rtk_lcd_hal_rect_fill(uint16_t xStart, uint16_t yStart, uint16_t w, uint16_t h, uint32_t color)
 {
 
-    GDMA_InitTypeDef LCDC_DMA_InitStruct = {0};
+    LCDC_DMA_InitTypeDef LCDC_DMA_InitStruct = {0};
     LCDC_DMA_StructInit(&LCDC_DMA_InitStruct);
-    LCDC_DMA_InitStruct.GDMA_ChannelNum          = LCDC_DMA_CHANNEL_NUM;
-    LCDC_DMA_InitStruct.GDMA_SourceInc           = DMA_SourceInc_Fix;
-    LCDC_DMA_InitStruct.GDMA_DestinationInc      = DMA_DestinationInc_Fix;
-    LCDC_DMA_InitStruct.GDMA_SourceDataSize      = GDMA_DataSize_Word;
-    LCDC_DMA_InitStruct.GDMA_DestinationDataSize = GDMA_DataSize_Word;
-    LCDC_DMA_InitStruct.GDMA_SourceMsize         = GDMA_Msize_8;
-    LCDC_DMA_InitStruct.GDMA_DestinationMsize    = GDMA_Msize_8;
-    LCDC_DMA_InitStruct.GDMA_SourceAddr          = (uint32_t)(&color);
-    LCDC_DMA_InitStruct.GDMA_Multi_Block_En     = 0;
+    LCDC_DMA_InitStruct.LCDC_DMA_ChannelNum          = LCDC_DMA_CHANNEL_NUM;
+    LCDC_DMA_InitStruct.LCDC_DMA_SourceInc           = LCDC_DMA_SourceInc_Fix;
+    LCDC_DMA_InitStruct.LCDC_DMA_DestinationInc      = LCDC_DMA_DestinationInc_Fix;
+    LCDC_DMA_InitStruct.LCDC_DMA_SourceDataSize      = LCDC_DMA_DataSize_Word;
+    LCDC_DMA_InitStruct.LCDC_DMA_DestinationDataSize = LCDC_DMA_DataSize_Word;
+    LCDC_DMA_InitStruct.LCDC_DMA_SourceMsize         = LCDC_DMA_Msize_8;
+    LCDC_DMA_InitStruct.LCDC_DMA_DestinationMsize    = LCDC_DMA_Msize_8;
+    LCDC_DMA_InitStruct.LCDC_DMA_SourceAddr          = (uint32_t)(&color);
+    LCDC_DMA_InitStruct.LCDC_DMA_Multi_Block_En     = 0;
     LCDC_DMA_Init(LCDC_DMA_CHANNEL_INDEX, &LCDC_DMA_InitStruct);
 
     LCDC_ClearDmaFifo();
@@ -135,20 +135,21 @@ static void driver_ic_init(void)
     LCDC_LCD_SET_RST(true);
     platform_delay_ms(200);
     LCDC_LCD_SET_RST(false);
-    platform_delay_ms(50);//todo
+    platform_delay_ms(50);
     Pad_Config(P17_7, PAD_SW_MODE, PAD_IS_PWRON, PAD_PULL_UP, PAD_OUT_DISABLE, PAD_OUT_HIGH);
     Pad_Dedicated_Config(P17_7, DISABLE);
 
+    /* Unlock the SH8601A command pages before sending panel settings. */
     uint8_t pass_word_0[] = {0x5a, 0x5a, 0xC0};
     DSI_IO_WriteCmd(2, (uint8_t *)pass_word_0);
     uint8_t pass_word_1[] = {0x5a, 0x5a, 0xC1};
     DSI_IO_WriteCmd(2, (uint8_t *)pass_word_1);
     platform_delay_ms(5);
     uint8_t ShortRegData36[] = {0x11, 0x00};
-    DSI_IO_WriteCmd(0, (uint8_t *)ShortRegData36);
+    DSI_IO_WriteCmd(1, (uint8_t *)ShortRegData36);
     platform_delay_ms(5);
 
-    /*set tear*/
+    /* TE is an optional frame-sync output; scan line 0x00C8 is selected. */
     uint8_t lcdRegData_tear_on[] = {0x35, 0x00};
     DSI_IO_WriteCmd(0, (uint8_t *)lcdRegData_tear_on);
     platform_delay_ms(5);
@@ -156,14 +157,15 @@ static void driver_ic_init(void)
     DSI_IO_WriteCmd(2, (uint8_t *)lcdRegData_tear_scan_line);
     platform_delay_ms(5);
 
-    // frame rate switch://
-    uint8_t paramter_select[] = {0xB0, 0x16}; // Parameter selection, 22th parameter
+    /* Select the frame-rate parameter page and retain the specified 60 Hz value. */
+    uint8_t paramter_select[] = {0xB0, 0x16};
     DSI_IO_WriteCmd(1, (uint8_t *)paramter_select);
     platform_delay_ms(5);
     uint8_t frame_rate[] = {0xB1, 0x00}; //0x01=45Hz, 0x00=60Hz
     DSI_IO_WriteCmd(1, (uint8_t *)frame_rate);
     platform_delay_ms(5);
 
+    /* Set the complete 454 x 454 address range (CASET/PASET: 0..453). */
     uint8_t lcdRegData27[] = {0, 0, 0x01, 0xC5, 0x2A};
     DSI_IO_WriteCmd(4, (uint8_t *)lcdRegData27);
     platform_delay_ms(5);
@@ -172,10 +174,11 @@ static void driver_ic_init(void)
     DSI_IO_WriteCmd(4, (uint8_t *)lcdRegData28);
     platform_delay_ms(5);
 
-    uint8_t ShortRegData41[] = {0x53, 0x20};//Write CTRL Display
-    DSI_IO_WriteCmd(0, (uint8_t *)ShortRegData41);
+    /* Enable display brightness control; the panel spec uses 0x20 for WRCTRLD. */
+    uint8_t ShortRegData41[] = {0x53, 0x20};
+    DSI_IO_WriteCmd(1, (uint8_t *)ShortRegData41);
 
-
+    /* Allow the internal power-on sequence to complete before Display On. */
     platform_delay_ms(60);
     uint8_t ShortRegData44[] = {0x29, 0x00};
     DSI_IO_WriteCmd(0, (uint8_t *)ShortRegData44);
@@ -239,11 +242,7 @@ void rtk_lcd_hal_init(void)
     eDPICfg.eDPI_Halt = 0;
     eDPICfg.eDPI_CmdMaxLatency = 0x39d23;//todo
     eDPICfg.eDPI_LineBufferPixelThreshold = eDPICfg.eDPI_TotalWidth / 2;
-
-
     EDPI_Init(&eDPICfg);
-
-
 
     DSI_DeInit(DSI);
     DSI_InitTypeDef   DSI_InitStruct = {0};
@@ -347,9 +346,6 @@ void rtk_lcd_hal_init(void)
 }
 
 
-
-
-
 uint32_t rtk_lcd_hal_power_on(void)
 {
     uint8_t ShortRegData44[] = {0x29, 0x00};
@@ -370,163 +366,7 @@ uint32_t rtk_lcd_hal_power_off(void)
 
 uint32_t rtk_lcd_hal_dlps_restore(void)
 {
-    RCC_PeriphClockCmd(APBPeriph_DISP, APBPeriph_DISP_CLOCK_CLOCK, ENABLE);
-    RCC_PeriphClockCmd(APBPeriph_MIPI_HOST, APBPeriph_MIPI_HOST_CLOCK, ENABLE);
-
-    Pad_Config(P17_2, PAD_PINMUX_MODE, PAD_IS_PWRON, PAD_PULL_UP, PAD_OUT_DISABLE, PAD_OUT_HIGH);
-    Pad_Dedicated_Config(P17_2, ENABLE);
-    drv_pin_mode(P13_7, PIN_MODE_OUTPUT);
-    drv_pin_write(P13_7, 0); //im0
-    drv_pin_mode(P13_6, PIN_MODE_OUTPUT);
-    drv_pin_write(P13_6, 1); //im1
-
-    LCDC_InitTypeDef lcdc_init = {0};
-    lcdc_init.LCDC_Interface = LCDC_IF_eDPI;
-    lcdc_init.LCDC_PixelInputFormat = LCDC_INPUT_ARGB8888;
-    lcdc_init.LCDC_PixelOutputFormat = LCDC_OUTPUT_RGB888;
-    lcdc_init.LCDC_PixelBitSwap = LCDC_SWAP_BYPASS; //lcdc_handler_cfg->LCDC_TeEn = DISABLE;
-
-    lcdc_init.LCDC_TeEn = DISABLE;
-    lcdc_init.LCDC_TePolarity = LCDC_TE_EDGE_RISING;
-    lcdc_init.LCDC_TeInputMux = LCDC_TE_LCD_INPUT;
-
-    lcdc_init.LCDC_DmaThreshold =
-        8;    // MSize + threshold should be no larger than 128
-    LCDC_Init(&lcdc_init);
-
-    LCDC_eDPICfgTypeDef eDPICfg;//836 * 550, 42FPS == 19311600
-    eDPICfg.eDPI_ClockDiv = 4;
-    eDPICfg.eDPI_HoriSyncWidth = SH8601A_LCD_HSYNC;
-    eDPICfg.eDPI_VeriSyncHeight = SH8601A_LCD_VSYNC;
-    eDPICfg.eDPI_AccumulatedHBP = SH8601A_LCD_HSYNC + SH8601A_LCD_HBP;
-    eDPICfg.eDPI_AccumulatedVBP = SH8601A_LCD_VSYNC + SH8601A_LCD_VBP;
-    eDPICfg.eDPI_AccumulatedActiveW = SH8601A_LCD_HSYNC + SH8601A_LCD_HBP + SH8601A_LCD_WIDTH;
-    eDPICfg.eDPI_AccumulatedActiveH = SH8601A_LCD_VSYNC + SH8601A_LCD_VBP + SH8601A_LCD_HEIGHT;
-    eDPICfg.eDPI_TotalWidth = SH8601A_LCD_WIDTH + SH8601A_LCD_HSYNC + SH8601A_LCD_HBP +
-                              SH8601A_LCD_HFP;
-    eDPICfg.eDPI_TotalHeight = SH8601A_LCD_HEIGHT + SH8601A_LCD_VSYNC + SH8601A_LCD_VBP +
-                               SH8601A_LCD_VFP;
-    eDPICfg.eDPI_HoriSyncPolarity = 1;
-    eDPICfg.eDPI_VeriSyncPolarity = 1;
-    eDPICfg.eDPI_DataEnPolarity = 1;
-    eDPICfg.eDPI_LineIntMask = 1;
-    //eDPICfg.eDPI_LineIntFlag = 0;
-    //eDPICfg.eDPI_LineIntClr = 0;
-    eDPICfg.eDPI_ColorMap = 0;//for RGB888
-    eDPICfg.eDPI_OperateMode = EDPI_ADAPTED_COMMAND_MODE;//for adpated cmd mode
-    eDPICfg.eDPI_LcdArc = 0;
-    eDPICfg.eDPI_ShutdnPolarity = 0;
-    eDPICfg.eDPI_ColorModePolarity = 0;
-    eDPICfg.eDPI_ShutdnEn = 0;
-    eDPICfg.eDPI_ColorModeEn = 0;
-    eDPICfg.eDPI_UpdateCfgEn = 0;
-    eDPICfg.eDPI_TearReq = 0;
-    eDPICfg.eDPI_Halt = 0;
-    eDPICfg.eDPI_CmdMaxLatency = 0x39d23;//todo
-    eDPICfg.eDPI_LineBufferPixelThreshold = eDPICfg.eDPI_TotalWidth / 2;
-
-
-    EDPI_Init(&eDPICfg);
-
-
-
-    DSI_DeInit(DSI);
-    DSI_InitTypeDef   DSI_InitStruct = {0};
-    DSI_InitStruct.VirtualChannelID             = 0;
-
-    DSI_InitStruct.ColorCoding                  = 5;
-    DSI_InitStruct.LPMaxReadPacket              = DSI_LP_MRDP_DISABLE;
-    DSI_InitStruct.DEPolarity                   = 0;
-    DSI_InitStruct.HSPolarity                   = 0;
-    DSI_InitStruct.VSPolarity                   = 0;
-
-    DSI_InitStruct.phy_mode = 0x0;  //fix
-    DSI_InitStruct.NumberOfLanes = 0x01;
-    DSI_InitStruct.StopWaitTime = 0;    //skip
-    DSI_InitStruct.InterruptMask0 = 0x1FFFFF;
-    DSI_InitStruct.InterruptMask1 = 0x1FFFFF;
-    DSI_InitStruct.HS_TX_CNT =
-        0xFFFF;                 //for trigger timeout error measured in TO_CLK_DIVISION
-    DSI_InitStruct.LP_RX_CNT =
-        0xFFFF;                 //for trigger timeout error measured in TO_CLK_DIVISION
-    DSI_InitStruct.TOCkdiv = 0x4;
-    DSI_InitStruct.TXEscapeCkdiv = 0x03;
-    DSI_InitStruct.ModeCfg = 1;                   //config for video mode or cmd mode
-    DSI_InitStruct.CommandSize                  = 598;
-    DSI_InitStruct.PeripherCharacteristics = 0;
-    DSI_InitStruct.GenericPacketVCID = 0;
-    DSI_InitStruct.GenericTearVCID = 0;
-    DSI_InitStruct.GenericReadBackVCID = 0;
-    DSI_InitStruct.AutoHS2LPEnable = 1;
-    DSI_InitStruct.TxRequestCLKEnable = 1;
-    DSI_InitStruct.ClockLaneHS2LPTime = 0x24;
-    DSI_InitStruct.ClockLaneLP2HSTime = 0x3d;
-    DSI_InitStruct.DataLaneHS2LPTime = 0x26;
-    DSI_InitStruct.DataLaneLP2HSTime = 0xA1;
-    DSI_InitStruct.DataLaneMaxReadTime = 0;
-    DSI_InitStruct.phy_shutdownz = 1;
-//    DSI_InitStruct.phy_testclr = 0;
-//    DSI_InitStruct.phy_testen = 0;
-    DSI_InitStruct.phy_enableclk = 1;
-//    DSI_InitStruct.phy_forcepll = 0;
-    DSI_InitStruct.phy_rstz = 1;
-//    DSI_InitStruct.phy_auto_ulps = 0;
-//    DSI_InitStruct.phy_pll_off_ulps = 0;
-//    DSI_InitStruct.phy_pre_pll_off_req = 0;
-//    DSI_InitStruct.phy_auto_ulps_delay = 0;
-//    DSI_InitStruct.phy_auto_ulps_time = 0;
-
-    DSI_InitStruct.AcknowledgeRequest           = DSI_ACKNOWLEDGE_DISABLE;
-    DSI_InitStruct.LPGenReadTime                = 0;
-    DSI_InitStruct.HSGenReadTime                = 0;
-    DSI_InitStruct.LPGenWriteTime               = 0;
-    DSI_InitStruct.HSGenWriteTime               = 0;
-    DSI_InitStruct.BTATime                      = 0;
-    DSI_InitStruct.LPGenShortWriteNoP           = DSI_LP_GSW0P_ENABLE;
-    DSI_InitStruct.LPGenShortWriteOneP          = DSI_LP_GSW1P_ENABLE;
-    DSI_InitStruct.LPGenShortWriteTwoP          = DSI_LP_GSW2P_ENABLE;
-    DSI_InitStruct.LPGenShortReadNoP            = DSI_LP_GSR0P_ENABLE;
-    DSI_InitStruct.LPGenShortReadOneP           = DSI_LP_GSR1P_ENABLE;
-    DSI_InitStruct.LPGenShortReadTwoP           = DSI_LP_GSR2P_ENABLE;
-    DSI_InitStruct.LPGenLongWrite               = DSI_LP_GLW_ENABLE;
-    DSI_InitStruct.LPDcsShortWriteNoP           = DSI_LP_DSW0P_ENABLE;
-    DSI_InitStruct.LPDcsShortWriteOneP          = DSI_LP_DSW1P_ENABLE;
-    DSI_InitStruct.LPDcsShortReadNoP            = DSI_LP_DSR0P_ENABLE;
-    DSI_InitStruct.LPDcsLongWrite               = DSI_LP_DLW_DISABLE;
-    DSI_Init(DSI, &DSI_InitStruct);
-
-    DSI_AdaptedCmdCfgTypeDef   AdaptedCmd_InitStruct = {0};
-    AdaptedCmd_InitStruct.TEAcknowledgeRequest         = DSI_TE_ACKNOWLEDGE_DISABLE;
-    AdaptedCmd_InitStruct.hw_tear_effect_gen       = 0;
-    AdaptedCmd_InitStruct.scan_line_parameter   = 0;
-    AdaptedCmd_InitStruct.hw_set_scan_line    = 0;
-    AdaptedCmd_InitStruct.hw_tear_effect_on   = 0;
-
-    DSI_ConfigAdaptedCommandMode(DSI, &AdaptedCmd_InitStruct);
-
-
-    DSI_PhyCfgTypeDef dsi_phy = {0};
-    dsi_phy.phy_forepll  = PHY_FORCEPLL_DISABLE;
-    dsi_phy.phy_enableclk  = PHY_CLK_ENABLE;
-    dsi_phy.phy_rstz   = PHY_RST_ENABLE;
-    dsi_phy.phy_shutdownz   = PHY_SHUTDOWN_ENABLE;
-    DSI_ConfigPhy(DSI, &dsi_phy);
-
-    DSI_Start(DSI);
-
-//    uint8_t pass_word_0[] = {0x5a, 0x5a, 0xC0};
-//    DSI_IO_WriteCmd(2, (uint8_t *)pass_word_0);
-//    uint8_t pass_word_1[] = {0x5a, 0x5a, 0xC1};
-//    DSI_IO_WriteCmd(2, (uint8_t *)pass_word_1);
-//    uint8_t video[] = {0xB1, 0X00};
-//    DSI_IO_WriteCmd(0, (uint8_t *)video);
-
-
-
-    //for bist mode
-//    uint8_t bist[] = {0xBA, 0X81};
-//    DSI_IO_WriteCmd(0, (uint8_t *)bist);
-
+    rtk_lcd_hal_init();
     return 0;
 }
 
@@ -546,34 +386,34 @@ void rtk_lcd_hal_update_framebuffer(uint8_t *buf, uint32_t len)
 {
 #define DMA_LINKLIST 0
 #if (DMA_LINKLIST == 0)
-    GDMA_InitTypeDef LCDC_DMA_InitStruct = {0};
+    LCDC_DMA_InitTypeDef LCDC_DMA_InitStruct = {0};
     LCDC_DMA_StructInit(&LCDC_DMA_InitStruct);
-    LCDC_DMA_InitStruct.GDMA_ChannelNum          = LCDC_DMA_CHANNEL_NUM;
-    LCDC_DMA_InitStruct.GDMA_SourceInc           = DMA_SourceInc_Inc;
-    LCDC_DMA_InitStruct.GDMA_DestinationInc      = DMA_DestinationInc_Fix;
-    LCDC_DMA_InitStruct.GDMA_SourceDataSize      = GDMA_DataSize_Word;
-    LCDC_DMA_InitStruct.GDMA_DestinationDataSize = GDMA_DataSize_Word;
-    LCDC_DMA_InitStruct.GDMA_SourceMsize         = GDMA_Msize_8;
-    LCDC_DMA_InitStruct.GDMA_DestinationMsize    = GDMA_Msize_8;
-    LCDC_DMA_InitStruct.GDMA_SourceAddr          = (uint32_t)buf;
-    LCDC_DMA_InitStruct.GDMA_Multi_Block_En     = 0;
+    LCDC_DMA_InitStruct.LCDC_DMA_ChannelNum          = LCDC_DMA_CHANNEL_NUM;
+    LCDC_DMA_InitStruct.LCDC_DMA_SourceInc           = LCDC_DMA_SourceInc_Inc;
+    LCDC_DMA_InitStruct.LCDC_DMA_DestinationInc      = LCDC_DMA_DestinationInc_Fix;
+    LCDC_DMA_InitStruct.LCDC_DMA_SourceDataSize      = LCDC_DMA_DataSize_Word;
+    LCDC_DMA_InitStruct.LCDC_DMA_DestinationDataSize = LCDC_DMA_DataSize_Word;
+    LCDC_DMA_InitStruct.LCDC_DMA_SourceMsize         = LCDC_DMA_Msize_8;
+    LCDC_DMA_InitStruct.LCDC_DMA_DestinationMsize    = LCDC_DMA_Msize_8;
+    LCDC_DMA_InitStruct.LCDC_DMA_SourceAddr          = (uint32_t)buf;
+    LCDC_DMA_InitStruct.LCDC_DMA_Multi_Block_En     = 0;
     LCDC_DMA_Init(LCDC_DMA_CHANNEL_INDEX, &LCDC_DMA_InitStruct);
 #else
-    GDMA_InitTypeDef LCDC_DMA_InitStruct = {0};
+    LCDC_DMA_InitTypeDef LCDC_DMA_InitStruct = {0};
     LCDC_DMA_StructInit(&LCDC_DMA_InitStruct);
-    LCDC_DMA_InitStruct.GDMA_ChannelNum          = LCDC_DMA_CHANNEL_NUM;
-    LCDC_DMA_InitStruct.GDMA_SourceInc           = DMA_SourceInc_Inc;
-    LCDC_DMA_InitStruct.GDMA_DestinationInc      = DMA_DestinationInc_Fix;
-    LCDC_DMA_InitStruct.GDMA_SourceDataSize      = GDMA_DataSize_Word;
-    LCDC_DMA_InitStruct.GDMA_DestinationDataSize = GDMA_DataSize_Word;
-    LCDC_DMA_InitStruct.GDMA_SourceMsize         = GDMA_Msize_8;
-    LCDC_DMA_InitStruct.GDMA_DestinationMsize    = GDMA_Msize_8;
-    LCDC_DMA_InitStruct.GDMA_SourceAddr          = 0;
+    LCDC_DMA_InitStruct.LCDC_DMA_ChannelNum          = LCDC_DMA_CHANNEL_NUM;
+    LCDC_DMA_InitStruct.LCDC_DMA_SourceInc           = LCDC_DMA_SourceInc_Inc;
+    LCDC_DMA_InitStruct.LCDC_DMA_DestinationInc      = LCDC_DMA_DestinationInc_Fix;
+    LCDC_DMA_InitStruct.LCDC_DMA_SourceDataSize      = LCDC_DMA_DataSize_Word;
+    LCDC_DMA_InitStruct.LCDC_DMA_DestinationDataSize = LCDC_DMA_DataSize_Word;
+    LCDC_DMA_InitStruct.LCDC_DMA_SourceMsize         = LCDC_DMA_Msize_8;
+    LCDC_DMA_InitStruct.LCDC_DMA_DestinationMsize    = LCDC_DMA_Msize_8;
+    LCDC_DMA_InitStruct.LCDC_DMA_SourceAddr          = 0;
 
-    LCDC_DMA_InitStruct.GDMA_Multi_Block_Mode   =
+    LCDC_DMA_InitStruct.LCDC_DMA_Multi_Block_Mode   =
         LLI_TRANSFER;//LLI_TRANSFER or LLI_WITH_CONTIGUOUS_SAR
-    LCDC_DMA_InitStruct.GDMA_Multi_Block_En     = 1;
-    LCDC_DMA_InitStruct.GDMA_Multi_Block_Struct  = LCDC_DMA_LINKLIST_REG_BASE + 0x50;
+    LCDC_DMA_InitStruct.LCDC_DMA_Multi_Block_En     = 1;
+    LCDC_DMA_InitStruct.LCDC_DMA_Multi_Block_Struct  = LCDC_DMA_LINKLIST_REG_BASE + 0x50;
     LCDC_DMA_Init(LCDC_DMA_CHANNEL_INDEX, &LCDC_DMA_InitStruct);
 
     LCDC_SET_GROUP1_BLOCKSIZE(SH8601A_LCD_WIDTH * INPUT_PIXEL_BYTES);
@@ -645,21 +485,19 @@ void rtk_lcd_hal_update_framebuffer(uint8_t *buf, uint32_t len)
 
 }
 
-
-
 void rtk_lcd_hal_start_transfer(uint8_t *buf, uint32_t len)
 {
-    GDMA_InitTypeDef LCDC_DMA_InitStruct = {0};
+    LCDC_DMA_InitTypeDef LCDC_DMA_InitStruct = {0};
     LCDC_DMA_StructInit(&LCDC_DMA_InitStruct);
-    LCDC_DMA_InitStruct.GDMA_ChannelNum          = LCDC_DMA_CHANNEL_NUM;
-    LCDC_DMA_InitStruct.GDMA_SourceInc           = DMA_SourceInc_Inc;
-    LCDC_DMA_InitStruct.GDMA_DestinationInc      = DMA_DestinationInc_Fix;
-    LCDC_DMA_InitStruct.GDMA_SourceDataSize      = GDMA_DataSize_Word;
-    LCDC_DMA_InitStruct.GDMA_DestinationDataSize = GDMA_DataSize_Word;
-    LCDC_DMA_InitStruct.GDMA_SourceMsize         = GDMA_Msize_8;
-    LCDC_DMA_InitStruct.GDMA_DestinationMsize    = GDMA_Msize_8;
-    LCDC_DMA_InitStruct.GDMA_SourceAddr          = (uint32_t)buf;
-    LCDC_DMA_InitStruct.GDMA_Multi_Block_En     = 0;
+    LCDC_DMA_InitStruct.LCDC_DMA_ChannelNum          = LCDC_DMA_CHANNEL_NUM;
+    LCDC_DMA_InitStruct.LCDC_DMA_SourceInc           = LCDC_DMA_SourceInc_Inc;
+    LCDC_DMA_InitStruct.LCDC_DMA_DestinationInc      = LCDC_DMA_DestinationInc_Fix;
+    LCDC_DMA_InitStruct.LCDC_DMA_SourceDataSize      = LCDC_DMA_DataSize_Word;
+    LCDC_DMA_InitStruct.LCDC_DMA_DestinationDataSize = LCDC_DMA_DataSize_Word;
+    LCDC_DMA_InitStruct.LCDC_DMA_SourceMsize         = LCDC_DMA_Msize_8;
+    LCDC_DMA_InitStruct.LCDC_DMA_DestinationMsize    = LCDC_DMA_Msize_8;
+    LCDC_DMA_InitStruct.LCDC_DMA_SourceAddr          = (uint32_t)buf;
+    LCDC_DMA_InitStruct.LCDC_DMA_Multi_Block_En     = 0;
     LCDC_DMA_Init(LCDC_DMA_CHANNEL_INDEX, &LCDC_DMA_InitStruct);
 
 
@@ -685,6 +523,7 @@ void rtk_lcd_hal_start_transfer(uint8_t *buf, uint32_t len)
     LCDC_HANDLER->TEAR_CTR = handler_reg_0x10.d32;
     LCDC_TeCmd(ENABLE);
 }
+
 void rtk_lcd_hal_transfer_done(void)
 {
     uint32_t time_out_ms = 100;

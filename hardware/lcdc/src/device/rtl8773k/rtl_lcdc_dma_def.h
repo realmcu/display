@@ -151,7 +151,7 @@ typedef union
 
 
     /* 0x10
-        1:0     R/W    reserved13          0x0
+        1:0     R/W    LMS                 0x0
         31:2    R/W    LOC                 0x0
     */
     typedef union
@@ -160,7 +160,7 @@ typedef union
             uint8_t d8[4];
             struct
             {
-                uint32_t reserved_0: 2;
+                uint32_t LMS: 2;
                 uint32_t LOC: 30;
             } b;
         } LCDC_DMA_LLPx_TypeDef;
@@ -176,9 +176,10 @@ typedef union
         16:14   R/W    SRC_MSIZE           0x1
         17      R/W    SRC_GATHER_EN       0x0
         18      R/W    DST_SCATTER_EN      0x0
-        19      R/W    reserved20          0x0
+        19      R/W    WRNP_EN             0x0
         22:20   R/W    TT_FC               0x0
-        26:23   R      reserved18          0x0
+        24:23   R      reserved18          0x0
+        26:25   R      reserved19          0x0
         27      R/W    LLP_DST_EN          0x0
         28      R/W    LLP_SRC_EN          0x0
         31:29   R      reserved15          0x0
@@ -198,9 +199,10 @@ typedef union
                 uint32_t SRC_MSIZE: 3;
                 uint32_t SRC_GATHER_EN: 1;
                 uint32_t DST_SCATTER_EN: 1;
-                uint32_t reserved_2: 1;
+                uint32_t WRNP_EN: 1;
                 uint32_t TT_FC: 3;
-                const uint32_t reserved_1: 4;
+                const uint32_t reserved_1: 2;
+                const uint32_t reserved_2: 2;
                 uint32_t LLP_DST_EN: 1;
                 uint32_t LLP_SRC_EN: 1;
                 const uint32_t reserved_0: 3;
@@ -253,7 +255,7 @@ typedef union
         17:12   R      reserved39          0x0
         18      R/W    DST_HS_POL          0x0
         19      R/W    SRC_HS_POL          0x0
-        29:20   R/W    reserved36          0x0
+        29:20   R/W    MAX_ABRST           0x0
         30      R/W    RELOAD_SRC          0x0
         31      R/W    RELOAD_DST          0x0
     */
@@ -275,7 +277,7 @@ typedef union
                 const uint32_t reserved_1: 6;
                 uint32_t DST_HS_POL: 1;
                 uint32_t SRC_HS_POL: 1;
-                uint32_t reserved_0: 10;
+                uint32_t MAX_ABRST: 10;
                 uint32_t RELOAD_SRC: 1;
                 uint32_t RELOAD_DST: 1;
             } b;
@@ -284,8 +286,8 @@ typedef union
 
 
     /* 0x44
-        0       R/W    reserved63          0x0
-        1       R/W    reserved62          0x0
+        0       R/W    FCMODE              0x0
+        1       R/W    FIFO_MODE           0x0
         2       R      reserved61          0x0
         3       R/W    PROTCTL             0x1
         6:4     R      reserved59          0x0
@@ -305,8 +307,8 @@ typedef union
             uint8_t d8[4];
             struct
             {
-                uint32_t reserved_4: 1;
-                uint32_t reserved_3: 1;
+                uint32_t FCMODE: 1;
+                uint32_t FIFO_MODE: 1;
                 const uint32_t reserved_2: 1;
                 uint32_t PROTCTL: 1;
                 const uint32_t reserved_1: 3;

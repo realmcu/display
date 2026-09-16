@@ -35,7 +35,7 @@ typedef struct
     __IO uint32_t  EDPI_VIDEO_CTL;                          /*!< 0x38 */
     __IO uint32_t  EDPI_CMD_CTL;                            /*!< 0x3C */
     __IO uint32_t  EDPI_CMD_MAX_LATENCY;                    /*!< 0x40 */
-    __IO uint32_t  DPI_LINNE_BUFFER_PIXEL_NUM;              /*!< 0x44 */
+    __IO uint32_t  DPI_LINE_BUFFER_PIXEL_NUM;               /*!< 0x44 */
     __IO uint32_t  DPI_LINE_BUFFER_PIXEL_THRESHOLD;         /*!< 0x48 */
     __I  uint32_t  RESERVED2;                               /*!< 0x4C */
     __IO uint32_t  EDPI_DIV_PAR;                            /*!< 0x50 */
@@ -316,7 +316,8 @@ typedef union
         0       R/W    up_en                       0x0
         1       R/W    clm_en                      0x0
         2       R/W    sd_en                       0x1
-        8:3     R      reserved3                   0x0
+        7:3     R      reserved3                   0x0
+        8       R/W    dpiclk_polarity             0x1
         9       R/W    sd_pol                      0x1
         15:10   R      reserved2                   0x0
         16      R/W    sd_dis_fcolor               0x0
@@ -333,7 +334,8 @@ typedef union
                 uint32_t up_en: 1;
                 uint32_t clm_en: 1;
                 uint32_t sd_en: 1;
-                const uint32_t reserved_2: 6;
+                const uint32_t reserved_2: 5;
+                uint32_t dpiclk_polarity: 1;
                 uint32_t sd_pol: 1;
                 const uint32_t reserved_1: 6;
                 uint32_t sd_dis_fcolor: 1;
@@ -382,7 +384,7 @@ typedef union
 
 
     /* 0x44
-        15:0    R/W    linne_buffer_pixel_num      0x0
+        15:0    R/W    line_buffer_pixel_num       0x0
         31:16   R      reserved                    0x0
     */
     typedef union
@@ -391,10 +393,10 @@ typedef union
             uint8_t d8[4];
             struct
             {
-                uint32_t linne_buffer_pixel_num: 16;
+                uint32_t line_buffer_pixel_num: 16;
                 const uint32_t reserved_0: 16;
             } b;
-        } EDPI_LINNE_BUFFER_PIXEL_NUM_TypeDef;
+        } EDPI_LINE_BUFFER_PIXEL_NUM_TypeDef;
 
 
 

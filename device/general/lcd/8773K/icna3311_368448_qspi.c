@@ -247,17 +247,17 @@ void rtk_lcd_hal_set_window(uint16_t xStart, uint16_t yStart, uint16_t w, uint16
 
 void rtk_lcd_hal_update_framebuffer(uint8_t *buf, uint32_t len)
 {
-    GDMA_InitTypeDef LCDC_DMA_InitStruct = {0};
+    LCDC_DMA_InitTypeDef LCDC_DMA_InitStruct = {0};
     LCDC_DMA_StructInit(&LCDC_DMA_InitStruct);
-    LCDC_DMA_InitStruct.GDMA_ChannelNum          = LCDC_DMA_CHANNEL_NUM;
-    LCDC_DMA_InitStruct.GDMA_SourceInc           = DMA_SourceInc_Inc;
-    LCDC_DMA_InitStruct.GDMA_DestinationInc      = DMA_DestinationInc_Fix;
-    LCDC_DMA_InitStruct.GDMA_SourceDataSize      = GDMA_DataSize_Word;
-    LCDC_DMA_InitStruct.GDMA_DestinationDataSize = GDMA_DataSize_Word;
-    LCDC_DMA_InitStruct.GDMA_SourceMsize         = GDMA_Msize_8;
-    LCDC_DMA_InitStruct.GDMA_DestinationMsize    = GDMA_Msize_8;
-    LCDC_DMA_InitStruct.GDMA_SourceAddr          = (uint32_t)buf;
-    LCDC_DMA_InitStruct.GDMA_Multi_Block_En     = 0;
+    LCDC_DMA_InitStruct.LCDC_DMA_ChannelNum          = LCDC_DMA_CHANNEL_NUM;
+    LCDC_DMA_InitStruct.LCDC_DMA_SourceInc           = LCDC_DMA_SourceInc_Inc;
+    LCDC_DMA_InitStruct.LCDC_DMA_DestinationInc      = LCDC_DMA_DestinationInc_Fix;
+    LCDC_DMA_InitStruct.LCDC_DMA_SourceDataSize      = LCDC_DMA_DataSize_Word;
+    LCDC_DMA_InitStruct.LCDC_DMA_DestinationDataSize = LCDC_DMA_DataSize_Word;
+    LCDC_DMA_InitStruct.LCDC_DMA_SourceMsize         = LCDC_DMA_Msize_8;
+    LCDC_DMA_InitStruct.LCDC_DMA_DestinationMsize    = LCDC_DMA_Msize_8;
+    LCDC_DMA_InitStruct.LCDC_DMA_SourceAddr          = (uint32_t)buf;
+    LCDC_DMA_InitStruct.LCDC_DMA_Multi_Block_En     = 0;
     LCDC_DMA_Init(LCDC_DMA_CHANNEL_INDEX, &LCDC_DMA_InitStruct);
 
 
@@ -298,17 +298,17 @@ void rtk_lcd_hal_update_framebuffer(uint8_t *buf, uint32_t len)
 
 void rtk_lcd_hal_start_transfer(uint8_t *buf, uint32_t len)
 {
-    GDMA_InitTypeDef LCDC_DMA_InitStruct = {0};
+    LCDC_DMA_InitTypeDef LCDC_DMA_InitStruct = {0};
     LCDC_DMA_StructInit(&LCDC_DMA_InitStruct);
-    LCDC_DMA_InitStruct.GDMA_ChannelNum          = LCDC_DMA_CHANNEL_NUM;
-    LCDC_DMA_InitStruct.GDMA_SourceInc           = DMA_SourceInc_Inc;
-    LCDC_DMA_InitStruct.GDMA_DestinationInc      = DMA_DestinationInc_Fix;
-    LCDC_DMA_InitStruct.GDMA_SourceDataSize      = GDMA_DataSize_Word;
-    LCDC_DMA_InitStruct.GDMA_DestinationDataSize = GDMA_DataSize_Word;
-    LCDC_DMA_InitStruct.GDMA_SourceMsize         = GDMA_Msize_8;
-    LCDC_DMA_InitStruct.GDMA_DestinationMsize    = GDMA_Msize_8;
-    LCDC_DMA_InitStruct.GDMA_SourceAddr          = (uint32_t)buf;
-    LCDC_DMA_InitStruct.GDMA_Multi_Block_En     = 0;
+    LCDC_DMA_InitStruct.LCDC_DMA_ChannelNum          = LCDC_DMA_CHANNEL_NUM;
+    LCDC_DMA_InitStruct.LCDC_DMA_SourceInc           = LCDC_DMA_SourceInc_Inc;
+    LCDC_DMA_InitStruct.LCDC_DMA_DestinationInc      = LCDC_DMA_DestinationInc_Fix;
+    LCDC_DMA_InitStruct.LCDC_DMA_SourceDataSize      = LCDC_DMA_DataSize_Word;
+    LCDC_DMA_InitStruct.LCDC_DMA_DestinationDataSize = LCDC_DMA_DataSize_Word;
+    LCDC_DMA_InitStruct.LCDC_DMA_SourceMsize         = LCDC_DMA_Msize_8;
+    LCDC_DMA_InitStruct.LCDC_DMA_DestinationMsize    = LCDC_DMA_Msize_8;
+    LCDC_DMA_InitStruct.LCDC_DMA_SourceAddr          = (uint32_t)buf;
+    LCDC_DMA_InitStruct.LCDC_DMA_Multi_Block_En     = 0;
     LCDC_DMA_Init(LCDC_DMA_CHANNEL_INDEX, &LCDC_DMA_InitStruct);
 
 

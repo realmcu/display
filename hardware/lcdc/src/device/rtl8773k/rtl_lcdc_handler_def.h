@@ -48,8 +48,8 @@ typedef struct
     __IO uint32_t  INFINITE_MODE_CTR;                              /*!< 0x64 */
     __IO uint32_t  SPIC_RX_FIFO_READ_SIZE;                         /*!< 0x68 */
     __IO uint32_t  SPIC_TX_DUMMY;                                  /*!< 0x6C */
-    __IO uint32_t  RSVD2;                                          /*!< 0x70 */
-    __IO uint32_t  RSVD3;                                          /*!< 0x74 */
+    __IO uint32_t  PIXEL_SOURCE_CTRL;                              /*!< 0x70 */
+    __IO uint32_t  M1P1T2P3T_CTRL;                                 /*!< 0x74 */
     __IO uint32_t  RSVD4;                                          /*!< 0x78 */
     __IO uint32_t  RSVD5;                                          /*!< 0x7C */
 } LCDC_Handler_TypeDef;
@@ -148,9 +148,9 @@ typedef union
         3       R      tear                                            0x0
         4       R/W    tear_input_mux                                  0x0
         5       R/W    tear_logic_enable                               0x0
-        15:6    R      reserved2                                       0x0
-        27:16   R/W    t2w_delay                                       0x0
-        30:28   R      reserved1                                       0x0
+        6       R/W    self_clear_tear_trigger                         0x1
+        7       R      reserved2                                       0x0
+        30:8    R/W    t2w_delay                                       0x0
         31      R/W    bypass_t2w_delay                                0x1
     */
     typedef union
@@ -165,9 +165,9 @@ typedef union
                 const uint32_t tear: 1;
                 uint32_t tear_input_mux: 1;
                 uint32_t tear_logic_enable: 1;
-                const uint32_t reserved_1: 10;
-                uint32_t t2w_delay: 12;
-                const uint32_t reserved_0: 3;
+                uint32_t self_clear_tear_trigger: 1;
+                const uint32_t reserved_0: 1;
+                uint32_t t2w_delay: 23;
                 uint32_t bypass_t2w_delay: 1;
             } b;
         } LCDC_HANDLER_TEAR_CTR_TypeDef;
@@ -652,7 +652,9 @@ typedef union
 
 
     /* 0x70
-        31:0    R      reserved                                        0x0
+        23:0    R/W    const_pixel                                     0x0
+        30:24   R      reserved2                                       0x0
+        31      R/W    pixel_source                                    0x0
     */
     typedef union
         {
@@ -660,14 +662,18 @@ typedef union
             uint8_t d8[4];
             struct
             {
-                const uint32_t reserved_0: 32;
+                uint32_t const_pixel: 24;
+                const uint32_t reserved_1: 7;
+                uint32_t pixel_source: 1;
             } b;
-        } LCDC_HANDLER_RSVD2_TypeDef;
+        } LCDC_HANDLER_PIXEL_SOURCE_CTRL_TypeDef;
 
 
 
     /* 0x74
-        31:0    R      reserved                                        0x0
+        0       R/W    reg_1p1t_swap                                   0x0
+        1       R/W    reg_2p3t_swap                                   0x0
+        31:2    R      reserved                                        0x0
     */
     typedef union
         {
@@ -675,9 +681,11 @@ typedef union
             uint8_t d8[4];
             struct
             {
-                const uint32_t reserved_0: 32;
+                uint32_t reg_1p1t_swap: 1;
+                uint32_t reg_2p3t_swap: 1;
+                const uint32_t reserved_0: 30;
             } b;
-        } LCDC_HANDLER_RSVD3_TypeDef;
+        } LCDC_HANDLER_1P1T2P3T_CTRL_TypeDef;
 
 
 

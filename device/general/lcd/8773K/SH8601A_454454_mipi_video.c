@@ -41,9 +41,7 @@ __weak void DSI_IO_WriteCmd(uint32_t NbrParams, uint8_t *pParams)
     }
 }
 
-
-
-uint8_t SH8601A_Init()
+void rtk_lcd_hal_init(void)
 {
     LCDC_InitTypeDef lcdc_init = {0};
     lcdc_init.LCDC_Interface = LCDC_IF_eDPI;
@@ -57,20 +55,20 @@ uint8_t SH8601A_Init()
         64;    // MSize + threshold should be no larger than 128
     LCDC_Init(&lcdc_init);
 
-    LCDC_MaskINTConfig(LCDC_MASK_TX_AUTO_DONE_INT_MSK, DISABLE);
-    LCDC_ClearINTPendingBit(LCDC_TX_AUTO_DONE_INT_CLR);
+    LCDC_MaskINTConfig(LCDC_INT_MASK_TX_AUTO_DONE, DISABLE);
+    LCDC_ClearINTPendingBit(LCDC_CLR_TX_AUTO_DONE);
     NVIC_InitTypeDef NVIC_InitStruct;
+    /* Infinite-mode refresh depends on LCDC_IRQHandler rearming the DMA. */
     NVIC_InitStruct.NVIC_IRQChannel = Display_IRQn;
     NVIC_InitStruct.NVIC_IRQChannelPriority = 3;
-    NVIC_InitStruct.NVIC_IRQChannelCmd = DISABLE;
+    NVIC_InitStruct.NVIC_IRQChannelCmd = ENABLE;
     NVIC_Init(&NVIC_InitStruct);
 
-    LCDC_eDPICfgTypeDef eDPICfg = {0};//836 * 550, 42FPS == 19311600
-    eDPICfg.eDPI_ClockDiv1 = 1;
-    eDPICfg.eDPI_ClockDiv2 = 8;
-    eDPICfg.eDPI_ClockDiv3 = 1;
+    LCDC_eDPICfgTypeDef eDPICfg = {0};
+    /* The current 8773K eDPI API has one divider field. */
+    eDPICfg.eDPI_ClockDiv = 8;
     uint32_t laneByteClk_kHz = 50000;
-    uint32_t LcdClock_kHz  = (80000 / 8);
+    uint32_t LcdClock_kHz  = (80000 / eDPICfg.eDPI_ClockDiv);
     eDPICfg.eDPI_HoriSyncWidth = SH8601A_LCD_HSYNC;
     eDPICfg.eDPI_VeriSyncHeight = SH8601A_LCD_VSYNC;
     eDPICfg.eDPI_AccumulatedHBP = SH8601A_LCD_HSYNC + SH8601A_LCD_HBP;
@@ -107,16 +105,17 @@ uint8_t SH8601A_Init()
              VACT = SH8601A_LCD_HEIGHT;
 
     LCDC_LCD_SET_RST(false);
-    rt_thread_mdelay(100);
+    platform_delay_ms(100);
     LCDC_LCD_SET_RST(true);
-    rt_thread_mdelay(50);
+    platform_delay_ms(50);
     LCDC_LCD_SET_RST(false);
-    rt_thread_mdelay(50);//todo
+    platform_delay_ms(50);
 
     DSI_DeInit(DSI);
     DSI_InitTypeDef   DSI_InitStruct = {0};
     DSI_InitStruct.VirtualChannelID             = 0;
 
+    /* DSI color code 5 is the host RGB888 packet format. */
     DSI_InitStruct.ColorCoding                  = 5;
     DSI_InitStruct.LPMaxReadPacket              = DSI_LP_MRDP_DISABLE;
     DSI_InitStruct.DEPolarity                   = 1;
@@ -124,6 +123,7 @@ uint8_t SH8601A_Init()
     DSI_InitStruct.VSPolarity                   = 1;
 
     DSI_InitStruct.phy_mode = 0x0;  //fix
+    /* The MIPI module specification calls for one data lane. */
     DSI_InitStruct.NumberOfLanes = 0x01;
     DSI_InitStruct.StopWaitTime = 0;    //skip
     DSI_InitStruct.InterruptMask0 = 0x1FFFFF;
@@ -170,6 +170,18 @@ uint8_t SH8601A_Init()
     DSI_InitStruct.LPGenWriteTime               = 0;
     DSI_InitStruct.HSGenWriteTime               = 0;
     DSI_InitStruct.BTATime                      = 0;
+
+    DSI_InitStruct.LPGenShortWriteNoP           = DSI_LP_GSW0P_ENABLE;
+    DSI_InitStruct.LPGenShortWriteOneP          = DSI_LP_GSW1P_ENABLE;
+    DSI_InitStruct.LPGenShortWriteTwoP          = DSI_LP_GSW2P_ENABLE;
+    DSI_InitStruct.LPGenShortReadNoP            = DSI_LP_GSR0P_ENABLE;
+    DSI_InitStruct.LPGenShortReadOneP           = DSI_LP_GSR1P_ENABLE;
+    DSI_InitStruct.LPGenShortReadTwoP           = DSI_LP_GSR2P_ENABLE;
+    DSI_InitStruct.LPGenLongWrite               = DSI_LP_GLW_ENABLE;
+    DSI_InitStruct.LPDcsShortWriteNoP           = DSI_LP_DSW0P_ENABLE;
+    DSI_InitStruct.LPDcsShortWriteOneP          = DSI_LP_DSW1P_ENABLE;
+    DSI_InitStruct.LPDcsShortReadNoP            = DSI_LP_DSR0P_ENABLE;
+    DSI_InitStruct.LPDcsLongWrite               = DSI_LP_DLW_ENABLE;
     DSI_Init(DSI, &DSI_InitStruct);
 
 
@@ -229,22 +241,25 @@ void sh8601a_video_mode_init(void)
 
     uint8_t ShortRegData36[] = {0x11, 0x00};
     DSI_IO_WriteCmd(0, (uint8_t *)ShortRegData36);
-    rt_thread_mdelay(5);
+    platform_delay_ms(5);
     uint8_t video[] = {0xB1, 0XF0};
     DSI_IO_WriteCmd(1, (uint8_t *)video);
 
     //DSI_ShortWrite(DSI, 0, DSI_GEN_SHORT_PKT_WRITE_P1, 0xB1, 0xF0);
 
+    /* Address the complete 454 x 454 active area, coordinates 0..453. */
     uint8_t lcdRegData27[] = {0, 0, 0x01, 0xC5, 0x2A};
     DSI_IO_WriteCmd(4, (uint8_t *)lcdRegData27);
 
     uint8_t lcdRegData28[] = {0, 0, 0x01, 0xC5, 0x2B};
     DSI_IO_WriteCmd(4, (uint8_t *)lcdRegData28);
 
+    /* WRCTRLD: enable the panel brightness control path. */
     uint8_t ShortRegData41[] = {0x53, 0x20};
     DSI_IO_WriteCmd(1, (uint8_t *)ShortRegData41);
 
-    rt_thread_mdelay(50);
+    platform_delay_ms(50);
+    /* Display On is sent only after the internal power-on settling delay. */
     uint8_t ShortRegData44[] = {0x29, 0x00};
     DSI_IO_WriteCmd(0, (uint8_t *)ShortRegData44);
 
@@ -269,13 +284,13 @@ void lcd_sh8601a_mipi_video_init_framebuffer(uint8_t *buf, uint32_t len)
     LCDC_DMA_InitTypeDef LCDC_DMA_InitStruct = {0};
     LCDC_DMA_StructInit(&LCDC_DMA_InitStruct);
     LCDC_DMA_InitStruct.LCDC_DMA_ChannelNum          = LCDC_DMA_CHANNEL_NUM;
-    LCDC_DMA_InitStruct.LCDC_DMA_DIR                 = DMA_DIR_PeripheralToMemory;
-    LCDC_DMA_InitStruct.LCDC_DMA_SourceInc           = DMA_SourceInc_Inc;
-    LCDC_DMA_InitStruct.LCDC_DMA_DestinationInc      = DMA_DestinationInc_Fix;
-    LCDC_DMA_InitStruct.LCDC_DMA_SourceDataSize      = DMA_DataSize_Word;
-    LCDC_DMA_InitStruct.LCDC_DMA_DestinationDataSize = DMA_DataSize_Word;
-    LCDC_DMA_InitStruct.LCDC_DMA_SourceMsize         = DMA_Msize_64;
-    LCDC_DMA_InitStruct.LCDC_DMA_DestinationMsize    = DMA_Msize_64;
+    LCDC_DMA_InitStruct.LCDC_DMA_DIR                 = LCDC_DMA_DIR_PeripheralToMemory;
+    LCDC_DMA_InitStruct.LCDC_DMA_SourceInc           = LCDC_DMA_SourceInc_Inc;
+    LCDC_DMA_InitStruct.LCDC_DMA_DestinationInc      = LCDC_DMA_DestinationInc_Fix;
+    LCDC_DMA_InitStruct.LCDC_DMA_SourceDataSize      = LCDC_DMA_DataSize_Word;
+    LCDC_DMA_InitStruct.LCDC_DMA_DestinationDataSize = LCDC_DMA_DataSize_Word;
+    LCDC_DMA_InitStruct.LCDC_DMA_SourceMsize         = LCDC_DMA_Msize_64;
+    LCDC_DMA_InitStruct.LCDC_DMA_DestinationMsize    = LCDC_DMA_Msize_64;
     LCDC_DMA_InitStruct.LCDC_DMA_SourceAddr          = (uint32_t)buf;
     LCDC_DMA_InitStruct.LCDC_DMA_Multi_Block_En     = 0;
     LCDC_DMA_Init(LCDC_DMA_CHANNEL_INDEX, &LCDC_DMA_InitStruct);
@@ -287,13 +302,13 @@ void lcd_sh8601a_mipi_video_init_framebuffer(uint8_t *buf, uint32_t len)
     LCDC_DMA_InitTypeDef LCDC_DMA_InitStruct = {0};
     LCDC_DMA_StructInit(&LCDC_DMA_InitStruct);
     LCDC_DMA_InitStruct.LCDC_DMA_ChannelNum          = LCDC_DMA_CHANNEL_NUM;
-    LCDC_DMA_InitStruct.LCDC_DMA_DIR                 = DMA_DIR_PeripheralToMemory;
-    LCDC_DMA_InitStruct.LCDC_DMA_SourceInc           = DMA_SourceInc_Inc;
-    LCDC_DMA_InitStruct.LCDC_DMA_DestinationInc      = DMA_DestinationInc_Fix;
-    LCDC_DMA_InitStruct.LCDC_DMA_SourceDataSize      = DMA_DataSize_Word;
-    LCDC_DMA_InitStruct.LCDC_DMA_DestinationDataSize = DMA_DataSize_Word;
-    LCDC_DMA_InitStruct.LCDC_DMA_SourceMsize         = DMA_Msize_64;
-    LCDC_DMA_InitStruct.LCDC_DMA_DestinationMsize    = DMA_Msize_64;
+    LCDC_DMA_InitStruct.LCDC_DMA_DIR                 = LCDC_DMA_DIR_PeripheralToMemory;
+    LCDC_DMA_InitStruct.LCDC_DMA_SourceInc           = LCDC_DMA_SourceInc_Inc;
+    LCDC_DMA_InitStruct.LCDC_DMA_DestinationInc      = LCDC_DMA_DestinationInc_Fix;
+    LCDC_DMA_InitStruct.LCDC_DMA_SourceDataSize      = LCDC_DMA_DataSize_Word;
+    LCDC_DMA_InitStruct.LCDC_DMA_DestinationDataSize = LCDC_DMA_DataSize_Word;
+    LCDC_DMA_InitStruct.LCDC_DMA_SourceMsize         = LCDC_DMA_Msize_64;
+    LCDC_DMA_InitStruct.LCDC_DMA_DestinationMsize    = LCDC_DMA_Msize_64;
     LCDC_DMA_InitStruct.LCDC_DMA_SourceAddr          = 0;
 
     LCDC_DMA_InitStruct.LCDC_DMA_Multi_Block_Mode   =
@@ -341,9 +356,9 @@ void lcd_sh8601a_mipi_video_init_framebuffer(uint8_t *buf, uint32_t len)
 
 void LCDC_IRQHandler(void)
 {
-    if (LCDC_GetINTStatus(LCDC_TX_AUTO_DONE_INT_MSK) == SET)
+    if (LCDC_GetINTStatus(LCDC_STATUS_TX_AUTO_DONE_INT) == SET)
     {
-        LCDC_ClearINTPendingBit(LCDC_TX_AUTO_DONE_INT_MSK);
+        LCDC_ClearINTPendingBit(LCDC_CLR_TX_AUTO_DONE);
         //rt_kprintf("LCDC_IRQHandler line = %d\n",__LINE__);
         LCDC_ClearDmaFifo();
         LCDC_ClearTxPixelCnt();

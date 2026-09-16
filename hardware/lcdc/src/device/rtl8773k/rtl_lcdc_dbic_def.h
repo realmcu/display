@@ -74,10 +74,15 @@ typedef struct
     __IO uint32_t  TPR0;                    /*!< 0x138 */
     __IO uint32_t  AUTO_LENGTH2;            /*!< 0x13C */
     __IO uint32_t  TPR1;                    /*!< 0x140 */
-    __IO uint32_t  RESERVED1[15];           /*!< 0x144-0x17C */
+    __IO uint32_t  RESERVED1[7];            /*!< 0x144-0x15C */
+    __IO uint32_t  DCX_CTRL;                /*!< 0x160 */
+    __IO uint32_t  DCX_CMD;                 /*!< 0x164 */
+    __IO uint32_t  DCX_ADDR;                /*!< 0x168 */
+    __IO uint32_t  DCX_DATA;                /*!< 0x16C */
+    __IO uint32_t  RESERVED2[4];            /*!< 0x170-0x17C */
     __IO uint32_t  ST_DR[16];               /*!< 0x180-0x1BC */
     __IO uint32_t  STFLR;                   /*!< 0x1C0 */
-    __IO uint32_t  RESERVED2[3];            /*!< 0x1C4-0x1CC */
+    __IO uint32_t  RESERVED3[3];            /*!< 0x1C4-0x1CC */
     __IO uint32_t  PAGE_READ;               /*!< 0x1D0 */
 } LCDC_DBIC_TypeDef;
 
@@ -1194,6 +1199,96 @@ typedef union
                 const uint32_t reserved_0: 8;
             } b;
         } DBIC_TPR1_TypeDef;
+
+
+
+    /* 0x160
+        0       R/W    cmd_head_en             0x0
+        1       R/W    cmd_tail_en             0x0
+        4:2     R/W    cmd_ctrl_bit            0x0
+        7:5     R/W    cmd_ctrl                0x0
+        8       R/W    addr_head_en            0x0
+        9       R/W    addr_tail_en            0x0
+        12:10   R/W    addr_ctrl_bit           0x0
+        15:13   R/W    addr_ctrl               0x0
+        16      R/W    data_head_en            0x0
+        17      R/W    data_tail_en            0x0
+        20:18   R/W    data_ctrl_bit           0x0
+        23:21   R/W    data_ctrl               0x0
+        31:24   R      reserved                0x0
+    */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t cmd_head_en: 1;
+                uint32_t cmd_tail_en: 1;
+                uint32_t cmd_ctrl_bit: 3;
+                uint32_t cmd_ctrl: 3;
+                uint32_t addr_head_en: 1;
+                uint32_t addr_tail_en: 1;
+                uint32_t addr_ctrl_bit: 3;
+                uint32_t addr_ctrl: 3;
+                uint32_t data_head_en: 1;
+                uint32_t data_tail_en: 1;
+                uint32_t data_ctrl_bit: 3;
+                uint32_t data_ctrl: 3;
+                const uint32_t reserved_0: 8;
+            } b;
+        } DBIC_DCX_CTRL_TypeDef;
+
+
+
+    /* 0x164
+        15: 0   R/W    cmd_head_val            0x0
+        31: 16  R/W    cmd_tail_val            0x0
+    */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t cmd_head_val: 16;
+                uint32_t cmd_tail_val: 16;
+            } b;
+        } DBIC_DCX_CMD_TypeDef;
+
+
+
+    /* 0x168
+        15: 0   R/W    addr_head_val           0x0
+        31: 16  R/W    addr_tail_val           0x0
+    */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t addr_head_val: 16;
+                uint32_t addr_tail_val: 16;
+            } b;
+        } DBIC_DCX_ADDR_TypeDef;
+
+
+
+    /* 0x16C
+        15: 0   R/W    data_head_val           0x0
+        31: 16  R/W    data_tail_val           0x0
+    */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t data_head_val: 16;
+                uint32_t data_tail_val: 16;
+            } b;
+        } DBIC_DCX_DATA_TypeDef;
 
 
 
