@@ -51,6 +51,109 @@ config REALTEK_DISPLAY_ENABLE_JPU
     depends on REALTEK_DISPLAY
     default n
 
+config REALTEK_DISPLAY_ENABLE_VCDJ
+    bool "Enable VeriSilicon VC9000DJ DecoderJ (JPEG/PNG hardware decode)"
+    depends on REALTEK_DISPLAY
+    default n
+    help
+        Driver for the VeriSilicon (Hantro) VC9000DJ DecoderJ image decoding IP,
+        hardware build ID 0x2070. JPEG and PNG are the two formats this IP
+        decodes and both are always compiled in. This is a different IP from the
+        Realtek JPU selected by REALTEK_DISPLAY_ENABLE_JPU; the two can be
+        enabled independently and share no register or clock code.
+
+        The register base, IRQ, clock and reset contract for this SoC has not
+        been delivered yet, so the low level layer is still placeholder code.
+        Enabling this option gives a driver that compiles, links and can walk the
+        whole vendor Control Software call path, not one that decodes pictures.
+
+if REALTEK_DISPLAY_ENABLE_VCDJ
+
+choice REALTEK_VCDJ_COMPLETION
+    prompt "VCDJ hardware completion detection"
+    default REALTEK_VCDJ_POLLING
+    help
+        How the driver waits for the decoder core to finish a job.
+
+config REALTEK_VCDJ_POLLING
+    bool "Polling (bring-up default)"
+    help
+        Poll the decoder interrupt status register with a wall clock bounded
+        timeout. Requires no IRQ information, which is why it is the bring-up
+        default.
+
+config REALTEK_VCDJ_IRQ
+    bool "Interrupt"
+    help
+        Wait on a semaphore released by the decoder interrupt handler. Needs the
+        IRQ number and routing, which are not known yet, so the platform layer
+        currently refuses this mode and the core layer falls back to polling.
+
+endchoice
+
+config REALTEK_VCDJ_HW_TIMEOUT_MS
+    int "Upper bound for any hardware wait (ms)"
+    default 2000
+    range 1 60000
+    help
+        Hard ceiling applied to every DWLWaitHwReady() call. The vendor call
+        sites pass DEC_X170_TIMEOUT_LENGTH, which defaults to -1 meaning "wait
+        forever"; that value is clamped to this bound so a missing or wedged core
+        can never hang the caller.
+
+config REALTEK_VCDJ_COND_WAIT_TIMEOUT_MS
+    int "Upper bound for condition variable and semaphore waits (ms)"
+    default 1000
+    range 1 60000
+    help
+        With NON_PTHREAD_H the vendor code turns pthread_create() into a no-op,
+        so nothing exists to signal a condition variable. Every vendor call site
+        re-checks its predicate in a loop, so bounding the wait turns a potential
+        deadlock into a slow poll.
+
+config REALTEK_VCDJ_OS_MUTEX_COUNT
+    int "Number of OS mutex objects reserved for the vendor code"
+    default 12
+    range 1 32
+    help
+        The vendor code creates its mutexes through the dwl_os bridge, which hands
+        out indices into a statically sized pool. Exhaustion is reported as a hard
+        error rather than silently ignored. The upper bound of 32 comes from the
+        allocation bitmap being a single 32-bit word.
+
+config REALTEK_VCDJ_OS_COND_COUNT
+    int "Number of OS condition variable objects reserved for the vendor code"
+    default 8
+    range 1 32
+    help
+        See REALTEK_VCDJ_OS_MUTEX_COUNT. OSIF has no condition variable, so each
+        one is emulated with a binary semaphore.
+
+config REALTEK_VCDJ_OS_SEM_COUNT
+    int "Number of OS semaphore objects reserved for the vendor code"
+    default 12
+    range 1 32
+    help
+        See REALTEK_VCDJ_OS_MUTEX_COUNT.
+
+config REALTEK_VCDJ_SELFTEST
+    bool "Build the VCDJ bring-up self test"
+    default n
+    help
+        Compiles hal_vcdj_selftest(), which walks the whole vendor call path
+        (DWLInit -> JpegDecInit -> JpegDecGetImageInfo -> JpegDecSetInfo ->
+        JpegDecDecode -> bounded hardware wait) and reports every step over the
+        console with printf().
+
+        It also cross-checks the vendor software header parse against an
+        independent scan of the same bitstream, which is the only real functional
+        verification possible before the hardware contract arrives.
+
+        Leave this off in a production image: it pulls in printf() and the
+        diagnostics are only useful during bring-up.
+
+endif # REALTEK_DISPLAY_ENABLE_VCDJ
+
 config REALTEK_LCD_SH8601Z_410_502_QSPI
 	bool "Enable Realtek LCD Device Driver 410 502"
 	default n
