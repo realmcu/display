@@ -131,8 +131,6 @@ u32 PngRunAsic(PngDecContainer *dec_cont) {
   if(dec_cont->pp_enabled) {
     ASSERT(dec_cont->pp_enabled);
     if (dec_cont->pp_enabled /*&& ((asic_id & 0x0000F000) >> 12 >= 7)*/) {
-      PpUnitIntConfig tmp_ppu_cfg[DEC_MAX_PPU_COUNT];
-      DWLmemcpy(tmp_ppu_cfg, dec_cont->ppu_cfg, sizeof(dec_cont->ppu_cfg));
      /* PPSetRegs need to add slice_mb_set_value support in future  */
       DelogoSetRegs(dec_cont->png_regs, hw_feature, dec_cont->delogo_params);
       struct DWLLinearMem *ppu_out_addr =

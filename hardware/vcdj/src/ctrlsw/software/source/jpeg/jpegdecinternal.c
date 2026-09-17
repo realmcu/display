@@ -487,9 +487,17 @@ enum DecRet JpegDecInitHW(JpegDecContainer * dec_cont) {
     ASSERT(dec_cont->pp_enabled);
     if (dec_cont->pp_enabled /*&& ((asic_id & 0x0000F000) >> 12 >= 7)*/) {
       PpUnitIntConfig *ppu_cfg = &dec_cont->ppu_cfg[0];
-      PpUnitIntConfig tmp_ppu_cfg[DEC_MAX_PPU_COUNT];
-      DWLmemcpy(tmp_ppu_cfg, dec_cont->ppu_cfg, sizeof(dec_cont->ppu_cfg));
+      PpUnitIntConfig *tmp_ppu_cfg = NULL;
       if (RI_MC_ENABLED(dec_cont->ri_mc_enabled)) {
+        tmp_ppu_cfg = (PpUnitIntConfig *)DWLmalloc(sizeof(dec_cont->ppu_cfg));
+        if (tmp_ppu_cfg == NULL) {
+          if (!dec_cont->vcmd_used)
+            DWLReleaseHw(dec_cont->dwl, dec_cont->core_id);
+          else
+            DWLReleaseCmdBuf(dec_cont->dwl, dec_cont->cmd_buf_id);
+          return DEC_MEMFAIL;
+        }
+        DWLmemcpy(tmp_ppu_cfg, dec_cont->ppu_cfg, sizeof(dec_cont->ppu_cfg));
         u32 ri_height = dec_cont->frame.num_mcu_rows_in_interval *
                         dec_cont->frame.mcu_height;
         for (i = 0; i < DEC_MAX_PPU_COUNT; i++, ppu_cfg++) {
@@ -569,9 +577,10 @@ enum DecRet JpegDecInitHW(JpegDecContainer * dec_cont) {
         PPSetRegs(dec_cont->jpeg_regs, &pp_args);
         dec_cont->sbi_pic_start = 1;
         PPSetLancozsScaleRegs(dec_cont->jpeg_regs, hw_feature, dec_cont->ppu_cfg, core_id);
-        if (RI_MC_ENABLED(dec_cont->ri_mc_enabled)) {
+        if (tmp_ppu_cfg != NULL) {
           /* Restore ppu config. */
           DWLmemcpy(dec_cont->ppu_cfg, tmp_ppu_cfg, sizeof(dec_cont->ppu_cfg));
+          DWLfree(tmp_ppu_cfg);
           dec_cont->ri_running_cores++;
         }
       }

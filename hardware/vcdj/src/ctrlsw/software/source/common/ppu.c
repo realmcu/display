@@ -711,6 +711,7 @@ static void InitPpUnitLanczosData(const struct DecHwFeatures *hw_feature,
       int TableWLength = 5;
       int TableHLength = 5;
 
+#if VCDJ_ENABLE_ULTRA_SCALER
       if(hw_feature->scale_cost_support[i] == ULTRA_SCALER) {
 
         int xx = 0;
@@ -1040,7 +1041,9 @@ static void InitPpUnitLanczosData(const struct DecHwFeatures *hw_feature,
           for (m = 0; m < y_filter_stride - filterSize; m++)
             *table_data++ = 0;
         }
-      } else {
+      } else
+#endif
+      {
         if (ppu_cfg->scale.width < ppu_cfg->crop.width) {
           if ((ppu_cfg->x_filter_size - ppu_cfg->x_filter_offset) <= 7)
             ppu_cfg->x_phase_num = 4;
@@ -2354,6 +2357,14 @@ u32 CheckPpUnitConfig(const struct DecHwFeatures *hw_feature,
   /*support odd crop*/ /*using hw feature 'crop_step_rshift'*/
   u32 crop_align = (1 << hw_feature->crop_step_rshift) - 1;
   for (i = 0; i < DEC_MAX_PPU_COUNT; i++, ppu_cfg++) {
+#if !VCDJ_ENABLE_ULTRA_SCALER
+    if (ppu_cfg->enabled &&
+        hw_feature->scale_cost_support[i] == ULTRA_SCALER) {
+      APITRACEERR("CheckPpUnitConfig# ULTRA_SCALER is disabled in this build [PP %u].\n", i);
+      return 1;
+    }
+#endif
+
     if (i >= hw_feature->max_ppu_count && ppu_cfg->enabled) {
       APITRACEERR("The count(%u) of PPU exceeded the max PPU count.\n", i);
       return 1;
