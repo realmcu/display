@@ -59,40 +59,17 @@ if(CONFIG_REALTEK_DISPLAY_ENABLE_VCDJ)
     # ------------------------------------------------------------------------
     # Feature macros
     # ------------------------------------------------------------------------
-    # Neutral feature macro for our own layer. If IRQ support is not selected,
-    # the core uses bounded polling without requiring a separate polling macro.
-    if(CONFIG_REALTEK_VCDJ_IRQ)
-        target_compile_definitions(${HW_DISPLAY_TARGET_NAME} PRIVATE VCDJ_USE_IRQ)
-    endif()
-
-    if(CONFIG_REALTEK_VCDJ_SELFTEST)
-        target_compile_definitions(${HW_DISPLAY_TARGET_NAME} PRIVATE VCDJ_ENABLE_SELFTEST)
-    endif()
-
-    foreach(vcdj_opt
-            REALTEK_VCDJ_HW_TIMEOUT_MS
-            REALTEK_VCDJ_COND_WAIT_TIMEOUT_MS
-            REALTEK_VCDJ_OS_MUTEX_COUNT
-            REALTEK_VCDJ_OS_COND_COUNT
-            REALTEK_VCDJ_OS_SEM_COUNT)
-        # CONFIG_REALTEK_VCDJ_FOO -> VCDJ_FOO
-        string(REPLACE "REALTEK_" "" vcdj_macro ${vcdj_opt})
-        if(CONFIG_${vcdj_opt})
-            target_compile_definitions(${HW_DISPLAY_TARGET_NAME} PRIVATE
-                ${vcdj_macro}=${CONFIG_${vcdj_opt}}
-            )
-        endif()
-    endforeach()
-
+    # No Kconfig-tunable macro remains in this target: VCDJ_ENABLE_SELFTEST is
+    # defined unconditionally in rtl_vcdj_vendor.h (bring-up is fixed on), and
+    # the numerical defaults (hardware wait timeouts, OS object pool sizes) are
+    # #ifndef fallbacks in the .c sources themselves. rtl_vcdj_vendor.h below is
+    # force-included into every VCDJ translation unit, so those macros can never
+    # drift apart between build systems, and there is no build-time toggle
+    # left that would need a target_compile_definitions() here.
     # ------------------------------------------------------------------------
-    # Force one private entry header into every VCDJ translation unit so the
-    # vendor feature macros and the portability shim cannot drift apart between
-    # build systems.
-    #
-    # NOTE for Keil MDK: armcc (AC5) does not accept -include; it needs
-    # --preinclude rtl_vcdj_vendor.h instead. The MDK project carries that flag
-    # in its own MiscControls.
-    # ------------------------------------------------------------------------
+    target_compile_options(${HW_DISPLAY_TARGET_NAME} PRIVATE
+        -include ${CMAKE_CURRENT_SOURCE_DIR}/inc/rtl_vcdj_vendor.h
+    )
     target_compile_options(${HW_DISPLAY_TARGET_NAME} PRIVATE
         -include ${CMAKE_CURRENT_SOURCE_DIR}/inc/rtl_vcdj_vendor.h
     )

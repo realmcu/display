@@ -29,6 +29,19 @@
 #define USE_FAKE_RFC_TABLE
 #define FAKE_RFC_TBL_LITTLE_ENDIAN
 
+/*
+ * Bring-up self test: fixed ON.
+ *
+ * Defined here so the driver 4 TUs always build it regardless of build system
+ * (CMake / Keil). The Keil project equally carries it in the target-level
+ * <Define> for Basic/src/ap/app_task.c, which does NOT go through this
+ * force-included header; the #ifndef guard makes the two coexist without a
+ * macro-redefined warning.
+ */
+#ifndef VCDJ_ENABLE_SELFTEST
+#define VCDJ_ENABLE_SELFTEST
+#endif
+
 /* Keep the original ULTRA_SCALER path available for diagnostic builds. */
 #ifndef VCDJ_ENABLE_ULTRA_SCALER
 #define VCDJ_ENABLE_ULTRA_SCALER 0

@@ -15,10 +15,12 @@
  *   - translate `enum DecRet` into the stable \ref vcdj_error_t space, so no
  *     vendor type ever escapes through rtl_vcdj.h
  *   - drive the vendor external-buffer negotiation protocol
- *   - the optional bring-up self test (CONFIG_REALTEK_VCDJ_SELFTEST)
+ *   - the bring-up self test (VCDJ_ENABLE_SELFTEST)
  *
  * VENDOR FACING TRANSLATION UNIT: no OS header may be included here.
- * See rtl_vcdj_dwl.c for the rationale.
+ * See rtl_vcdj_dwl.c for the rationale.  The one exception is the bring-up
+ * self test below, which is platform-side test code and logs through
+ * the Realtek trace.h / DBG_DIRECT() path like the rest of hardware/.
  */
 #include <stddef.h>
 #include <string.h>
@@ -32,11 +34,11 @@
 #include "jpegdecapi.h"
 #include "pngdecapi.h"
 
-#if defined(CONFIG_REALTEK_VCDJ_SELFTEST) || defined(VCDJ_ENABLE_SELFTEST)
-#include <stdio.h>
+#if defined(VCDJ_ENABLE_SELFTEST)
+#include "trace.h"
 #define VCDJ_SELFTEST_ENABLED   1
 #else
-#define VCDJ_SELFTEST_ENABLED   1
+#define VCDJ_SELFTEST_ENABLED   0
 #endif
 
 /*============================================================================*
@@ -1804,8 +1806,8 @@ vcdj_error_t hal_vcdj_picture_release(vcdj_picture_t *pic)
  *      That check is the only real functional verification possible at this
  *      stage, so it is performed and reported explicitly.
  *
- * Progress is printed with printf(), which is plain libc and therefore safe next
- * to the vendor macros.
+ * Progress is reported through the platform trace.h / DBG_DIRECT() path, the
+ * same log interface the rest of hardware/ (e.g. jpu) uses.
  */
 static const char *vcdj_dec_ret_str(enum DecRet ret)
 {
@@ -1933,11 +1935,11 @@ vcdj_error_t hal_vcdj_selftest(const void *jpeg, uint32_t jpeg_size)
     int ref_ok;
     int info_ok = 0;
 
-    printf("[vcdj] ---- DecoderJ (VC9000DJ) M1 self test ----\n");
+    DBG_DIRECT("[vcdj] ---- DecoderJ (VC9000DJ) M1 self test ----\n");
 
     if ((jpeg == NULL) || (jpeg_size == 0U))
     {
-        printf("[vcdj] step 0 FAIL: no input bitstream\n");
+        DBG_DIRECT("[vcdj] step 0 FAIL: no input bitstream\n");
         return VCDJ_ERR_PARAM;
     }
 
@@ -1945,45 +1947,45 @@ vcdj_error_t hal_vcdj_selftest(const void *jpeg, uint32_t jpeg_size)
     plat = vcdj_platform_get_config();
     if (plat == NULL)
     {
-        printf("[vcdj] step 1 FAIL: no platform configuration\n");
+        DBG_DIRECT("[vcdj] step 1 FAIL: no platform configuration\n");
         return VCDJ_ERR_NO_HW;
     }
-    printf("[vcdj] step 1 OK  : platform reg_base=0x%08lx core_offset=0x%x "
-           "window=%u cores=%u timeout=%ums\n",
-           (unsigned long)plat->reg_base, (unsigned)plat->core_offset,
-           (unsigned)plat->reg_window_size, (unsigned)plat->core_count,
-           (unsigned)plat->hw_timeout_ms);
+    DBG_DIRECT("[vcdj] step 1 OK  : platform reg_base=0x%08lx core_offset=0x%x "
+               "window=%u cores=%u timeout=%ums\n",
+               (unsigned long)plat->reg_base, (unsigned)plat->core_offset,
+               (unsigned)plat->reg_window_size, (unsigned)plat->core_count,
+               (unsigned)plat->hw_timeout_ms);
     if (plat->reg_base == 0UL)
     {
-        printf("[vcdj]           NOTE: register base is a placeholder "
-               "(hardware contract missing) - register access is inert\n");
+        DBG_DIRECT("[vcdj]           NOTE: register base is a placeholder "
+                   "(hardware contract missing) - register access is inert\n");
     }
 
     /* ---- step 2: DWL instance ---------------------------------------- */
     err = hal_vcdj_init();
     if (err != VCDJ_SUCCESS)
     {
-        printf("[vcdj] step 2 FAIL: hal_vcdj_init -> %d\n", (int)err);
+        DBG_DIRECT("[vcdj] step 2 FAIL: hal_vcdj_init -> %d\n", (int)err);
         return err;
     }
     dwl = vcdj_internal_dwl();
-    printf("[vcdj] step 2 OK  : DWLInit, instance=%p\n", dwl);
+    DBG_DIRECT("[vcdj] step 2 OK  : DWLInit, instance=%p\n", dwl);
 
     /* ---- step 3: hardware identification ----------------------------- */
     {
         uint32_t build_id = 0U;
         (void)hal_vcdj_get_hw_build_id(&build_id);
-        printf("[vcdj] step 3 OK  : hw build id = 0x%04x (expected 0x%04x)%s\n",
-               (unsigned)build_id, (unsigned)VCDJ_EXPECTED_HW_BUILD_ID,
-               (plat->reg_base == 0UL) ? "  [assumed, not read from silicon]" : "");
+        DBG_DIRECT("[vcdj] step 3 OK  : hw build id = 0x%04x (expected 0x%04x)%s\n",
+                   (unsigned)build_id, (unsigned)VCDJ_EXPECTED_HW_BUILD_ID,
+                   (plat->reg_base == 0UL) ? "  [assumed, not read from silicon]" : "");
     }
 
     /* ---- step 4: JpegDecInit ----------------------------------------- */
     work = vcdj_mem_alloc(sizeof(*work));
     if (work == NULL)
     {
-        printf("[vcdj] step 4 FAIL: cannot allocate %u-byte self-test workspace\n",
-               (unsigned)sizeof(*work));
+        DBG_DIRECT("[vcdj] step 4 FAIL: cannot allocate %u-byte self-test workspace\n",
+                   (unsigned)sizeof(*work));
         hal_vcdj_deinit();
         return VCDJ_ERR_NO_MEM;
     }
@@ -2001,18 +2003,18 @@ vcdj_error_t hal_vcdj_selftest(const void *jpeg, uint32_t jpeg_size)
     ret = JpegDecInit(&inst, dwl, &work->cfg);
     if (ret != DEC_OK)
     {
-        printf("[vcdj] step 4 FAIL: JpegDecInit -> %s (%d)\n", vcdj_dec_ret_str(ret), (int)ret);
+        DBG_DIRECT("[vcdj] step 4 FAIL: JpegDecInit -> %s (%d)\n", vcdj_dec_ret_str(ret), (int)ret);
         vcdj_mem_free(work);
         hal_vcdj_deinit();
         return VCDJ_ERR_STATE;
     }
-    printf("[vcdj] step 4 OK  : JpegDecInit, inst=%p\n", inst);
+    DBG_DIRECT("[vcdj] step 4 OK  : JpegDecInit, inst=%p\n", inst);
 
     /* ---- step 5: input buffer ---------------------------------------- */
     if (DWLMallocLinear(dwl, jpeg_size, &work->dec_in.stream_buffer) != DWL_OK)
     {
-        printf("[vcdj] step 5 FAIL: DWLMallocLinear(%u) - is hal_vcdj_mem_init() done?\n",
-               (unsigned)jpeg_size);
+        DBG_DIRECT("[vcdj] step 5 FAIL: DWLMallocLinear(%u) - is hal_vcdj_mem_init() done?\n",
+                   (unsigned)jpeg_size);
         JpegDecRelease(inst);
         vcdj_mem_free(work);
         hal_vcdj_deinit();
@@ -2025,46 +2027,46 @@ vcdj_error_t hal_vcdj_selftest(const void *jpeg, uint32_t jpeg_size)
     work->dec_in.dec_image_type = JPEGDEC_IMAGE;
     work->dec_in.stream = (u8 *)work->dec_in.stream_buffer.virtual_address;
 
-    printf("[vcdj] step 5 OK  : input %u bytes, cpu=%p bus=0x%08lx\n",
-           (unsigned)jpeg_size, (void *)work->dec_in.stream_buffer.virtual_address,
-           (unsigned long)work->dec_in.stream_buffer.bus_address);
+    DBG_DIRECT("[vcdj] step 5 OK  : input %u bytes, cpu=%p bus=0x%08lx\n",
+               (unsigned)jpeg_size, (void *)work->dec_in.stream_buffer.virtual_address,
+               (unsigned long)work->dec_in.stream_buffer.bus_address);
 
     /* ---- step 6: software header parse ------------------------------- */
     ret = JpegDecGetImageInfo(inst, &work->dec_in, &work->image_info);
     if (ret != DEC_OK)
     {
-        printf("[vcdj] step 6 FAIL: JpegDecGetImageInfo -> %s (%d)\n",
-               vcdj_dec_ret_str(ret), (int)ret);
+        DBG_DIRECT("[vcdj] step 6 FAIL: JpegDecGetImageInfo -> %s (%d)\n",
+                   vcdj_dec_ret_str(ret), (int)ret);
         err = VCDJ_ERR_STREAM;
         goto out;
     }
 
-    printf("[vcdj] step 6 OK  : JpegDecGetImageInfo display=%ux%u output=%ux%u "
-           "bit_depth=%u out_format=0x%x coding_mode=%u thumbnail=%u\n",
-           (unsigned)work->image_info.display_width, (unsigned)work->image_info.display_height,
-           (unsigned)work->image_info.output_width, (unsigned)work->image_info.output_height,
-           (unsigned)work->image_info.bit_depth, (unsigned)work->image_info.output_format,
-           (unsigned)work->image_info.coding_mode, (unsigned)work->image_info.thumbnail_type);
+    DBG_DIRECT("[vcdj] step 6 OK  : JpegDecGetImageInfo display=%ux%u output=%ux%u "
+               "bit_depth=%u out_format=0x%x coding_mode=%u thumbnail=%u\n",
+               (unsigned)work->image_info.display_width, (unsigned)work->image_info.display_height,
+               (unsigned)work->image_info.output_width, (unsigned)work->image_info.output_height,
+               (unsigned)work->image_info.bit_depth, (unsigned)work->image_info.output_format,
+               (unsigned)work->image_info.coding_mode, (unsigned)work->image_info.thumbnail_type);
 
     /* ---- step 7: cross-check the parse against the raw bitstream ----- */
     ref_ok = vcdj_scan_jpeg_sof((const u8 *)jpeg, jpeg_size,
                                 &ref_w, &ref_h, &ref_comp, &ref_prog);
     if (!ref_ok)
     {
-        printf("[vcdj] step 7 SKIP: no SOF marker found by the reference scan\n");
+        DBG_DIRECT("[vcdj] step 7 SKIP: no SOF marker found by the reference scan\n");
     }
     else if ((work->image_info.display_width == ref_w) && (work->image_info.display_height == ref_h))
     {
         info_ok = 1;
-        printf("[vcdj] step 7 PASS: header parse matches bitstream SOF "
-               "(%ux%u, %u components, progressive=%u)\n",
-               (unsigned)ref_w, (unsigned)ref_h, (unsigned)ref_comp, (unsigned)ref_prog);
+        DBG_DIRECT("[vcdj] step 7 PASS: header parse matches bitstream SOF "
+                   "(%ux%u, %u components, progressive=%u)\n",
+                   (unsigned)ref_w, (unsigned)ref_h, (unsigned)ref_comp, (unsigned)ref_prog);
     }
     else
     {
-        printf("[vcdj] step 7 FAIL: header parse %ux%u != bitstream SOF %ux%u\n",
-               (unsigned)work->image_info.display_width, (unsigned)work->image_info.display_height,
-               (unsigned)ref_w, (unsigned)ref_h);
+        DBG_DIRECT("[vcdj] step 7 FAIL: header parse %ux%u != bitstream SOF %ux%u\n",
+                   (unsigned)work->image_info.display_width, (unsigned)work->image_info.display_height,
+                   (unsigned)ref_w, (unsigned)ref_h);
         err = VCDJ_ERR_STREAM;
         goto out;
     }
@@ -2073,18 +2075,18 @@ vcdj_error_t hal_vcdj_selftest(const void *jpeg, uint32_t jpeg_size)
     ret = JpegDecSetInfo(inst, &work->cfg);
     if (ret != DEC_OK)
     {
-        printf("[vcdj] step 8 FAIL: JpegDecSetInfo -> %s (%d)\n",
-               vcdj_dec_ret_str(ret), (int)ret);
+        DBG_DIRECT("[vcdj] step 8 FAIL: JpegDecSetInfo -> %s (%d)\n",
+                   vcdj_dec_ret_str(ret), (int)ret);
         err = VCDJ_ERR_UNSUPPORTED;
         goto out;
     }
-    printf("[vcdj] step 8 OK  : JpegDecSetInfo (RGB565 out, 64B aligned)\n");
+    DBG_DIRECT("[vcdj] step 8 OK  : JpegDecSetInfo (RGB565 out, 64B aligned)\n");
 
     dec_out = vcdj_mem_alloc(sizeof(*dec_out));
     if (dec_out == NULL)
     {
-        printf("[vcdj] step 9 FAIL: cannot allocate %u-byte decoder output\n",
-               (unsigned)sizeof(*dec_out));
+        DBG_DIRECT("[vcdj] step 9 FAIL: cannot allocate %u-byte decoder output\n",
+                   (unsigned)sizeof(*dec_out));
         err = VCDJ_ERR_NO_MEM;
         goto out;
     }
@@ -2093,13 +2095,13 @@ vcdj_error_t hal_vcdj_selftest(const void *jpeg, uint32_t jpeg_size)
     /* ---- step 9: hardware decode, expected to time out --------------- */
     if (plat->reg_base == 0UL)
     {
-        printf("[vcdj] step 9 ... : JpegDecDecode - hardware is not mapped; "
-               "an immediate timeout is expected\n");
+        DBG_DIRECT("[vcdj] step 9 ... : JpegDecDecode - hardware is not mapped; "
+                   "an immediate timeout is expected\n");
     }
     else
     {
-        printf("[vcdj] step 9 ... : JpegDecDecode - a %ums bounded wait is expected\n",
-               (unsigned)plat->hw_timeout_ms);
+        DBG_DIRECT("[vcdj] step 9 ... : JpegDecDecode - a %ums bounded wait is expected\n",
+                   (unsigned)plat->hw_timeout_ms);
     }
 
     ret = (enum DecRet)vcdj_internal_jpeg_decode(inst, &work->dec_in, dec_out);
@@ -2111,15 +2113,15 @@ vcdj_error_t hal_vcdj_selftest(const void *jpeg, uint32_t jpeg_size)
 
         memset(&layout, 0, sizeof(layout));
 
-        printf("[vcdj] step 9 BUF : querying external buffer requirements\n");
+        DBG_DIRECT("[vcdj] step 9 BUF : querying external buffer requirements\n");
         ret = (enum DecRet)vcdj_internal_add_jpeg_buffers(inst, external_buffers,
                                                           VCDJ_MAX_EXTERNAL_BUFFERS,
                                                           &external_count,
                                                           &layout);
         if (ret != DEC_OK)
         {
-            printf("[vcdj] step 9 FAIL: external buffer setup -> %s (%d)\n",
-                   vcdj_dec_ret_str(ret), (int)ret);
+            DBG_DIRECT("[vcdj] step 9 FAIL: external buffer setup -> %s (%d)\n",
+                       vcdj_dec_ret_str(ret), (int)ret);
             err = (ret == DEC_MEMFAIL) ? VCDJ_ERR_NO_MEM : VCDJ_ERR_INTERNAL;
             goto out;
         }
@@ -2128,31 +2130,31 @@ vcdj_error_t hal_vcdj_selftest(const void *jpeg, uint32_t jpeg_size)
         /* Print the per-plane breakdown, not just the total: a wrong plane split
          * is the failure this negotiation is most likely to produce, and the
          * total alone would hide it. */
-        printf("[vcdj] step 9 BUF : %u buffer(s), total=%llu planes=%llu/%llu/%llu "
-               "ystride=%u cstride=%u\n",
-               external_count, layout.total_size,
-               layout.plane_size[0], layout.plane_size[1], layout.plane_size[2],
-               (unsigned)layout.ystride, (unsigned)layout.cstride);
+        DBG_DIRECT("[vcdj] step 9 BUF : %u buffer(s), total=%llu planes=%llu/%llu/%llu "
+                   "ystride=%u cstride=%u\n",
+                   external_count, layout.total_size,
+                   layout.plane_size[0], layout.plane_size[1], layout.plane_size[2],
+                   (unsigned)layout.ystride, (unsigned)layout.cstride);
         ret = (enum DecRet)vcdj_internal_jpeg_decode(inst, &work->dec_in, dec_out);
     }
 
     if ((ret == DEC_PIC_RDY) || (ret == DEC_PIC_DECODED) || (ret == DEC_OK))
     {
-        printf("[vcdj] step 9 OK  : JpegDecDecode -> %s - a picture was produced\n",
-               vcdj_dec_ret_str(ret));
+        DBG_DIRECT("[vcdj] step 9 OK  : JpegDecDecode -> %s - a picture was produced\n",
+                   vcdj_dec_ret_str(ret));
         (void)JpegDecPictureConsumed(inst, dec_out);
         err = VCDJ_SUCCESS;
     }
     else if (ret == DEC_HW_TIMEOUT)
     {
-        printf("[vcdj] step 9 EXPECTED: JpegDecDecode -> DEC_HW_TIMEOUT. The vendor "
-               "path is reachable, the bounded wait fired, nothing hung.\n");
+        DBG_DIRECT("[vcdj] step 9 EXPECTED: JpegDecDecode -> DEC_HW_TIMEOUT. The vendor "
+                   "path is reachable, the bounded wait fired, nothing hung.\n");
         err = VCDJ_ERR_TIMEOUT;
     }
     else
     {
-        printf("[vcdj] step 9 FAIL: JpegDecDecode -> %s (%d)\n",
-               vcdj_dec_ret_str(ret), (int)ret);
+        DBG_DIRECT("[vcdj] step 9 FAIL: JpegDecDecode -> %s (%d)\n",
+                   vcdj_dec_ret_str(ret), (int)ret);
         err = VCDJ_ERR_HW;
     }
 
@@ -2164,8 +2166,8 @@ out:
     vcdj_mem_free(work);
     hal_vcdj_deinit();
 
-    printf("[vcdj] ---- self test done: header parse %s, result %d ----\n",
-           info_ok ? "PASS" : "not verified", (int)err);
+    DBG_DIRECT("[vcdj] ---- self test done: header parse %s, result %d ----\n",
+               info_ok ? "PASS" : "not verified", (int)err);
 
     return err;
 }

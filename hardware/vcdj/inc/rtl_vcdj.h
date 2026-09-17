@@ -471,7 +471,7 @@ vcdj_error_t hal_vcdj_decode_pp(const vcdj_dec_param_t *param,
  */
 vcdj_error_t hal_vcdj_picture_release(vcdj_picture_t *pic);
 
-#if defined(CONFIG_REALTEK_VCDJ_SELFTEST) || defined(VCDJ_ENABLE_SELFTEST)
+#if defined(VCDJ_ENABLE_SELFTEST)
 /**
  * @brief      M1 self test: walk the whole vendor call path and report each step.
  *
@@ -487,8 +487,9 @@ vcdj_error_t hal_vcdj_picture_release(vcdj_picture_t *pic);
  *             is checked against the bitstream, which is the one piece of real
  *             functional verification possible at this stage.
  *
- * @note       Compiled only when CONFIG_REALTEK_VCDJ_SELFTEST is selected, so a
- *             production image does not carry the bring-up diagnostics.
+ * @note       Compiled while VCDJ_ENABLE_SELFTEST is defined. That macro is set
+ *             unconditionally in rtl_vcdj_vendor.h during bring-up; remove it
+ *             there (and from the Keil project <Define>) for a production image.
  */
 vcdj_error_t hal_vcdj_selftest(const void *jpeg, uint32_t jpeg_size);
 #endif
