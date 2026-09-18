@@ -3,49 +3,37 @@ import glob
 ci_check_config = {
     "commit_labels":{
         'IO': {
-            "check_handler": "default_handler", # will call default_handler to check this commit, not used currently 
+            "check_handler": "default_handler", # will call default_handler to check this commit, not used currently
             "build_handler": None
         },
         'Script-CI': {
-            "check_handler": "default_handler", # will call default_handler to check this commit, not used currently 
+            "check_handler": "default_handler", # will call default_handler to check this commit, not used currently
             "build_handler": None
         },
         'Script-Nightly': {
-            "check_handler": "default_handler", # will call default_handler to check this commit, not used currently 
+            "check_handler": "default_handler", # will call default_handler to check this commit, not used currently
             "build_handler": None
         },
         'Script-Release': {
-            "check_handler": "default_handler", # will call default_handler to check this commit, not used currently 
+            "check_handler": "default_handler", # will call default_handler to check this commit, not used currently
             "build_handler": None
         },
         'Script-Other': {
-            "check_handler": "default_handler", # will call default_handler to check this commit, not used currently 
+            "check_handler": "default_handler", # will call default_handler to check this commit, not used currently
             "build_handler": None
         }
     },
     "ignore_file_encoding":[
-         r'.claude/skills/lcd-driver-gen',
-         r'hardware\vcdj\src\ctrlsw',
+         r'src\ctrlsw',
     ],
     "ignore_cpp_astyle_check":[
-     r'hardware\vcdj\src\ctrlsw',
+     r'src\ctrlsw',
     ],
     "ignore_astyle_check":[
-     r'hardware\lcdc\src\device\rtl87x2g',
-     r'hardware\lcdc\src\device\rtl8773e',
-     r'hardware\lcdc\src\device\rtl8773g',
-     r'hardware\lcdc\src\device\rtl8773k',
-     r'hardware\idu\src\device\rtl87x2g',
-     r'hardware\idu\src\device\rtl8773e',
-     r'hardware\idu\src\device\rtl8773g',
-     r'hardware\ppe\src\device\rtl87x2g',
-     r'hardware\segcom\src\device\rtl87x2g',
-     r'hardware\segcom\src\device\rtl8772f',
-     r'hardware\vcdj\src\ctrlsw',
-     r'hardware\mipi\inc',
+     r'src\ctrlsw',
     ],
     "ignore_cppcheck_check":[
-     r'hardware\vcdj\src\ctrlsw',
+     r'src\ctrlsw',
     ],
     "commit_version_check": {
         "ANCESTOR_ACCEPT_LENGTH": 5, # the 5th commit is the parent, ok // first priority

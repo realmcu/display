@@ -3,56 +3,49 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 #
-message(STATUS "CONFIG_REALTEK_DISPLAY is set to: ${CONFIG_REALTEK_DISPLAY}")
+# Build entry point for the VCDJ (VeriSilicon VC9000DJ DecoderJ) driver.
+#
+cmake_minimum_required(VERSION 3.10)
 
-list(APPEND soc_series
-    CONFIG_SOC_SERIES_RTL87X2G
-    CONFIG_SOC_SERIES_RTL8772F
-    CONFIG_SOC_SERIES_RTL8773K
-    CONFIG_SOC_SERIES_RTL8773E
-    CONFIG_SOC_SERIES_RTL87X3E
-    CONFIG_SOC_SERIES_RTL87X3G
-)
+if(CONFIG_REALTEK_DISPLAY_ENABLE_VCDJ)
 
-set(any_soc_selected OFF)
+    set(HW_DISPLAY_TARGET_NAME realtek_vcdj_driver_library)
 
-foreach(item IN LISTS soc_series)
-  if(${item} STREQUAL "y")
-     message(STATUS "REALTEK SOC selected: ${item}")
-  set(any_soc_selected ON)
-  endif()
-endforeach()
+    add_library(${HW_DISPLAY_TARGET_NAME} STATIC)
 
-if(NOT any_soc_selected)
-  message(STATUS "No REALTEK SOC selected!!!")
+    # inc/rtl_vcdj.h is the only header an integrator includes.
+    target_include_directories(${HW_DISPLAY_TARGET_NAME} PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/inc
+    )
+
+    set(VCDJ_CTRLSW_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/src/ctrlsw/software)
+
+    # PRIVATE: driver internals and vendor headers must not leak to linkers.
+    target_include_directories(${HW_DISPLAY_TARGET_NAME} PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/common
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/device/rtl87x3k
+        ${VCDJ_CTRLSW_ROOT}/source/inc
+        ${VCDJ_CTRLSW_ROOT}/source/config
+        ${VCDJ_CTRLSW_ROOT}/source/common
+        ${VCDJ_CTRLSW_ROOT}/source/jpeg
+        ${VCDJ_CTRLSW_ROOT}/source/png
+    )
+
+    target_sources(${HW_DISPLAY_TARGET_NAME} PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/common/rtl_vcdj_hal.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/common/rtl_vcdj_dwl.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/common/rtl_vcdj_core.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/device/rtl87x3k/rtl_vcdj_port.c
+    )
+
+    # Vendor compile contract. Must stay in step with the SConscript's
+    # LOCAL_CCFLAGS and Keil's --preinclude.
+    target_compile_options(${HW_DISPLAY_TARGET_NAME} PRIVATE
+        -include ${CMAKE_CURRENT_SOURCE_DIR}/inc/rtl_vcdj_vendor.h
+    )
+
+    # Vendor Control Software: explicit import list plus its own warning
+    # suppressions.
+    add_subdirectory(src/ctrlsw)
+
 endif()
-
-set(HW_DISPLAY_TARGET_NAME realtek_display_driver_library)
-set(LIBRARY_NAME ${HW_DISPLAY_TARGET_NAME})
-
-if(ZEPHYR_BASE)
-  if(CONFIG_REALTEK_DISPLAY)
-	  message(STATUS "ZEPHYR_BASE is set to: ${ZEPHYR_BASE}")
-    zephyr_library_named(${HW_DISPLAY_TARGET_NAME})
-	  if(CONFIG_REALTEK_DISPLAY_GUI_ACC)
-		target_link_libraries(${HW_DISPLAY_TARGET_NAME} PRIVATE guiLib)
-	  endif()
-	  add_subdirectory(hardware)
-	  add_subdirectory(device)
-	  add_subdirectory(bindings)
-  endif()
-else()
-  if(CONFIG_REALTEK_DISPLAY)
-    message(STATUS "[Display] Building for non-Zephyr environment")
-    add_library(${LIBRARY_NAME} STATIC)
-    add_subdirectory(hardware)
-    add_subdirectory(device)
-    add_subdirectory(bindings)
-    target_link_libraries(${LIBRARY_NAME} PUBLIC halLib)
-    if(CONFIG_REALTEK_DISPLAY_GUI_ACC)
-      target_link_libraries(${LIBRARY_NAME} PUBLIC guiLib)
-    endif()
-  endif()
-endif()
-
-

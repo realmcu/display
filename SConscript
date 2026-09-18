@@ -1,71 +1,105 @@
-# for module compiling
-Import('RTK_SDK_ROOT')
-Import('RTK_IC_TYPE')
+#
+# Copyright (c) 2026, Realtek Semiconductor Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# SCons build for the VCDJ (VeriSilicon VC9000DJ DecoderJ) driver.
+#
 import os
 from building import *
-import menu_config
 
-# get current directory
-cwd  = GetCurrentDir()
-objs = []
-list = os.listdir(cwd)
-parent_dir = os.path.dirname(cwd)
+cwd = GetCurrentDir()
 
-src = Split("""
-""")
+CTRLSW = 'src/ctrlsw/software/source'
 
-include_path = []
-libs = ['']
+# One directory per OS under src/device/, exactly one compiled:
+#   rtl87x3k      FreeRTOS + OSIF, built by Keil MDK
+#   rtl87x3k_rtt  RT-Thread, built here (also supplies a trace.h stand-in)
+PLATFORM = 'src/device/rtl87x3k_rtt'
 
-if GetDepend(['CONFIG_REALTEK_LCDC_DBIB']):
-    src += ['hardware/lcdc/src/device/rtl_common/rtl_lcdc_dbib.c']
-if GetDepend(['CONFIG_REALTEK_LCDC_DBIC']):
-    src += ['hardware/lcdc/src/device/rtl_common/rtl_lcdc_dbic.c']
-if GetDepend(['CONFIG_REALTEK_LCDC_DSI']):
-    src += ['hardware/mipi/src/device/rtl_common/rtl_lcdc_dsi.c']
-if GetDepend(['CONFIG_REALTEK_LCDC_EDPI']) :
-    src += ['hardware/lcdc/src/device/rtl_common/rtl_lcdc_edpi.c']
-if GetDepend(['CONFIG_REALTEK_LCDC']):
-    src += ['hardware/lcdc/src/device/rtl_common/rtl_lcdc.c']
-if GetDepend(['CONFIG_REALTEK_PPE']):
-    src += ['hardware/ppe/src/device/' + RTK_IC_TYPE + '/rtl_ppe.c']
-if GetDepend(['CONFIG_REALTEK_RAMLESS_QSPI']):
-    src += ['hardware/lcdc/src/device/rtl_common/rtl_ramless_qspi.c']
+include_path = [
+    cwd + '/inc',
+    cwd + '/src/common',
+    cwd + '/' + PLATFORM,
+    cwd + '/' + CTRLSW + '/inc',
+    cwd + '/' + CTRLSW + '/config',
+    cwd + '/' + CTRLSW + '/common',
+    cwd + '/' + CTRLSW + '/jpeg',
+    cwd + '/' + CTRLSW + '/png',
+]
 
-if  GetDepend(['CONFIG_REALTEK_IDU']) :
-    src += ['hardware/idu/src/device/rtl_common/rtl_idu.c']
-    src += ['hardware/idu/src/device/' + RTK_IC_TYPE + '/rtl_idu_int.c']
+# Vendor compile contract. Must stay in step with CMake's
+# target_compile_options(-include ...) and Keil's --preinclude.
+VENDOR_PREINCLUDE = ' -include ' + cwd + '/inc/rtl_vcdj_vendor.h'
 
-if GetDepend(['CONFIG_REALTEK_SEGCOM']):
-    src += ['hardware/segcom/device/src/rtl_common/rtl876x_segcom.c']
+src = [
+    'src/common/rtl_vcdj_hal.c',
+    'src/common/rtl_vcdj_dwl.c',
+    'src/common/rtl_vcdj_core.c',
+    PLATFORM + '/rtl_vcdj_port.c',
+]
 
+# Two groups because SCons has no per-source-file compile option: vendor sources
+# need their own warning suppressions.
+group = DefineGroup(
+    'vcdj', src, depend = ['REALTEK_DISPLAY_ENABLE_VCDJ'],
+    CPPPATH       = include_path,
+    LOCAL_CCFLAGS = VENDOR_PREINCLUDE,
+)
 
-if GetDepend(['CONFIG_REALTEK_BUILD_PPE']):
-    src += ['bindings/honeygui/hardware_engine/PPE/' + RTK_IC_TYPE + '/acc_ppe.c']
+# Explicit, not globbed, and mirrors src/ctrlsw/CMakeLists.txt one for one, so a
+# vendor upgrade that adds or renames a file fails loudly.
+ctrlsw_common_src = [
+    CTRLSW + '/common/case_info.c',
+    CTRLSW + '/common/commonconfig.c',
+    CTRLSW + '/common/commonfunction.c',
+    CTRLSW + '/common/dec_log.c',
+    CTRLSW + '/common/delogo.c',
+    CTRLSW + '/common/error.c',
+    CTRLSW + '/common/errorhandling.c',
+    CTRLSW + '/common/fifo.c',
+    CTRLSW + '/common/input_queue.c',
+    CTRLSW + '/common/low_latency.c',
+    CTRLSW + '/common/ppu.c',
+    CTRLSW + '/common/regdrv.c',
+    CTRLSW + '/common/sw_buf_protect.c',
+    CTRLSW + '/common/sw_stream.c',
+    CTRLSW + '/common/sw_util.c',
+    CTRLSW + '/common/vpufeature.c',
+]
 
-if  GetDepend(['CONFIG_REALTEK_JPU']) :
-    src += ['hardware/jpu/src/device/rtl_common/rtl_jpu.c']
-    src += ['hardware/jpu/src/device/rtl_common/rtl_hal_jpu.c']
+ctrlsw_jpeg_src = [
+    CTRLSW + '/jpeg/jpegdecapi.c',
+    CTRLSW + '/jpeg/jpegdechdrs.c',
+    CTRLSW + '/jpeg/jpegdecinternal.c',
+    CTRLSW + '/jpeg/jpegdecutils.c',
+]
 
-include_path += [cwd,
-        cwd + '/hardware/lcdc/inc',
-        cwd + '/hardware/lcdc/src/device/' + RTK_IC_TYPE,
-        cwd + '/hardware/idu/inc',
-        cwd + '/hardware/idu/src/device/' + RTK_IC_TYPE,
-        cwd + '/hardware/idu/inc',
-        cwd + '/hardware/mipi/inc',
-        cwd + '/hardware/ppe/inc/' + RTK_IC_TYPE,
-        cwd + '/hardware/ppe/src/device/' + RTK_IC_TYPE,
-        cwd + '/hardware/segcom/inc',
-        cwd + '/hardware/jpu/inc',
-        cwd + '/hardware/jpu/src/device/' + RTK_IC_TYPE]
+ctrlsw_png_src = [
+    CTRLSW + '/png/png_decoder.c',
+    CTRLSW + '/png/pngdecapi.c',
+    CTRLSW + '/png/pngdecutils.c',
+    CTRLSW + '/png/pnghwd_asic.c',
+]
 
+ctrlsw_src = ctrlsw_common_src + ctrlsw_jpeg_src + ctrlsw_png_src
 
-group = DefineGroup('peripheral', src, depend = [''], CPPPATH = include_path,LIBS = [''], LIBPATH = [''])
+for vcdj_src in ctrlsw_src:
+    if not os.path.isfile(os.path.join(cwd, vcdj_src)):
+        raise RuntimeError(
+            '[VCDJ] vendor source %s is missing. The tree under src/ctrlsw/ must '
+            'be an unmodified extraction of the release archive; see '
+            'src/ctrlsw/README.md.' % vcdj_src)
 
-for d in list:
-    path = os.path.join(cwd, d)
-    if os.path.isfile(os.path.join(path, 'SConscript')):
-        group = group + SConscript(os.path.join(d, 'SConscript'))
+# Vendor files only. The tree under src/ctrlsw/ is byte identical to the release
+# archive, so these cannot be fixed by patching a source.
+CTRLSW_CCFLAGS = (' -Wno-format -Wno-format-security'
+                  ' -Wno-unused-variable -Wno-unused-function')
+
+group = group + DefineGroup(
+    'vcdj_ctrlsw', ctrlsw_src, depend = ['REALTEK_DISPLAY_ENABLE_VCDJ'],
+    CPPPATH       = include_path,
+    LOCAL_CCFLAGS = VENDOR_PREINCLUDE + CTRLSW_CCFLAGS,
+)
 
 Return('group')
