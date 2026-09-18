@@ -3,56 +3,36 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 #
-message(STATUS "CONFIG_REALTEK_DISPLAY is set to: ${CONFIG_REALTEK_DISPLAY}")
+# Build entry point for the JPU (Realtek JPEG codec) driver.
+#
+cmake_minimum_required(VERSION 3.10)
 
-list(APPEND soc_series
-    CONFIG_SOC_SERIES_RTL87X2G
-    CONFIG_SOC_SERIES_RTL8772F
-    CONFIG_SOC_SERIES_RTL8773K
-    CONFIG_SOC_SERIES_RTL8773E
-    CONFIG_SOC_SERIES_RTL87X3E
-    CONFIG_SOC_SERIES_RTL87X3G
-)
+if(CONFIG_REALTEK_DISPLAY_ENABLE_JPU)
 
-set(any_soc_selected OFF)
+    set(HW_DISPLAY_TARGET_NAME realtek_jpu_driver_library)
 
-foreach(item IN LISTS soc_series)
-  if(${item} STREQUAL "y")
-     message(STATUS "REALTEK SOC selected: ${item}")
-  set(any_soc_selected ON)
-  endif()
-endforeach()
+    add_library(${HW_DISPLAY_TARGET_NAME} STATIC)
 
-if(NOT any_soc_selected)
-  message(STATUS "No REALTEK SOC selected!!!")
+    # inc/rtl_jpu.h and inc/rtl_hal_jpu.h are what an integrator includes.
+    target_include_directories(${HW_DISPLAY_TARGET_NAME} PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/inc
+    )
+
+    # PRIVATE: register and address-map definitions must not leak to linkers.
+    target_include_directories(${HW_DISPLAY_TARGET_NAME} PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/device/rtl8773g
+    )
+
+    target_sources(${HW_DISPLAY_TARGET_NAME} PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/device/rtl_common/rtl_jpu.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/device/rtl_common/rtl_hal_jpu.c
+    )
+
+    # Realtek RTOS SDK memory placement contract, carried over from the
+    # per-SoC CMakeLists this file replaced.
+    target_compile_definitions(${HW_DISPLAY_TARGET_NAME} PRIVATE
+        T_OS_MEM_TYPE=RAM_TYPE
+        OS_MEM_TYPE_DATA=RAM_TYPE_DATA_ON
+    )
+
 endif()
-
-set(HW_DISPLAY_TARGET_NAME realtek_display_driver_library)
-set(LIBRARY_NAME ${HW_DISPLAY_TARGET_NAME})
-
-if(ZEPHYR_BASE)
-  if(CONFIG_REALTEK_DISPLAY)
-	  message(STATUS "ZEPHYR_BASE is set to: ${ZEPHYR_BASE}")
-    zephyr_library_named(${HW_DISPLAY_TARGET_NAME})
-	  if(CONFIG_REALTEK_DISPLAY_GUI_ACC)
-		target_link_libraries(${HW_DISPLAY_TARGET_NAME} PRIVATE guiLib)
-	  endif()
-	  add_subdirectory(hardware)
-	  add_subdirectory(device)
-	  add_subdirectory(bindings)
-  endif()
-else()
-  if(CONFIG_REALTEK_DISPLAY)
-    message(STATUS "[Display] Building for non-Zephyr environment")
-    add_library(${LIBRARY_NAME} STATIC)
-    add_subdirectory(hardware)
-    add_subdirectory(device)
-    add_subdirectory(bindings)
-    target_link_libraries(${LIBRARY_NAME} PUBLIC halLib)
-    if(CONFIG_REALTEK_DISPLAY_GUI_ACC)
-      target_link_libraries(${LIBRARY_NAME} PUBLIC guiLib)
-    endif()
-  endif()
-endif()
-
-

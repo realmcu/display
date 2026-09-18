@@ -1,71 +1,33 @@
-# for module compiling
-Import('RTK_SDK_ROOT')
-Import('RTK_IC_TYPE')
-import os
+#
+# Copyright (c) 2026, Realtek Semiconductor Corporation
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+# SCons build for the JPU (Realtek JPEG codec) driver.
+#
 from building import *
-import menu_config
 
-# get current directory
-cwd  = GetCurrentDir()
-objs = []
-list = os.listdir(cwd)
-parent_dir = os.path.dirname(cwd)
+cwd = GetCurrentDir()
 
-src = Split("""
-""")
+# Register and address-map definitions live per SoC under src/device/.
+# Only one is compiled; rtl_common/ holds the SoC independent driver.
+PLATFORM = 'src/device/rtl8773g'
 
-include_path = []
-libs = ['']
+include_path = [
+    cwd + '/inc',
+    cwd + '/' + PLATFORM,
+]
 
-if GetDepend(['CONFIG_REALTEK_LCDC_DBIB']):
-    src += ['hardware/lcdc/src/device/rtl_common/rtl_lcdc_dbib.c']
-if GetDepend(['CONFIG_REALTEK_LCDC_DBIC']):
-    src += ['hardware/lcdc/src/device/rtl_common/rtl_lcdc_dbic.c']
-if GetDepend(['CONFIG_REALTEK_LCDC_DSI']):
-    src += ['hardware/mipi/src/device/rtl_common/rtl_lcdc_dsi.c']
-if GetDepend(['CONFIG_REALTEK_LCDC_EDPI']) :
-    src += ['hardware/lcdc/src/device/rtl_common/rtl_lcdc_edpi.c']
-if GetDepend(['CONFIG_REALTEK_LCDC']):
-    src += ['hardware/lcdc/src/device/rtl_common/rtl_lcdc.c']
-if GetDepend(['CONFIG_REALTEK_PPE']):
-    src += ['hardware/ppe/src/device/' + RTK_IC_TYPE + '/rtl_ppe.c']
-if GetDepend(['CONFIG_REALTEK_RAMLESS_QSPI']):
-    src += ['hardware/lcdc/src/device/rtl_common/rtl_ramless_qspi.c']
+src = [
+    'src/device/rtl_common/rtl_jpu.c',
+    'src/device/rtl_common/rtl_hal_jpu.c',
+]
 
-if  GetDepend(['CONFIG_REALTEK_IDU']) :
-    src += ['hardware/idu/src/device/rtl_common/rtl_idu.c']
-    src += ['hardware/idu/src/device/' + RTK_IC_TYPE + '/rtl_idu_int.c']
-
-if GetDepend(['CONFIG_REALTEK_SEGCOM']):
-    src += ['hardware/segcom/device/src/rtl_common/rtl876x_segcom.c']
-
-
-if GetDepend(['CONFIG_REALTEK_BUILD_PPE']):
-    src += ['bindings/honeygui/hardware_engine/PPE/' + RTK_IC_TYPE + '/acc_ppe.c']
-
-if  GetDepend(['CONFIG_REALTEK_JPU']) :
-    src += ['hardware/jpu/src/device/rtl_common/rtl_jpu.c']
-    src += ['hardware/jpu/src/device/rtl_common/rtl_hal_jpu.c']
-
-include_path += [cwd,
-        cwd + '/hardware/lcdc/inc',
-        cwd + '/hardware/lcdc/src/device/' + RTK_IC_TYPE,
-        cwd + '/hardware/idu/inc',
-        cwd + '/hardware/idu/src/device/' + RTK_IC_TYPE,
-        cwd + '/hardware/idu/inc',
-        cwd + '/hardware/mipi/inc',
-        cwd + '/hardware/ppe/inc/' + RTK_IC_TYPE,
-        cwd + '/hardware/ppe/src/device/' + RTK_IC_TYPE,
-        cwd + '/hardware/segcom/inc',
-        cwd + '/hardware/jpu/inc',
-        cwd + '/hardware/jpu/src/device/' + RTK_IC_TYPE]
-
-
-group = DefineGroup('peripheral', src, depend = [''], CPPPATH = include_path,LIBS = [''], LIBPATH = [''])
-
-for d in list:
-    path = os.path.join(cwd, d)
-    if os.path.isfile(os.path.join(path, 'SConscript')):
-        group = group + SConscript(os.path.join(d, 'SConscript'))
+# depend = [] keeps the whole group out of the build when the switch is off,
+# so nothing here is read unless REALTEK_DISPLAY_ENABLE_JPU is set.
+group = DefineGroup(
+    'jpu', src, depend = ['REALTEK_DISPLAY_ENABLE_JPU'],
+    CPPPATH = include_path,
+)
 
 Return('group')
