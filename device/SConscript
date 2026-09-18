@@ -20,7 +20,8 @@ SOC_SERIES_MAP = {
 
 # Device type subdirectories and their config suffix
 # CONFIG_REALTEK_8773G_DEVICE_LCD -> lcd/8773G, CONFIG_REALTEK_8773G_DEVICE_KNOB -> knob/8773E, etc.
-DEVICE_TYPES = ['lcd', 'touch', 'knob', 'key_button']
+# DEVICE_TYPES = ['lcd', 'touch', 'knob', 'key_button']
+DEVICE_TYPES = ['lcd']
 
 for soc_config, chip_dir in SOC_SERIES_MAP.items():
     if GetDepend([soc_config]):

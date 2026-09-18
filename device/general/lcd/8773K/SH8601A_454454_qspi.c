@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 #include "board.h"
-#include "sh8601a_454454_qspi.h"
+#include "SH8601A_454454_qspi.h"
 #include "rtl_lcdc_dbic.h"
 #include "utils.h"
 #include "trace.h"
@@ -563,7 +563,7 @@ uint32_t rtk_lcd_hal_get_pixel_bits(void)
 
 void rtk_lcd_hal_clear_screen(uint32_t ARGB_color)
 {
-    rtk_lcd_hal_set_window(0, 0, SH8601Z_LCD_WIDTH, SH8601Z_LCD_HEIGHT);
+    rtk_lcd_hal_set_window(0, 0, SH8601A_LCD_WIDTH, SH8601A_LCD_HEIGHT);
     uint8_t *RGB_transfer = (uint8_t *)&ARGB_color;
     uint32_t clear_buf[64] = {0};
 #if INPUT_PIXEL_BYTES == 4

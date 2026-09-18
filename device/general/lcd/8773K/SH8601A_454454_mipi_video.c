@@ -104,6 +104,15 @@ void rtk_lcd_hal_init(void)
     uint32_t VSA = SH8601A_LCD_VSYNC, VFP = SH8601A_LCD_VFP, VBP = SH8601A_LCD_VBP,
              VACT = SH8601A_LCD_HEIGHT;
 
+    (void)HSA;
+    (void)HFP;
+    (void)HBP;
+    (void)HACT;
+    (void)VSA;
+    (void)VFP;
+    (void)VBP;
+    (void)VACT;
+
     LCDC_LCD_SET_RST(false);
     platform_delay_ms(100);
     LCDC_LCD_SET_RST(true);
@@ -228,8 +237,6 @@ void rtk_lcd_hal_init(void)
     DSI_ConfigPhy(DSI, &dsi_phy);
 
     DSI_Start(DSI);
-
-    return 0;
 }
 
 void sh8601a_video_mode_init(void)

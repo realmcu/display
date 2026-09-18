@@ -98,16 +98,16 @@ static const SH8601Z_CMD_DESC SH8601Z_POWEROFF_SEQ_CMD[] =
 
 static T_LCDC_TE_TYPE use_TE = LCDC_TE_TYPE_HW_TE;
 
-static void Pad_Enable_HS(uint32_t reg_addr)
-{
-    uint16_t reg_value = 0;
-    reg_value = btaon_fast_read_safe(reg_addr);
-    //Enable HS MUX
-    //reg_value |= ((0x1));
-    //Enable HS MUX and driving strength
-    reg_value |= ((0x1) | (0x2 << 6));
-    btaon_fast_write_safe(reg_addr, reg_value);
-}
+// static void Pad_Enable_HS(uint32_t reg_addr)
+// {
+//     uint16_t reg_value = 0;
+//     reg_value = btaon_fast_read_safe(reg_addr);
+//     //Enable HS MUX
+//     //reg_value |= ((0x1));
+//     //Enable HS MUX and driving strength
+//     reg_value |= ((0x1) | (0x2 << 6));
+//     btaon_fast_write_safe(reg_addr, reg_value);
+// }
 
 static void qspi_pad_config(void)
 {
@@ -249,7 +249,7 @@ static void SH8601Z_Reg_Write(const SH8601Z_CMD_DESC *cmd)
         sdat[2] = cmd[idx].index; // Set in the middle 8 bits ADDR[15:8] of the 24 bits ADDR[23:0]
         sdat[3] = 0;
 
-        APP_PRINT_INFO1("cmd[idx].index: 0x%x", cmd[idx].index);
+        DBG_DIRECT("cmd[idx].index: 0x%x", cmd[idx].index);
 
         for (uint16_t i = 0; i < cmd[idx].wordcount; i++)
         {
@@ -298,7 +298,7 @@ void rtk_lcd_hal_init(void)
     qspi_pad_config();
 
     RCC_PeriphClockCmd(APBPeriph_DISP, APBPeriph_DISP_CLOCK, ENABLE);
-    RCC_DisplayClockConfig(DISPLAY_CLOCK_SOURCE_PLL1, DISPLAY_CLOCK_DIV_1);
+    // RCC_DisplayClockConfig(DISPLAY_CLOCK_SOURCE_PLL1, DISPLAY_CLOCK_DIV_1);
 
     LCDC_InitTypeDef lcdc_init = {0};
     lcdc_init.LCDC_Interface = LCDC_IF_DBIC;
