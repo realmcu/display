@@ -1330,8 +1330,8 @@ static vcdj_error_t vcdj_png_image_info(const vcdj_dec_param_t *param,
         goto out_inst;
     }
 
-    work->dec_in.stream_length = param->size;
-    work->dec_in.stream = (u8 *)work->dec_in.stream_buffer.virtual_address;
+    work->dec_in.stream_length = param->size - 8U;
+    work->dec_in.stream = (u8 *)work->dec_in.stream_buffer.virtual_address + 8U;
 
     ret = PngDecGetImageInfo(inst, &work->dec_in, &work->image_info);
 
@@ -1408,8 +1408,8 @@ static vcdj_error_t vcdj_png_decode(const vcdj_dec_param_t *param,
         goto out_inst;
     }
 
-    work->dec_in.stream_length = param->size;
-    work->dec_in.stream = (u8 *)work->dec_in.stream_buffer.virtual_address;
+    work->dec_in.stream_length = param->size - 8U;
+    work->dec_in.stream = (u8 *)work->dec_in.stream_buffer.virtual_address + 8U;
 
     ret = PngDecGetImageInfo(inst, &work->dec_in, &work->image_info);
     if (ret != DEC_OK)
