@@ -47,6 +47,51 @@
 #define VCDJ_ENABLE_ULTRA_SCALER 0
 #endif
 
+/*
+ * Vendor trace, OFF by default: without VCD_LOGMSG the five dec_log.h macros
+ * below expand to `fprintf(stderr, ...)` at 302 call sites, costing ~38 KB of
+ * newlib stdio for output nothing on this target reads. Define
+ * VCDJ_ENABLE_VENDOR_TRACE for a diagnostic build. The off case is not
+ * `((void)0)`: `sizeof` keeps the format checking and the argument evaluation
+ * that discarding __VA_ARGS__ would lose, while generating no code.
+ */
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#if defined(VCDJ_ENABLE_VENDOR_TRACE)
+/** Console sink, implemented by the platform layer src/device/<soc>/. */
+void vcdj_vendor_trace(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
+#define VCDJ_VENDOR_TRACE(...)      vcdj_vendor_trace(__VA_ARGS__)
+#else
+/* Never defined: unevaluated inside sizeof, so it resolves to no symbol. */
+int vcdj_vendor_trace_check(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
+#define VCDJ_VENDOR_TRACE(...)      ((void)sizeof(vcdj_vendor_trace_check(__VA_ARGS__)))
+#endif
+
+#ifdef __cplusplus
+}
+#endif
+
+/*
+ * Include before overriding, or the #undefs hit macros that do not exist yet:
+ * this header is force-included ahead of every vendor source. The `_DEC_LOG_H`
+ * guard then makes the later in-source include a no-op, so these win.
+ */
+#include "dec_log.h"
+
+#undef  APITRACEERR
+#undef  APITRACEWARN
+#undef  CONFIGTRACE_W
+#undef  DPB_TRACE_E
+#undef  DTRACE_E
+
+#define APITRACEERR(...)            VCDJ_VENDOR_TRACE(__VA_ARGS__)
+#define APITRACEWARN(...)           VCDJ_VENDOR_TRACE(__VA_ARGS__)
+#define CONFIGTRACE_W(...)          VCDJ_VENDOR_TRACE(__VA_ARGS__)
+#define DPB_TRACE_E(...)            VCDJ_VENDOR_TRACE(__VA_ARGS__)
+#define DTRACE_E(...)               VCDJ_VENDOR_TRACE(__VA_ARGS__)
+
 /*============================================================================*
  *                        Header Files
  *============================================================================*/

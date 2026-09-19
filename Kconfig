@@ -8,11 +8,6 @@ config REALTEK_DISPLAY_ENABLE_VCDJ
     default n
     help
         Driver for the VeriSilicon (Hantro) VC9000DJ DecoderJ image decoding IP,
-        hardware build ID 0x2070. A different IP from the Realtek JPU, sharing no
-        register or clock code with it.
-
-        The register base, IRQ, clock and reset contract for this SoC has not been
-        delivered yet, so the low level layer is still placeholder code: the driver
-        compiles, links and walks the whole vendor call path, but does not decode.
+        hardware build ID 0x2070.
 
         This is the driver's only build-time option.

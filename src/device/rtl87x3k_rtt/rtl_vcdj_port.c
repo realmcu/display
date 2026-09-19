@@ -45,6 +45,7 @@
  */
 #include <stddef.h>
 #include <stdint.h>
+#include <stdarg.h>
 
 #include <rtthread.h>
 #include <rthw.h>
@@ -58,6 +59,9 @@
 #ifndef VCDJ_HW_TIMEOUT_MS
 #define VCDJ_HW_TIMEOUT_MS      2000U
 #endif
+
+/* Matches RT_CONSOLEBUF_SIZE: raising it alone would not widen the console. */
+#define VCDJ_CONSOLE_LINE_MAX   128U
 
 /** Guard word placed in front of every aligned allocation. */
 #define VCDJ_ALLOC_MAGIC        0x56434A41U     /* 'VCJA' */
@@ -824,3 +828,61 @@ void vcdj_os_delay_us(uint32_t us)
         rt_hw_us_delay(us);
     }
 }
+
+/*============================================================================*
+ *                        Console sinks
+ *============================================================================*/
+/*
+ * Both sinks live here rather than in src/common/, which may not include an OS
+ * header. Each renders into a local buffer first because ISO C cannot forward a
+ * `va_list` to rt_kprintf(); rt_vsnprintf() is the kernel formatter, so no newlib
+ * stdio is pulled back in.
+ */
+
+/**
+ * \brief Driver-side console sink, see vcdj_plat_log() in rtl_vcdj_internal.h.
+ *
+ * rt_kprintf() writes straight to the console device, which is what the contract
+ * asks for: a message must survive a fault right after it rather than sit in a
+ * deferred buffer.
+ */
+void vcdj_plat_log(const char *fmt, ...)
+{
+    char line[VCDJ_CONSOLE_LINE_MAX];
+    va_list args;
+
+    if (fmt == NULL)
+    {
+        return;
+    }
+
+    va_start(args, fmt);
+    (void)rt_vsnprintf(line, sizeof(line), fmt, args);
+    va_end(args);
+
+    /* Callers supply their own "[vcdj]" tag. */
+    rt_kprintf("%s", line);
+}
+
+#if defined(VCDJ_ENABLE_VENDOR_TRACE)
+
+/** \brief Console sink for the vendor trace macros (see inc/rtl_vcdj_vendor.h). */
+void vcdj_vendor_trace(const char *fmt, ...)
+{
+    char line[VCDJ_CONSOLE_LINE_MAX];
+    va_list args;
+
+    if (fmt == NULL)
+    {
+        return;
+    }
+
+    va_start(args, fmt);
+    (void)rt_vsnprintf(line, sizeof(line), fmt, args);
+    va_end(args);
+
+    /* Vendor messages carry no prefix of their own. */
+    rt_kprintf("[vcdj-vendor] %s", line);
+}
+
+#endif /* VCDJ_ENABLE_VENDOR_TRACE */

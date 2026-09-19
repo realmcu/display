@@ -151,6 +151,22 @@ struct vcdj_platform_config
 const struct vcdj_platform_config *vcdj_platform_get_config(void);
 
 /*============================================================================*
+ *                        Diagnostic console
+ *============================================================================*/
+/**
+ * \brief Unbuffered diagnostic print, implemented by `src/device/<soc>/`.
+ *
+ * The one log seam of this driver, so that no file outside the platform layer
+ * needs an OS header: RT-Thread reaches rt_kprintf(), the Realtek SDK port
+ * reaches DBG_DIRECT(). Must write straight to the console rather than a
+ * deferred buffer, because a message has to survive a fault right after it.
+ *
+ * Only `src/test/vcdj_selftest.c` calls this; the three driver translation units
+ * in src/common/ emit no log at all.
+ */
+void vcdj_plat_log(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
+
+/*============================================================================*
  *                        Allocator injection
  *============================================================================*/
 /**
@@ -300,9 +316,46 @@ void vcdj_os_delay_us(uint32_t us);
  *                        Cross-file driver internals
  *============================================================================*/
 /**
- * Shared between `rtl_vcdj_hal.c` and the self test inside it. Deliberately uses
- * `void *` rather than a vendor type so this header stays vendor-header-free.
+ * Shared between `rtl_vcdj_hal.c` and the bring-up self test in
+ * `src/test/vcdj_selftest.c`. Deliberately uses `void *` rather than a vendor
+ * type so this header stays vendor-header-free - which is also what lets the
+ * self test live in its own translation unit without duplicating any of the
+ * facade's internals.
  */
+
+/*
+ * Upper bound on the output buffers one decode registers with the vendor.
+ *
+ * Here rather than in rtl_vcdj_hal.c because it is the `capacity` argument of
+ * vcdj_internal_add_jpeg_buffers() / vcdj_internal_add_png_buffers() below: both
+ * callers size their `buffers[]` array with it, so a copy per file could drift
+ * and overflow the array the helper writes into.
+ *
+ * NOT a guess: both codecs hardcode a single output buffer -
+ * `JpegSetExternalBufferInfo()` and `PngSetExternalBufferInfo()` each open with
+ * `u32 buffers = 1` and never raise it, so `DecBufferInfo.buf_num` is always 1
+ * for this Control Software drop. Two slots are kept rather than one because the
+ * re-allocation protocol hands back the old buffer while asking for a bigger one,
+ * so both can be live for the duration of one negotiation round.
+ *
+ * The vendor's own ceiling is `MAX_PIC_BUFFERS` (34, see dwl.h); exceeding it is
+ * reported as `DEC_EXT_BUFFER_REJECTED`. We stay far below it deliberately -
+ * this driver decodes one still picture at a time.
+ */
+#define VCDJ_MAX_EXTERNAL_BUFFERS       2U
+
+/*
+ * Bound on the `Decode -> DEC_WAITING_FOR_BUFFER -> AddBuffer -> Decode` rounds.
+ *
+ * Three is derived, not picked: with `use_adaptive_buffers == 0` (our config)
+ * the JPEG path returns DEC_WAITING_FOR_BUFFER once because the picture geometry
+ * differs from the previous one - and `prev_display_width` starts at 0, so the
+ * FIRST picture always trips it (jpegdecapi.c, the `prev_display_width !=
+ * display_width` branch). A second round can follow if the reported size grew.
+ * Three leaves one spare round; a fourth would mean the negotiation is not
+ * converging, which is a defect to surface rather than to keep retrying.
+ */
+#define VCDJ_MAX_BUFFER_NEGOTIATIONS    3U
 
 /** \brief Active DWL instance, or NULL before hal_vcdj_init(). */
 const void *vcdj_internal_dwl(void);

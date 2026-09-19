@@ -1,4 +1,4 @@
-#
+﻿#
 # Copyright (c) 2026, Realtek Semiconductor Corporation
 #
 # SPDX-License-Identifier: Apache-2.0
@@ -20,6 +20,7 @@ PLATFORM = 'src/device/rtl87x3k_rtt'
 include_path = [
     cwd + '/inc',
     cwd + '/src/common',
+    cwd + '/src/test',
     cwd + '/' + PLATFORM,
     cwd + '/' + CTRLSW + '/inc',
     cwd + '/' + CTRLSW + '/config',
@@ -37,6 +38,8 @@ src = [
     'src/common/rtl_vcdj_dwl.c',
     'src/common/rtl_vcdj_core.c',
     PLATFORM + '/rtl_vcdj_port.c',
+    'src/test/vcdj_test_stream.c',
+    'src/test/vcdj_selftest.c',
 ]
 
 # Two groups because SCons has no per-source-file compile option: vendor sources

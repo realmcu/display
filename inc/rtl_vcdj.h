@@ -471,28 +471,11 @@ vcdj_error_t hal_vcdj_decode_pp(const vcdj_dec_param_t *param,
  */
 vcdj_error_t hal_vcdj_picture_release(vcdj_picture_t *pic);
 
-#if defined(VCDJ_ENABLE_SELFTEST)
-/**
- * @brief      M1 self test: walk the whole vendor call path and report each step.
- *
- * @param[in]  jpeg      JPEG bitstream to feed the parser and the decoder.
- * @param[in]  jpeg_size Length of \p jpeg in bytes.
- *
- * @return     \ref VCDJ_SUCCESS only if a picture was actually produced.
- *             \ref VCDJ_ERR_TIMEOUT is the expected result while the hardware
- *             contract is open: it proves that the vendor code path is reachable,
- *             that the bounded wait works and that nothing spins forever.
- *
- * @note       Progress is printed with printf(). The software header parse result
- *             is checked against the bitstream, which is the one piece of real
- *             functional verification possible at this stage.
- *
- * @note       Compiled while VCDJ_ENABLE_SELFTEST is defined. That macro is set
- *             unconditionally in rtl_vcdj_vendor.h during bring-up; remove it
- *             there (and from the Keil project <Define>) for a production image.
+/*
+ * The bring-up self test is NOT declared here. It is test code, not a driver
+ * requirement, so it lives in `src/test/vcdj_selftest.h` and this header stays
+ * limited to the decode interface a product feature uses.
  */
-vcdj_error_t hal_vcdj_selftest(const void *jpeg, uint32_t jpeg_size);
-#endif
 
 /** End of VCDJ
   * \}
