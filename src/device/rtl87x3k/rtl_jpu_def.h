@@ -7,10 +7,7 @@
 #ifndef RTL_JPU_REG_H
 #define RTL_JPU_REG_H
 
-#ifdef __arm__
-#include "address_map.h"
-#include "rtl876x.h"
-#endif
+#include "rtl_jpu_port.h"
 
 
 #ifdef  __cplusplus
@@ -20,7 +17,7 @@ extern "C" {
 /*============================================================================*
  *                         JPU Defines
  *============================================================================*/
-#define JPU_REG_BASE                  0x4002A000UL
+#define JPU_REG_BASE                  0x40640000UL
 #define JPU_WRAPPER_REG_BASE          0x4002A800UL
 
 

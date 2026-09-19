@@ -4,16 +4,12 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 config REALTEK_DISPLAY_ENABLE_JPU
-    bool "Enable Realtek JPU (JPEG hardware codec)"
+    bool "Enable JPU (CodaJ12 JPEG codec)"
     default n
     help
-        Driver for the Realtek JPU JPEG codec IP. A different IP from the
-        VeriSilicon VC9000DJ DecoderJ, sharing no register or clock code with it.
+        Driver for the CodaJ12 JPEG codec IP.
 
-        The driver still targets the Realtek RTOS SDK: it includes rtl876x.h,
-        address_map.h, os_mem.h and trace.h, none of which exist in this
-        RT-Thread workspace. Turning this on will therefore fail to compile until
-        an RT-Thread platform layer is added, the way vcdj has one under
-        src/device/rtl87x3k_rtt/.
+        The OS is not selected here: inc/rtl_jpu_port.h branches on JPU_OS_*,
+        which SConscript and CMake each state for their own target.
 
         This is the driver's only build-time option.

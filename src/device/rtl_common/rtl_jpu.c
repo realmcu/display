@@ -9,7 +9,6 @@
  *============================================================================*/
 #include "stdio.h"
 #include "rtl_jpu.h"
-#include "trace.h"
 #include "string.h"
 // #include "rtl_jpu_int.h"
 
@@ -475,7 +474,7 @@ static int JPU_EncGenHuffTab(JPU_ENC_CFG *pEncInfo, int tabNum)
     int p, i, l, lastp, si, maxsymbol;
     int code;
     uint8_t *bitleng, *huffval;
-    unsigned int *ehufco, *ehufsi;
+    uint32_t *ehufco, *ehufsi;
 
     bitleng = pEncInfo->pHuffBits[tabNum];
     huffval = pEncInfo->pHuffVal[tabNum];
@@ -1015,12 +1014,12 @@ static int JPU_EncLoadQMatTab(JPU_ENC_CFG *pEncInfo)
 
 void JPU_Clk_Init(void)
 {
-    RCC_PeriphClockCmd(APBPeriph_JPEG, APBPeriph_JPEG_CLOCK, ENABLE);
+    JPU_PORT_CLK_ENABLE();
 }
 
 void JPU_Clk_Deinit(void)
 {
-    RCC_PeriphClockCmd(APBPeriph_JPEG, APBPeriph_JPEG_CLOCK, DISABLE);
+    JPU_PORT_CLK_DISABLE();
 }
 
 void JPU_Reset(void)

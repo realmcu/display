@@ -18,13 +18,9 @@ extern "C" {
  *                        Header Files
  *============================================================================*/
 
+/* rtl_jpu_def.h pulls in rtl_jpu_port.h, which supplies the OS headers. */
 #include "rtl_jpu_def.h"
 #include <stdbool.h>
-
-#ifdef __arm__
-#include "rtl876x.h"
-#include "rtl876x_rcc.h"
-#endif
 
 
 /** \defgroup JPU       JPU

@@ -9,9 +9,7 @@
  *============================================================================*/
 #include <stdio.h>
 #include <string.h>
-#include "os_mem.h"
 #include "rtl_hal_jpu.h"
-#include "trace.h"
 
 
 
@@ -854,8 +852,8 @@ static int decode_sos_header(JPU_DEC_INFO *jpg)
 
 static void genDecHuffTab(JPU_DEC_INFO *jpg, int tabNum)
 {
-    unsigned char *huffPtr, *huffBits;
-    unsigned int *huffMax, *huffMin;
+    uint8_t *huffPtr, *huffBits;
+    uint32_t *huffMax, *huffMin;
 
     int ptrCnt = 0;
     int huffCode = 0;
