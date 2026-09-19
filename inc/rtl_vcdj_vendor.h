@@ -49,11 +49,9 @@
 
 /*
  * Vendor trace, OFF by default: without VCD_LOGMSG the five dec_log.h macros
- * below expand to `fprintf(stderr, ...)` at 302 call sites, costing ~38 KB of
- * newlib stdio for output nothing on this target reads. Define
- * VCDJ_ENABLE_VENDOR_TRACE for a diagnostic build. The off case is not
- * `((void)0)`: `sizeof` keeps the format checking and the argument evaluation
- * that discarding __VA_ARGS__ would lose, while generating no code.
+ * below expand to fprintf(stderr, ...), which this target has no stderr for, so
+ * they are redirected to the platform console sink vcdj_vendor_trace(). Define
+ * VCDJ_ENABLE_VENDOR_TRACE for a diagnostic build.
  */
 #ifdef __cplusplus
 extern "C" {
@@ -64,7 +62,7 @@ extern "C" {
 void vcdj_vendor_trace(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 #define VCDJ_VENDOR_TRACE(...)      vcdj_vendor_trace(__VA_ARGS__)
 #else
-/* Never defined: unevaluated inside sizeof, so it resolves to no symbol. */
+/* Declared for its format attribute only; never called, so never defined. */
 int vcdj_vendor_trace_check(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 #define VCDJ_VENDOR_TRACE(...)      ((void)sizeof(vcdj_vendor_trace_check(__VA_ARGS__)))
 #endif
@@ -74,9 +72,10 @@ int vcdj_vendor_trace_check(const char *fmt, ...) __attribute__((format(printf, 
 #endif
 
 /*
- * Include before overriding, or the #undefs hit macros that do not exist yet:
- * this header is force-included ahead of every vendor source. The `_DEC_LOG_H`
- * guard then makes the later in-source include a no-op, so these win.
+ * Include before overriding, or the #undefs hit macros that do not exist yet.
+ * Because this header is force-included ahead of every vendor source, pulling
+ * dec_log.h in here trips its `_DEC_LOG_H` guard first, which turns the later
+ * in-source include into a no-op and leaves the overrides below in force.
  */
 #include "dec_log.h"
 
