@@ -167,8 +167,7 @@ typedef struct
     2       R/W      stop_codec                               0x0
     3       R        reserved                                 0x0
     4       R/W      start_codec                              0x0
-    5       R/W      start_slice_dec                          0x0
-    31:6    R        reserved                                 0x0
+    31:5    R        reserved                                 0x0
 */
 typedef union
 {
@@ -180,8 +179,7 @@ typedef union
         uint32_t stop_codec: 1;
         const uint32_t reserved_1: 1;
         uint32_t start_codec: 1;
-        uint32_t start_slice_dec: 1;
-        const uint32_t reserved_2: 26;
+        const uint32_t reserved_2: 27;
         } b;
     } JPU_PIC_START_TypeDef;
 
@@ -191,13 +189,9 @@ typedef union
         0       R/W      jpg_done                                0x0
         1       R/W      jpg_err                                 0x0
         2       R/W      bbc_int                                 0x0
-        3       R/W      jpg_pb_of                               0x0
-        4       R/W      jpg_pb_0                                0x0
-        5       R/W      jpg_pb_1                                0x0
-        6       R/W      jpg_pb_2                                0x0
-        7       R/W      jpg_pb_3                                0x0
-        8       R/W      jpg_stop                                0x0
-        31:9    R        reserved                                0x0
+        8:3     R        reserved                                0x0
+        9       R/W      slice_done                              0x0
+        31:10   R        reserved                                0x0
     */
     typedef union
         {
@@ -208,13 +202,9 @@ typedef union
                 uint32_t jpg_done:  1;
                 uint32_t jpg_err:   1;
                 uint32_t bbc_int:   1;
-                uint32_t jpg_pb_of: 1;
-                uint32_t jpg_pb_0:  1;
-                uint32_t jpg_pb_1:  1;
-                uint32_t jpg_pb_2:  1;
-                uint32_t jpg_pb_3:  1;
-                uint32_t jpg_stop:  1;
-                const uint32_t reserved_0: 23;
+                const uint32_t reserved_0: 6;
+                uint32_t slice_done: 1;
+                const uint32_t reserved_1: 22;
             } b;
         } JPU_PIC_STATUS_TypeDef;
 
@@ -431,9 +421,7 @@ typedef union
 
     /* 0x2C
         3:0        R/W      mcu_req_num                  0x1
-        6:4        R/W      pb_num                       0x0
-        15:7       R        reserved                     0x0
-        31:16      R/W      pb_line                      0x10
+        31:4       R        reserved                     0x0
     */
     typedef union
         {
@@ -442,9 +430,7 @@ typedef union
             struct
             {
                 uint32_t mcu_req_num: 4;
-                uint32_t pb_num: 3;
-                const uint32_t reserved_0: 9;
-                uint32_t pb_line: 16;
+                const uint32_t reserved_0: 28;
             } b;
         } JPU_OP_INFO_TypeDef;
 
@@ -996,8 +982,8 @@ typedef union
         } JPU_DPCM_DIFF_Y_TypeDef;
 
     /* 0xF4
-        15:0     R/W      dc_predict_cmp1           0x0
-        31:16    R        reserved                  0x0
+        11:0     R/W      dc_predict_cmp1           0x0
+        31:12    R        reserved                  0x0
     */
     typedef union
         {
@@ -1005,14 +991,14 @@ typedef union
             uint8_t d8[4];
             struct
             {
-                uint32_t dc_predict_cmp1: 16;
-                const uint32_t reserved_0: 16;
+                uint32_t dc_predict_cmp1: 12;
+                const uint32_t reserved_0: 20;
             } b;
         } JPU_DPCM_DIFF_CB_TypeDef;
 
     /* 0xF8
-        15:0     R/W      dc_predict_cmp2           0x0
-        31:16    R        reserved                  0x0
+        11:0     R/W      dc_predict_cmp2           0x0
+        31:12    R        reserved                  0x0
     */
     typedef union
         {
@@ -1020,8 +1006,8 @@ typedef union
             uint8_t d8[4];
             struct
             {
-                uint32_t dc_predict_cmp2: 16;
-                const uint32_t reserved_0: 16;
+                uint32_t dc_predict_cmp2: 12;
+                const uint32_t reserved_0: 20;
             } b;
         } JPU_DPCM_DIFF_CR_TypeDef;
 
@@ -1131,8 +1117,7 @@ typedef union
         } JPU_GBU_TT_CNT_H_TypeDef;
 
     /* 0x120
-        7:0     W        data_8b                   0x0
-        31:8    R        reserved                  0x0
+        31:0    W        data_8b                   0x0
     */
     typedef union
         {
@@ -1140,8 +1125,7 @@ typedef union
             uint8_t d8[4];
             struct
             {
-                uint32_t data_8b: 8;
-                const uint32_t reserved_0: 24;
+                uint32_t data_8b: 32;
             } b;
         } JPU_GBU_PBIT_08_TypeDef;
 

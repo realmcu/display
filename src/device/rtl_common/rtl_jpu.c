@@ -1188,8 +1188,6 @@ uint32_t JPU_Decode(JPU_DEC_CFG *config)
     JPU->ROT_INFO = jpu_reg_0x1c.d32;
 
     JPU_OP_INFO_TypeDef jpu_reg_0x2c = {.d32 = 0};
-    jpu_reg_0x2c.b.pb_line = config->lineNum;
-    jpu_reg_0x2c.b.pb_num = config->bufNum;
     jpu_reg_0x2c.b.mcu_req_num = config->busReqNum;
     JPU->OP_INFO = jpu_reg_0x2c.d32;
 
@@ -1519,8 +1517,6 @@ uint32_t JPU_Encode(JPU_ENC_CFG *config)
     JPU->BBC_CTRL = jpu_reg_0x228.d32;
 
     JPU_OP_INFO_TypeDef jpu_reg_0x2c = {.d32 = 0};
-    jpu_reg_0x2c.b.pb_line = config->lineNum;
-    jpu_reg_0x2c.b.pb_num = config->bufNum;
     jpu_reg_0x2c.b.mcu_req_num = config->busReqNum;
     JPU->OP_INFO = jpu_reg_0x2c.d32;
 
