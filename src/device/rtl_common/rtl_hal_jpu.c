@@ -1136,7 +1136,6 @@ DONE_DEC_HEADER:
         // jpg->busReqNum = 1;
         jpg->mcuBlockNum = 6;
         jpg->compNum = 3;
-        jpg->compInfo[0] = 10;
         jpg->compInfo[1] = 5;
         jpg->compInfo[2] = 5;
         jpg->alignedWidth = ((jpg->picWidth + 15) & ~15);
@@ -1148,7 +1147,6 @@ DONE_DEC_HEADER:
         jpg->busReqNum = 3;
         jpg->mcuBlockNum = 4;
         jpg->compNum = 3;
-        jpg->compInfo[0] = 9;
         jpg->compInfo[1] = 5;
         jpg->compInfo[2] = 5;
         jpg->alignedWidth = ((jpg->picWidth + 15) & ~15);
@@ -1160,7 +1158,6 @@ DONE_DEC_HEADER:
         jpg->busReqNum = 3;
         jpg->mcuBlockNum = 4;
         jpg->compNum = 3;
-        jpg->compInfo[0] = 6;
         jpg->compInfo[1] = 5;
         jpg->compInfo[2] = 5;
         jpg->alignedWidth = ((jpg->picWidth + 7) & ~7);
@@ -1172,7 +1169,6 @@ DONE_DEC_HEADER:
         jpg->busReqNum = 4;
         jpg->mcuBlockNum = 3;
         jpg->compNum = 3;
-        jpg->compInfo[0] = 5;
         jpg->compInfo[1] = 5;
         jpg->compInfo[2] = 5;
         jpg->alignedWidth = ((jpg->picWidth + 7) & ~7);
@@ -1184,7 +1180,6 @@ DONE_DEC_HEADER:
         jpg->busReqNum = 4;
         jpg->mcuBlockNum = 1;
         jpg->compNum = 1;
-        jpg->compInfo[0] = 5;
         jpg->compInfo[1] = 0;
         jpg->compInfo[2] = 0;
         jpg->alignedWidth = ((jpg->picWidth + 7) & ~7);
@@ -1193,6 +1188,8 @@ DONE_DEC_HEADER:
         jpg->mcuHeight = 8;
         break;
     }
+
+    jpg->compInfo[0] = (jpg->mcuWidth >> 3) << 3 | (jpg->mcuHeight >> 3);
 
     return 1;
 }
@@ -2082,6 +2079,8 @@ JPU_ERROR hal_jpu_encode(JPU_ENC_PARAM *enc_param, uint8_t **jpg_buff, uint32_t 
 
 
     // comp info
+    uint32_t mcu_w = 8;
+    uint32_t mcu_h = 8;
     switch (param->jpgFormat)
     {
     case JPU_FORMAT_420:
@@ -2089,7 +2088,8 @@ JPU_ERROR hal_jpu_encode(JPU_ENC_PARAM *enc_param, uint8_t **jpg_buff, uint32_t 
             info->compNum = 3;
             info->mcuBlockNum = 6;
             info->busReqNum = 2;
-            info->compInfo[0] = 10;
+            mcu_w = 16;
+            mcu_h = 16;
             info->compInfo[1] = 5;
             info->compInfo[2] = 5;
         }
@@ -2099,7 +2099,8 @@ JPU_ERROR hal_jpu_encode(JPU_ENC_PARAM *enc_param, uint8_t **jpg_buff, uint32_t 
             info->compNum = 3;
             info->mcuBlockNum = 4;
             info->busReqNum = 3;
-            info->compInfo[0] = 9;
+            mcu_w = 16;
+            mcu_h = 8;
             info->compInfo[1] = 5;
             info->compInfo[2] = 5;
         }
@@ -2109,7 +2110,8 @@ JPU_ERROR hal_jpu_encode(JPU_ENC_PARAM *enc_param, uint8_t **jpg_buff, uint32_t 
             info->compNum = 3;
             info->mcuBlockNum = 4;
             info->busReqNum  = 3;
-            info->compInfo[0] = 6;
+            mcu_w = 8;
+            mcu_h = 16;
             info->compInfo[1] = 5;
             info->compInfo[2] = 5;
         }
@@ -2119,7 +2121,6 @@ JPU_ERROR hal_jpu_encode(JPU_ENC_PARAM *enc_param, uint8_t **jpg_buff, uint32_t 
             info->compNum = 3;
             info->mcuBlockNum = 3;
             info->busReqNum = 4;
-            info->compInfo[0] = 5;
             info->compInfo[1] = 5;
             info->compInfo[2] = 5;
         }
@@ -2129,12 +2130,13 @@ JPU_ERROR hal_jpu_encode(JPU_ENC_PARAM *enc_param, uint8_t **jpg_buff, uint32_t 
             info->compNum = 1;
             info->mcuBlockNum = 1;
             info->busReqNum = 4;
-            info->compInfo[0] = 5;
             info->compInfo[1] = 0;
             info->compInfo[2] = 0;
         }
         break;
     }
+
+    info->compInfo[0] = (mcu_w >> 3) << 3 | (mcu_h >> 3);
 
 
 

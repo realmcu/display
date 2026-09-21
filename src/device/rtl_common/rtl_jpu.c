@@ -1164,10 +1164,10 @@ uint32_t JPU_Decode(JPU_DEC_CFG *config)
     JPU_MCU_INFO_TypeDef jpu_reg_0x18 = {.d32 = 0};
     jpu_reg_0x18.b.block_num = config->mcuBlockNum;
     jpu_reg_0x18.b.cmp_num = config->compNum;
-    jpu_reg_0x18.b.cmp0_v_sf = config->compInfo[0];
-    jpu_reg_0x18.b.cmp1_v_sf = config->compInfo[1];
-    jpu_reg_0x18.b.cmp2_v_sf = config->compInfo[2];
-    jpu_reg_0x18.b.cmp0_h_sf = config->compInfo[0] >> 2;
+    jpu_reg_0x18.b.cmp0_v_sf = config->compInfo[0] & 0x7;
+    jpu_reg_0x18.b.cmp1_v_sf = config->compInfo[1] & 0x3;
+    jpu_reg_0x18.b.cmp2_v_sf = config->compInfo[2] & 0x3;
+    jpu_reg_0x18.b.cmp0_h_sf = config->compInfo[0] >> 3;
     jpu_reg_0x18.b.cmp1_h_sf = config->compInfo[1] >> 2;
     jpu_reg_0x18.b.cmp2_h_sf = config->compInfo[2] >> 2;
     JPU->MCU_INFO = jpu_reg_0x18.d32;
@@ -1460,7 +1460,9 @@ uint32_t JPU_Encode(JPU_ENC_CFG *config)
 
 
     JPU_PIC_CTRL_TypeDef jpu_reg_0x10 = {.d32 = 0};
-    jpu_reg_0x10.d32 = 0x18 | config->usePartial;
+    jpu_reg_0x10.b.tc_dir = 1;
+    jpu_reg_0x10.b.enc_mode = 1;
+    jpu_reg_0x10.b.op_mode = config->usePartial;
     JPU->PIC_CTRL = jpu_reg_0x10.d32;
 
     JPU_SCL_INFO_TypeDef jpu_reg_0x20 = {.d32 = 0};
@@ -1520,27 +1522,14 @@ uint32_t JPU_Encode(JPU_ENC_CFG *config)
 
     // MCU setting  EN
     JPU_MCU_INFO_TypeDef jpu_reg_0x18 = {.d32 = 0};
-    switch (config->format)
-    {
-    case JPU_FORMAT_422:
-        // DBG_DIRECT("Encode to 422 JPG");
-        jpu_reg_0x18.d32 = 0x00043955;
-        break;
-    case JPU_FORMAT_444:
-        // DBG_DIRECT("Encode to 444 JPG");
-        // different from sw package original value
-        jpu_reg_0x18.d32 = 0x00133555;
-        break;
-    case JPU_FORMAT_420:
-        // DBG_DIRECT("Encode to 420 JPG");
-        jpu_reg_0x18.d32 = 0x00063A55;
-        break;
-    default:
-        jpu_reg_0x18.d32 = config->mcuBlockNum << 16 | config->compNum << 12
-                           | config->compInfo[0] << 8 | config->compInfo[1] << 4 | config->compInfo[2];
-        // DBG_DIRECT("MCU: Ori 0x%x", jpu_reg_0x18.d32);
-        break;
-    }
+    jpu_reg_0x18.b.block_num = config->mcuBlockNum;
+    jpu_reg_0x18.b.cmp_num = config->compNum;
+    jpu_reg_0x18.b.cmp0_v_sf = config->compInfo[0] & 0x7;
+    jpu_reg_0x18.b.cmp1_v_sf = config->compInfo[1] & 0x3;
+    jpu_reg_0x18.b.cmp2_v_sf = config->compInfo[2] & 0x3;
+    jpu_reg_0x18.b.cmp0_h_sf = config->compInfo[0] >> 3;
+    jpu_reg_0x18.b.cmp1_h_sf = config->compInfo[1] >> 2;
+    jpu_reg_0x18.b.cmp2_h_sf = config->compInfo[2] >> 2;
     JPU->MCU_INFO = jpu_reg_0x18.d32;
 
     jpu_reg_0x100.d32 = config->stuffByteEnable << 3; // stuffing "FF" data where frame end

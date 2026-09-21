@@ -260,9 +260,9 @@ typedef union
         4       R/W      tc_dir                              0x0
         5       R        reserved                            0x0
         6       R/W      usr_ht_en                           0x0
-        9:7     R/W      dc_ht_idx                           0x0
-        12:10   R/W      ac_ht_idx                           0x0
-        31:13   R        reserved                            0x0
+        12:7    R/W      dc_ht_idx                           0x0
+        18:13   R/W      ac_ht_idx                           0x0
+        31:19   R        reserved                            0x0
     */
     typedef union
         {
@@ -276,9 +276,9 @@ typedef union
                 uint32_t tc_dir: 1;
                 const uint32_t reserved_0: 1;
                 uint32_t usr_ht_en: 1;
-                uint32_t dc_ht_idx: 3;
-                uint32_t ac_ht_idx: 3;
-                const uint32_t reserved_1: 19;
+                uint32_t dc_ht_idx: 6;
+                uint32_t ac_ht_idx: 6;
+                const uint32_t reserved_1: 13;
             } b;
         } JPU_PIC_CTRL_TypeDef;
 
@@ -306,11 +306,11 @@ typedef union
         3:2      R/W    cmp2_h_sf                 0x0
         5:4      R/W    cmp1_v_sf                 0x0
         7:6      R/W    cmp1_h_sf                 0x0
-        9:8      R/W    cmp0_v_sf                 0x0
-        11:10    R/W    cmp0_h_sf                 0x0
-        14:12    R/W    cmp_num                   0x0
-        19:16    R/W    block_num                 0x0
-        31:20    R      reserved                  0x0
+        10:8     R/W    cmp0_v_sf                 0x0
+        13:11    R/W    cmp0_h_sf                 0x0
+        16:14    R/W    cmp_num                   0x0
+        20:17    R/W    block_num                 0x0
+        31:21    R      reserved                  0x0
     */
     typedef union
         {
@@ -322,12 +322,11 @@ typedef union
                 uint32_t cmp2_h_sf: 2;
                 uint32_t cmp1_v_sf: 2;
                 uint32_t cmp1_h_sf: 2;
-                uint32_t cmp0_v_sf: 2;
-                uint32_t cmp0_h_sf: 2;
+                uint32_t cmp0_v_sf: 3;
+                uint32_t cmp0_h_sf: 3;
                 uint32_t cmp_num: 3;
-                const uint32_t reserved_0: 1;
                 uint32_t block_num: 4;
-                const uint32_t reserved_1: 13;
+                const uint32_t reserved_0: 11;
             } b;
         } JPU_MCU_INFO_TypeDef;
 
@@ -416,9 +415,9 @@ typedef union
 
 
     /* 0x2C
-        2:0        R/W      mcu_req_num                  0x1
-        5:3        R/W      pb_num                       0x0
-        15:6       R        reserved                     0x0
+        3:0        R/W      mcu_req_num                  0x1
+        6:4        R/W      pb_num                       0x0
+        15:7       R        reserved                     0x0
         31:16      R/W      pb_line                      0x10
     */
     typedef union
@@ -427,9 +426,9 @@ typedef union
             uint8_t d8[4];
             struct
             {
-                uint32_t mcu_req_num: 3;
+                uint32_t mcu_req_num: 4;
                 uint32_t pb_num: 3;
-                const uint32_t reserved_0: 10;
+                const uint32_t reserved_0: 9;
                 uint32_t pb_line: 16;
             } b;
         } JPU_OP_INFO_TypeDef;
@@ -439,8 +438,10 @@ typedef union
     /* 0x30
         1:0        R/W      dpb_interleave_mode          0x0
         5:2        R/W      pack_mode                    0x0
-        7:6        R/W      dpb_endianess                0x0
-        31:8       R/W      reserved                     0x0
+        8:6        R/W      dpb_endianess                0x0
+        10:9       R/W      output_format                0x0
+        11         R/W      pixel_justification          0x0
+        31:12      R        reserved                     0x0
     */
     typedef union
         {
@@ -450,8 +451,10 @@ typedef union
             {
                 uint32_t dpb_interleave_mode: 2;
                 uint32_t pack_mode: 4;
-                uint32_t dpb_endianess: 2;
-                const uint32_t reserved_0: 24;
+                uint32_t dpb_endianess: 3;
+                uint32_t output_format: 2;
+                uint32_t pixel_justification: 1;
+                const uint32_t reserved_0: 20;
             } b;
         } JPU_DPB_CONFIG_TypeDef;
 
