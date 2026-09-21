@@ -271,7 +271,10 @@ typedef union
         6       R/W      usr_ht_en                           0x0
         12:7    R/W      dc_ht_idx                           0x0
         18:13   R/W      ac_ht_idx                           0x0
-        31:19   R        reserved                            0x0
+        19      R/W      tile_mode                           0x0
+        26:20   R        reserved                            0x0
+        30:27   R/W      q_prec                              0x0
+        31      R/W      prec                                0x0
     */
     typedef union
         {
@@ -287,7 +290,10 @@ typedef union
                 uint32_t usr_ht_en: 1;
                 uint32_t dc_ht_idx: 6;
                 uint32_t ac_ht_idx: 6;
-                const uint32_t reserved_1: 13;
+                uint32_t tile_mode: 1;
+                const uint32_t reserved_1: 7;
+                uint32_t q_prec: 4;
+                uint32_t prec: 1;
             } b;
         } JPU_PIC_CTRL_TypeDef;
 
@@ -990,8 +996,8 @@ typedef union
         } JPU_DPCM_DIFF_Y_TypeDef;
 
     /* 0xF4
-        11:0     R/W      dc_predict_cmp1           0x0
-        31:12    R        reserved                  0x0
+        15:0     R/W      dc_predict_cmp1           0x0
+        31:16    R        reserved                  0x0
     */
     typedef union
         {
@@ -1005,8 +1011,8 @@ typedef union
         } JPU_DPCM_DIFF_CB_TypeDef;
 
     /* 0xF8
-        11:0     R/W      dc_predict_cmp2           0x0
-        31:12    R        reserved                  0x0
+        15:0     R/W      dc_predict_cmp2           0x0
+        31:16    R        reserved                  0x0
     */
     typedef union
         {
