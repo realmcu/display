@@ -638,8 +638,8 @@ typedef union
 
 
     /* 0x64
-        15:0     R/W      dpb_lum_stride            0x0
-        31:16    R        reserved                  0x0
+        17:0     R/W      dpb_lum_stride            0x0
+        31:18    R        reserved                  0x0
     */
     typedef union
         {
@@ -647,16 +647,16 @@ typedef union
             uint8_t d8[4];
             struct
             {
-                uint32_t dpb_lum_stride: 16;
-                const uint32_t reserved_0: 16;
+                uint32_t dpb_lum_stride: 18;
+                const uint32_t reserved_0: 14;
             } b;
         } JPU_DPB_YSTRIDE_TypeDef;
 
 
 
     /* 0x68
-        15:0     R/W      dpb_chrom_stride          0x0
-        31:16    R        reserved                  0x0
+        17:0     R/W      dpb_chrom_stride          0x0
+        31:18    R        reserved                  0x0
     */
     typedef union
         {
@@ -664,8 +664,8 @@ typedef union
             uint8_t d8[4];
             struct
             {
-                uint32_t dpb_chrom_stride: 16;
-                const uint32_t reserved_0: 16;
+                uint32_t dpb_chrom_stride: 18;
+                const uint32_t reserved_0: 14;
             } b;
         } JPU_DPB_CSTRIDE_TypeDef;
 
@@ -808,8 +808,7 @@ typedef union
         } JPU_QMAT_ADDR_TypeDef;
 
     /* 0x98
-        19:0     R/W      qmat_data                  0x0
-        31:20    R        reserved                   0x0
+        31:0     R/W      qmat_data                  0x0
     */
     typedef union
         {
@@ -817,8 +816,7 @@ typedef union
             uint8_t d8[4];
             struct
             {
-                uint32_t qmat_data: 20;
-                const uint32_t reserved_0: 12;
+                uint32_t qmat_data: 32;
             } b;
         } JPU_QMAT_DATA_TypeDef;
 
@@ -861,7 +859,8 @@ typedef union
         } JPU_COEF_ADDR_TypeDef;
 
     /* 0xA8
-        31:0    R/W        coef_data                  0x0
+        15:0    R/W        coef_data                  0x0
+        31:16   R          reserved                  0x0
     */
     typedef union
         {
@@ -869,7 +868,8 @@ typedef union
             uint8_t d8[4];
             struct
             {
-                uint32_t coef_data: 32;
+                uint32_t coef_data: 16;
+                const uint32_t reserved_0: 16;
             } b;
         } JPU_COEF_DATA_TypeDef;
 
@@ -926,7 +926,8 @@ typedef union
         6       R/W      pb2                       0x0
         7       R/W      pb3                       0x0
         8       R/W      jpg_stop                  0x0
-        31:9    R        reserved                  0x0
+        9       R/W      slice_done                0x0
+        31:10   R        reserved                  0x0
     */
     typedef union
         {
@@ -943,7 +944,8 @@ typedef union
                 uint32_t pb2: 1;
                 uint32_t pb3: 1;
                 uint32_t jpg_stop: 1;
-                const uint32_t reserved_0: 23;
+                uint32_t slice_done: 1;
+                const uint32_t reserved_0: 22;
             } b;
         } JPU_INTR_MASK_TypeDef;
 
@@ -1055,7 +1057,8 @@ typedef union
         } JPU_GBU_PBIT_BUSY_TypeDef;
 
     /* 0x110
-        31:0     R/W      bit_ptr          0x0
+        5:0     R/W      bit_ptr          0x0
+        31:6    R        reserved         0x0
     */
     typedef union
         {
@@ -1063,7 +1066,8 @@ typedef union
             uint8_t d8[4];
             struct
             {
-                uint32_t bit_ptr;
+                uint32_t bit_ptr: 6;
+                const uint32_t reserved_0: 26;
             } b;
         } JPU_GBU_BT_PTR_TypeDef;
 
