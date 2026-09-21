@@ -42,6 +42,7 @@ extern "C" {
 
 #define JPU                                ((JPU_TypeDef *)JPU_REG_BASE)
 #define JPU_WRAP                           ((JPU_WRAPPER_TypeDef *)JPU_WRAPPER_REG_BASE)
+#define JPU_PROC                           ((JPU_PROC_TypeDef *)JPU_PROC_REG_BASE)
 
 
 #define DC_TABLE_INDEX0             0

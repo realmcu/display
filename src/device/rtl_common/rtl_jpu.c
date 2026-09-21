@@ -1008,6 +1008,25 @@ static int JPU_EncLoadQMatTab(JPU_ENC_CFG *pEncInfo)
 
     return 1;
 }
+
+/* Spin count, not wall-clock: only needs to bound the wait so an unresponsive
+ * codec fails the call instead of hanging the system. */
+#define JPU_POLL_MAX_SPINS          (2 * 1000 * 1000UL)
+
+static bool JPU_WaitPicStatus(JPU_PIC_STATUS_TypeDef *status)
+{
+    for (uint32_t spins = 0; spins < JPU_POLL_MAX_SPINS; spins++)
+    {
+        status->d32 = JPU->PIC_STATUS;
+        if (status->d32)
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 /*============================================================================*
  *                           Public Functions
  *============================================================================*/
@@ -1031,6 +1050,17 @@ void JPU_Reset(void)
     JPU_BBC_RD_PTR_TypeDef jpu_reg_0x210 = {.d32 = JPU->BBC_RD_PTR};
     JPU_BBC_WR_PTR_TypeDef jpu_reg_0x20c = {.d32 = JPU->BBC_WR_PTR};
 
+    /*
+     * Gates every codec run: PIC_START bit4 is only examined in S_INST_RUN,
+     * unreachable while this bit is 0.
+     *
+     * KNOWN INEFFECTIVE on the current bitfile -- the APB decode window ends at
+     * 0x8FF, so 0xC00 reads and writes as 0. The J12 software reset (bit2, poll
+     * STATUS[8:4]) is left out for the same reason.
+     */
+    JPU_INST_CTRL_START_TypeDef jpu_reg_0xc00 = {.d32 = JPU_PROC->INST_CTRL_START};
+    jpu_reg_0xc00.b.inst_start = 1;
+    JPU_PROC->INST_CTRL_START = jpu_reg_0xc00.d32;
 
     JPU->BBC_BAS_ADDR = jpu_reg_0x230.d32;
     JPU->BBC_END_ADDR = jpu_reg_0x208.d32;
@@ -1355,31 +1385,32 @@ uint32_t JPU_Decode(JPU_DEC_CFG *config)
 
     // jpu done
     JPU_PIC_STATUS_TypeDef jpu_reg_0x04 = {.d32 = JPU->PIC_STATUS};
-    while (1)
-    {
-        jpu_reg_0x04.d32 = JPU->PIC_STATUS;
-        if (jpu_reg_0x04.d32)
-        {
-            break;
-        }
-    }
+    bool timed_out = !JPU_WaitPicStatus(&jpu_reg_0x04);
 
     // wrapper done
-    if (jpu_reg_0x04.b.jpg_done && config->wrapper_en)
+    if (!timed_out && jpu_reg_0x04.b.jpg_done && config->wrapper_en)
     {
         JPU_WRAP_DONE_TypeDef jpu_wrap_reg_0x08 = {.d32 = 0};
-        while (1)
+        uint32_t spins = 0;
+        while (spins < JPU_POLL_MAX_SPINS)
         {
             jpu_wrap_reg_0x08.d32 = JPU_WRAP->WRAP_DONE;
             if (jpu_wrap_reg_0x08.d32)
             {
                 break;
             }
+            spins++;
+        }
+        if (!jpu_wrap_reg_0x08.d32)
+        {
+            timed_out = true;
         }
     }
 
+    /* Snapshot below runs on timeout too, so output_hw_info never hands the
+     * caller the previous frame's values. */
     uint32_t ret = false;
-    ret = jpu_reg_0x04.b.jpg_done ? true : false;
+    ret = (!timed_out && jpu_reg_0x04.b.jpg_done) ? true : false;
 
     output_hw_info.status.d32 = jpu_reg_0x04.d32;
     JPU_PIC_ERRMB_TypeDef jpu_reg_0x08 = {.d32 = JPU->PIC_ERRMB};
@@ -1601,17 +1632,10 @@ uint32_t JPU_Encode(JPU_ENC_CFG *config)
     JPU->PIC_START = jpu_reg_0x00.d32;
 
     // jpu done
-    while (1)
-    {
-        jpu_reg_0x04.d32 = JPU->PIC_STATUS;
-        if (jpu_reg_0x04.d32)
-        {
-            break;
-        }
-    }
+    bool timed_out = !JPU_WaitPicStatus(&jpu_reg_0x04);
 
     uint32_t ret = false;
-    ret = jpu_reg_0x04.b.jpg_done ? true : false;
+    ret = (!timed_out && jpu_reg_0x04.b.jpg_done) ? true : false;
 
     output_hw_info.status.d32 = jpu_reg_0x04.d32;
     jpu_reg_0x20c.d32 = JPU->BBC_WR_PTR;

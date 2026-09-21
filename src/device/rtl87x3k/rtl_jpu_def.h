@@ -19,6 +19,9 @@ extern "C" {
  *============================================================================*/
 #define JPU_REG_BASE                  0x40640000UL
 #define JPU_WRAPPER_REG_BASE          0x40640800UL
+/* Instance controller. Kept out of JPU_TypeDef because the wrapper above sits
+ * inside the range the IP reserves for its third instance. */
+#define JPU_PROC_REG_BASE             (JPU_REG_BASE + 0xC00UL)
 
 
 #ifdef __WIN32
@@ -142,6 +145,12 @@ typedef struct
     __I  uint32_t INT_STATUS;                                   /*< 0x18  */
     __IO uint32_t INT_CLEAR;                                    /*< 0x1C  */
 } JPU_WRAPPER_TypeDef;
+
+typedef struct
+{
+    __IO uint32_t INST_CTRL_START;                              /*< 0xC00 */
+    __IO uint32_t INST_CTRL_STATUS;                             /*< 0xC04 */
+} JPU_PROC_TypeDef;
 /*============================================================================*
  *                         JPU Declaration
  *============================================================================*/
@@ -1600,6 +1609,45 @@ typedef union
                 const uint32_t reserved_0: 31;
             } b;
         } JPU_WRAP_INT_CLR_TypeDef;
+
+    /* 0xC00
+        0       R/W      inst_start                               0x0
+        1       R/W      inst_pause                               0x0
+        2       R/W      inst_init                                0x0
+        31:3    R        reserved                                 0x0
+    */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t inst_start: 1;
+                uint32_t inst_pause: 1;
+                uint32_t inst_init: 1;
+                const uint32_t reserved_0: 29;
+            } b;
+        } JPU_INST_CTRL_START_TypeDef;
+
+    /* 0xC04
+        3:0     R/W      inst_int_pending                         0x0
+        8:4     R        inst_fsm_state                           0x0
+        31:9    R        reserved                                 0x0
+
+        inst_fsm_state: IDLE=0 LOAD=1 RUN=2 PAUSE=3 ENC=4 PIC_DONE=5 SLC_DONE=6
+        inst_int_pending is W1C per instance; the FSM stalls until it is cleared.
+    */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t inst_int_pending: 4;
+                const uint32_t inst_fsm_state: 5;
+                const uint32_t reserved_0: 23;
+            } b;
+        } JPU_INST_CTRL_STATUS_TypeDef;
 
 
 #ifdef  __cplusplus
