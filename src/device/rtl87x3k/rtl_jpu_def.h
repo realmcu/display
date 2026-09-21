@@ -18,7 +18,7 @@ extern "C" {
  *                         JPU Defines
  *============================================================================*/
 #define JPU_REG_BASE                  0x40640000UL
-#define JPU_WRAPPER_REG_BASE          0x4002A800UL
+#define JPU_WRAPPER_REG_BASE          0x40640800UL
 
 
 #ifdef __WIN32
