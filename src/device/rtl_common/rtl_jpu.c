@@ -1026,19 +1026,11 @@ void JPU_Reset(void)
 {
     JPU_Clk_Init();
 
-    JPU_PIC_START_TypeDef jpu_reg_0x00 = {.d32 = 0};
     JPU_BBC_BAS_ADDR_TypeDef jpu_reg_0x230 = {.d32 = JPU->BBC_BAS_ADDR};
     JPU_BBC_END_ADDR_TypeDef jpu_reg_0x208 = {.d32 = JPU->BBC_END_ADDR};
     JPU_BBC_RD_PTR_TypeDef jpu_reg_0x210 = {.d32 = JPU->BBC_RD_PTR};
     JPU_BBC_WR_PTR_TypeDef jpu_reg_0x20c = {.d32 = JPU->BBC_WR_PTR};
 
-    jpu_reg_0x00.b.init_codec = 1;
-    JPU->PIC_START = jpu_reg_0x00.d32;
-    do
-    {
-        jpu_reg_0x00.d32 = JPU->PIC_START;
-    }
-    while (jpu_reg_0x00.b.init_codec == 1);
 
     JPU->BBC_BAS_ADDR = jpu_reg_0x230.d32;
     JPU->BBC_END_ADDR = jpu_reg_0x208.d32;

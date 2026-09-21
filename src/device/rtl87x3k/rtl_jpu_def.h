@@ -154,11 +154,12 @@ typedef struct
  *                         JPU Registers and Field Descriptions
  *============================================================================*/
 /* 0x00
-    0       R/W      start_codec                              0x0
-    1       R/W      init_codec                               0x0
+    1:0     R        reserved                                 0x0
     2       R/W      stop_codec                               0x0
-    3       R/W      start_partial_enc                        0x0
-    31:4    R        reserved                                 0x0
+    3       R        reserved                                 0x0
+    4       R/W      start_codec                              0x0
+    5       R/W      start_slice_dec                          0x0
+    31:6    R        reserved                                 0x0
 */
 typedef union
 {
@@ -166,11 +167,12 @@ typedef union
     uint8_t d8[4];
     struct
     {
-        uint32_t start_codec: 1;
-        uint32_t init_codec: 1;
+        const uint32_t reserved_0: 2;
         uint32_t stop_codec: 1;
-        uint32_t start_partial_enc: 1;
-        const uint32_t reserved_0: 28;
+        const uint32_t reserved_1: 1;
+        uint32_t start_codec: 1;
+        uint32_t start_slice_dec: 1;
+        const uint32_t reserved_2: 26;
         } b;
     } JPU_PIC_START_TypeDef;
 
