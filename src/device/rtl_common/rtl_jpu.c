@@ -1122,7 +1122,9 @@ uint32_t JPU_Decode(JPU_DEC_CFG *config)
     if (config->strm_end_flg)
     {
         val = (config->bs_wr_ptr - config->bs_buffer_start + 255) >> 8;
-        JPU_BBC_STRM_CTRL_TypeDef jpu_reg_0x234 = {.d32 = 0};
+        /* read-modify-write: bit[28] strm_last is owned by hardware and must
+           keep its current value on any write to 0x234 */
+        JPU_BBC_STRM_CTRL_TypeDef jpu_reg_0x234 = {.d32 = JPU->BBC_STRM_CTRL};
         jpu_reg_0x234.b.eof = 1;
         jpu_reg_0x234.b.strm_cnt = val;
         JPU->BBC_STRM_CTRL = jpu_reg_0x234.d32;

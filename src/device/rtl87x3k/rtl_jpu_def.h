@@ -1439,8 +1439,11 @@ typedef union
 
     /* 0x234
         23:0     R/W      strm_cnt              0x0
-        30:24    R        reserved              0x0
+        27:24    R        reserved              0x0
+        28       R/W      strm_last             0x0
+        30:29    R        reserved              0x0
         31       R/W      eof                   0x0
+        strm_last is set by hardware: writes must preserve it (read-modify-write).
     */
     typedef union
         {
@@ -1449,7 +1452,9 @@ typedef union
             struct
             {
                 uint32_t strm_cnt: 24;
-                const uint32_t reserved_0: 7;
+                const uint32_t reserved_0: 4;
+                uint32_t strm_last: 1;
+                const uint32_t reserved_1: 2;
                 uint32_t eof: 1;
             } b;
         } JPU_BBC_STRM_CTRL_TypeDef;
