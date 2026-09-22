@@ -12,7 +12,7 @@ extern "C" {
 #endif
 
 #include "rtl_dci.h"
-#include "dci_demo_preset.h"
+#include "dci_demo_signal.h"
 
 /** \brief  Carve the pool into count buffers of bytes each. false if it will not fit. */
 bool dci_demo_buf_alloc(uint32_t bytes, uint8_t count);
@@ -31,7 +31,18 @@ bool dci_demo_buf_guards_ok(void);
 bool dci_demo_buf_has_data(uint8_t index, uint32_t bytes);
 
 /** \brief  Report a frame. Level 0 = summary + CRC, 1 = samples, 2 = full hex. */
-void dci_demo_buf_dump(const DCI_frame_t *f, const dci_demo_preset_t *p, uint8_t level);
+void dci_demo_buf_dump(const DCI_frame_t *f, const dci_demo_cfg_t *c, uint8_t level);
+
+/**
+ * \brief   Print the address and byte range of a buffer, ready for a JLink dump.
+ *
+ * The end of the RECEIVE case: the data is in RAM, capture has stopped, and the only
+ * thing left to say is where to look. Prints the savebin command line as well, because
+ * getting the length argument wrong is the usual way a dump comes back short.
+ *
+ * \param[in] f  The held frame, or NULL to describe every allocated buffer.
+ */
+void dci_demo_buf_report_range(const DCI_frame_t *f);
 
 /** \brief  Verify JPEG SOI/EOI framing, tolerating the hardware's word padding. */
 bool dci_demo_buf_jpeg_ok(const DCI_frame_t *f);

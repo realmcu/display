@@ -7,13 +7,27 @@
 /*
  * DCI demo: the test cases.
  *
- * Each case is a linear script - readable top to bottom, breakpoint-friendly on any
- * line - built from the shared setup in dci_demo.c plus whatever assertions are
- * specific to that case. Nothing here duplicates the setup sequence.
+ * Three cases: a register self test, a snapshot case and a continuous case. Each is a
+ * linear script - readable top to bottom, breakpoint-friendly on any line - built from
+ * the shared setup in dci_demo.c plus whatever assertions are specific to it. Nothing
+ * here duplicates the setup sequence.
  *
- * All capture cases use POLL notification: the driver's WaitFrame() is a bounded
- * busy-wait designed for exactly this, no OS required. The callback path is exercised
- * by the one case that opts into it.
+ * A case is a different PROCEDURE. Anything that is the same procedure with a different
+ * number in it is a macro in dci_demo_config.h instead, which is why what used to be
+ * snapshot-x2, continuous-1buf, stress and config-only are now DCI_DEMO_SHOTS,
+ * DCI_DEMO_BUF_COUNT + DCI_DEMO_FILL_MODE, DCI_DEMO_FRAMES and DCI_DEMO_NO_CAPTURE.
+ *
+ * A case takes a RESOLVED configuration (dci_demo_cfg_t): the signal row chosen by
+ * DCI_DEMO_SIGNAL with the overlay macros applied and the geometry already derived. No
+ * case recomputes a frame size, so there is exactly one formula to be wrong.
+ *
+ * Both capture cases use POLL notification, except continuous when it has to hold a
+ * frame: the driver's WaitFrame() is a bounded busy-wait designed for exactly this, no OS
+ * required, but deciding WHICH frame to keep has to happen in the frame interrupt.
+ *
+ * Interrupt counting and the frame_ready / frame_error handlers live in dci_demo_irq.c,
+ * shared by every case, because "the image looked right but the sync count drifted" is
+ * precisely the fault those counters exist to expose.
  *
  * Every case is wrapped in DEMO_CASE_IS(), so only the one selected in
  * dci_demo_config.h is compiled. That keeps an unfinished case from breaking the build
@@ -29,27 +43,23 @@
 #define DEMO_CASE_IS(c)     (DCI_DEMO_CASE == (c))
 
 /*
- * The shared helpers below are only referenced by the capture cases. Compiling them
- * for a case that never calls them would produce unused-function warnings on every
- * build, so they are gated on "is this a capture case" rather than left unconditional.
+ * The shared helpers below are only referenced by the capture cases. Compiling them for
+ * REG_TEST would produce unused-function warnings on every build, so they are gated on
+ * "is this a capture case" rather than left unconditional.
  */
 #define DEMO_IS_CAPTURE_CASE                    \
-    (DEMO_CASE_IS(DCI_DEMO_CASE_SNAPSHOT)    || \
-     DEMO_CASE_IS(DCI_DEMO_CASE_SNAPSHOT_X2) || \
-     DEMO_CASE_IS(DCI_DEMO_CASE_CONTINUOUS)  || \
-     DEMO_CASE_IS(DCI_DEMO_CASE_CONTINUOUS_1BUF) || \
-     DEMO_CASE_IS(DCI_DEMO_CASE_RECONFIG)    || \
-     DEMO_CASE_IS(DCI_DEMO_CASE_SUSPEND)     || \
-     DEMO_CASE_IS(DCI_DEMO_CASE_STRESS)      || \
-     DEMO_CASE_IS(DCI_DEMO_CASE_RAW10))
+    (DEMO_CASE_IS(DCI_DEMO_CASE_SNAPSHOT) ||    \
+     DEMO_CASE_IS(DCI_DEMO_CASE_CONTINUOUS))
 
-/* demo_check_frame() validates a delivered frame, which the two cases that only count
- * callbacks or only reconfigure never do. */
-#define DEMO_NEEDS_FRAME_CHECK                  \
-    (DEMO_CASE_IS(DCI_DEMO_CASE_SNAPSHOT)    || \
-     DEMO_CASE_IS(DCI_DEMO_CASE_SNAPSHOT_X2) || \
-     DEMO_CASE_IS(DCI_DEMO_CASE_CONTINUOUS)  || \
-     DEMO_CASE_IS(DCI_DEMO_CASE_SUSPEND))
+/*
+ * demo_check_frame() validates a delivered frame. Two builds never call it: NO_CAPTURE
+ * (no frame is ever delivered) and the continuous hold path, which deliberately asserts
+ * almost nothing - a short or long frame is what the dump is there to explain, so it is
+ * reported rather than judged.
+ */
+#define DEMO_NEEDS_FRAME_CHECK                                              \
+    ((DEMO_CASE_IS(DCI_DEMO_CASE_SNAPSHOT) && (DCI_DEMO_NO_CAPTURE == 0)) || \
+     (DEMO_CASE_IS(DCI_DEMO_CASE_CONTINUOUS) && (DCI_DEMO_CAPTURE_FRAME == 0)))
 
 /*
  * DCI_DEMO_DUMP_LEVEL applies to the cases that stop between frames. A streaming case
@@ -62,60 +72,6 @@
 #define DEMO_DUMP_STREAM        0
 
 /*============================================================================*
- *                         Callbacks
- *============================================================================*/
-/*
- * ISR context. Records and returns - no printing, because a UART write at pixel rate
- * would overrun the FIFO and the resulting OVR would be blamed on the hardware.
- */
-static volatile uint32_t demo_cb_frames;
-static volatile uint32_t demo_cb_last_seq;
-static volatile uint32_t demo_err_count;
-static volatile DCI_ERROR demo_last_err;
-static volatile uint32_t demo_last_ris;
-
-void dci_demo_on_frame_ready(const DCI_frame_t *frame)
-{
-    demo_cb_frames++;
-    demo_cb_last_seq = frame->seq;
-    /* Release immediately: this is the "hand it straight on and free it" pattern the
-     * driver explicitly supports from ISR context (DESIGN.md 11.5). */
-    DCI_Capture_ReleaseBuffer(frame->index);
-}
-
-void dci_demo_on_frame_error(DCI_ERROR err, uint32_t ris)
-{
-    demo_err_count++;
-    demo_last_err = err;
-    demo_last_ris = ris;
-}
-
-#if DEMO_IS_CAPTURE_CASE
-static void demo_cb_reset(void)
-{
-    demo_cb_frames   = 0;
-    demo_cb_last_seq = 0;
-    demo_err_count   = 0;
-    demo_last_err    = DCI_SUCCESS;
-    demo_last_ris    = 0;
-}
-
-/*
- * Errors are latched rather than acted on, so a case can distinguish "no frame
- * because nothing arrived" from "no frame because the driver rejected the frame that
- * did arrive" - two very different investigations.
- */
-static void demo_report_errors(void)
-{
-    if (demo_err_count != 0)
-    {
-        DEMO_LOG("  frame_error fired %u time(s), last err=%d ris=0x%08X",
-                 demo_err_count, demo_last_err, demo_last_ris);
-    }
-}
-#endif /* DEMO_IS_CAPTURE_CASE */
-
-/*============================================================================*
  *                         Frame validation
  *============================================================================*/
 /*
@@ -125,7 +81,7 @@ static void demo_report_errors(void)
  */
 #if DEMO_NEEDS_FRAME_CHECK
 static dci_demo_result_t demo_check_frame(const DCI_frame_t *f,
-                                          const dci_demo_preset_t *p,
+                                          const dci_demo_cfg_t *c,
                                           uint32_t expect_bytes)
 {
     if (expect_bytes != 0)
@@ -156,6 +112,8 @@ static dci_demo_result_t demo_check_frame(const DCI_frame_t *f,
         }
     }
 
+    (void)c;
+
     if (!dci_demo_buf_guards_ok())
     {
         return DEMO_FAIL_GUARD;
@@ -169,6 +127,47 @@ static dci_demo_result_t demo_check_frame(const DCI_frame_t *f,
 #endif /* DEMO_NEEDS_FRAME_CHECK */
 
 /*============================================================================*
+ *                         Dump report
+ *============================================================================*/
+/*
+ * Printed after every captured frame by both capture cases, because the address of the
+ * data is information whether or not the automatic checks passed - arguably more so when
+ * they failed. This is why there is no separate "receive" case any more: getting the
+ * bytes out is not a different procedure, it is one more line of output.
+ *
+ * A length that disagrees with the configuration is reported and NOT treated as a
+ * failure here: a short or long frame is exactly the kind of thing a dump is meant to
+ * explain, and suppressing the address would remove the only evidence. The caller still
+ * applies demo_check_frame() and decides pass/fail on its own.
+ */
+#if DEMO_IS_CAPTURE_CASE && (DCI_DEMO_NO_CAPTURE == 0)
+static void demo_report_dump(const DCI_frame_t *f, uint32_t expect, bool static_now)
+{
+    DEMO_LOG("");
+    DEMO_LOG("=========== CAPTURE COMPLETE ===========");
+    DEMO_LOG("  seq %u, buffer %u, %u B%s", (unsigned)f->seq, f->index,
+             (unsigned)f->bytes, f->truncated ? "  (TRUNCATED)" : "");
+    if (expect != 0 && f->bytes != expect)
+    {
+        DEMO_LOG("  NOTE: expected %u B - the length disagrees with the config",
+                 (unsigned)expect);
+    }
+    dci_demo_buf_report_range(f);
+    if (static_now)
+    {
+        DEMO_LOG("  capture is stopped; the data is static and will not change");
+        DEMO_LOG("  set a breakpoint here, then dump with the command above");
+    }
+    else
+    {
+        DEMO_LOG("  NOTE: capture is still running - this buffer will be rewritten.");
+        DEMO_LOG("  For a dump use the SNAPSHOT case, or set DCI_DEMO_CAPTURE_FRAME.");
+    }
+    DEMO_LOG("========================================");
+}
+#endif /* DEMO_IS_CAPTURE_CASE && !NO_CAPTURE */
+
+/*============================================================================*
  *                         Case: register self test
  *============================================================================*/
 /*
@@ -177,11 +176,11 @@ static dci_demo_result_t demo_check_frame(const DCI_frame_t *f,
  * is wrong". Those two have completely different causes.
  */
 #if DEMO_CASE_IS(DCI_DEMO_CASE_REG_TEST)
-dci_demo_result_t dci_demo_case_reg_test(const dci_demo_preset_t *p)
+dci_demo_result_t dci_demo_case_reg_test(const dci_demo_cfg_t *c)
 {
     DCI_ERROR err;
 
-    (void)p;
+    (void)c;
 
 #if (DCI_DEBUG_REG_DUMP == 1)
     err = DCI_RegTestDump();        /* prints the per-register report */
@@ -211,339 +210,189 @@ dci_demo_result_t dci_demo_case_reg_test(const dci_demo_preset_t *p)
 #endif
 
 /*============================================================================*
- *                         Case: preset table dump
+ *                         Case: snapshot
  *============================================================================*/
 /*
- * Pure software. Prints what every preset derives to, so a bad pclk ratio or an
- * impossible frame size is visible before any hardware is involved.
+ * The case to use for a JLink dump. A snapshot frame is static the moment it is
+ * delivered: CAPTURE self-clears at frame end (spec 2.5.1), so nothing is still writing
+ * to the buffer while the address is printed. dci_demo.c also skips the usual Abort()
+ * teardown for this case, because Abort() invalidates every delivered frame by contract.
+ *
+ * DCI_DEMO_NO_CAPTURE = 1 stops after the configuration is applied and dumped. That
+ * covers everything checkable without pixels - Capture_Init, the crop programming and
+ * the geometry cross-check against the driver - so signal rows and overlays can be swept
+ * on a board with no sensor attached.
+ *
+ * DCI_DEMO_SHOTS = 2 takes a second snapshot while the first is still held, which is the
+ * double-buffer rotation check: if rotation is broken the driver either overwrites the
+ * held buffer or reports BUSY. dci_demo_config.h requires BUF_COUNT = 2 for it, because
+ * two shots into one buffer would look like a passing rotation check while testing
+ * nothing.
  */
-#if DEMO_CASE_IS(DCI_DEMO_CASE_PRESET_DUMP)
-dci_demo_result_t dci_demo_case_preset_dump(const dci_demo_preset_t *unused)
-{
-    uint8_t i;
-
-    (void)unused;
-
-    dci_demo_preset_list();
-
-    DEMO_LOG("");
-    DEMO_LOG("--- derived values ---");
-    DEMO_LOG("  # pclk/line lines   frame B  buf B  fits %u KB pool?",
-             (unsigned)DCI_DEMO_POOL_KB);
-    DEMO_LOG("  (buf B > frame B means the preset crops: Init validates uncropped)");
-
-    for (i = 0; i < dci_demo_preset_count(); i++)
-    {
-        const dci_demo_preset_t *p = dci_demo_preset_get(i);
-        DCI_InitTypeDef          init;
-        uint32_t                 bytes = dci_demo_preset_frame_bytes(p);
-        /* A cropping preset has to allocate for the uncropped frame - see
-         * dci_demo_preset_init_bytes(). */
-        uint32_t                 need  = (p->fmt == DCI_FMT_JPEG)
-                                         ? (DCI_DEMO_JPEG_CAP_KB * 1024UL)
-                                         : dci_demo_preset_init_bytes(p);
-
-        dci_demo_preset_to_init(p, &init);
-
-        DEMO_LOG(" %2u %9u %5u %9u %8u  1x:%-3s 2x:%-3s", i,
-                 init.sensor_pclk_per_line, init.sensor_lines, (unsigned)bytes,
-                 (unsigned)need,
-                 (need <= DCI_DEMO_POOL_KB * 1024UL) ? "yes" : "NO",
-                 (2 * need <= DCI_DEMO_POOL_KB * 1024UL) ? "yes" : "NO");
-    }
-    return DEMO_PASS;
-}
-#endif
-
-/*============================================================================*
- *                         Case: configure only
- *============================================================================*/
-/*
- * Applies a preset and stops. Proves the configuration is accepted and the derived
- * geometry agrees, without needing a camera - which makes it the last purely local
- * check before a live signal is required.
- */
-#if DEMO_CASE_IS(DCI_DEMO_CASE_CONFIG_ONLY)
-dci_demo_result_t dci_demo_case_config_only(const dci_demo_preset_t *p)
+#if DEMO_CASE_IS(DCI_DEMO_CASE_SNAPSHOT)
+dci_demo_result_t dci_demo_case_snapshot(const dci_demo_cfg_t *c)
 {
     dci_demo_result_t r;
-    uint32_t          frame_bytes;
+    uint32_t          expect;
 
-    r = dci_demo_setup(p, dci_demo_buf_count_cfg(), DCI_ON_BUSY_GATE,
-                       DCI_NOTIFY_POLL, &frame_bytes);
+#if (DCI_DEMO_NO_CAPTURE == 1)
+
+    /* Configure only. The setup already ran Capture_Init, the crop programming and the
+     * geometry cross-check; all that is left is to prove the peripheral settled in a
+     * state that can be started, and to show the registers that were written. */
+    r = dci_demo_setup(c, dci_demo_buf_count_cfg(), dci_demo_on_busy_cfg(),
+                       DCI_NOTIFY_POLL, &expect);
     if (r != DEMO_PASS)
     {
         return r;
     }
+    (void)expect;
 
+    DEMO_LOG("  configuration accepted; not capturing "
+             "(DCI_DEMO_NO_CAPTURE = 1, no camera needed)");
+
+    /*
+     * The whole table, resolved against this build's overlay. Costs nothing here - no
+     * capture is running - and it is the pre-flight the deleted signal-dump case used to
+     * provide: a bad pclk ratio, an impossible frame size or a row the overlay rules out
+     * is visible before any hardware is involved. The overlay is printed first because
+     * the same table yields different numbers under different macros.
+     */
+    DEMO_LOG("");
+    DEMO_LOG("  overlay in force for every row below:");
+    DEMO_LOG("   crop=%d fcrc=%d bsm=%d oebs=%d lsm=%d oels=%d",
+             DCI_DEMO_OV_CROP, DCI_DEMO_OV_FCRC, DCI_DEMO_OV_BSM,
+             DCI_DEMO_OV_OEBS, DCI_DEMO_OV_LSM, DCI_DEMO_OV_OELS);
+    DEMO_LOG("");
+    dci_demo_signal_list();
+    DEMO_LOG("");
+
+#if (DCI_DEBUG_REG_DUMP == 1)
+    DCI_RegDump();
+#else
+    DEMO_LOG("  (build with DCI_DEBUG_REG_DUMP=1 to see the registers)");
+#endif
+
+    /* IDLE means configured and startable. RESET would mean Capture_Init never ran,
+     * which the setup above would already have reported. */
     if (DCI_Capture_GetState() != DCI_STATE_IDLE)
     {
         DEMO_LOG("  state %d after Init, expected IDLE", DCI_Capture_GetState());
         return DEMO_FAIL_STATE;
     }
 
-#if (DCI_DEBUG_REG_DUMP == 1)
-    DCI_RegDump();
-#endif
-    DEMO_LOG("  configuration accepted; no capture attempted");
+    /* The pool is worth printing even with no frame in it: "where is the buffer and how
+     * big is it" is the first thing needed when nothing arrives later. */
+    dci_demo_buf_report_range(NULL);
     return DEMO_PASS;
-}
-#endif
 
-/*============================================================================*
- *                         Case: probe the signal
- *============================================================================*/
-/*
- * Counts VSYNC and LINE interrupts without arming the DMA, so it measures what the
- * sensor actually emits rather than what the preset claims.
- *
- * This catches the most common integration fault there is - a preset that says 240
- * lines against a sensor configured for 480 - and it catches it as one line of
- * output instead of as a stream of FRAME_SHORT errors whose cause has to be inferred.
- */
-#if DEMO_CASE_IS(DCI_DEMO_CASE_PROBE_SIGNAL)
+#else /* capture */
 
-static volatile uint32_t demo_vsync_count;
-static volatile uint32_t demo_line_count;
-static volatile uint32_t demo_lines_measured;
+    DCI_frame_t f[DCI_DEMO_SHOTS];
+    DCI_ERROR   err;
+    uint8_t     shot;
 
-static void demo_on_vsync(void)
-{
-    /* Skip the first VSYNC: capture may have begun mid-frame, so its line count is
-     * a partial frame and would read low. */
-    if (demo_vsync_count != 0)
-    {
-        demo_lines_measured = demo_line_count;
-    }
-    demo_line_count = 0;
-    demo_vsync_count++;
-}
-
-static void demo_on_line(void)
-{
-    demo_line_count++;
-}
-
-dci_demo_result_t dci_demo_case_probe_signal(const dci_demo_preset_t *p)
-{
-    DCI_InitTypeDef init;
-    DCI_DMA_config  dma;
-    uint32_t        spin;
-    uint16_t        expect_lines;
-
-    demo_vsync_count    = 0;
-    demo_line_count     = 0;
-    demo_lines_measured = 0;
-
-    /* A buffer is still required by Capture_Init even though nothing will be written
-     * into it - one word is enough. */
-    if (!dci_demo_buf_alloc(4, 1))
-    {
-        return DEMO_FAIL_POOL;
-    }
-
-    dci_demo_preset_to_init(p, &init);
-
-    memset(&dma, 0, sizeof(dma));
-    dma.dma_channel_num = DCI_DMA_CH_AUTO;
-    dma.buf_count       = DCI_BUF_SINGLE;
-    dma.buf[0]          = dci_demo_buf_get(0);
-    dma.buf_bytes       = 4;
-    dma.notify_mode     = DCI_NOTIFY_POLL;
-    dma.vsync_event     = demo_on_vsync;
-    dma.line_event      = demo_on_line;   /* enabling LINE is the whole point here */
-
-    /* buf_bytes is deliberately smaller than a frame, which Capture_Init would
-     * normally reject - so declare a geometry of one line to keep it consistent. */
-    init.sensor_lines         = 1;
-    init.sensor_pclk_per_line = 2;
-
-    if (DCI_Capture_Init(&init, &dma) != DCI_SUCCESS)
-    {
-        DEMO_LOG("  probe Init failed");
-        return DEMO_FAIL_INIT;
-    }
-
-    /* CR.ENABLE on, CAPTURE off: the pins are sampled and the interrupts fire, but no
-     * DMA request is ever raised, so nothing is written anywhere. */
-    DCI_Cmd(ENABLE);
-
-    for (spin = 0; spin < 40000000UL && demo_vsync_count < 4; spin++)
-    {
-        __asm volatile("" ::: "memory");
-    }
-
-    DCI_Cmd(DISABLE);
-
-    expect_lines = p->crop_en ? p->crop_h : p->height;
-    if (p->lsm)
-    {
-        expect_lines = p->oels ? (expect_lines / 2) : ((expect_lines + 1) / 2);
-    }
-
-    DEMO_LOG("  vsync=%u  lines/frame measured=%u  preset declares=%u",
-             demo_vsync_count, demo_lines_measured, expect_lines);
-
-    if (demo_vsync_count == 0)
-    {
-        DEMO_LOG("  no VSYNC at all. Check, in order:");
-        DEMO_LOG("   1. sensor powered and clocked (is PIXCLK running?)");
-        DEMO_LOG("   2. VSYNC pin wired and muxed - see rtl_dci_pinmux_init() TODO(HAL)");
-        DEMO_LOG("   3. vspol matches the sensor");
-        return DEMO_FAIL_NO_VSYNC;
-    }
-    if (demo_lines_measured == 0)
-    {
-        DEMO_LOG("  VSYNC present but no LINE: check HSYNC wiring and hspol");
-        return DEMO_FAIL_LINE_COUNT;
-    }
-    if (demo_lines_measured != expect_lines)
-    {
-        DEMO_LOG("  LINE COUNT MISMATCH - the sensor is not emitting what the preset");
-        DEMO_LOG("  declares. Fix this first: every capture will desync otherwise.");
-        DEMO_LOG("   sensor really emits %u lines; either reconfigure the sensor or",
-                 demo_lines_measured);
-        DEMO_LOG("   pick/add a preset with height=%u", demo_lines_measured);
-        return DEMO_FAIL_LINE_COUNT;
-    }
-
-    DEMO_LOG("  geometry confirmed against the real signal");
-    return DEMO_PASS;
-}
-#endif
-
-/*============================================================================*
- *                         Case: snapshot
- *============================================================================*/
-#if DEMO_CASE_IS(DCI_DEMO_CASE_SNAPSHOT)
-dci_demo_result_t dci_demo_case_snapshot(const dci_demo_preset_t *p)
-{
-    DCI_frame_t       f;
-    dci_demo_result_t r;
-    uint32_t          expect;
-    DCI_ERROR         err;
-
-    demo_cb_reset();
-
-    r = dci_demo_setup(p, dci_demo_buf_count_cfg(), DCI_ON_BUSY_GATE,
+    r = dci_demo_setup(c, dci_demo_buf_count_cfg(), dci_demo_on_busy_cfg(),
                        DCI_NOTIFY_POLL, &expect);
     if (r != DEMO_PASS)
     {
         return r;
     }
 
-    err = DCI_Capture_Start(DCI_MODE_SNAPSHOT);
-    if (err != DCI_SUCCESS)
+    for (shot = 0; shot < DCI_DEMO_SHOTS; shot++)
     {
-        DEMO_LOG("  Start failed: %d", err);
-        return DEMO_FAIL_START;
+        if (DCI_DEMO_SHOTS > 1)
+        {
+            DEMO_LOG("  --- shot %u of %u ---", shot + 1u, DCI_DEMO_SHOTS);
+        }
+
+        err = DCI_Capture_Start(DCI_MODE_SNAPSHOT);
+        if (err != DCI_SUCCESS)
+        {
+            DEMO_LOG("  Start failed: %d", err);
+            return DEMO_FAIL_START;
+        }
+
+        err = DCI_Capture_WaitFrame(&f[shot], DCI_DEMO_TIMEOUT_MS);
+        if (err != DCI_SUCCESS)
+        {
+            DEMO_LOG("  no frame in %u ms: %d", DCI_DEMO_TIMEOUT_MS, err);
+            dci_demo_irq_report();
+            dci_demo_buf_report_range(NULL);
+            return DEMO_FAIL_TIMEOUT;
+        }
+
+        r = demo_check_frame(&f[shot], c, expect);
+        dci_demo_buf_dump(&f[shot], c, DEMO_DUMP_ONESHOT);
+        if (r != DEMO_PASS)
+        {
+            /* Still print the address: a frame that failed a check is precisely the one
+             * worth looking at byte by byte. */
+            demo_report_dump(&f[shot], expect, true);
+            dci_demo_irq_report();
+            return r;
+        }
+
+        /* CAPTURE self-clears after a snapshot frame, so the driver must be back to IDLE
+         * without anyone stopping it (spec 2.5.1). */
+        if (DCI_Capture_GetState() != DCI_STATE_IDLE)
+        {
+            DEMO_LOG("  state %d after snapshot, expected IDLE",
+                     DCI_Capture_GetState());
+            return DEMO_FAIL_STATE;
+        }
+
+        /* Deliberately NOT released inside the loop: holding shot 1 while shot 2 is
+         * taken is what makes the second shot a rotation test rather than a repeat. */
     }
 
-    err = DCI_Capture_WaitFrame(&f, DCI_DEMO_TIMEOUT_MS);
-    if (err != DCI_SUCCESS)
+    /*
+     * Rotation: the two shots must land in different buffers and carry consecutive
+     * sequence numbers. With one buffer there is nothing to rotate, which is why
+     * dci_demo_config.h refuses SHOTS = 2 there.
+     */
+    if (DCI_DEMO_SHOTS > 1)
     {
-        DEMO_LOG("  no frame in %u ms: %d", DCI_DEMO_TIMEOUT_MS, err);
-        demo_report_errors();
-        return DEMO_FAIL_TIMEOUT;
+        if (f[1].index == f[0].index)
+        {
+            DEMO_LOG("  both shots landed in buffer %u: rotation stalled while the "
+                     "first was still held", f[0].index);
+            r = DEMO_FAIL_SEQ;
+        }
+        else if (f[1].seq != f[0].seq + 1u)
+        {
+            DEMO_LOG("  seq %u then %u: a frame was delivered but never collected",
+                     (unsigned)f[0].seq, (unsigned)f[1].seq);
+            r = DEMO_FAIL_SEQ;
+        }
+        else
+        {
+            DEMO_LOG("  rotation ok: buffer %u then %u, seq %u then %u",
+                     f[0].index, f[1].index, (unsigned)f[0].seq, (unsigned)f[1].seq);
+        }
     }
 
-    r = demo_check_frame(&f, p, expect);
-    dci_demo_buf_dump(&f, p, DEMO_DUMP_ONESHOT);
-    DCI_Capture_ReleaseBuffer(f.index);
-
-    if (r != DEMO_PASS)
+    /*
+     * The last frame stays locked on purpose - that is the deliverable for a JLink dump,
+     * and dci_demo.c skips teardown for this case so it stays valid. Earlier shots are
+     * released: their buffers are of no further use and holding them would confuse the
+     * state a rerun starts from.
+     */
+    for (shot = 0; shot + 1u < DCI_DEMO_SHOTS; shot++)
     {
-        demo_report_errors();
-        return r;
+        DCI_Capture_ReleaseBuffer(f[shot].index);
     }
 
-    /* CAPTURE self-clears after a snapshot frame, so the driver must be back to IDLE
-     * without anyone stopping it (spec 2.5.1). */
-    if (DCI_Capture_GetState() != DCI_STATE_IDLE)
-    {
-        DEMO_LOG("  state %d after snapshot, expected IDLE", DCI_Capture_GetState());
-        return DEMO_FAIL_STATE;
-    }
+    demo_report_dump(&f[DCI_DEMO_SHOTS - 1], expect, true);
 
-    return dci_demo_check_stats(1);
-}
-#endif
-
-/*============================================================================*
- *                         Case: two snapshots, double buffered
- *============================================================================*/
-/*
- * The driver rotates the target buffer between shots so an application can process
- * shot N while shot N+1 is being taken. Verified by holding the first buffer while
- * the second shot runs - if rotation were broken, the second shot would either
- * overwrite the held buffer or fail with BUSY.
- */
-#if DEMO_CASE_IS(DCI_DEMO_CASE_SNAPSHOT_X2)
-dci_demo_result_t dci_demo_case_snapshot_x2(const dci_demo_preset_t *p)
-{
-    DCI_frame_t       f1, f2;
-    dci_demo_result_t r;
-    uint32_t          expect;
-
-    demo_cb_reset();
-
-    r = dci_demo_setup(p, 2, DCI_ON_BUSY_GATE, DCI_NOTIFY_POLL, &expect);
-    if (r != DEMO_PASS)
-    {
-        return r;
-    }
-
-    if (DCI_Capture_Start(DCI_MODE_SNAPSHOT) != DCI_SUCCESS)
-    {
-        return DEMO_FAIL_START;
-    }
-    if (DCI_Capture_WaitFrame(&f1, DCI_DEMO_TIMEOUT_MS) != DCI_SUCCESS)
-    {
-        demo_report_errors();
-        return DEMO_FAIL_TIMEOUT;
-    }
-    r = demo_check_frame(&f1, p, expect);
-    if (r != DEMO_PASS)
-    {
-        return r;
-    }
-    DEMO_LOG("  shot 1 -> buffer %u, seq %u", f1.index, f1.seq);
-
-    /* Deliberately do NOT release f1: the second shot must go elsewhere. */
-    if (DCI_Capture_Start(DCI_MODE_SNAPSHOT) != DCI_SUCCESS)
-    {
-        DEMO_LOG("  second Start failed while buffer %u held - rotation broken",
-                 f1.index);
-        return DEMO_FAIL_START;
-    }
-    if (DCI_Capture_WaitFrame(&f2, DCI_DEMO_TIMEOUT_MS) != DCI_SUCCESS)
-    {
-        demo_report_errors();
-        return DEMO_FAIL_TIMEOUT;
-    }
-    r = demo_check_frame(&f2, p, expect);
+    dci_demo_irq_report();
     if (r != DEMO_PASS)
     {
         return r;
     }
-    DEMO_LOG("  shot 2 -> buffer %u, seq %u", f2.index, f2.seq);
+    return dci_demo_check_stats(DCI_DEMO_SHOTS);
 
-    if (f2.index == f1.index)
-    {
-        DEMO_LOG("  both shots landed in buffer %u: no rotation", f1.index);
-        return DEMO_FAIL_SEQ;
-    }
-    if (f2.seq != f1.seq + 1)
-    {
-        DEMO_LOG("  seq %u -> %u, expected consecutive", f1.seq, f2.seq);
-        return DEMO_FAIL_SEQ;
-    }
-
-    dci_demo_buf_dump(&f2, p, DEMO_DUMP_ONESHOT);
-    DCI_Capture_ReleaseBuffer(f1.index);
-    DCI_Capture_ReleaseBuffer(f2.index);
-
-    return dci_demo_check_stats(2);
+#endif /* DCI_DEMO_NO_CAPTURE */
 }
 #endif
 
@@ -551,27 +400,115 @@ dci_demo_result_t dci_demo_case_snapshot_x2(const dci_demo_preset_t *p)
  *                         Case: continuous
  *============================================================================*/
 /*
- * The one case that exercises the closed descriptor ring, the FRAME/block rendezvous
- * and the gating back-pressure - none of which the snapshot path uses at all.
+ * The only case that exercises the closed descriptor ring (LLP != 0, so transfer-complete
+ * never fires and completion comes from the evt rendezvous). The snapshot path does not
+ * go near any of that.
  *
- * Two assertions matter beyond the per-frame ones: seq must not gap (a gap means a
- * frame was delivered and never collected), and consecutive frames must differ (equal
- * frames mean the DMA is replaying one buffer rather than advancing).
+ * Back-pressure comes from DCI_DEMO_FILL_MODE rather than being pinned: GATE clears
+ * CAPTURE and waits, which is the safe default; OVERWRITE with BUF_COUNT = 1 is the
+ * viewfinder configuration, and there the key assertion is that the driver never gates -
+ * suspend_count must stay 0.
+ *
+ * DCI_DEMO_FRAMES scales it from a quick check to a long soak; 1000 frames is the
+ * stress setting. DCI_DEMO_CAPTURE_FRAME != 0 switches to callback notification and
+ * keeps that frame for a dump: frames before it are received and released normally,
+ * frame N is kept, and capture is stopped from the ISR (dci_demo_irq.c). Holding uses
+ * Stop() rather than Abort() by contract - Abort() invalidates delivered frames.
  */
 #if DEMO_CASE_IS(DCI_DEMO_CASE_CONTINUOUS)
-dci_demo_result_t dci_demo_case_continuous(const dci_demo_preset_t *p)
+
+#if (DCI_DEMO_CAPTURE_FRAME != 0)
+/*
+ * Spin budget scaled to the frame being waited for - waiting for frame 100 takes about a
+ * hundred frame periods, and a fixed budget would time out on exactly the configurations
+ * someone would use it for. Clamped rather than allowed to wrap.
+ */
+#define DEMO_HOLD_SPIN_PER_FRAME    8000000UL
+#if (DCI_DEMO_CAPTURE_FRAME > 500)
+#define DEMO_HOLD_SPIN              0xFFFFFFFFUL
+#else
+#define DEMO_HOLD_SPIN              (DCI_DEMO_CAPTURE_FRAME * DEMO_HOLD_SPIN_PER_FRAME)
+#endif
+#endif
+
+dci_demo_result_t dci_demo_case_continuous(const dci_demo_cfg_t *c)
 {
-    DCI_frame_t       f;
     dci_demo_result_t r;
     uint32_t          expect;
-    uint32_t          prev_seq = 0;
-    uint32_t          prev_crc = 0;
-    uint32_t          got = 0;
-    uint8_t           prev_index = 0xFF;
 
-    demo_cb_reset();
+#if (DCI_DEMO_CAPTURE_FRAME != 0)
 
-    r = dci_demo_setup(p, dci_demo_buf_count_cfg(), DCI_ON_BUSY_GATE,
+    /*---- hold a frame for a dump ----*/
+    const DCI_frame_t *held;
+    uint32_t           spin;
+
+    r = dci_demo_setup(c, dci_demo_buf_count_cfg(), dci_demo_on_busy_cfg(),
+                       DCI_NOTIFY_CALLBACK, &expect);
+    if (r != DEMO_PASS)
+    {
+        return r;
+    }
+
+    /* Arm the hold before starting: with DCI_DEMO_CAPTURE_FRAME = 1 the first frame
+     * interrupt can arrive before the next statement would have run. */
+    dci_demo_irq_hold_frame(DCI_DEMO_CAPTURE_FRAME);
+
+    DEMO_LOG("  receiving; frame %u will be kept, earlier frames released",
+             (unsigned)DCI_DEMO_CAPTURE_FRAME);
+
+    if (DCI_Capture_Start(DCI_MODE_CONTINUOUS) != DCI_SUCCESS)
+    {
+        return DEMO_FAIL_START;
+    }
+
+    for (spin = 0; spin < DEMO_HOLD_SPIN && !dci_demo_irq_held(); spin++)
+    {
+        __asm volatile("" ::: "memory");
+    }
+
+    /* Graceful stop: frames already delivered stay valid, buf_lock_mask is left alone.
+     * This is the reason the hold path does not call Abort(). */
+    DCI_Capture_Stop();
+
+    DEMO_LOG("");
+    dci_demo_irq_report();
+
+    if (!dci_demo_irq_held())
+    {
+        DEMO_LOG("");
+        DEMO_LOG("  NO FRAME KEPT: %u frame(s) delivered, needed %u",
+                 (unsigned)dci_demo_irq.ready, (unsigned)DCI_DEMO_CAPTURE_FRAME);
+        if (dci_demo_irq.ready == 0)
+        {
+            DEMO_LOG("  nothing arrived at all - check PCLK, the sync polarity and the");
+            DEMO_LOG("  wiring; DCI_DEMO_IRQ_VSYNC=1 reports whether the pins are alive");
+        }
+        dci_demo_buf_report_range(NULL);
+        return DEMO_FAIL_TIMEOUT;
+    }
+
+    held = dci_demo_irq_held_frame();
+
+    /* Guards are checked because a DMA that wrote past its buffer has already corrupted
+     * something else, and that is worth knowing before the dump is trusted. Everything
+     * else is reported, not asserted: judging the data is the user's job. */
+    r = dci_demo_buf_guards_ok() ? DEMO_PASS : DEMO_FAIL_GUARD;
+
+    demo_report_dump(held, expect, true);
+
+    /* A brief look over the UART as well, so a completely wrong result is obvious
+     * without attaching a debugger at all. */
+    dci_demo_buf_dump(held, c, 1);
+    return r;
+
+#else /* stream DCI_DEMO_FRAMES frames */
+
+    DCI_frame_t f;
+    uint32_t    prev_seq = 0;
+    uint32_t    got = 0;
+    uint8_t     prev_index = 0xFF;
+
+    r = dci_demo_setup(c, dci_demo_buf_count_cfg(), dci_demo_on_busy_cfg(),
                        DCI_NOTIFY_POLL, &expect);
     if (r != DEMO_PASS)
     {
@@ -588,11 +525,11 @@ dci_demo_result_t dci_demo_case_continuous(const dci_demo_preset_t *p)
         if (DCI_Capture_WaitFrame(&f, DCI_DEMO_TIMEOUT_MS) != DCI_SUCCESS)
         {
             DEMO_LOG("  timeout after %u frame(s)", got);
-            demo_report_errors();
+            dci_demo_irq_report();
             return DEMO_FAIL_TIMEOUT;
         }
 
-        r = demo_check_frame(&f, p, expect);
+        r = demo_check_frame(&f, c, expect);
         if (r != DEMO_PASS)
         {
             DCI_Capture_ReleaseBuffer(f.index);
@@ -616,12 +553,20 @@ dci_demo_result_t dci_demo_case_continuous(const dci_demo_preset_t *p)
             }
         }
 
-        dci_demo_buf_dump(&f, p, DEMO_DUMP_STREAM);
+        dci_demo_buf_dump(&f, c, DEMO_DUMP_STREAM);
 
         prev_seq   = f.seq;
         prev_index = f.index;
-        (void)prev_crc;
         got++;
+
+        /* The last frame's address is worth printing even though it is about to be
+         * released: it says where the data actually landed, and it states plainly that
+         * the ring will overwrite it - which is the reason DCI_DEMO_CAPTURE_FRAME and
+         * the SNAPSHOT case exist. */
+        if (got == DCI_DEMO_FRAMES)
+        {
+            demo_report_dump(&f, expect, false);
+        }
 
         DCI_Capture_ReleaseBuffer(f.index);
     }
@@ -629,549 +574,32 @@ dci_demo_result_t dci_demo_case_continuous(const dci_demo_preset_t *p)
     DCI_Capture_Stop();
     DEMO_LOG("  collected %u frames, seq %u..%u", got, prev_seq - got + 1, prev_seq);
 
-    return dci_demo_check_stats(DCI_DEMO_FRAMES);
-}
-#endif
-
-/*============================================================================*
- *                         Case: continuous, single buffer, overwrite
- *============================================================================*/
-/*
- * Viewfinder configuration: one buffer, never gate, accept tearing. Uses the callback
- * path rather than POLL, which is what a real viewfinder would do - hand the buffer
- * straight to the display and release it in the ISR.
- *
- * seq gaps are expected here, not a failure: with one buffer and OVERWRITE the driver
- * keeps writing whether or not anyone collected the previous frame.
- */
-#if DEMO_CASE_IS(DCI_DEMO_CASE_CONTINUOUS_1BUF)
-dci_demo_result_t dci_demo_case_continuous_1buf(const dci_demo_preset_t *p)
-{
-    dci_demo_result_t r;
-    uint32_t          expect;
-    uint32_t          spin;
-
-    demo_cb_reset();
-
-    r = dci_demo_setup(p, 1, DCI_ON_BUSY_OVERWRITE, DCI_NOTIFY_CALLBACK, &expect);
-    if (r != DEMO_PASS)
+    /*
+     * OVERWRITE must never gate: the whole point of the policy is that the capture keeps
+     * running at full rate. A non-zero suspend_count means the driver stopped for a busy
+     * buffer, which is GATE behaviour and would make a viewfinder stutter.
+     */
+    if (dci_demo_on_busy_cfg() == DCI_ON_BUSY_OVERWRITE)
     {
-        return r;
-    }
+        DCI_stats_t st;
 
-    if (DCI_Capture_Start(DCI_MODE_CONTINUOUS) != DCI_SUCCESS)
-    {
-        return DEMO_FAIL_START;
-    }
-
-    /* The callback releases each buffer as it arrives, so nothing to do but wait. */
-    for (spin = 0; spin < 60000000UL && demo_cb_frames < DCI_DEMO_FRAMES; spin++)
-    {
-        __asm volatile("" ::: "memory");
-    }
-
-    DCI_Capture_Stop();
-
-    DEMO_LOG("  callback fired %u time(s), last seq %u", demo_cb_frames,
-             demo_cb_last_seq);
-    demo_report_errors();
-
-    if (demo_cb_frames == 0)
-    {
-        DEMO_LOG("  no callback: nothing was captured");
-        return DEMO_FAIL_TIMEOUT;
-    }
-    if (!dci_demo_buf_guards_ok())
-    {
-        return DEMO_FAIL_GUARD;
-    }
-    if (!dci_demo_buf_has_data(0, expect))
-    {
-        return DEMO_FAIL_CONTENT;
-    }
-
-    /* No gating in this mode, so suspend_count must be 0 - that is the difference
-     * from the gated case, and worth asserting rather than assuming. */
-    {
-        DCI_stats_t s;
-
-        DCI_GetStats(&s);
-        DEMO_LOG("[STATS] done=%u dropped=%u suspend=%u ovr=%u",
-                 s.frames_done, s.frames_dropped, s.suspend_count, s.ovr_count);
-        if (s.suspend_count != 0)
+        DCI_GetStats(&st);
+        if (st.suspend_count != 0)
         {
-            DEMO_LOG("  OVERWRITE must never gate, yet suspend_count=%u",
-                     s.suspend_count);
+            DEMO_LOG("  suspend_count %u under OVERWRITE - the driver gated, which "
+                     "this policy must never do", (unsigned)st.suspend_count);
+            dci_demo_irq_report();
             return DEMO_FAIL_STATS;
         }
-    }
-    return DEMO_PASS;
-}
-#endif
-
-/*============================================================================*
- *                         Case: reconfigure while running
- *============================================================================*/
-/*
- * Swaps to a smaller preset mid-capture. The property being tested is the one that
- * makes Reconfig worth having over Stop-then-Init: an invalid configuration is
- * rejected without disturbing the capture in progress.
- */
-#if DEMO_CASE_IS(DCI_DEMO_CASE_RECONFIG)
-dci_demo_result_t dci_demo_case_reconfig(const dci_demo_preset_t *p)
-{
-    const dci_demo_preset_t *small;
-    DCI_frame_t              f;
-    DCI_InitTypeDef          init;
-    dci_demo_result_t        r;
-    uint32_t                 expect;
-    DCI_ERROR                err;
-
-    demo_cb_reset();
-
-    r = dci_demo_setup(p, dci_demo_buf_count_cfg(), DCI_ON_BUSY_GATE,
-                       DCI_NOTIFY_POLL, &expect);
-    if (r != DEMO_PASS)
-    {
-        return r;
+        DEMO_LOG("  OVERWRITE held full rate: suspend_count 0");
     }
 
-    if (DCI_Capture_Start(DCI_MODE_CONTINUOUS) != DCI_SUCCESS)
-    {
-        return DEMO_FAIL_START;
-    }
-    if (DCI_Capture_WaitFrame(&f, DCI_DEMO_TIMEOUT_MS) != DCI_SUCCESS)
-    {
-        demo_report_errors();
-        return DEMO_FAIL_TIMEOUT;
-    }
-    DEMO_LOG("  running on '%s', got seq %u", p->name, f.seq);
-    DCI_Capture_ReleaseBuffer(f.index);
+    DEMO_LOG("  (set DCI_DEMO_CAPTURE_FRAME = N to keep frame N for a JLink dump,");
+    DEMO_LOG("   or use the SNAPSHOT case, where the frame is static on delivery)");
 
-    /* An impossible geometry must be refused with the capture left alone. */
-    dci_demo_preset_to_init(p, &init);
-    init.sensor_lines = 4096;               /* beyond the 2048 spec limit */
-    err = DCI_Capture_Reconfig(&init, NULL);
-    if (err == DCI_SUCCESS)
-    {
-        DEMO_LOG("  Reconfig accepted 4096 lines - validation is not working");
-        return DEMO_FAIL_STATE;
-    }
-    DEMO_LOG("  bad Reconfig correctly refused: %d", err);
+    dci_demo_irq_report();
+    return dci_demo_check_stats(DCI_DEMO_FRAMES);
 
-    if (DCI_Capture_GetState() != DCI_STATE_BUSY)
-    {
-        DEMO_LOG("  capture was disturbed by a refused Reconfig (state %d)",
-                 DCI_Capture_GetState());
-        return DEMO_FAIL_STATE;
-    }
-    if (DCI_Capture_WaitFrame(&f, DCI_DEMO_TIMEOUT_MS) != DCI_SUCCESS)
-    {
-        DEMO_LOG("  capture stopped after a refused Reconfig");
-        return DEMO_FAIL_TIMEOUT;
-    }
-    DEMO_LOG("  still capturing after the refusal: seq %u", f.seq);
-    DCI_Capture_ReleaseBuffer(f.index);
-
-    /* Now a legitimate change. The frame size shrinks, so the buffers stay valid. */
-    small = dci_demo_preset_get(DCI_DEMO_PRESET_QQVGA_RGB565);
-    dci_demo_preset_to_init(small, &init);
-    err = DCI_Capture_Reconfig(&init, NULL);
-    if (err != DCI_SUCCESS)
-    {
-        DEMO_LOG("  valid Reconfig to '%s' failed: %d", small->name, err);
-        return DEMO_FAIL_INIT;
-    }
-    DEMO_LOG("  reconfigured to '%s'", small->name);
-
-    expect = dci_demo_preset_frame_bytes(small);
-    if (DCI_Capture_WaitFrame(&f, DCI_DEMO_TIMEOUT_MS) != DCI_SUCCESS)
-    {
-        demo_report_errors();
-        return DEMO_FAIL_TIMEOUT;
-    }
-    if (f.bytes != expect)
-    {
-        DEMO_LOG("  after Reconfig got %u B, expected %u B", f.bytes, expect);
-        return DEMO_FAIL_FRAME_LEN;
-    }
-    DEMO_LOG("  new geometry in effect: %u B", f.bytes);
-    DCI_Capture_ReleaseBuffer(f.index);
-
-    DCI_Capture_Stop();
-    return dci_demo_buf_guards_ok() ? DEMO_PASS : DEMO_FAIL_GUARD;
-}
-#endif
-
-/*============================================================================*
- *                         Case: suspend / resume
- *============================================================================*/
-#if DEMO_CASE_IS(DCI_DEMO_CASE_SUSPEND)
-dci_demo_result_t dci_demo_case_suspend(const dci_demo_preset_t *p)
-{
-    DCI_frame_t       f;
-    dci_demo_result_t r;
-    uint32_t          expect;
-
-    demo_cb_reset();
-
-    r = dci_demo_setup(p, dci_demo_buf_count_cfg(), DCI_ON_BUSY_GATE,
-                       DCI_NOTIFY_POLL, &expect);
-    if (r != DEMO_PASS)
-    {
-        return r;
-    }
-
-    if (DCI_Capture_Start(DCI_MODE_CONTINUOUS) != DCI_SUCCESS)
-    {
-        return DEMO_FAIL_START;
-    }
-    if (DCI_Capture_WaitFrame(&f, DCI_DEMO_TIMEOUT_MS) != DCI_SUCCESS)
-    {
-        demo_report_errors();
-        return DEMO_FAIL_TIMEOUT;
-    }
-    DCI_Capture_ReleaseBuffer(f.index);
-
-    if (DCI_Capture_Suspend() != DCI_SUCCESS)
-    {
-        return DEMO_FAIL_STATE;
-    }
-    if (DCI_Capture_GetState() != DCI_STATE_SUSPENDED)
-    {
-        DEMO_LOG("  state %d after Suspend", DCI_Capture_GetState());
-        return DEMO_FAIL_STATE;
-    }
-    DEMO_LOG("  suspended at a frame boundary");
-
-    /* While suspended no frame may arrive; a timeout here is the pass condition. */
-    if (DCI_Capture_WaitFrame(&f, 200) == DCI_SUCCESS)
-    {
-        DEMO_LOG("  a frame arrived while suspended - CAPTURE was not cleared");
-        DCI_Capture_ReleaseBuffer(f.index);
-        return DEMO_FAIL_STATE;
-    }
-    DEMO_LOG("  no frames while suspended, as expected");
-
-    if (DCI_Capture_Resume() != DCI_SUCCESS)
-    {
-        return DEMO_FAIL_STATE;
-    }
-    if (DCI_Capture_WaitFrame(&f, DCI_DEMO_TIMEOUT_MS) != DCI_SUCCESS)
-    {
-        DEMO_LOG("  no frame after Resume");
-        demo_report_errors();
-        return DEMO_FAIL_TIMEOUT;
-    }
-    DEMO_LOG("  resumed: seq %u, %u B", f.seq, f.bytes);
-
-    r = demo_check_frame(&f, p, expect);
-    DCI_Capture_ReleaseBuffer(f.index);
-    DCI_Capture_Stop();
-    return r;
-}
-#endif
-
-/*============================================================================*
- *                         Case: stress
- *============================================================================*/
-/*
- * Long run at level 0 reporting. Looks for the slow failures a short run cannot show:
- * a guard word eventually clipped, suspend_count climbing because the consumer is
- * marginally too slow, or a resync every few hundred frames.
- */
-#if DEMO_CASE_IS(DCI_DEMO_CASE_STRESS)
-dci_demo_result_t dci_demo_case_stress(const dci_demo_preset_t *p)
-{
-    DCI_frame_t       f;
-    dci_demo_result_t r;
-    uint32_t          expect;
-    uint32_t          got = 0;
-    uint32_t          prev_seq = 0;
-    uint32_t          gaps = 0;
-    const uint32_t    target = DCI_DEMO_STRESS_FRAMES;
-    /* Ten progress lines regardless of the run length, so shortening the run for a
-     * quick check still produces intermediate output rather than silence. */
-    const uint32_t    every = (target >= 10) ? (target / 10) : 1;
-
-    demo_cb_reset();
-
-    r = dci_demo_setup(p, dci_demo_buf_count_cfg(), DCI_ON_BUSY_GATE,
-                       DCI_NOTIFY_POLL, &expect);
-    if (r != DEMO_PASS)
-    {
-        return r;
-    }
-
-    if (DCI_Capture_Start(DCI_MODE_CONTINUOUS) != DCI_SUCCESS)
-    {
-        return DEMO_FAIL_START;
-    }
-
-    DEMO_LOG("  running %u frames, reporting every %u", target, every);
-
-    while (got < target)
-    {
-        if (DCI_Capture_WaitFrame(&f, DCI_DEMO_TIMEOUT_MS) != DCI_SUCCESS)
-        {
-            DEMO_LOG("  timeout at frame %u", got);
-            demo_report_errors();
-            return DEMO_FAIL_TIMEOUT;
-        }
-
-        if (expect != 0 && f.bytes != expect)
-        {
-            DEMO_LOG("  frame %u: %u B, expected %u", got, f.bytes, expect);
-            DCI_Capture_ReleaseBuffer(f.index);
-            return DEMO_FAIL_FRAME_LEN;
-        }
-        if (got != 0 && f.seq != prev_seq + 1)
-        {
-            gaps++;
-        }
-        prev_seq = f.seq;
-        got++;
-
-        DCI_Capture_ReleaseBuffer(f.index);
-
-        /* Guards are checked periodically rather than per frame: the check walks the
-         * whole fence, and doing that at frame rate would itself perturb the timing. */
-        if ((got % every) == 0)
-        {
-            DCI_stats_t s;
-
-            if (!dci_demo_buf_guards_ok())
-            {
-                DEMO_LOG("  guard violated at frame %u", got);
-                return DEMO_FAIL_GUARD;
-            }
-            DCI_GetStats(&s);
-            DEMO_LOG("  %4u frames: ovr=%u err=%u resync=%u suspend=%u dropped=%u "
-                     "seq-gaps=%u", got, s.ovr_count, s.err_count, s.resync_count,
-                     s.suspend_count, s.frames_dropped, gaps);
-        }
-    }
-
-    DCI_Capture_Stop();
-    demo_report_errors();
-
-    DEMO_LOG("  %u frames done, %u seq gap(s)", got, gaps);
-    if (gaps != 0)
-    {
-        DEMO_LOG("  seq gaps mean frames were delivered but not collected");
-        return DEMO_FAIL_SEQ;
-    }
-    return dci_demo_check_stats(target);
-}
-#endif
-
-/*============================================================================*
- *                         Case: 10-bit (EDM = 10BIT)
- *============================================================================*/
-/*
- * Why 10-bit gets its own case rather than being just another preset under snapshot.
- *
- * Every other format can only be checked structurally - right length, guards intact,
- * not all one value - because a real sensor pointed at a real scene has no golden
- * data. EDM = 10BIT is the exception: the hardware packs one sample per 16-bit
- * half-word with bits 15:10 CLEARED (DESIGN.md 2), so every sample carries a
- * verifiable invariant no matter what the camera sees. Checking it exhaustively turns
- * "the image looks wrong" into "sample 4097 has 0x8000 set", and the ratio of bad
- * samples names the fault outright.
- *
- * The case also asserts the two refusals that only exist in 10-bit mode. Those are
- * cheap, need no camera, and are the kind of thing that silently rots: BSM requires
- * EDM = 8BIT (register table) and embedded sync is 8-bit only (spec 2.4). If a future
- * edit loosens dci_validate_init(), a corrupt configuration would be accepted and the
- * symptom would be a sheared image, blamed on wiring.
- */
-#if DEMO_CASE_IS(DCI_DEMO_CASE_RAW10)
-/*
- * Both mutual exclusions must be refused. Run before the capture: neither needs a
- * camera, so a validation regression is reported even on a bench with no sensor.
- */
-static dci_demo_result_t demo_raw10_check_exclusions(const dci_demo_preset_t *p)
-{
-    DCI_InitTypeDef init;
-    DCI_DMA_config  dma;
-    DCI_ERROR       err;
-    uint8_t         i;
-
-    /* A minimal but otherwise valid dma config, so that whatever Init returns is
-     * about the mode conflict and not about a missing buffer. */
-    memset(&dma, 0, sizeof(dma));
-    dma.dma_channel_num = DCI_DMA_CH_AUTO;
-    dma.buf_count       = (DCI_BUF_COUNT_T)1;
-    dma.buf_bytes       = dci_demo_buf_bytes();
-    dma.notify_mode     = DCI_NOTIFY_POLL;
-    dma.on_busy         = DCI_ON_BUSY_GATE;
-    dma.frame_error     = dci_demo_on_frame_error;
-    for (i = 0; i < 1; i++)
-    {
-        dma.buf[i] = dci_demo_buf_get(i);
-    }
-
-    /* 1. BSM under 10-bit: register table says BSM is valid only when EDM = 00. */
-    dci_demo_preset_to_init(p, &init);
-    init.bsm = DCI_BSM_EVERY_2ND;
-    err = DCI_Capture_Init(&init, &dma);
-    if (err == DCI_SUCCESS)
-    {
-        DEMO_LOG("  BSM was ACCEPTED under EDM=10BIT - validation regressed");
-        DEMO_LOG("   register table: BSM is valid only when EDM[1:0] = 00");
-        DCI_Capture_Abort();
-        return DEMO_FAIL_STATE;
-    }
-    DEMO_LOG("  BSM correctly refused under 10-bit: %d", err);
-
-    /* 2. Embedded sync under 10-bit: spec 2.4, codes are 8-bit only. */
-    dci_demo_preset_to_init(p, &init);
-    init.sync = DCI_SYNC_EMBEDDED;
-    err = DCI_Capture_Init(&init, &dma);
-    if (err == DCI_SUCCESS)
-    {
-        DEMO_LOG("  embedded sync was ACCEPTED under EDM=10BIT - validation regressed");
-        DEMO_LOG("   spec 2.4: embedded codes are 8-bit only");
-        DCI_Capture_Abort();
-        return DEMO_FAIL_STATE;
-    }
-    DEMO_LOG("  embedded sync correctly refused under 10-bit: %d", err);
-
-    return DEMO_PASS;
-}
-
-dci_demo_result_t dci_demo_case_raw10(const dci_demo_preset_t *p)
-{
-    DCI_frame_t       f;
-    DCI_frame_info_t  info;
-    dci_demo_result_t r;
-    uint32_t          expect;
-    uint32_t          bad;
-    DCI_ERROR         err;
-
-    demo_cb_reset();
-
-    /*
-     * Guard against being pointed at the wrong preset. The case is specifically about
-     * the 10-bit data path, so on an 8-bit row every assertion below would either be
-     * vacuous or wrong - better to say so than to "pass" without testing anything.
-     */
-    if (p->fmt != DCI_FMT_RAW10)
-    {
-        DEMO_LOG("  preset '%s' is %s, not RAW10", p->name, dci_demo_fmt_name(p->fmt));
-        DEMO_LOG("   this case only means anything under EDM=10BIT; pick one of:");
-        DEMO_LOG("   %d QVGA_RAW10, %d RAW10_CROP, %d VGA_RAW10, %d RAW10_LSM",
-                 DCI_DEMO_PRESET_QVGA_RAW10, DCI_DEMO_PRESET_RAW10_CROP,
-                 DCI_DEMO_PRESET_VGA_RAW10, DCI_DEMO_PRESET_RAW10_LSM);
-        return DEMO_FAIL_BAD_PRESET;
-    }
-
-    r = dci_demo_setup(p, dci_demo_buf_count_cfg(), DCI_ON_BUSY_GATE,
-                       DCI_NOTIFY_POLL, &expect);
-    if (r != DEMO_PASS)
-    {
-        return r;
-    }
-
-    /*
-     * Confirm the geometry really is 2 bytes per pclk before capturing. The frame
-     * size alone cannot show this - RGB565 at half the width gives the same byte
-     * count - so compare the line length against the declared pclk count.
-     */
-    if (DCI_Capture_GetFrameInfo(&info) == DCI_SUCCESS && !info.var_len)
-    {
-        uint16_t pclk_line = p->crop_en ? p->crop_w : p->width;
-
-        DEMO_LOG("  10-bit geometry: %u pclk/line -> %u B/line (expect 2x)",
-                 pclk_line, info.line_bytes);
-
-        if (info.line_bytes != (uint32_t)pclk_line * 2U)
-        {
-            DEMO_LOG("  EDM=10BIT should give 2 bytes per pclk, got %u/%u",
-                     info.line_bytes, pclk_line);
-            return DEMO_FAIL_GEOMETRY;
-        }
-    }
-
-    /* The two refusals. Done after setup so a buffer exists, and before Start so a
-     * failure here is not confused with a capture fault. Each Init attempt is
-     * expected to fail, which leaves the driver unconfigured - so reconfigure by
-     * running setup again afterwards. */
-    r = demo_raw10_check_exclusions(p);
-    if (r != DEMO_PASS)
-    {
-        return r;
-    }
-
-    r = dci_demo_setup(p, dci_demo_buf_count_cfg(), DCI_ON_BUSY_GATE,
-                       DCI_NOTIFY_POLL, &expect);
-    if (r != DEMO_PASS)
-    {
-        return r;
-    }
-
-    err = DCI_Capture_Start(DCI_MODE_SNAPSHOT);
-    if (err != DCI_SUCCESS)
-    {
-        DEMO_LOG("  Start failed: %d", err);
-        return DEMO_FAIL_START;
-    }
-
-    err = DCI_Capture_WaitFrame(&f, DCI_DEMO_TIMEOUT_MS);
-    if (err != DCI_SUCCESS)
-    {
-        DEMO_LOG("  no frame in %u ms: %d", DCI_DEMO_TIMEOUT_MS, err);
-        demo_report_errors();
-        return DEMO_FAIL_TIMEOUT;
-    }
-
-    /* Structural checks first: a wrong length would make the per-sample scan report
-     * thousands of failures that are really one length fault. */
-    if (f.bytes != expect)
-    {
-        DEMO_LOG("  length %u, expected %u", f.bytes, expect);
-        dci_demo_buf_dump(&f, p, DEMO_DUMP_ONESHOT);
-        DCI_Capture_ReleaseBuffer(f.index);
-        return DEMO_FAIL_FRAME_LEN;
-    }
-    if (f.truncated)
-    {
-        DEMO_LOG("  frame flagged truncated");
-        DCI_Capture_ReleaseBuffer(f.index);
-        return DEMO_FAIL_TRUNCATED;
-    }
-    if (!dci_demo_buf_guards_ok())
-    {
-        DCI_Capture_ReleaseBuffer(f.index);
-        return DEMO_FAIL_GUARD;
-    }
-
-    /* The point of the case. */
-    DEMO_LOG("  checking %u samples for 10-bit packing", f.bytes / 2U);
-    bad = dci_demo_buf_raw10_bad_samples(&f, 8);
-    dci_demo_buf_raw10_range(&f);
-    dci_demo_buf_dump(&f, p, DEMO_DUMP_ONESHOT);
-
-    if (bad != 0)
-    {
-        DCI_Capture_ReleaseBuffer(f.index);
-        return DEMO_FAIL_CONTENT;
-    }
-    DEMO_LOG("  all samples correctly packed: bits 15:10 clear throughout");
-
-    if (!dci_demo_buf_has_data(f.index, f.bytes))
-    {
-        DCI_Capture_ReleaseBuffer(f.index);
-        return DEMO_FAIL_CONTENT;
-    }
-
-    DCI_Capture_ReleaseBuffer(f.index);
-
-    if (DCI_Capture_GetState() != DCI_STATE_IDLE)
-    {
-        DEMO_LOG("  state %d after snapshot, expected IDLE", DCI_Capture_GetState());
-        return DEMO_FAIL_STATE;
-    }
-    return dci_demo_check_stats(1);
+#endif /* DCI_DEMO_CAPTURE_FRAME */
 }
 #endif

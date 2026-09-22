@@ -11,11 +11,11 @@
  * case is compiled and linked. The alternative - a table of function pointers - would
  * pull every case into the image and, more importantly, would make the framebuffer
  * pool sized for the worst case rather than the chosen one. At a 1 MB budget that
- * difference decides whether the largest presets are runnable at all.
+ * difference decides whether the largest signal rows are runnable at all.
  *
- * The setup sequence (pool, init, crop, geometry cross-check) is shared because it is
- * identical for every capture case, and duplicating it per case is how the copies
- * drift apart.
+ * The setup sequence (pool, init, crop, interrupt install, geometry cross-check) is
+ * shared because it is identical for every capture case, and duplicating it per case is
+ * how the copies drift apart.
  */
 
 #include <string.h>
@@ -27,119 +27,64 @@
  *                         Selected case
  *============================================================================*/
 /*
- * One name per case, resolved here so the rest of the file has a single symbol to
- * call and a single string to print. DCI_DEMO_CASE_NEEDS_PRESET and
- * DCI_DEMO_CASE_NEEDS_SIGNAL let the banner state up front whether a camera is
- * required, rather than letting a missing sensor surface as a timeout later.
+ * One name per case, resolved here so the rest of the file has a single symbol to call
+ * and a single string to print.
  *
- * Two cases pin the buffer count because the behaviour under test requires it: a
- * rotation check needs two buffers, and an overwrite check needs one.
+ *   DEMO_NEEDS_CONFIG   the case is handed a resolved signal row. Off only for REG_TEST,
+ *                       which is about the peripheral rather than the signal.
+ *   DEMO_NEEDS_SIGNAL   a live camera must be driving the pins. Printed in the banner so
+ *                       a missing sensor is stated up front rather than surfacing as a
+ *                       timeout thirty seconds later.
+ *   DEMO_SKIP_TEARDOWN  the case owns a buffer after it returns, so the usual Abort()
+ *                       must not run - Abort() invalidates every delivered frame by
+ *                       contract (DESIGN.md 11.5).
+ *
+ * Nothing pins the buffer count any more: what used to need a dedicated case is now a
+ * macro combination, and dci_demo_config.h rejects the combinations that cannot work.
  */
 #if   (DCI_DEMO_CASE == DCI_DEMO_CASE_REG_TEST)
 #define DEMO_NAME               "reg-test"
 #define DEMO_ENTRY              dci_demo_case_reg_test
-#define DEMO_NEEDS_PRESET       0
+#define DEMO_NEEDS_CONFIG       0
 #define DEMO_NEEDS_SIGNAL       0
-
-#elif (DCI_DEMO_CASE == DCI_DEMO_CASE_PRESET_DUMP)
-#define DEMO_NAME               "preset-dump"
-#define DEMO_ENTRY              dci_demo_case_preset_dump
-#define DEMO_NEEDS_PRESET       0
-#define DEMO_NEEDS_SIGNAL       0
-
-#elif (DCI_DEMO_CASE == DCI_DEMO_CASE_CONFIG_ONLY)
-#define DEMO_NAME               "config-only"
-#define DEMO_ENTRY              dci_demo_case_config_only
-#define DEMO_NEEDS_PRESET       1
-#define DEMO_NEEDS_SIGNAL       0
-
-#elif (DCI_DEMO_CASE == DCI_DEMO_CASE_PROBE_SIGNAL)
-#define DEMO_NAME               "probe-signal"
-#define DEMO_ENTRY              dci_demo_case_probe_signal
-#define DEMO_NEEDS_PRESET       1
-#define DEMO_NEEDS_SIGNAL       1
 
 #elif (DCI_DEMO_CASE == DCI_DEMO_CASE_SNAPSHOT)
 #define DEMO_NAME               "snapshot"
 #define DEMO_ENTRY              dci_demo_case_snapshot
-#define DEMO_NEEDS_PRESET       1
-#define DEMO_NEEDS_SIGNAL       1
-
-#elif (DCI_DEMO_CASE == DCI_DEMO_CASE_SNAPSHOT_X2)
-#define DEMO_NAME               "snapshot-x2"
-#define DEMO_ENTRY              dci_demo_case_snapshot_x2
-#define DEMO_NEEDS_PRESET       1
-#define DEMO_NEEDS_SIGNAL       1
-#define DEMO_FORCE_BUF_COUNT    2       /* rotation cannot be observed with one */
+#define DEMO_NEEDS_CONFIG       1
+/* NO_CAPTURE stops after the configuration is applied and dumped, so no pixels are
+ * needed and the banner should not claim otherwise. */
+#define DEMO_NEEDS_SIGNAL       (DCI_DEMO_NO_CAPTURE == 0)
+/* A snapshot frame stays valid after the case returns - CAPTURE self-clears at frame end,
+ * so the data is static and the printed address is dumpable. Tearing down with Abort()
+ * would invalidate exactly what the user is about to dump. */
+#define DEMO_SKIP_TEARDOWN      (DCI_DEMO_NO_CAPTURE == 0)
 
 #elif (DCI_DEMO_CASE == DCI_DEMO_CASE_CONTINUOUS)
 #define DEMO_NAME               "continuous"
 #define DEMO_ENTRY              dci_demo_case_continuous
-#define DEMO_NEEDS_PRESET       1
+#define DEMO_NEEDS_CONFIG       1
 #define DEMO_NEEDS_SIGNAL       1
-
-#elif (DCI_DEMO_CASE == DCI_DEMO_CASE_CONTINUOUS_1BUF)
-#define DEMO_NAME               "continuous-1buf"
-#define DEMO_ENTRY              dci_demo_case_continuous_1buf
-#define DEMO_NEEDS_PRESET       1
-#define DEMO_NEEDS_SIGNAL       1
-#define DEMO_FORCE_BUF_COUNT    1       /* the point is single-buffer overwrite */
-
-#elif (DCI_DEMO_CASE == DCI_DEMO_CASE_RECONFIG)
-#define DEMO_NAME               "reconfig"
-#define DEMO_ENTRY              dci_demo_case_reconfig
-#define DEMO_NEEDS_PRESET       1
-#define DEMO_NEEDS_SIGNAL       1
-
-#elif (DCI_DEMO_CASE == DCI_DEMO_CASE_SUSPEND)
-#define DEMO_NAME               "suspend"
-#define DEMO_ENTRY              dci_demo_case_suspend
-#define DEMO_NEEDS_PRESET       1
-#define DEMO_NEEDS_SIGNAL       1
-
-#elif (DCI_DEMO_CASE == DCI_DEMO_CASE_STRESS)
-#define DEMO_NAME               "stress"
-#define DEMO_ENTRY              dci_demo_case_stress
-#define DEMO_NEEDS_PRESET       1
-#define DEMO_NEEDS_SIGNAL       1
-
-#elif (DCI_DEMO_CASE == DCI_DEMO_CASE_RAW10)
-#define DEMO_NAME               "raw10"
-#define DEMO_ENTRY              dci_demo_case_raw10
-#define DEMO_NEEDS_PRESET       1
-#define DEMO_NEEDS_SIGNAL       1
-/* Forced to 1: the case takes a single snapshot, and VGA_RAW10 is 600 KB - at two
- * buffers the largest 10-bit preset would not fit the pool, and this is the case most
- * likely to be pointed at it. */
-#define DEMO_FORCE_BUF_COUNT    1
-/* The 10-bit rows are the only ones where the config's default preset (an 8-bit row)
- * would make the case refuse to run, so catch it at compile time instead of after a
- * flash cycle. */
-#if (DCI_DEMO_PRESET != DCI_DEMO_PRESET_QVGA_RAW10) &&  \
-    (DCI_DEMO_PRESET != DCI_DEMO_PRESET_RAW10_CROP) &&  \
-    (DCI_DEMO_PRESET != DCI_DEMO_PRESET_VGA_RAW10)  &&  \
-    (DCI_DEMO_PRESET != DCI_DEMO_PRESET_RAW10_LSM)
-#error "DCI_DEMO_CASE_RAW10 needs a RAW10 preset: QVGA_RAW10, RAW10_CROP, VGA_RAW10 or RAW10_LSM"
-#endif
+/* Only when a frame is being held for a dump; a plain run releases everything and can be
+ * torn down normally. */
+#define DEMO_SKIP_TEARDOWN      (DCI_DEMO_CAPTURE_FRAME != 0)
 
 #else
 #error "DCI_DEMO_CASE selects no known case - see dci_demo_id.h"
 #endif
 
-#ifndef DEMO_FORCE_BUF_COUNT
 #define DEMO_FORCE_BUF_COUNT    DCI_DEMO_BUF_COUNT
+
+#ifndef DEMO_SKIP_TEARDOWN
+#define DEMO_SKIP_TEARDOWN      0
 #endif
 
-/*
- * Resolved here rather than with an #if inside the DEMO_LOG() call: a preprocessor
- * directive between a macro's parentheses is undefined behaviour (C99 6.10.3p11).
- * GCC happens to accept it, so a build sweep does not catch it - cppcheck does.
- */
-#if (DEMO_FORCE_BUF_COUNT != DCI_DEMO_BUF_COUNT)
-#define DEMO_BUF_FORCED_NOTE    "(forced by this case)"
-#else
-#define DEMO_BUF_FORCED_NOTE    ""
-#endif
+/* Which of the two capture cases is selected, for the banner. Named here rather than
+ * tested inline because a preprocessor directive between a macro's parentheses is
+ * undefined behaviour (C99 6.10.3p11) - GCC accepts it, so a build sweep would not
+ * catch it. */
+#define DEMO_CASE_IS_SNAPSHOT   (DCI_DEMO_CASE == DCI_DEMO_CASE_SNAPSHOT)
+#define DEMO_CASE_IS_CONTINUOUS (DCI_DEMO_CASE == DCI_DEMO_CASE_CONTINUOUS)
 
 /*============================================================================*
  *                         Result names
@@ -148,7 +93,7 @@ const char *dci_demo_result_name(dci_demo_result_t r)
 {
     static const char *const names[] =
     {
-        "PASS", "BAD_PRESET", "REG_DEAD", "REG_BITS", "POOL", "INIT", "GEOMETRY",
+        "PASS", "BAD_CONFIG", "REG_DEAD", "REG_BITS", "POOL", "INIT", "GEOMETRY",
         "CROP", "START", "TIMEOUT", "FRAME_LEN", "TRUNCATED", "GUARD", "CONTENT",
         "SEQ", "STATS", "NO_VSYNC", "LINE_COUNT", "STATE",
     };
@@ -157,11 +102,26 @@ const char *dci_demo_result_name(dci_demo_result_t r)
 }
 
 /*============================================================================*
- *                         Buffer count
+ *                         Buffer and fill policy
  *============================================================================*/
 uint8_t dci_demo_buf_count_cfg(void)
 {
     return DEMO_FORCE_BUF_COUNT;
+}
+
+/*
+ * One translation point for the fill-mode macro. The two enums happen to use the same
+ * values, but a cast would make dci_demo_id.h and rtl_dci.h silently dependent on each
+ * other's numbering - and dci_demo_id.h exists precisely so the config file needs no
+ * driver header.
+ */
+DCI_ON_BUSY_T dci_demo_on_busy_cfg(void)
+{
+#if (DCI_DEMO_FILL_MODE == DCI_DEMO_FILL_OVERWRITE)
+    return DCI_ON_BUSY_OVERWRITE;
+#else
+    return DCI_ON_BUSY_GATE;
+#endif
 }
 
 /*============================================================================*
@@ -171,12 +131,12 @@ uint8_t dci_demo_buf_count_cfg(void)
  * Everything a capture case needs before it can start.
  *
  * The geometry cross-check is the reason this is one function rather than a few lines
- * per case. The demo computes the frame size from the preset and the driver computes
+ * per case. The demo computes the frame size from the signal row and the driver computes
  * it from DCI_InitTypeDef; if those disagree, one of the two formulas is wrong and
- * every later symptom - short frames, overruns, desync - is a consequence. Catching
- * it here turns a day of guessing into one line of output.
+ * every later symptom - short frames, overruns, desync - is a consequence. Catching it
+ * here turns a day of guessing into one line of output.
  */
-dci_demo_result_t dci_demo_setup(const dci_demo_preset_t *p, uint8_t buf_count,
+dci_demo_result_t dci_demo_setup(const dci_demo_cfg_t *c, uint8_t buf_count,
                                  DCI_ON_BUSY_T on_busy, DCI_NOTIFY_MODE_T notify,
                                  uint32_t *frame_bytes_out)
 {
@@ -184,26 +144,23 @@ dci_demo_result_t dci_demo_setup(const dci_demo_preset_t *p, uint8_t buf_count,
     DCI_DMA_config   dma;
     DCI_frame_info_t info;
     uint32_t         expect;
-    uint32_t         buf_bytes;
     DCI_ERROR        err;
     uint8_t          i;
 
-    expect = dci_demo_preset_frame_bytes(p);
+    expect = c->frame_bytes;            /* 0 for JPEG: no frame size exists */
 
     /*
      * Size the buffer for what Capture_Init() will validate, not for what will finally
-     * be delivered. Those differ when the preset crops - the window is only programmed
+     * be delivered. Those differ when the overlay crops - the window is only programmed
      * afterwards, so Init still measures against the full frame - and for JPEG, where
      * the buffer is a capacity cap rather than a frame size.
      */
-    buf_bytes = dci_demo_preset_init_bytes(p);
-
-    if (!dci_demo_buf_alloc(buf_bytes, buf_count))
+    if (!dci_demo_buf_alloc(c->init_bytes, buf_count))
     {
         return DEMO_FAIL_POOL;
     }
 
-    dci_demo_preset_to_init(p, &init);
+    dci_demo_cfg_to_init(c, &init);
 
     memset(&dma, 0, sizeof(dma));
     dma.dma_channel_num = DCI_DMA_CH_AUTO;
@@ -212,7 +169,6 @@ dci_demo_result_t dci_demo_setup(const dci_demo_preset_t *p, uint8_t buf_count,
     dma.buf_bytes       = dci_demo_buf_bytes();
     dma.on_busy         = on_busy;
     dma.notify_mode     = notify;
-    dma.frame_error     = dci_demo_on_frame_error;
     if (notify == DCI_NOTIFY_CALLBACK)
     {
         dma.frame_ready = dci_demo_on_frame_ready;
@@ -222,25 +178,39 @@ dci_demo_result_t dci_demo_setup(const dci_demo_preset_t *p, uint8_t buf_count,
         dma.buf[i] = dci_demo_buf_get(i);
     }
 
+    /*
+     * frame_error, and the VSYNC/LINE handlers the macros asked for. This is also the
+     * register-level interrupt enable: the driver adds IT_VSYNC / IT_LINE to IER only
+     * for the pointers that are non-NULL, so a disabled interrupt is a NULL pointer
+     * here rather than a masking step somewhere else. Must be before Start(), which
+     * re-assigns IER from exactly these fields.
+     */
+    dci_demo_irq_install(&dma);
+    dci_demo_irq_reset();
+
     err = DCI_Capture_Init(&init, &dma);
     if (err != DCI_SUCCESS)
     {
         DEMO_LOG("  Capture_Init failed: %d", err);
+        if (err == DCI_ERROR_BUF_TOO_SMALL)
+        {
+            DEMO_LOG("  -> allocated %u B for a declared %u x %u pclk frame; Init "
+                     "measures the UNCROPPED size", (unsigned)dci_demo_buf_bytes(),
+                     c->pclk_per_line, c->lines_in);
+        }
         return DEMO_FAIL_INIT;
     }
 
-    /* Crop must follow Init: Capture_Init() does not take a window. */
-    if (p->crop_en)
+    /* Crop must follow Init: Capture_Init() does not take a window. The pclk values are
+     * pre-derived, including the align-down that DCI_ConfigCrop() would apply, so what
+     * was printed is what gets programmed. */
+    if (c->crop_en)
     {
-        uint8_t  ppp = dci_demo_fmt_pclk_per_pixel(p->fmt);
-        uint16_t x   = p->crop_x * ppp;
-        uint16_t w   = p->crop_w * ppp;
-
-        err = DCI_ConfigCrop(x, p->crop_y, w, p->crop_h);
+        err = DCI_ConfigCrop(c->crop_pclk_x, c->crop_y, c->crop_pclk_w, c->crop_h);
         if (err != DCI_SUCCESS)
         {
-            DEMO_LOG("  ConfigCrop(%u,%u,%u,%u) failed: %d", x, p->crop_y, w,
-                     p->crop_h, err);
+            DEMO_LOG("  ConfigCrop(%u,%u,%u,%u) failed: %d", c->crop_pclk_x, c->crop_y,
+                     c->crop_pclk_w, c->crop_h, err);
             return DEMO_FAIL_CROP;
         }
         err = DCI_CropCmd(ENABLE);
@@ -263,8 +233,8 @@ dci_demo_result_t dci_demo_setup(const dci_demo_preset_t *p, uint8_t buf_count,
 
     if (!info.var_len && info.frame_bytes != expect)
     {
-        DEMO_LOG("  GEOMETRY MISMATCH: driver says %u B, preset implies %u B",
-                 info.frame_bytes, expect);
+        DEMO_LOG("  GEOMETRY MISMATCH: driver says %u B, the table implies %u B",
+                 info.frame_bytes, (unsigned)expect);
         DEMO_LOG("  -> one of the two formulas is wrong; fix before trusting a capture");
         return DEMO_FAIL_GEOMETRY;
     }
@@ -281,6 +251,10 @@ dci_demo_result_t dci_demo_setup(const dci_demo_preset_t *p, uint8_t buf_count,
 /*
  * Leaves the peripheral idle so a reset-less rerun starts from a known state rather
  * than inheriting a running ring.
+ *
+ * Skipped whenever a frame is still held for a dump (DEMO_SKIP_TEARDOWN): Abort()
+ * invalidates every delivered frame by contract, which would destroy exactly the data the
+ * printed address points at.
  */
 void dci_demo_teardown(void)
 {
@@ -303,9 +277,16 @@ dci_demo_result_t dci_demo_check_stats(uint32_t expect_frames)
              s.frames_done, s.frames_dropped, s.chunks_done, s.ovr_count,
              s.err_count, s.resync_count, s.suspend_count, s.buf_overflow, s.seq);
 
-    if (s.frames_done != expect_frames)
+    /*
+     * frames_done may legitimately be one higher than asked for in continuous mode:
+     * DCI_Capture_Stop() polls CAPTURE down to 0 with the interrupt still enabled, so a
+     * frame that had already ended is still settled and counted. Fewer than expected is
+     * always a fault; one extra is the stop boundary, not a lost frame.
+     */
+    if (s.frames_done < expect_frames)
     {
-        DEMO_LOG("  frames_done %u, expected %u", s.frames_done, expect_frames);
+        DEMO_LOG("  frames_done %u, expected at least %u", s.frames_done,
+                 (unsigned)expect_frames);
         return DEMO_FAIL_STATS;
     }
     if (s.ovr_count || s.err_count || s.resync_count || s.buf_overflow)
@@ -323,51 +304,84 @@ dci_demo_result_t dci_demo_check_stats(uint32_t expect_frames)
  * Prints the build's configuration before running. That banner is the record of what
  * was actually flashed, which matters precisely because the selection is compile
  * time: log output from a previous build is otherwise indistinguishable.
+ *
+ * The full configuration record comes from dci_demo_cfg_print() rather than from a
+ * second set of DEMO_LOG lines here - one printer, so what is printed cannot drift from
+ * what is programmed.
  */
-static void dci_demo_banner(const dci_demo_preset_t *p)
+static void dci_demo_banner(const dci_demo_cfg_t *c)
 {
     DEMO_LOG("");
     DEMO_LOG("================ DCI demo ================");
     DEMO_LOG(" case   : %d  %s%s", DCI_DEMO_CASE, DEMO_NAME,
              DEMO_NEEDS_SIGNAL ? "   [needs a live camera]" : "   [no camera needed]");
-
-    if (p != NULL)
-    {
-        uint32_t pool = dci_demo_preset_pool_bytes(p, DEMO_FORCE_BUF_COUNT);
-
-        DEMO_LOG(" preset : %d  %s", DCI_DEMO_PRESET, p->name);
-        DEMO_LOG("          %s %ux%u, %u B/frame",
-                 dci_demo_fmt_name(p->fmt),
-                 p->crop_en ? p->crop_w : p->width,
-                 p->crop_en ? p->crop_h : p->height,
-                 (unsigned)dci_demo_preset_frame_bytes(p));
-        DEMO_LOG(" buffers: %d %s", DEMO_FORCE_BUF_COUNT, DEMO_BUF_FORCED_NOTE);
-        DEMO_LOG(" RAM    : %u B needed, %u B pool, budget %u KB",
-                 (unsigned)pool, (unsigned)(DCI_DEMO_POOL_KB * 1024UL),
-                 (unsigned)DCI_DEMO_RAM_BUDGET_KB);
-        DEMO_LOG("          %s", p->note);
-    }
+    DEMO_LOG(" buffers: %d", DEMO_FORCE_BUF_COUNT);
+    DEMO_LOG(" fill   : %s", (dci_demo_on_busy_cfg() == DCI_ON_BUSY_OVERWRITE)
+             ? "OVERWRITE - keeps writing into a held buffer, may tear"
+             : "GATE - stops rather than overwrite a held buffer");
+    DEMO_LOG(" irq    : FRAME/OVR/ERR on (always), VSYNC %s, LINE %s, per-frame log %s",
+             DCI_DEMO_IRQ_VSYNC ? "on" : "off",
+             DCI_DEMO_IRQ_LINE  ? "on" : "off",
+             DCI_DEMO_IRQ_LOG   ? "on" : "off");
+    /*
+     * The settings that used to be separate cases. Printed unconditionally, including the
+     * defaults, because the whole point of the banner is that a log from another build
+     * looks identical otherwise - and these four now decide what the run actually does.
+     */
+#if DEMO_CASE_IS_SNAPSHOT
+    DEMO_LOG(" shots  : %d%s", DCI_DEMO_SHOTS,
+             (DCI_DEMO_SHOTS > 1) ? "  (rotation check: shot 1 held while 2 is taken)"
+             : "");
+    DEMO_LOG(" capture: %s", (DCI_DEMO_NO_CAPTURE != 0)
+             ? "NO - configure and dump registers only"
+             : "yes - frame held on delivery, address printed for JLink");
+#elif DEMO_CASE_IS_CONTINUOUS
+    DEMO_LOG(" frames : %d", DCI_DEMO_FRAMES);
+#if (DCI_DEMO_CAPTURE_FRAME != 0)
+    DEMO_LOG(" hold   : frame %d, kept for a JLink dump", DCI_DEMO_CAPTURE_FRAME);
+#else
+    DEMO_LOG(" hold   : no - every frame released, nothing static to dump");
+#endif
+#endif
     DEMO_LOG("==========================================");
+
+    if (c != NULL)
+    {
+        DEMO_LOG("");
+        dci_demo_cfg_print(c, DEMO_FORCE_BUF_COUNT);
+    }
 }
 
 dci_demo_result_t dci_demo_run(void)
 {
-    const dci_demo_preset_t *p = NULL;
-    dci_demo_result_t        r;
+    const dci_demo_cfg_t *cp = NULL;
+    dci_demo_result_t     r;
 
-#if (DEMO_NEEDS_PRESET == 1)
-    p = dci_demo_preset_get(DCI_DEMO_PRESET);
-    if (p == NULL)
+#if (DEMO_NEEDS_CONFIG == 1)
+    dci_demo_cfg_t cfg;
+
+    /*
+     * Resolving before the banner, not after: the resolver is also where an illegal
+     * overlay/row combination is rejected, and its own log lines name the macro to
+     * change. Printing a configuration record first would make a refusal look like a
+     * failure of something that was actually programmed.
+     */
+    if (!dci_demo_cfg_resolve(DCI_DEMO_SIGNAL, &cfg))
     {
-        DEMO_LOG("[DEMO] preset %d does not exist (have %u)",
-                 DCI_DEMO_PRESET, dci_demo_preset_count());
-        return DEMO_FAIL_BAD_PRESET;
+        DEMO_LOG("[DEMO] signal %d is not usable with the current overlay macros",
+                 DCI_DEMO_SIGNAL);
+        DEMO_LOG("       the whole table follows, with this overlay applied - pick a "
+                 "row that is not ruled out:");
+        DEMO_LOG("");
+        dci_demo_signal_list();
+        return DEMO_FAIL_BAD_CONFIG;
     }
+    cp = &cfg;
 #endif
 
-    dci_demo_banner(p);
+    dci_demo_banner(cp);
 
-    r = DEMO_ENTRY(p);
+    r = DEMO_ENTRY(cp);
 
     DEMO_LOG("");
     if (r == DEMO_PASS)
@@ -387,8 +401,13 @@ dci_demo_result_t dci_demo_run(void)
 #endif
     }
 
-#if (DEMO_NEEDS_PRESET == 1)
+#if (DEMO_NEEDS_CONFIG == 1) && (DEMO_SKIP_TEARDOWN == 0)
     dci_demo_teardown();
+#elif (DEMO_SKIP_TEARDOWN == 1)
+    /* Left running-but-stopped on purpose: the buffer is still locked and its contents
+     * are the deliverable. A rerun without a reset starts with Capture_Init, which
+     * reconfigures everything this would have cleared. */
+    DEMO_LOG("    (peripheral left as-is: the held buffer must stay valid)");
 #endif
     return r;
 }

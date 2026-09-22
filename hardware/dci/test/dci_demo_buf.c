@@ -8,7 +8,7 @@
  * DCI demo: framebuffer pool.
  *
  * A fixed arena carved into 1 or 2 buffers at run time, rather than a static array
- * per preset: the demo has to serve presets from 37 KB to 424 KB and only one runs at
+ * per signal row: the demo has to serve rows from 37 KB to 938 KB and only one runs at
  * a time, so one arena sized to the budget is both smaller and simpler than a union
  * of worst cases.
  *
@@ -350,10 +350,11 @@ static uint32_t demo_crc32(const uint8_t *p, uint32_t len)
  * continuous run has to stay at level 0 or the UART becomes the bottleneck and the
  * capture itself starts failing.
  */
-void dci_demo_buf_dump(const DCI_frame_t *f, const dci_demo_preset_t *p, uint8_t level)
+void dci_demo_buf_dump(const DCI_frame_t *f, const dci_demo_cfg_t *c, uint8_t level)
 {
-    const uint8_t *d = f->addr;
-    uint32_t       bpp, line_bytes, y, x;
+    const uint8_t *d   = f->addr;
+    dci_demo_fmt_t fmt = c->sig->fmt;
+    uint32_t       line_bytes, y, x;
 
     DEMO_LOG("[FRAME] idx=%u seq=%u bytes=%u trunc=%u crc32=0x%08X",
              f->index, f->seq, f->bytes, f->truncated,
@@ -364,8 +365,10 @@ void dci_demo_buf_dump(const DCI_frame_t *f, const dci_demo_preset_t *p, uint8_t
         return;
     }
 
-    bpp        = dci_demo_fmt_bytes_per_pixel(p->fmt);
-    line_bytes = (p->crop_en ? p->crop_w : p->width) * (bpp ? bpp : 1);
+    /* Taken from the resolved configuration rather than recomputed: it already accounts
+     * for crop, byte select and EDM, and a second formula here would be one more place
+     * for the two to drift apart. */
+    line_bytes = c->line_bytes;
 
     if (level == 1)
     {
@@ -378,7 +381,7 @@ void dci_demo_buf_dump(const DCI_frame_t *f, const dci_demo_preset_t *p, uint8_t
                  d[f->bytes - 8], d[f->bytes - 7], d[f->bytes - 6], d[f->bytes - 5],
                  d[f->bytes - 4], d[f->bytes - 3], d[f->bytes - 2], d[f->bytes - 1]);
 
-        if (p->fmt != DCI_FMT_JPEG && line_bytes != 0)
+        if (fmt != DCI_FMT_JPEG && line_bytes != 0)
         {
             uint32_t lines = f->bytes / line_bytes;
 
@@ -388,7 +391,7 @@ void dci_demo_buf_dump(const DCI_frame_t *f, const dci_demo_preset_t *p, uint8_t
 
                 /* RAW10 is half-word data: printing raw bytes would show the
                  * padding byte interleaved and read as garbage, so decode it. */
-                if (p->fmt == DCI_FMT_RAW10)
+                if (fmt == DCI_FMT_RAW10)
                 {
                     const uint16_t *s = (const uint16_t *)(const void *)&d[o];
 
@@ -421,6 +424,44 @@ void dci_demo_buf_dump(const DCI_frame_t *f, const dci_demo_preset_t *p, uint8_t
         }
         line[n] = '\0';
         DEMO_LOG("  %06X  %s", y, line);
+    }
+}
+
+/*
+ * Where the data is, for a debugger rather than for the UART.
+ *
+ * This is the whole output of the RECEIVE case, and the reason it is printed instead of
+ * hex-dumped: a 300 KB frame is minutes of UART, and the bytes are already sitting in
+ * RAM at a fixed address with capture stopped. The savebin line is spelled out because
+ * the length argument is the usual mistake - JLink takes a byte count, not an end
+ * address, and a frame is rarely a round number.
+ */
+void dci_demo_buf_report_range(const DCI_frame_t *f)
+{
+    uint8_t i;
+
+    if (f != NULL)
+    {
+        uint32_t start = (uint32_t)f->addr;
+        uint32_t len   = f->bytes;
+
+        DEMO_LOG("  buffer %u: 0x%08X .. 0x%08X  (%u B)", f->index, start,
+                 start + len - 1U, (unsigned)len);
+        DEMO_LOG("  JLink : savebin frame.bin, 0x%08X, 0x%X", start, (unsigned)len);
+        DEMO_LOG("  (length is a BYTE COUNT, not an end address)");
+        return;
+    }
+
+    /* No held frame: describe the arena instead, which is what someone stopping at a
+     * breakpoint mid-run needs. */
+    for (i = 0; i < demo_bufs.count; i++)
+    {
+        uint32_t start = (uint32_t)demo_bufs.buf[i];
+
+        DEMO_LOG("  buffer %u: 0x%08X .. 0x%08X  (%u B allocated)", i, start,
+                 start + demo_bufs.bytes - 1U, (unsigned)demo_bufs.bytes);
+        DEMO_LOG("  JLink : savebin buf%u.bin, 0x%08X, 0x%X", i, start,
+                 (unsigned)demo_bufs.bytes);
     }
 }
 
