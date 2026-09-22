@@ -70,3 +70,16 @@ void hw_jpeg_init(void)
     hal_jpu_mem_init(gui_malloc, gui_free);
     hal_jpu_add_dec_header(sizeof(gui_rgb_data_head_t));
 }
+
+void hw_jpeg_deinit(void)
+{
+    JPU_Clk_Deinit();
+}
+
+gui_jpeg_ops_t hw_jpeg_ops =
+{
+    .init = hw_jpeg_init,
+    .load = hw_jpeg_load,
+    .release = hw_jpeg_free,
+    .deinit = hw_jpeg_deinit,
+};

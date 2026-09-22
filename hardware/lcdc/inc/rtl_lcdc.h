@@ -447,8 +447,8 @@ typedef struct
                                          This parameter can be a value of @ref LCDC_Interface. */
     uint32_t LCDC_RamlessEn;     /*!< Enable or disable ramless qspi, only active when DBIC/SPIC interface is selected.
                                          This parameter can be a value of ENABLE or DISABLE. */
-    uint32_t LCDC_GroupSel;      /*!< Select the LCDC output pin assignment group.
-                                    Valid values range from 0 to 3. Refer to the chip-specific pin-mux documentation. */
+    uint32_t LCDC_GroupSel;      /*!< selecting the output pin assignemnt groups.
+                                         This parameter can be a value of 1 or 2. */
     uint32_t LCDC_PixelInputFormat;    /*!< Configure the input pixel format of pixel converter.
                                               This parameter can be a value of @ref LCDC_Pixel_Input_Format. */
     uint32_t LCDC_PixelOutputFormat;    /*!< Configure the output pixel format of pixel converter.

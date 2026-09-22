@@ -787,3 +787,11 @@ void hw_acc_init(uint8_t high_speed_dma, uint8_t low_speed_dma)
     high_speed_dma_channel_num = high_speed_dma;
     low_speed_dma_channel_num = low_speed_dma;
 }
+
+void hw_acc_deinit(void)
+{
+    RCC_PeriphClockCmd(APBPeriph_IDU, APBPeriph_IDU_CLOCK, DISABLE);
+    RCC_PeriphClockCmd(APBPeriph_PPE, APBPeriph_PPE_CLOCK, DISABLE);
+    high_speed_dma_channel_num = 0xFF;
+    low_speed_dma_channel_num = 0xFF;
+}

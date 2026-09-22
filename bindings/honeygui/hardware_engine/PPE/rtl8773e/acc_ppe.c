@@ -1176,4 +1176,36 @@ void hw_acc_init(void)
     draw_img_acc_end_cb = hw_acc_end_cb;
 }
 
+void hw_acc_deinit(void)
+{
+    extern void (* draw_img_acc_prepare_cb)(struct draw_img * image, gui_rect_t *rect);
+    extern void (* draw_img_acc_end_cb)(struct draw_img * image);
+    if (draw_img_acc_prepare_cb == hw_acc_prepare_cb)
+    {
+        draw_img_acc_prepare_cb = NULL;
+    }
+    if (draw_img_acc_end_cb == hw_acc_end_cb)
+    {
+        draw_img_acc_end_cb = NULL;
+    }
+    if (high_speed_dma_channel_num != 0xFF)
+    {
+        GDMA_channel_release(high_speed_dma_channel_num);
+        high_speed_dma_channel_num = 0xFF;
+    }
+    if (low_speed_dma_channel_num != 0xFF)
+    {
+        GDMA_channel_release(low_speed_dma_channel_num);
+        low_speed_dma_channel_num = 0xFF;
+    }
+    PPE_CLK_ENABLE(DISABLE);
+}
+
+gui_blit_ops_t hw_acc_blit_ops =
+{
+    .init = hw_acc_init,
+    .process = hw_acc_blit,
+    .deinit = hw_acc_deinit,
+};
+
 

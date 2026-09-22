@@ -31,6 +31,7 @@
 #define PSRAM_GUI_HEAP_ADDR SPIC1_MEM_BASE
 static void *ppe_sync_sem;
 static void *idu_sync_sem;
+static uint8_t hw_acc_init_count;
 
 static void ppe_wait_finish_blocking(void);
 
@@ -1881,9 +1882,11 @@ void hw_acc_blit_a8_blur(draw_img_t *image, struct gui_dispdev *dc, struct gui_r
     {
         return;
     }
-    if (image->acc_user == NULL)
+    struct acc_engine *acc = gui_get_acc();
+    if ((image->acc_user == NULL) && (acc != NULL) && (acc->blur != NULL)
+        && (acc->blur->prepare != NULL))
     {
-        blur_prepare(&img_rect, &image->acc_user);
+        acc->blur->prepare(&image->acc_user);
     }
 
     uint32_t c_a = (image->fg_color_set & 0xFF000000);
@@ -1898,9 +1901,10 @@ void hw_acc_blit_a8_blur(draw_img_t *image, struct gui_dispdev *dc, struct gui_r
                    image->img_target_x, image->img_target_y, ppe_abgr);
 
     /* Free scratch memory after the last section. */
-    if (dc->section_count == dc->section_total - 1 && image->acc_user != NULL)
+    if ((dc->section_count == dc->section_total - 1) && (image->acc_user != NULL)
+        && (acc != NULL) && (acc->blur != NULL) && (acc->blur->release != NULL))
     {
-        blur_depose(&image->acc_user);
+        acc->blur->release(&image->acc_user);
     }
 }
 
@@ -2548,20 +2552,25 @@ void hw_acc_blur_a8(struct gui_dispdev *dc, gui_rect_t *rect, uint8_t blur_degre
                               ? (int16_t)dc->screen_height - 1 : rect->y2;
     int16_t target_h        = onscreen_bottom - onscreen_top + 1;
 
-    gui_rect_t local_rect = {0, 0, blur_w - 1, target_h - 1};
+    gui_rect_t target_rect = {0, 0, blur_w - 1, target_h - 1};
+    gui_rect_t valid_rect =
+    {
+        .x1 = 0,
+        .y1 = blur_rect.y1 - onscreen_top,
+        .x2 = blur_w - 1,
+        .y2 = blur_rect.y2 - onscreen_top,
+    };
 
-    gui_dispdev_t fake_dc = {0};
-    fake_dc.frame_buf     = blur_copy;
-    fake_dc.fb_width      = (uint16_t)blur_w;
-    fake_dc.screen_width  = (uint16_t)blur_w;
-    fake_dc.screen_height = (uint16_t)target_h;
-    fake_dc.bit_depth     = dc->bit_depth;
-    fake_dc.section.x1    = 0;
-    fake_dc.section.y1    = blur_rect.y1 - onscreen_top;
-    fake_dc.section.x2    = blur_w - 1;
-    fake_dc.section.y2    = blur_rect.y2 - onscreen_top;
-
-    gui_get_acc()->blur(&fake_dc, &local_rect, blur_degree, cache_mem);
+    gui_rect_t buffer_rect = valid_rect;
+    struct acc_engine *acc = gui_get_acc();
+    if ((acc == NULL) || (acc->blur == NULL) || (acc->blur->process == NULL))
+    {
+        gui_free(blur_copy);
+        return;
+    }
+    acc->blur->process(blur_copy, blur_w, dc->bit_depth,
+                       &buffer_rect, &valid_rect, &target_rect,
+                       blur_degree, cache_mem);
 
     uint8_t *argb_combine = (uint8_t *)gui_malloc((uint32_t)blur_w * (uint32_t)blur_h * 4 + 8);
     if (argb_combine == NULL)
@@ -2683,8 +2692,18 @@ static void idu_handler(void)
 
 void hw_acc_init(void)
 {
-    cache_buf1 = gui_get_acc()->hw_acc_cache_mem;
-    CACHE_BUF_SIZE = gui_get_acc()->hw_acc_cache_size;
+    if (hw_acc_init_count++ != 0U)
+    {
+        return;
+    }
+    struct acc_engine *acc = gui_get_acc();
+    if ((acc == NULL) || (acc->blit == NULL))
+    {
+        hw_acc_init_count = 0U;
+        return;
+    }
+    cache_buf1 = acc->cache_mem;
+    CACHE_BUF_SIZE = acc->cache_size;
     if (cache_buf1)
     {
         GUI_ASSERT(CACHE_BUF_SIZE != 0);
@@ -2704,7 +2723,7 @@ void hw_acc_init(void)
     {
         GDMA_channel_request(&low_speed_dma_channel_num, NULL, false);
     }
-    if (gui_get_acc() != NULL && gui_get_acc()->enable_thread_sync)
+    if (acc->enable_thread_sync)
     {
         if (!os_sem_create(&ppe_sync_sem, "ppe_sync_sem", 0, 1))
         {
@@ -2747,3 +2766,119 @@ void hw_acc_init(void)
         NVIC_Init(&IDU_NVIC_InitStruct);
     }
 }
+
+void hw_acc_deinit(void)
+{
+    if ((hw_acc_init_count == 0U) || (--hw_acc_init_count != 0U))
+    {
+        return;
+    }
+    NVIC_DisableIRQ(PPE_IRQn);
+    NVIC_DisableIRQ(IDU_IRQn);
+    PPE_Mask_All_Interrupt(ENABLE);
+    PPE_Clear_Interrupt(PPE_ALL_OVER_INT);
+    IDU_MaskINTConfig(IDU_DECOMPRESS_FINISH_INT, ENABLE);
+    IDU_MaskINTConfig(IDU_DECOMPRESS_ERROR_INT, ENABLE);
+    IDU_ClearINTPendingBit(IDU_DECOMPRESS_FINISH_INT);
+    IDU_ClearINTPendingBit(IDU_DECOMPRESS_ERROR_INT);
+
+    if (ppe_sync_sem != NULL)
+    {
+        os_sem_delete(ppe_sync_sem);
+        ppe_sync_sem = NULL;
+    }
+    if (idu_sync_sem != NULL)
+    {
+        os_sem_delete(idu_sync_sem);
+        idu_sync_sem = NULL;
+    }
+    if (high_speed_dma_channel_num != 0xFF)
+    {
+        GDMA_channel_release(high_speed_dma_channel_num);
+        high_speed_dma_channel_num = 0xFF;
+    }
+    if (low_speed_dma_channel_num != 0xFF)
+    {
+        GDMA_channel_release(low_speed_dma_channel_num);
+        low_speed_dma_channel_num = 0xFF;
+    }
+
+    RCC_PeriphClockCmd(APBPeriph_IDU, APBPeriph_IDU_CLOCK, DISABLE);
+    PPE_CLK_ENABLE(DISABLE);
+    cache_buf1 = NULL;
+    CACHE_BUF_SIZE = 0;
+}
+
+bool hw_acc_blit_scale(uint8_t *target_buffer, const uint8_t *source_buffer,
+                       uint16_t source_width, uint16_t source_height,
+                       uint16_t source_stride, uint16_t target_stride,
+                       uint8_t factor, uint16_t target_width, uint16_t target_height,
+                       uint8_t bytes_per_pixel, bool scale_up)
+{
+    if ((target_buffer == NULL) || (source_buffer == NULL) || (factor == 0U))
+    {
+        return false;
+    }
+
+    if ((bytes_per_pixel != 2U) && (bytes_per_pixel != 3U) && (bytes_per_pixel != 4U))
+    {
+        return false;
+    }
+
+    ppe_buffer_t target, source;
+    memset(&target, 0, sizeof(ppe_buffer_t));
+    memset(&source, 0, sizeof(ppe_buffer_t));
+
+    PPE_PIXEL_FORMAT format = bytes_per_pixel == 2 ? PPE_RGB565 : bytes_per_pixel == 3 ? PPE_RGB888 :
+                              PPE_ARGB8888;
+    target.format = format;
+    target.address = (uint32_t)target_buffer;
+    target.width = target_width;
+    target.height = target_height;
+    target.stride = target_stride;
+    target.const_color = 0xFFFFFFFF;
+    target.win_x_min = 0;
+    target.win_x_max = target.width - 1;
+    target.win_y_min = 0;
+    target.win_y_max = target.height - 1;
+
+    source.format = format;
+    source.address = (uint32_t)source_buffer;
+    source.width = source_width;
+    source.height = source_height;
+    source.stride = source_stride;
+    source.const_color = 0xFFFFFFFF;
+    source.opacity = 0xFF;
+    source.win_x_min = 0;
+    source.win_x_max = target.width - 1;
+    source.win_y_min = 0;
+    source.win_y_max = target.height - 1;
+
+    ppe_matrix_t inverse;
+    ppe_get_identity(&inverse);
+    float scale = scale_up ? 1.0f / (float)factor : (float)factor;
+    ppe_scale(scale, scale, &inverse);
+    ppe_rect_t constraint = {.x1 = 0, .y1 = 0, .x2 = target.width - 1, .y2 = target.height - 1};
+    PPE_ERR err = PPE_Blit_Inverse(&target, &source, NULL, &inverse, &constraint, PPE_BLEND_BYPASS);
+    if (err != PPE_SUCCESS)
+    {
+        return false;
+    }
+    ppe_wait_finish_blocking();
+    return true;
+}
+
+gui_blit_ops_t hw_acc_blit_ops =
+{
+    .init = hw_acc_init,
+    .process = hw_acc_blit,
+    .deinit = hw_acc_deinit,
+};
+
+gui_idu_ops_t hw_acc_idu_ops =
+{
+    .init = hw_acc_init,
+    .load = hw_acc_idu_decode,
+    .release = hw_acc_idu_free,
+    .deinit = hw_acc_deinit,
+};

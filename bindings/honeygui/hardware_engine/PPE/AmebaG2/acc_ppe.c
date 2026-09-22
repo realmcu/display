@@ -550,10 +550,7 @@ void hw_acc_blit_decode(draw_img_t *image, struct gui_dispdev *dc, struct gui_re
         gui_free(decoded_data);
         return;
     }
-    if (!gui_get_acc()->enable_async)
-    {
-        PPE_DISP_Finish();
-    }
+    PPE_DISP_Finish();
     gui_free(decoded_data);
     return;
 }
@@ -707,10 +704,7 @@ void hw_acc_blit_direct(draw_img_t *image, struct gui_dispdev *dc, struct gui_re
     {
         return;
     }
-    if (!gui_get_acc()->enable_async)
-    {
-        PPE_DISP_Finish();
-    }
+    PPE_DISP_Finish();
     //uint32_t time2 = rtos_time_get_current_system_time_us();
     return;
 }
@@ -900,3 +894,14 @@ void hw_acc_init(void)
     //PPE_DISP clock init
     dma_memcpy_init(&dma_obj, memcpy_by_gdma_int, 0);
 }
+
+void hw_acc_deinit(void)
+{
+}
+
+gui_blit_ops_t hw_acc_blit_ops =
+{
+    .init = hw_acc_init,
+    .process = hw_acc_blit,
+    .deinit = hw_acc_deinit,
+};

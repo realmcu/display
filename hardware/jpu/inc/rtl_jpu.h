@@ -319,6 +319,7 @@ typedef struct
 } JPU_ENC_CFG;
 
 void JPU_Clk_Init(void);
+void JPU_Clk_Deinit(void);
 void JPU_Deinit(void);
 void JPU_Reset(void);
 JPU_HW_INFO *JPU_Read_Output(void);
