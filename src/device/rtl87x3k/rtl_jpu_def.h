@@ -162,15 +162,17 @@ typedef struct
 /*============================================================================*
  *                         JPU Registers and Field Descriptions
  *============================================================================*/
-/* 0x00
-    1:0     R        reserved                                 0x0
-    2       R/W      stop_codec                               0x0
-    3       R        reserved                                 0x0
-    4       R/W      start_codec                              0x0
-    31:5    R        reserved                                 0x0
-*/
+
 typedef union
 {
+
+    /* 0x00
+        1:0     R        reserved                                 0x0
+        2       R/W      stop_codec                               0x0
+        3       R        reserved                                 0x0
+        4       R/W      start_codec                              0x0
+        31:5    R        reserved                                 0x0
+    */
     uint32_t d32;
     uint8_t d8[4];
     struct
@@ -257,12 +259,12 @@ typedef union
         2       R/W      dma_wr_resp_en                      0x0
         3       R/W      enc_mode                            0x0
         4       R/W      tc_dir                              0x0
-        5       R        reserved                            0x0
+        5       R/W      reserved                            0x0
         6       R/W      usr_ht_en                           0x0
         12:7    R/W      dc_ht_idx                           0x0
         18:13   R/W      ac_ht_idx                           0x0
         19      R/W      tile_mode                           0x0
-        26:20   R        reserved                            0x0
+        26:20   R/W      reserved                            0x0
         30:27   R/W      q_prec                              0x0
         31      R/W      prec                                0x0
     */
@@ -306,6 +308,7 @@ typedef union
 
 
 
+    /* CHECK(jira Q1): comp0 width, A1(2+2) vs A3/A4(3+3, full 6bit) */
     /* 0x18
         1:0      R/W    cmp2_v_sf                 0x0
         3:2      R/W    cmp2_h_sf                 0x0
@@ -381,6 +384,7 @@ typedef union
 
 
 
+    /* CHECK(jira Q7): bits[1:0] missing from A1, A3 defines disp_if_clr/sensor_if_clr */
     /* 0x24
         0        R/W      disp_if_clr                  0x0
         1        R/W      sensor_if_clr                0x0
@@ -400,10 +404,12 @@ typedef union
 
 
 
+    /* CHECK(jira Q5): bit2 A1(RSVD) vs A3(clp_range_disable) */
     /* 0x28
         0        R/W      roi_en                        0x0
         1        R/W      done_int_mode                 0x0
-        31:30    R        reserved                      0x0
+        2        R/W      clp_range_disable             0x0
+        31:3     R        reserved                      0x0
     */
     typedef union
         {
@@ -413,7 +419,8 @@ typedef union
             {
                 uint32_t roi_en: 1;
                 uint32_t done_int_mode: 1;
-                const uint32_t reserved_0: 30;
+                uint32_t clp_range_disable: 1;
+                const uint32_t reserved_0: 29;
             } b;
         } JPU_CLP_INFO_TypeDef;
 
@@ -862,6 +869,7 @@ typedef union
             } b;
         } JPU_COEF_ADDR_TypeDef;
 
+    /* CHECK(jira Q2): data width, A1(12bit) vs A3/A4(16bit, WIDTH_COEF_DAT=16) */
     /* 0xA8
         15:0    R/W        coef_data                  0x0
         31:16   R          reserved                  0x0
@@ -890,9 +898,10 @@ typedef union
             } b;
         } JPU_RST_INTERVAL_TypeDef;
 
+    /* CHECK(jira Q3): data width, A1(26bit) vs A3/A4(4bit, hardware) */
     /* 0xB4
-        25:0     R/W      rst_indx                  0x0
-        31:26    R        reserved                  0x0
+        3:0      R/W      rst_indx                  0x0
+        31:4     R        reserved                  0x0
     */
     typedef union
         {
@@ -900,8 +909,8 @@ typedef union
             uint8_t d8[4];
             struct
             {
-                uint32_t rst_indx: 26;
-                const uint32_t reserved_0: 6;
+                uint32_t rst_indx: 4;
+                const uint32_t reserved_0: 28;
             } b;
         } JPU_RST_INDEX_TypeDef;
 
@@ -920,6 +929,7 @@ typedef union
             } b;
         } JPU_RST_COUNT_TypeDef;
 
+    /* CHECK(jira Q10): bits[7:4], A1(RSVD) vs A3(pb0-pb3 putbit interrupt enables) */
     /* 0xC0
         0       R/W      jpg_done                  0x0
         1       R/W      jpg_err                   0x0
@@ -966,9 +976,10 @@ typedef union
             } b;
         } JPU_CYCLE_INFO_TypeDef;
 
+    /* CHECK(jira Q4): data width (Y/CB/CR, 0xF0/F4/F8), A1(12bit) vs A3/A4(16bit, WIDTH_DPCM=16) */
     /* 0xF0
-        11:0     R/W      dc_predict_cmp0           0x0
-        31:12    R        reserved                  0x0
+        15:0     R/W      dc_predict_cmp0           0x0
+        31:16    R        reserved                  0x0
     */
     typedef union
         {
@@ -976,14 +987,15 @@ typedef union
             uint8_t d8[4];
             struct
             {
-                uint32_t dc_predict_cmp0: 12;
-                const uint32_t reserved_0: 20;
+                uint32_t dc_predict_cmp0: 16;
+                const uint32_t reserved_0: 16;
             } b;
         } JPU_DPCM_DIFF_Y_TypeDef;
 
+    /* CHECK(jira Q4, cont.): same width dispute as DPCM_DIFF_Y above */
     /* 0xF4
-        11:0     R/W      dc_predict_cmp1           0x0
-        31:12    R        reserved                  0x0
+        15:0     R/W      dc_predict_cmp1           0x0
+        31:16    R        reserved                  0x0
     */
     typedef union
         {
@@ -991,14 +1003,15 @@ typedef union
             uint8_t d8[4];
             struct
             {
-                uint32_t dc_predict_cmp1: 12;
-                const uint32_t reserved_0: 20;
+                uint32_t dc_predict_cmp1: 16;
+                const uint32_t reserved_0: 16;
             } b;
         } JPU_DPCM_DIFF_CB_TypeDef;
 
+    /* CHECK(jira Q4, cont.): same width dispute as DPCM_DIFF_Y above */
     /* 0xF8
-        11:0     R/W      dc_predict_cmp2           0x0
-        31:12    R        reserved                  0x0
+        15:0     R/W      dc_predict_cmp2           0x0
+        31:16    R        reserved                  0x0
     */
     typedef union
         {
@@ -1006,8 +1019,8 @@ typedef union
             uint8_t d8[4];
             struct
             {
-                uint32_t dc_predict_cmp2: 12;
-                const uint32_t reserved_0: 20;
+                uint32_t dc_predict_cmp2: 16;
+                const uint32_t reserved_0: 16;
             } b;
         } JPU_DPCM_DIFF_CR_TypeDef;
 
@@ -1045,6 +1058,7 @@ typedef union
             } b;
         } JPU_GBU_CTRL_TypeDef;
 
+    /* CHECK(jira Q8): whole field missing from A1; A3 defines bit0=halt read-only */
     /* 0x104
         0       R      busy                      0x0
         31:1    R      reserved                  0x0
@@ -1116,6 +1130,7 @@ typedef union
             } b;
         } JPU_GBU_TT_CNT_H_TypeDef;
 
+    /* CHECK(jira Q9): high bits [31:8], A1([31:0] W, not marked RSVD) vs A3(8bit, only [7:0]) */
     /* 0x120
         31:0    W        data_8b                   0x0
     */
@@ -1436,6 +1451,7 @@ typedef union
             } b;
         } JPU_BBC_BAS_ADDR_TypeDef;
 
+    /* CHECK(jira Q6): bits[30:29], A1(RSVD) vs A3([30]=eop, [29]=empty) */
     /* 0x234
         23:0     R/W      strm_cnt              0x0
         27:24    R        reserved              0x0
