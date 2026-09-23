@@ -1152,8 +1152,7 @@ uint32_t JPU_Decode(JPU_DEC_CFG *config)
     if (config->strm_end_flg)
     {
         val = (config->bs_wr_ptr - config->bs_buffer_start + 255) >> 8;
-        /* read-modify-write: bit[28] strm_last is owned by hardware and must
-           keep its current value on any write to 0x234 */
+        /* read-modify-write: strm_last and strm_eop are hardware-set */
         JPU_BBC_STRM_CTRL_TypeDef jpu_reg_0x234 = {.d32 = JPU->BBC_STRM_CTRL};
         jpu_reg_0x234.b.eof = 1;
         jpu_reg_0x234.b.strm_cnt = val;
@@ -1656,10 +1655,9 @@ uint32_t JPU_Encode(JPU_ENC_CFG *config)
 
 bool JPU_Busy(void)
 {
-    JPU_BBC_BUSY_TypeDef jpu_reg_0x224 = {.d32 = JPU->BBC_BUSY};
-    JPU_GBU_PBIT_BUSY_TypeDef jpu_reg_0x104 = {.d32 = JPU->GBU_PBIT_BUSY};
+    JPU_PIC_STATUS_TypeDef jpu_reg_0x04 = {.d32 = JPU->PIC_STATUS};
 
-    return (jpu_reg_0x224.b.busy || jpu_reg_0x104.b.busy);
+    return !(jpu_reg_0x04.b.jpg_done || jpu_reg_0x04.b.jpg_err);
 }
 
 
