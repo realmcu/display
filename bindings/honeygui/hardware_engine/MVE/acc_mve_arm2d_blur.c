@@ -227,10 +227,11 @@ static inline uint16x8_t arm2d_local_rgb565_pack_single_vec(uint16x8_t R, uint16
     uint16x8_t      vecMaskRpck = vdupq_n_u16(0x00f8);
     uint16x8_t      vecMaskGpck = vdupq_n_u16(0x00fc);
 
-    uint16x8_t      vOut = vorrq(vshrq(B, 3),
-                                 vmulq(vandq(G, vecMaskGpck), 8));
+    uint16x8_t vOut = vorrq(vshrq(B, 3),
+                            vmulq_n_u16(vandq(G, vecMaskGpck), 8));
 
-    vOut = vorrq(vOut, vmulq(vandq(R, vecMaskRpck), 256));
+    vOut = vorrq(vOut,
+                 vmulq_n_u16(vandq(R, vecMaskRpck), 256));
 
     return vOut;
 }
