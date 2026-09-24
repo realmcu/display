@@ -1,0 +1,210 @@
+/*********************************************************************
+*
+*       Constants, fixed
+*
+**********************************************************************
+*/
+//
+// Registers (ARM)
+//
+__constant U32 _AIRCR_ADDR                 = 0xE000ED0C; // Application Interrupt and Reset Control Register
+__constant U32 _DHCSR_ADDR                 = 0xE000EDF0; // Debug Halting Control and Status Register
+__constant U32 _DEMCR_ADDR                 = 0xE000EDFC; // Debug Exception and Monitor Control Register
+__constant U32 _ID_PFR1_ADDR               = 0xE000ED44; // RO Processor Feature Register 1
+__constant U32 _DSCSR_ADDR                 = 0xE000EE08; // RW Debug Security Control and Status Register
+
+//
+// Bits & Shifts (ARM)
+//
+__constant U32 _DP_CTRL_STAT_BIT_STICKYERR = (1 <<  5);
+
+__constant U32 _DHCSR_DBGKEY               = (0xA05F << 16);
+__constant U32 _DHCSR_C_DEBUGEN            = (1 <<  0);
+__constant U32 _DHCSR_C_HALT               = (1 <<  1);
+__constant U32 _DHCSR_S_HALT               = (1 << 17);
+__constant U32 _DHCSR_S_RESET_ST           = (1 << 25);
+
+__constant U32 _DEMCR_VC_CORERESET         = (1 <<  0);
+__constant U32 _DEMCR_TRCENA               = (1 << 24);
+
+__constant U32 _AIRCR_VECTKEY              = (0x05FA << 16);
+__constant U32 _AIRCR_SYSRESETREQ          = (1 <<  2);
+
+/*********************************************************************
+*
+*       Constants, configurable
+*
+**********************************************************************
+*/
+
+__constant U32 _DEF_BUSY_TIMEOUT = 250;
+
+/*********************************************************************
+*
+*       Static code
+*
+**********************************************************************
+*/
+
+/*********************************************************************
+*
+*       _DAPClrStickyErr
+*
+*  Function description
+*    Clears the DAP sticky error flags.
+*/
+static void _DAPClrStickyErr(void) {
+  U32 v;
+  //
+  // The DP is slightly different for JTAG and SWD regarding clearing sticky error bits.
+  //
+  if (JLINK_ActiveTIF == JLINK_TIF_SWD) {
+    JLINK_CORESIGHT_WriteDP(JLINK_CORESIGHT_DP_REG_ABORT, 0x1E);
+  } else {
+    v  = JLINK_CORESIGHT_ReadDP(JLINK_CORESIGHT_DP_REG_CTRL_STAT);
+    v |= _DP_CTRL_STAT_BIT_STICKYERR;
+    JLINK_CORESIGHT_WriteDP(JLINK_CORESIGHT_DP_REG_CTRL_STAT, v);
+  }
+}
+
+/*********************************************************************
+*
+*       Global functions
+*
+**********************************************************************
+*/
+
+/*********************************************************************
+*
+*       ResetTarget()
+*
+*  Function description
+*    Replaces reset strategies of DLL. No matter what reset type is selected in the DLL, if this function is present, it will be called instead of the DLL internal reset.
+*
+*  Notes
+*    (1) DLL expects target CPU to be halted / in debug mode, when leaving this function
+*    (2) May use MEM_ API functions
+*    (3) The caller ensures that the J-Link SW / FW caches are invalidated after this function
+*/
+int ResetTarget(void) {
+int t;
+  U32 v;
+  U32 DSCSRVal;
+  U8  AllowFail;
+  int Result;
+  U32 DATA;
+  int i;
+  //
+  // v8M + Security Extension enabled:
+  // When AIRCR.SYSRESETREQS is set and the processor is running NS code,
+  // a system reset can not be issued through AIRCR.SYSRESETREQ. This is caused by the
+  // core dropping the signal that indicates that a bus transaction is secure if it
+  // is running NS code. This means that the write to AIRCR.SYSRESETREQ is interpreted
+  // as NS, and blocked by AIRCR.SYSRESETREQS, even though the J-Link issued a secure write.
+  // We make sure that the reset is performed in secure mode. We do not have to restore this
+  // as secure mode is the default after reset anyhow.
+  // Exception: There are different scenarios where switching from non-secure to secure domain
+  // is not possible (e.g. DHCSR.S_SDE == 0). If switching was not possible, we try to issue the
+  // reset via the non-secure domain. As the secure application might disable the reset functinality
+  // via SYSRESET in non-secure mode (AIRCRC.SYSRESREQS == 0), we do not return an error in case of
+  // erase did not work but output a corresponding message instead and proceed without reset. If
+  // reset in non-secure mode is allowed or not can unfortunately not be determined up front because
+  // AIRCRC.SYSRESREQS cannot be read from the non-secure domain.
+  //
+  Result = 0;
+  AllowFail = 0;
+
+  v = JLINK_MEM_ReadU32(_ID_PFR1_ADDR);
+  if (v & (0xF << 4)) {           // Security Extension enabled?
+    DSCSRVal = JLINK_MEM_ReadU32(_DSCSR_ADDR);                                                                                  // Will cause recursive entering of this function, but as we use default flags for this access, there is no need to worry
+    v  = DSCSRVal;
+    v &= ~(1 << 17);              // CDSKEY: Read as 1. Must be written as 0 to make write effective
+    v |=  (1 << 16);              // CDS: 1 == Enable secure mode
+    JLINK_MEM_WriteU32(_DSCSR_ADDR, v);
+    //
+    // Read back the CDS bit and check if it could be changed. If not, reset is switching from non-secure domain to secure domain is not possible. For possible reasons, refer to the DSCSR.CDS description in the ARMv8-M architecture reference manual.
+    //
+    DSCSRVal = JLINK_MEM_ReadU32(_DSCSR_ADDR);                                                                                  // Will cause recursive entering of this function, but as we use default flags for this access, there is no need to worry
+    if (DSCSRVal & (1 << 16)) {
+      JLINK_SYS_Report("Reset: ARMv8M core with Security Extension enabled detected. Switch to secure domain.");
+    } else {
+      JLINK_SYS_Report("Reset: ARMv8M core with Security Extension enabled detected but switching to secure domain is not possible.");
+      AllowFail = 1;
+    }
+  }
+  //
+  // Perform reset
+  //
+  JLINK_SYS_Report("Reset: Halt core after reset via DEMCR.VC_CORERESET.");
+  JLINK_MEM_WriteU32(_DHCSR_ADDR, (_DHCSR_DBGKEY | _DHCSR_C_HALT | _DHCSR_C_DEBUGEN)); // Halt the CPU
+  JLINK_MEM_WriteU32(_DEMCR_ADDR, (_DEMCR_VC_CORERESET | _DEMCR_TRCENA));              // Set vector catch on reset (to halt the CPU immediately after reset)
+  _DAPClrStickyErr();                                                                  // Make sure that no sticky error bits are set on the DP
+  JLINK_SYS_Report("Reset: Reset device via AIRCR.SYSRESETREQ.");
+  JLINK_MEM_WriteU32(_AIRCR_ADDR, (_AIRCR_VECTKEY | _AIRCR_SYSRESETREQ));              // Issue reset request via SFR
+  JLINK_SYS_Sleep(50);                                                                 // The spec. does not guarantee that the reset takes place immediately, so we give the target some time.
+
+
+  //
+  // Wait until S_RESET_ST is set
+  //
+  t = JLINK_GetTime() + _DEF_BUSY_TIMEOUT;
+  do {
+    v  = JLINK_MEM_ReadU32(_DHCSR_ADDR);
+    v &= _DHCSR_S_RESET_ST;
+    if (v) {
+      break;
+    }
+    if ((t - JLINK_GetTime()) < 0) {
+      if (AllowFail) {
+        JLINK_SYS_Report("Reset: CPU has not been reset (DHCSR.S_RESET_ST never gets set). Probably because reset is not available in the current security state (SYSRESETREQS == 0). Details: https://wiki.segger.com/J-Link_ARMv8-M#Non-secure_debug_access");
+        Result = -1;
+        goto Done;
+      } else {
+        JLINK_SYS_Report("Reset: CPU may have not been reset (DHCSR.S_RESET_ST never gets set).");
+        Result = -1;             // Error, timeout
+        goto Done;
+      }
+    }
+  } while (1);
+
+  //
+  // Wait until S_RESET_ST is cleared
+  //
+  t = JLINK_GetTime() + _DEF_BUSY_TIMEOUT;
+  do {
+    v  = JLINK_MEM_ReadU32(_DHCSR_ADDR);
+    JLINK_SYS_Report1("_DHCSR_ADDR=", v);
+    v &= _DHCSR_S_RESET_ST;
+    if (v == 0) {
+      break;
+    }
+    if ((t - JLINK_GetTime()) < 0) {
+      JLINK_SYS_Report("Reset: S_RESET_ST never gets cleared. CPU seems to be kept in reset forever.");
+      return -1;
+    }
+  } while (1);
+
+  //
+  // Make sure we clear the vector catch we have set before
+  //
+  JLINK_MEM_WriteU32(_DEMCR_ADDR, (0x0 | _DEMCR_TRCENA));
+Done:
+  return Result;
+}
+
+VOID InitTarget(void){
+	Report("***********************************");
+	Report("J-Link script: cm55(Cortex-M55 CPU) J-Link script");
+	Report("***********************************");
+	CORESIGHT_AddAP(0, CORESIGHT_AHB_AP);
+	CORESIGHT_AddAP(1, CORESIGHT_AHB_AP);
+	CORESIGHT_AddAP(2, CORESIGHT_AHB_AP);
+	CORESIGHT_AddAP(3, CORESIGHT_AHB_AP);
+	CORESIGHT_IndexAHBAPToUse = 0;
+}
+
+int SetupTarget(void) {
+    JLINK_SYS_Report("=== start ===");
+
+    return 0;
+}

@@ -1,0 +1,23 @@
+./objects/vector_table.o: \
+  ..\..\..\..\kernel\soc\rtl87x3k\ap\vector_table.c \
+  ..\..\..\boot\ap_boot\inc\rom_defines.h \
+  D:\App\MDK\AC\622\bin\..\include\stddef.h \
+  ..\..\..\..\kernel\soc\rtl87x3k\ap\vector_table.h \
+  ..\..\..\..\kernel\soc\rtl87x3k\ap\vector_table_auto_gen.h \
+  D:\App\MDK\AC\622\bin\..\include\stdint.h \
+  D:\App\MDK\AC\622\bin\..\include\stdbool.h \
+  ..\..\..\..\kernel\arch\arm\cmsis\CMSIS_5-5.9.0\CMSIS\Core\Include\cmsis_compiler.h \
+  ..\..\..\..\kernel\arch\arm\cmsis\CMSIS_5-5.9.0\CMSIS\Core\Include\cmsis_armclang.h \
+  ..\..\..\..\kernel\soc\rtl87x3k\ap\cpu_setting.h \
+  ..\..\..\..\kernel\soc\rtl87x3k\ap\cm55_setting.h \
+  ..\..\..\..\kernel\arch\arm\cmsis\CMSIS_5-5.9.0\CMSIS\Core\Include\core_cm55.h \
+  ..\..\..\..\kernel\arch\arm\cmsis\CMSIS_5-5.9.0\CMSIS\Core\Include\cmsis_version.h \
+  ..\..\..\..\kernel\arch\arm\cmsis\CMSIS_5-5.9.0\CMSIS\Core\Include\mpu_armv8.h \
+  ..\..\..\..\kernel\arch\arm\cmsis\CMSIS_5-5.9.0\CMSIS\Core\Include\pmu_armv8.h \
+  ..\..\..\..\kernel\arch\arm\cmsis\CMSIS_5-5.9.0\CMSIS\Core\Include\cachel1_armv7.h \
+  ..\..\..\..\kernel\logging\inc\rtl87x3k\soc_log.h \
+  ..\..\..\..\kernel\logging\inc\log_core.h \
+  ..\..\..\..\kernel\linker\inc\section.h \
+  ..\..\..\..\kernel\util\inc\utils.h \
+  D:\App\MDK\AC\622\bin\..\include\stdlib.h \
+  ..\..\..\..\kernel\soc\rtl87x3k\ap\vector_table_ext.h
