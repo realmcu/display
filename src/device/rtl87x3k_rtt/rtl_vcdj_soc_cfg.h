@@ -15,23 +15,24 @@ extern "C" {
 #endif
 
 /*============================================================================*
- *          !!! EVERY VALUE IN THIS FILE IS A PLACEHOLDER !!!
+ *   !!! ONLY VCDJ_SOC_REG_BASE IS CONFIRMED - THE REST IS PLACEHOLDER !!!
  *============================================================================*/
 /**
  * SoC integration constants for the VeriSilicon VC9000DJ (DecoderJ) core on
  * RTL87x3K.
  *
- * THIS IS THE ONE FILE TO EDIT WHEN THE HARDWARE CONTRACT ARRIVES. Nothing below
- * is a real, confirmed hardware parameter: the values are deliberately obviously
- * invalid rather than plausible, so that nobody mistakes them for measured data.
+ * THIS IS THE ONE FILE TO EDIT WHEN THE HARDWARE CONTRACT ARRIVES. Apart from
+ * VCDJ_SOC_REG_BASE, nothing below is a real, confirmed hardware parameter: the
+ * values are deliberately obviously invalid rather than plausible, so that nobody
+ * mistakes them for measured data.
  *
  * DO NOT copy register, clock or reset values from hardware/jpu. The Realtek JPU
  * is a different IP with a different register map, a different clock gate and
  * different completion bits.
  *
  * Still required from the SoC / FPGA side before anything here can be trusted:
- *   - subsystem MMIO base, decoder core offset (vendor FPGA example uses 0x800),
- *     register window size, number of cores
+ *   - decoder core offset (vendor FPGA example uses 0x800), register window size,
+ *     number of cores
  *   - IRQ number, trigger type/polarity, interrupt controller routing, how the
  *     status is cleared
  *   - who owns clock / reset / power domain and the power-up and reset ordering
@@ -48,11 +49,15 @@ extern "C" {
 /**
  * \brief Subsystem MMIO base address of the DecoderJ core.
  *
- * TODO(hardware-contract): unknown. 0 is used on purpose so that any register
- * access is visibly wrong and \ref VCDJ_SOC_REG_BASE_VALID reports "not mapped"
- * instead of silently poking an unrelated peripheral.
+ * Confirmed on the BBpro4 FPGA bench: reading swreg0 through this base returns
+ * the ASIC ID 0x90211010, and swreg309 the build ID 0x80002070 whose low half
+ * matches \ref VCDJ_EXPECTED_HW_BUILD_ID.
+ *
+ * The region is 0x40644000-0x40644FFF, i.e. 4 KB. Note that
+ * VCDJ_SOC_CORE_OFFSET + VCDJ_SOC_REG_WINDOW_SIZE exceeds it - see the window
+ * size below before writing across the whole range.
  */
-#define VCDJ_SOC_REG_BASE               0x00000000UL
+#define VCDJ_SOC_REG_BASE               0x40644000UL
 
 /**
  * \brief Byte offset of the decoder core inside the subsystem register space.
@@ -69,6 +74,13 @@ extern "C" {
  * Derived from the vendor software limit MAX_REG_COUNT (896 registers), i.e.
  * 896 * 4 = 3584 bytes. TODO(hardware-contract): confirm against the hardware
  * manual.
+ *
+ * This is a software array bound, NOT a measured decode range, and on BBpro4 it
+ * does not fit: VCDJ_SOC_CORE_OFFSET (0x800) + 0xE00 = 0x1600 runs past the end
+ * of the 4 KB region, so the last 1536 bytes land outside it. Writing that tail
+ * wedges the bus badly enough that the DAP no longer powers up, and only an FPGA
+ * bitfile reload recovers it (measured 2026-09-24). Do not sweep this whole
+ * window; the region implies 0x800, but that is inference, not confirmed.
  */
 #define VCDJ_SOC_REG_WINDOW_SIZE        (896U * 4U)
 
