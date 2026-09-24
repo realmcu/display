@@ -108,11 +108,16 @@ void rtl_dci_irq_init(void (*isr)(void));
  *============================================================================*/
 /*
  * A macro rather than a function so that the variadic arguments expand at the call
- * site: DBG_DIRECT is itself a macro and cannot be handed a va_list. trace.h is
- * pulled in only for debug builds, so rtl_common stays trace-free in release.
+ * site: DBG_DIRECT is itself a macro and cannot be handed a va_list. The log header is
+ * pulled in only for debug builds, so rtl_common stays log-free in release.
+ *
+ * soc_log.h, not trace.h: on RTL87X3K the logging header is
+ * kernel/logging/inc/rtl87x3k/soc_log.h. trace.h exists only for the older parts
+ * (rtl8772f, rtl87x2g) and there is no rtl87x3k copy of it, so including it fails to
+ * compile. The peripheral samples in soc/ram_proj use soc_log.h the same way.
  */
 #if (DCI_DEBUG_REG_DUMP == 1)
-#include "trace.h"
+#include "soc_log.h"
 #ifndef DCI_LOG
 #define DCI_LOG(...)        DBG_DIRECT(__VA_ARGS__)
 #endif

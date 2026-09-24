@@ -127,6 +127,22 @@ void dci_demo_irq_install(DCI_DMA_config *dma);
 void dci_demo_irq_report(void);
 
 /**
+ * \brief   Sample SR in a loop and report whether the sync inputs ever TOGGLE.
+ *
+ * The measurement a single SR read cannot make. SR is combinational on the pin XOR the
+ * programmed polarity bit, so one read tells you nothing about the wire: flipping
+ * hspol/vspol flips the reading with the pin untouched, and HSYNC is in its active state
+ * for most of a line anyway. Only a window longer than a frame distinguishes a live
+ * signal from a stuck level.
+ *
+ * Run this when RIS stays 0. It separates the three remaining causes - a silent sensor,
+ * an unrouted sync pin, and a missing PIXCLK - and names which one, with the reasoning in
+ * the log. Read-only; safe with a capture armed. Does not touch DR, which would pop the
+ * FIFO.
+ */
+void dci_demo_sync_probe(void);
+
+/**
  * \brief   Keep the nth delivered frame in its buffer instead of releasing it.
  *
  * Every other frame is released from the delivery callback so capture keeps running.
@@ -169,10 +185,27 @@ void dci_demo_on_frame_error(DCI_ERROR err, uint32_t ris);
  *                         Entry point
  *============================================================================*/
 /**
+ * \brief   Open up the test environment this board needs before DCI is touched.
+ *
+ * Writes 0xFFFFFFFF to five consecutive words at 0x40701080..0x40701090, which is the
+ * JLink bring-up sequence used by hand, expressed as code.
+ *
+ * NOT part of the DCI driver - the driver configures DCI, this prepares the platform
+ * around it - so it lives in the demo and an application is free to do the same thing
+ * its own way instead.
+ *
+ * dci_demo_run() calls this first, so it only needs calling directly by an application
+ * that drives the cases itself rather than going through dci_demo_run(). Writing the
+ * same all-ones value twice is harmless, so calling it in both places is fine.
+ */
+void dci_demo_env_init(void);
+
+/**
  * \brief   Run the case selected in dci_demo_config.h.
  *
- * Prints what it is about to do, runs it, and prints the verdict. On failure the
- * reason is logged along with a register dump, if DCI_DEBUG_REG_DUMP is enabled.
+ * Calls dci_demo_env_init() first, then prints what it is about to do, runs it, and
+ * prints the verdict. On failure the reason is logged along with a register dump, if
+ * DCI_DEBUG_REG_DUMP is enabled.
  *
  * \return  DEMO_PASS, or the first failure encountered.
  */

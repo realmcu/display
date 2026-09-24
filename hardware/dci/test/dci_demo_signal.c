@@ -143,7 +143,7 @@ static const dci_demo_signal_t dci_signals[] =
         .note   = "smallest sane frame: 1 block, 37 KB, fits anywhere. Start here.",
         .width  = 160, .height = 120,
         .fmt    = DCI_FMT_RGB565,
-        .pckpol = false, .hspol = false, .vspol = false,
+        .pckpol = true, .hspol = true, .vspol = true,
         .sync   = DCI_SYNC_HARDWARE,
     },
     {

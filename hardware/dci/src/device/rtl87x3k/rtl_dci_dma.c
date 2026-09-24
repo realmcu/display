@@ -160,12 +160,45 @@ void rtl_dci_dma_int_clear_all(uint8_t channel_num)
 }
 
 /*
+ * An ERROR interrupt has to be cleared here, and this is the only place that can.
+ *
+ * The channel raises TRANSFER, BLOCK and ERROR onto one NVIC line. rtl_dci.c's ISR only
+ * ever asks about the first two, so an ERROR would leave its pending bit set: the ISR
+ * returns, the NVIC re-enters immediately, and the CPU never gets back to the thread. The
+ * symptom is a total hang with no further output - not an error report - which is why
+ * this is swallowed at the point every ISR entry passes through rather than left to the
+ * common driver (which must not be modified for a SoC quirk anyway).
+ *
+ * Counted so it is visible: the count is printed by the register dump, and a non-zero
+ * value means the DMA rejected a descriptor or a transfer - usually a bad address or a
+ * width/handshake mismatch, not a pixel problem.
+ */
+static volatile uint32_t dci_dma_err_count;
+
+static void dci_dma_take_error(uint8_t channel_num)
+{
+    if (DMA_GetINTStatus(channel_num, DMA_INT_ERROR) == SET)
+    {
+        DMA_ClearINTPendingBit(channel_num, DMA_INT_ERROR);
+        dci_dma_err_count++;
+    }
+}
+
+uint32_t rtl_dci_dma_err_count(void)
+{
+    return dci_dma_err_count;
+}
+
+/*
  * DMA_GetINTStatus() is used rather than reading the global status registers
  * directly: this SoC splits them into _L / _H halves and the driver already knows
  * which half a channel lives in.
  */
 bool rtl_dci_dma_int_take_block(uint8_t channel_num)
 {
+    /* First thing on every ISR entry - see dci_dma_take_error() above. */
+    dci_dma_take_error(channel_num);
+
     if (DMA_GetINTStatus(channel_num, DMA_INT_BLOCK) != SET)
     {
         return false;
@@ -176,6 +209,10 @@ bool rtl_dci_dma_int_take_block(uint8_t channel_num)
 
 bool rtl_dci_dma_int_take_transfer(uint8_t channel_num)
 {
+    /* Also here: the ISR reaches this without going through take_block() when the
+     * BLOCK source is masked, and an uncleared ERROR hangs the part either way. */
+    dci_dma_take_error(channel_num);
+
     if (DMA_GetINTStatus(channel_num, DMA_INT_TRANSFER) != SET)
     {
         return false;
@@ -184,9 +221,26 @@ bool rtl_dci_dma_int_take_transfer(uint8_t channel_num)
     return true;
 }
 
+/*
+ * Reads CURR_DAR - where the DMA has written up to - by touching the register directly,
+ * because this SDK tree has no accessor for it.
+ *
+ * CAREFUL, the two are easy to confuse and only one is correct here:
+ *   DMA_DARx      (0x08) is the block's PROGRAMMED destination, and never moves;
+ *   DMA_CURR_DARx (0x0C) is where the transfer has actually got to.
+ * soc/driver/dma offers DMA_GetDstTransferAddress(), which returns DMA_DARx - using it
+ * would make every delivered frame report its own start address as the end, i.e. a
+ * length of zero. The sibling tree driver/dma does have DMA_GetCurrDstAddr() for
+ * CURR_DAR, but the AP project builds against soc/driver, where it does not exist.
+ *
+ * Reading the field is what the register dump below already does, so this stays
+ * consistent with the rest of the file.
+ */
 uint32_t rtl_dci_dma_curr_dar(uint8_t channel_num)
 {
-    return DMA_GetCurrDstAddr(DMA_GetDMAChannelx(channel_num));
+    DMA_ChannelTypeDef *chan = DMA_GetDMAChannelx(channel_num);
+
+    return (chan != NULL) ? chan->DMA_CURR_DARx : 0U;
 }
 
 bool rtl_dci_dma_fifo_empty(uint8_t channel_num)
@@ -199,9 +253,22 @@ bool rtl_dci_dma_fifo_empty(uint8_t channel_num)
  *============================================================================*/
 #if (DCI_DEBUG_REG_DUMP == 1)
 
-/* CFGx_H handshake fields: src_per[10:7] dest_per[14:11], each widened by three
- * extended bits elsewhere in the word. Only the low nibble is decoded here - enough
- * to spot the 0xFF placeholder, which is the reason this is dumped at all. */
+/*
+ * CFGx_H handshake fields: src_per[10:7] and dest_per[14:11], each widened to 7 bits
+ * by three extended bits scattered higher up the word - src at 15/17/19, dest at
+ * 16/18/20. All of them have to be reassembled, not just the low nibble: the DCI
+ * handshake is 48, whose low nibble is 0, so decoding four bits alone would print
+ * src_per=0 and read as UART0_TX - a wrong value that looks entirely plausible.
+ */
+#define DCI_CFGH_SRC_PER(h)     ((((h) >> 7)  & 0x0FU)        | \
+                                 ((((h) >> 15) & 1U) << 4)    | \
+                                 ((((h) >> 17) & 1U) << 5)    | \
+                                 ((((h) >> 19) & 1U) << 6))
+#define DCI_CFGH_DEST_PER(h)    ((((h) >> 11) & 0x0FU)        | \
+                                 ((((h) >> 16) & 1U) << 4)    | \
+                                 ((((h) >> 18) & 1U) << 5)    | \
+                                 ((((h) >> 20) & 1U) << 6))
+
 void rtl_dci_dma_read_regs(uint8_t channel_num, DCI_DMA_regs_t *regs)
 {
     DMA_ChannelTypeDef *chan = DMA_GetDMAChannelx(channel_num);
@@ -232,9 +299,11 @@ void rtl_dci_dma_read_regs(uint8_t channel_num, DCI_DMA_regs_t *regs)
     regs->hs_sel_src = ((regs->cfg_low & BIT(11)) != 0);
     regs->fifo_empty = (DMA_GetFIFOStatus(chan) == SET);
 
-    regs->src_per  = (regs->cfg_high >> 7) & 0xFU;
-    regs->dest_per = (regs->cfg_high >> 11) & 0xFU;
+    regs->src_per  = (uint8_t)DCI_CFGH_SRC_PER(regs->cfg_high);
+    regs->dest_per = (uint8_t)DCI_CFGH_DEST_PER(regs->cfg_high);
 
+    /* Channels 16..23 are DMA1 on the AP core (DMA1_CH_NUM0 = 16), and DCI only ever
+     * runs there - AP DMA0 was dropped from the silicon. */
     dmax = (channel_num < 16) ? DMA0 : DMA1;
     regs->ch_en        = dmax->DMA_CHENREG_L;
     regs->status_tfr   = dmax->DMA_STATUSTFR_L;

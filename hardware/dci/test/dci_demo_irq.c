@@ -292,4 +292,305 @@ void dci_demo_irq_report(void)
         DEMO_LOG("      last error %d, RIS 0x%02X at that point",
                  dci_demo_irq.last_err, (unsigned)dci_demo_irq.last_ris);
     }
+
+    /*
+     * The hardware's own view, read straight from the registers. This is the part the
+     * counters above cannot tell you: all-zero counts mean either "no signal arrived" or
+     * "the interrupt never reached the CPU", and those have completely different causes.
+     *
+     * RIS latches regardless of IER, so a bit set here proves the PIXCLK/VSYNC/HSYNC edge
+     * physically happened even if no ISR ever ran. The combination is the diagnosis:
+     *
+     *   RIS FRAME=1 but frame count 0 -> the signal is there, the interrupt is not
+     *                                    reaching the CPU (NVIC, vector table, IER)
+     *   RIS all 0, CR.ENABLE=1        -> nothing is arriving on the pins at all
+     *   CR.ENABLE=0 or CAPTURE=0      -> the peripheral was never actually started
+     */
+    {
+        uint32_t ris = DCI->RIS;
+        uint32_t ier = DCI->IER;
+        DCI_CR_TypeDef cr = {.d32 = DCI->CR};
+        DCI_SR_TypeDef sr = {.d32 = DCI->SR};
+
+        DEMO_LOG("      RIS 0x%02X [frame=%u ovr=%u err=%u vsync=%u line=%u]"
+                 "  IER 0x%02X",
+                 (unsigned)(ris & 0x1FU),
+                 (unsigned)((ris >> 0) & 1U), (unsigned)((ris >> 1) & 1U),
+                 (unsigned)((ris >> 2) & 1U), (unsigned)((ris >> 3) & 1U),
+                 (unsigned)((ris >> 4) & 1U), (unsigned)(ier & 0x1FU));
+        DEMO_LOG("      CR enable=%u capture=%u   SR fne=%u vsync=%u hsync=%u",
+                 (unsigned)cr.b.enable, (unsigned)cr.b.capture,
+                 (unsigned)sr.b.fne, (unsigned)sr.b.vsync, (unsigned)sr.b.hsync);
+
+        if (cr.b.enable == 0)
+        {
+            DEMO_LOG("      -> CR.ENABLE is 0: the peripheral is not running");
+        }
+        else if ((ris & DCI_INT_FRAME) != 0 && dci_demo_irq.frame == 0)
+        {
+            DEMO_LOG("      -> FRAME latched in RIS but never counted: the signal is");
+            DEMO_LOG("         arriving, the INTERRUPT is not reaching the CPU");
+        }
+        else if ((ris & 0x1FU) == 0)
+        {
+            /*
+             * Nothing has ever latched. DO NOT read the SR levels as a diagnosis here -
+             * that mistake was made once already and it cost a board-level debug session.
+             *
+             * SR is COMBINATIONAL on the pin XOR the polarity bit, and it is one sample
+             * at one instant. Two consequences, both of which make a single read useless:
+             *
+             *   - flipping hspol/vspol flips the reading with the pin untouched, so a
+             *     changed SR proves nothing about the wire;
+             *   - HSYNC is in its active state for most of a line (~85% at 320 of ~376
+             *     pclk) and VSYNC for most of a frame, so "reads active" is the overwhelmingly
+             *     likely sample for a perfectly healthy signal AND for a pin stuck high.
+             *
+             * What is diagnostic is that RIS is 0 while IER has LINE enabled: RIS latches
+             * regardless of IER, so not one line boundary has been recognised. Together
+             * with FNE=0 (not one word ever entered the FIFO) the fault is upstream of the
+             * DMA - which is why the DMA registers all looking correct is not reassuring,
+             * it is simply irrelevant.
+             *
+             * The measurement that separates the remaining causes is whether the sync pins
+             * TOGGLE over a window longer than a frame. dci_demo_sync_probe() does that.
+             */
+            DEMO_LOG("      -> nothing latched with ENABLE=1, and LINE is enabled in IER.");
+            DEMO_LOG("         RIS latches whether or not the interrupt is enabled, so");
+            DEMO_LOG("         not one line boundary has been recognised. FNE=%u: no word",
+                     (unsigned)sr.b.fne);
+            DEMO_LOG("         ever entered the DCI FIFO either, so this is UPSTREAM of");
+            DEMO_LOG("         the DMA - the DMA registers being correct means nothing.");
+            DEMO_LOG("         The SR levels above are ONE SAMPLE of a level that is");
+            DEMO_LOG("         active most of the time anyway - not evidence either way.");
+            DEMO_LOG("         Run dci_demo_sync_probe() for the measurement that is.");
+        }
+    }
+}
+
+/*============================================================================*
+ *                         Sync probe
+ *============================================================================*/
+/*
+ * Sample SR in a tight loop for longer than a frame period and report whether the sync
+ * inputs ever CHANGE. This is the measurement a single SR read cannot make, and it needs
+ * no oscilloscope and no reg-dump build.
+ *
+ * Why it is the decisive step when RIS stays 0:
+ *
+ *   sync toggles, RIS still 0  -> the sync wires are alive and DCI is not counting, so
+ *                                 PIXCLK is not reaching the peripheral. DCI advances its
+ *                                 state machine on PIXCLK; with no clock there is no line
+ *                                 boundary, no FIFO write and no frame, whatever the sync
+ *                                 pins do. THIS IS THE ONE THAT MATCHES A CORRECT-LOOKING
+ *                                 DMA AND AN ALL-ZERO RIS.
+ *   sync never toggles         -> the sensor is not emitting, or the pin is not routed.
+ *                                 A stuck level, which is what SR alone is mistaken for.
+ *   HSYNC toggles, VSYNC not   -> VSYNC unrouted, or the window was shorter than a frame.
+ *                                 The printed window length says which.
+ *   RIS becomes non-zero       -> it was working and the earlier read was simply too early.
+ *
+ * The duty cycle is printed as a cross-check on top: for the configured geometry HSYNC
+ * should be active for roughly pclk_per_line / total_line_pclk of the time. A duty cycle
+ * of 0% or 100% is a stuck pin even if the edge counter caught a glitch.
+ *
+ * SR and RIS are both read-only with no side effects, so this is safe with a capture
+ * armed. DR is deliberately NOT touched: reading it pops the FIFO.
+ */
+void dci_demo_sync_probe(void)
+{
+    /* Bit positions of SR, from the register table in rtl_dci_def.h. */
+    const uint32_t SR_HSYNC = 1U << 0;
+    const uint32_t SR_VSYNC = 1U << 1;
+    const uint32_t SR_FNE   = 1U << 2;
+
+    uint32_t i;
+    uint32_t prev;
+    uint32_t h_edges = 0, v_edges = 0;
+    uint32_t h_active = 0, v_active = 0, fne_seen = 0;
+    uint32_t ris_acc;
+    uint32_t taken = 0;
+
+    DEMO_LOG("  --- sync probe: up to %u samples of SR, looking for EDGES ---",
+             (unsigned)DCI_DEMO_SYNC_PROBE_SAMPLES);
+
+    ris_acc = DCI->RIS;
+    prev    = DCI->SR;
+
+    for (i = 0; i < DCI_DEMO_SYNC_PROBE_SAMPLES; i++)
+    {
+        uint32_t cur = DCI->SR;
+
+        ris_acc |= DCI->RIS;
+
+        if (((cur ^ prev) & SR_HSYNC) != 0)
+        {
+            h_edges++;
+
+            /*
+             * Report the FIRST edge on each line the moment it happens, rather than only
+             * in the summary. The summary is worth nothing if the log is cut off before
+             * the loop ends - which is exactly what happened on the first run of this
+             * probe: the banner appeared and nothing else. One line per SIGNAL, not per
+             * edge, so this cannot flood: at most two extra lines for the whole probe.
+             *
+             * It also answers the question early. "HSYNC toggles" is already most of the
+             * diagnosis, and waiting 200 000 samples to say so is a pointless delay when
+             * the interesting case is a board that is producing nothing.
+             */
+            if (h_edges == 1)
+            {
+                DEMO_LOG("      HSYNC TOGGLES (first edge at sample %u)", (unsigned)i);
+            }
+        }
+        if (((cur ^ prev) & SR_VSYNC) != 0)
+        {
+            v_edges++;
+
+            if (v_edges == 1)
+            {
+                DEMO_LOG("      VSYNC TOGGLES (first edge at sample %u)", (unsigned)i);
+            }
+        }
+
+        /* SR is pin XOR polarity, so a 0 here is the ACTIVE (non-blanking) state. */
+        if ((cur & SR_HSYNC) == 0)
+        {
+            h_active++;
+        }
+        if ((cur & SR_VSYNC) == 0)
+        {
+            v_active++;
+        }
+        if ((cur & SR_FNE) != 0)
+        {
+            fne_seen++;
+        }
+
+        prev = cur;
+        taken = i + 1u;
+
+        /*
+         * Both sync lines have been seen moving, so the only remaining question is whether
+         * DCI counts anything - and RIS has already answered it. Stop instead of spinning
+         * out the full budget: the verdict cannot change, and this runs before a blocking
+         * wait, so a shorter probe is strictly better.
+         *
+         * Counted first, then broken out of, so the duty cycle below covers every sample
+         * that was taken and none that were not.
+         */
+        if (h_edges > 0 && v_edges > 0)
+        {
+            break;
+        }
+
+        /*
+         * Heartbeat, bounded to 8 lines for the whole probe.
+         *
+         * Reached only while at least one sync input has still never moved - the loop
+         * breaks out as soon as both have - and that is precisely the board where the
+         * operator cannot tell a long probe from a hang. On an FPGA each register read
+         * crosses a slow bus bridge, so the budget can be seconds of wall clock with
+         * nothing on the UART otherwise.
+         *
+         * The counts are printed rather than a fixed "no edge yet" string: when one line
+         * is alive and the other is not, saying so here is already the diagnosis, and
+         * claiming "no edge" while HSYNC has been toggling for 300 samples would be a
+         * plainly false log line.
+         */
+        if ((i % (DCI_DEMO_SYNC_PROBE_SAMPLES / 8U)) == (DCI_DEMO_SYNC_PROBE_SAMPLES / 8U) - 1U)
+        {
+            DEMO_LOG("      ... %u/%u samples: hsync %u edge(s), vsync %u edge(s) "
+                     "(SR now 0x%02X)",
+                     (unsigned)taken, (unsigned)DCI_DEMO_SYNC_PROBE_SAMPLES,
+                     (unsigned)h_edges, (unsigned)v_edges, (unsigned)(cur & 0x07U));
+        }
+    }
+
+    /*
+     * Percentages are over samples ACTUALLY TAKEN, which the early break above makes
+     * different from the configured budget. Dividing by the budget would report a
+     * misleadingly tiny duty cycle on a healthy signal - the one case that exits early.
+     * taken is at least 1 whenever the loop body ran, and the guard covers the
+     * budget-is-zero build that the #error in dci_demo_config.h already rules out.
+     */
+    if (taken == 0)
+    {
+        DEMO_LOG("      no samples taken - DCI_DEMO_SYNC_PROBE_SAMPLES is 0");
+        return;
+    }
+
+    /*
+     * "0 edges at 0%" and "0 edges at 100%" are two different board faults that read
+     * almost identically in a wall of numbers, so the stuck level is named in words. A
+     * duty cycle strictly between the two is only meaningful when edges were seen.
+     */
+    DEMO_LOG("      HSYNC: %u edges, active in %u%% of %u samples%s",
+             (unsigned)h_edges, (unsigned)((h_active * 100U) / taken), (unsigned)taken,
+             (h_edges != 0) ? "" :
+             ((h_active == taken) ? "  <- STUCK ACTIVE" : "  <- STUCK BLANKING"));
+    DEMO_LOG("      VSYNC: %u edges, active in %u%% of %u samples%s",
+             (unsigned)v_edges, (unsigned)((v_active * 100U) / taken), (unsigned)taken,
+             (v_edges != 0) ? "" :
+             ((v_active == taken) ? "  <- STUCK ACTIVE" : "  <- STUCK BLANKING"));
+    DEMO_LOG("      FNE set in %u samples,  RIS accumulated over the window 0x%02X",
+             (unsigned)fne_seen, (unsigned)(ris_acc & 0x1FU));
+
+    if (h_edges == 0 && v_edges == 0)
+    {
+        DEMO_LOG("      => NEITHER OBSERVABLE SYNC INPUT EVER CHANGED over the window.");
+        DEMO_LOG("         NOTE: that is 2 of the 3 inputs. SR has only hsync/vsync/fne");
+        DEMO_LOG("         bits - there is NO status bit for PIXCLK, so this probe cannot");
+        DEMO_LOG("         see it directly. PIXCLK is only ever observed INDIRECTLY, via");
+        DEMO_LOG("         FNE/RIS moving, and with sync static those stay 0 regardless.");
+        DEMO_LOG("         So PIXCLK is UNTESTED here, not proven absent.");
+        DEMO_LOG("         This is a STUCK LEVEL, now proven rather than guessed at: a");
+        DEMO_LOG("         single SR read cannot tell this from a healthy signal, a whole");
+        DEMO_LOG("         window of samples can.");
+        DEMO_LOG("         SR is pin XOR polarity, so with hspol/vspol as configured the");
+        DEMO_LOG("         RAW pins are sitting at %s.",
+                 (h_active == taken) ? "the ACTIVE level" : "the BLANKING level");
+        DEMO_LOG("         POLARITY IS RULED OUT, and not merely unlikely: the polarity");
+        DEMO_LOG("         bit is an XOR, and this counts edges as (cur ^ prev), where");
+        DEMO_LOG("         (a^p)^(b^p) == a^b - the bit cancels out exactly. So the edge");
+        DEMO_LOG("         count is INDEPENDENT of hspol/vspol, and a toggling wire must");
+        DEMO_LOG("         produce edges at EITHER setting. Wrong polarity would mis-read");
+        DEMO_LOG("         blanking as valid - a wrong frame length, RIS bits, errors -");
+        DEMO_LOG("         never silence. Zero edges therefore means zero activity on the");
+        DEMO_LOG("         wire, which is a BOARD fault, not a configuration one.");
+        DEMO_LOG("         Check, in this order:");
+        DEMO_LOG("          1. is the sensor actually streaming - most sensors need a");
+        DEMO_LOG("             register write to start output, not just power and MCLK;");
+        DEMO_LOG("          2. is MCLK/XCLK reaching the sensor at all - with no input");
+        DEMO_LOG("             clock it drives no sync and no PCLK either;");
+        DEMO_LOG("          3. dcmi_hsync/dcmi_vsync routing in the FPGA .xdc, and the");
+        DEMO_LOG("             ribbon/FMC seating between the sensor board and the FPGA.");
+        DEMO_LOG("         IF A SCOPE SHOWS THE PINS TOGGLING AT THE SENSOR while this");
+        DEMO_LOG("         says static, the break is BETWEEN the two probe points - the");
+        DEMO_LOG("         connector or the FPGA routing - not in the sensor or in DCI.");
+    }
+    else if ((ris_acc & 0x1FU) != 0)
+    {
+        DEMO_LOG("      => RIS became NON-ZERO during the probe: the capture is in fact");
+        DEMO_LOG("         progressing and the earlier read was taken too early.");
+    }
+    else if (v_edges == 0)
+    {
+        DEMO_LOG("      => HSYNC toggles but VSYNC NEVER DID. Either VSYNC is not routed,");
+        DEMO_LOG("         or the probe window was shorter than one frame period. Raise");
+        DEMO_LOG("         DCI_DEMO_SYNC_PROBE_SAMPLES and re-run to tell those apart.");
+    }
+    else
+    {
+        DEMO_LOG("      => BOTH SYNC INPUTS TOGGLE, yet RIS is still 0 and FNE never set.");
+        DEMO_LOG("         The sync wires are alive and DCI is counting nothing, which");
+        DEMO_LOG("         points at PIXCLK NOT REACHING THE PERIPHERAL. DCI advances its");
+        DEMO_LOG("         state machine on PIXCLK: with no clock there is no line boundary,");
+        DEMO_LOG("         no FIFO write and no frame no matter what the sync pins do.");
+        DEMO_LOG("         This is an INFERENCE, not a direct reading - SR has no PIXCLK");
+        DEMO_LOG("         status bit, so the clock is only ever seen through its effects.");
+        DEMO_LOG("         Check, in this order: is the sensor's PCLK output enabled and");
+        DEMO_LOG("         running; is dcmi_pixclk routed (BB9/J4 G5, a clock-capable");
+        DEMO_LOG("         pin); does the FPGA constrain it as a clock in the .xdc.");
+    }
 }

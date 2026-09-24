@@ -169,6 +169,119 @@ bool dci_demo_buf_guards_ok(void)
 }
 
 /*
+ * The head of a delivered frame, over the UART, plus the guard word in front of it.
+ *
+ * This exists because "seq 1, 38400 B" looks the same whether the DMA wrote a frame or
+ * wrote nothing: the byte count comes from the descriptor, not from the data. A dozen
+ * words settle it immediately, and name the failure while doing so:
+ *
+ *   DEADBEEF repeated  - this demo's poison. The DMA never wrote here.
+ *   A5A5A5A5 in [-1]   - the guard is intact, so nothing overran into it.
+ *   one constant value - something wrote, but not pixels (bus stuck, or a sensor
+ *                        putting out a flat field).
+ *   varying values     - real data; compare against the expected format.
+ */
+void dci_demo_buf_head_dump(const DCI_frame_t *f, uint32_t words)
+{
+    const uint32_t *p;
+    uint32_t        avail;
+    uint32_t        i;
+
+    if (f == NULL)
+    {
+        return;
+    }
+
+    p = dci_demo_buf_get(f->index);
+    if (p == NULL)
+    {
+        return;
+    }
+
+    avail = f->bytes / 4;
+    if (words > avail)
+    {
+        words = avail;
+    }
+    if (words == 0)
+    {
+        DEMO_LOG("  head: frame is 0 words long, nothing to show");
+        return;
+    }
+
+    /* The guard immediately below the buffer. Printed with the data rather than only on
+     * the guard check, because "was anything written, and did it stay in bounds" is one
+     * question in practice. */
+    DEMO_LOG("  guard[-1] 0x%08X %s", p[-1],
+             (p[-1] == DCI_DEMO_GUARD) ? "(intact)" : "(!! OVERWRITTEN)");
+
+    for (i = 0; i < words; i += 4)
+    {
+        uint32_t n = ((words - i) < 4) ? (words - i) : 4;
+
+        switch (n)
+        {
+        case 4:
+            DEMO_LOG("  +%04X: %08X %08X %08X %08X", (unsigned)(i * 4),
+                     p[i], p[i + 1], p[i + 2], p[i + 3]);
+            break;
+        case 3:
+            DEMO_LOG("  +%04X: %08X %08X %08X", (unsigned)(i * 4),
+                     p[i], p[i + 1], p[i + 2]);
+            break;
+        case 2:
+            DEMO_LOG("  +%04X: %08X %08X", (unsigned)(i * 4), p[i], p[i + 1]);
+            break;
+        default:
+            DEMO_LOG("  +%04X: %08X", (unsigned)(i * 4), p[i]);
+            break;
+        }
+    }
+
+    /*
+     * Say what was just shown, so the reader does not have to recognise the constants.
+     *
+     * Judged over the WHOLE frame, not just the words printed above: on a colour bar the
+     * first words legitimately are one constant - the leading bar is tens of pixels wide
+     * - so a verdict based on the head alone would cry "no variation" on a perfectly
+     * good capture. The head is for the eye; the counting is for the verdict.
+     */
+    {
+        const uint32_t *q     = dci_demo_buf_get(f->index);
+        uint32_t        step  = (avail > 4096U) ? (avail / 4096U) : 1U;  /* cap the scan */
+        uint32_t        seen  = 0, poison = 0, same = 0;
+
+        for (i = 0; i < avail; i += step)
+        {
+            seen++;
+            if (q[i] == DCI_DEMO_POISON) { poison++; }
+            if (q[i] == q[0])            { same++; }
+        }
+
+        if (poison == seen)
+        {
+            DEMO_LOG("  -> all poison over the whole frame: "
+                     "THE DMA DID NOT WRITE THIS BUFFER");
+        }
+        else if (same == seen)
+        {
+            DEMO_LOG("  -> one constant 0x%08X over the whole frame: "
+                     "written, but no pixel variation", q[0]);
+        }
+        else if (poison != 0)
+        {
+            DEMO_LOG("  -> %u of %u sampled words still poison: partial write",
+                     (unsigned)poison, (unsigned)seen);
+        }
+        else
+        {
+            DEMO_LOG("  -> data varies across the frame (%u words sampled)",
+                     (unsigned)seen);
+        }
+    }
+}
+
+/*
  * Two degenerate outcomes that a length check alone would miss: nothing was written
  * at all, or something wrote a constant. Either means the data path is not carrying
  * pixels, whatever the byte count says.

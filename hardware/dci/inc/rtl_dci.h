@@ -292,12 +292,20 @@ typedef struct
  * is what a pixel stream wants, and the channel is released on Capture_Init failure
  * or on a later Reconfig. Naming a channel explicitly is still allowed but takes
  * the FIFO depth out of the driver's hands.
+ *
+ * On BBPro4 (rtl87x3k, AP core) a DCI capture only works on a DMA1 channel, which is
+ * 16..23 there: AP DMA0 was dropped from the silicon. An explicit channel outside
+ * that range is refused with DCI_ERROR_DMA_CHANNEL rather than quietly corrected,
+ * because it means the caller expected a channel that cannot carry DCI at all. AUTO
+ * handles the constraint on its own.
  */
 #define DCI_DMA_CH_AUTO             0xFFU
 
 typedef struct
 {
-    uint8_t           dma_channel_num;  /*!< DCI_DMA_CH_AUTO, or an explicit channel. */
+    uint8_t           dma_channel_num;  /*!< DCI_DMA_CH_AUTO, or an explicit channel -
+                                             on BBPro4 AP that must be a DMA1 channel,
+                                             16..23. */
     uint8_t           dma_priority;     /*!< 0 is highest. */
 
     DCI_BUF_COUNT_T   buf_count;

@@ -57,7 +57,12 @@ typedef struct
 /*============================================================================*
  *                         Handshake
  *============================================================================*/
-/** \brief  Source handshake index for the DCI request line. See TODO(HAL) 1/3. */
+/**
+ * \brief   Source handshake index for the DCI request line.
+ *
+ * 48 on BBPro4 AP: DCI runs on AP DMA1 because AP DMA0 was dropped from the silicon,
+ * and SRC_PER is a per-controller port number. rtl_dci_int.c carries the sourcing.
+ */
 uint8_t rtl_dci_dma_handshake_rx(void);
 
 /*============================================================================*
@@ -111,6 +116,16 @@ bool rtl_dci_dma_int_take_block(uint8_t channel_num);
 
 /** \brief  Did the transfer-complete interrupt fire? Clears it when it did. */
 bool rtl_dci_dma_int_take_transfer(uint8_t channel_num);
+
+/**
+ * \brief   How many DMA ERROR interrupts have been seen and cleared.
+ *
+ * The channel's ERROR source shares the NVIC line with TRANSFER and BLOCK, and the
+ * common driver never asks about it, so it is cleared inside the take_* functions above.
+ * Non-zero means the DMA rejected a transfer - a bad address, or a width or handshake
+ * mismatch - rather than anything to do with the pixels.
+ */
+uint32_t rtl_dci_dma_err_count(void);
 
 /** \brief  Current destination address, i.e. how far the channel has written. */
 uint32_t rtl_dci_dma_curr_dar(uint8_t channel_num);

@@ -30,6 +30,19 @@ bool dci_demo_buf_guards_ok(void);
 /** \brief  Reject a buffer that is still poison or holds one repeated value. */
 bool dci_demo_buf_has_data(uint8_t index, uint32_t bytes);
 
+/**
+ * \brief   Print the first words of a delivered frame, plus the guard below it.
+ *
+ * Answers over the UART what a byte count cannot: whether the DMA wrote anything. The
+ * length in DCI_frame_t comes from the descriptor, so an untouched buffer reports a full
+ * frame. A line of 0xDEADBEEF - this demo's poison - is that case, and the summary line
+ * after the hex says so in words.
+ *
+ * \param[in] f      Delivered frame. NULL is ignored.
+ * \param[in] words  How many 32-bit words to show, clamped to the frame length.
+ */
+void dci_demo_buf_head_dump(const DCI_frame_t *f, uint32_t words);
+
 /** \brief  Report a frame. Level 0 = summary + CRC, 1 = samples, 2 = full hex. */
 void dci_demo_buf_dump(const DCI_frame_t *f, const dci_demo_cfg_t *c, uint8_t level);
 

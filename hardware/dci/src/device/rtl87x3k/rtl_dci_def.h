@@ -7,9 +7,22 @@
 #ifndef RTL_DCI_REG_H
 #define RTL_DCI_REG_H
 
+/*
+ * On target this header needs only two things: the fixed-width integer types and the
+ * CMSIS __IO / __I / __O qualifiers. utils/rtl_utils.h supplies both - it pulls in
+ * stdint.h, stdbool.h and, via cpu_setting.h, the CMSIS core header for this core.
+ * That is the same entry point the sibling drivers use (compare rtl_rcc_def.h).
+ *
+ * NOT rtl876x.h: that name belongs to the older parts. RTL87X3K has no such header in
+ * driver/ or kernel/soc/rtl87x3k/ - the only copies in the tree are an rtl87x2g test
+ * platform, a TF-M port and soc/ram_proj/src/system_init/inc/, none of which is a
+ * peripheral driver include path.
+ *
+ * address_map.h is not needed either: DCI_REG_BASE is spelled out below, and the only
+ * mention of address_map.h's DCI_BASE here is in the comment on it.
+ */
 #ifdef __arm__
-#include "address_map.h"
-#include "rtl876x.h"
+#include "utils/rtl_utils.h"
 #endif
 
 

@@ -71,6 +71,25 @@
 #define DEMO_DUMP_ONESHOT       DCI_DEMO_DUMP_LEVEL
 #define DEMO_DUMP_STREAM        0
 
+/*
+ * The frame wait is split into slices so it can report progress. DCI_Capture_WaitFrame()
+ * spins a count rather than reading a clock, and prints nothing while it does, so a
+ * single call with the full budget is indistinguishable from a hang. 10 ms per slice is
+ * well over one frame period at any sane rate, so a frame that is coming still arrives
+ * inside the first slice.
+ */
+#define DEMO_WAIT_SLICE_MS      10
+#define DEMO_WAIT_SLICES        ((DCI_DEMO_TIMEOUT_MS + DEMO_WAIT_SLICE_MS - 1) \
+                                 / DEMO_WAIT_SLICE_MS)
+
+/*
+ * DMA ERROR interrupts seen by the SoC layer. Declared here rather than reached through
+ * rtl_dci_dma.h, because that header is the SoC port's own and the demo has no business
+ * including it; one extern for one diagnostic counter is the smaller coupling. Returns 0
+ * on a port that does not track them.
+ */
+extern uint32_t rtl_dci_dma_err_count(void);
+
 /*============================================================================*
  *                         Frame validation
  *============================================================================*/
@@ -153,6 +172,16 @@ static void demo_report_dump(const DCI_frame_t *f, uint32_t expect, bool static_
                  (unsigned)expect);
     }
     dci_demo_buf_report_range(f);
+
+    /*
+     * The first words of the frame, printed here rather than left to JLink. Reading a
+     * dozen words over the UART answers the one question a length and an address cannot:
+     * whether the DMA wrote anything at all. 0xDEADBEEF is this demo's poison, so a row
+     * of it means the buffer was never touched - which looks identical to a successful
+     * capture if all you have is "seq 1, 38400 B".
+     */
+    dci_demo_buf_head_dump(f, 16);
+
     if (static_now)
     {
         DEMO_LOG("  capture is stopped; the data is static and will not change");
@@ -196,9 +225,10 @@ dci_demo_result_t dci_demo_case_reg_test(const dci_demo_cfg_t *c)
 
     case DCI_ERROR_NO_RESPONSE:
         DEMO_LOG("  register block did not respond. In order of likelihood:");
-        DEMO_LOG("   1. DCI clock still gated - see rtl_dci_clock_enable() TODO(HAL)");
-        DEMO_LOG("   2. wrong base address");
-        DEMO_LOG("   3. display island powered down");
+        DEMO_LOG("   1. wrong base address (expect DCI at 0x40643000)");
+        DEMO_LOG("   2. display island powered down");
+        DEMO_LOG("   3. DCI clock gated after all - it is documented as on by");
+        DEMO_LOG("      default, so this is last; see rtl_dci_clock_enable()");
         return DEMO_FAIL_REG_DEAD;
 
     default:
@@ -313,12 +343,100 @@ dci_demo_result_t dci_demo_case_snapshot(const dci_demo_cfg_t *c)
             return DEMO_FAIL_START;
         }
 
-        err = DCI_Capture_WaitFrame(&f[shot], DCI_DEMO_TIMEOUT_MS);
+        /*
+         * Say so BEFORE blocking. WaitFrame() has no clock - it spins
+         * DCI_DEMO_TIMEOUT_MS * DCI_WAIT_ITER_PER_MS times - so at the default 3000 it
+         * can sit here for a minute with nothing on the UART. A log that just stops
+         * after the geometry line is that, and it is indistinguishable from a crash
+         * unless this line exists.
+         */
+        DEMO_LOG("  capture started, polling for a frame in %u slices of %u ms",
+                 (unsigned)DEMO_WAIT_SLICES, (unsigned)DEMO_WAIT_SLICE_MS);
+
+        /*
+         * Dump the registers HERE, with the capture armed and before anything can block.
+         *
+         * Every other DCI_RegDump() in this demo is on a failure path, which is useless
+         * when the failure is a hang: the log stops before reaching it. This one always
+         * runs, so the state that was actually programmed - IER, CR.ENABLE/CAPTURE, the
+         * DMA channel's CFG_HI.SRC_PER and CH_EN - is on record whatever happens next.
+         */
+#if (DCI_DEBUG_REG_DUMP == 1)
+        DEMO_LOG("  --- registers with capture armed ---");
+        DCI_RegDump();
+#endif
+        /* And the hardware's own view of the sync signals, which needs no reg dump build:
+         * RIS latches whether or not the interrupt is enabled, so this says straight away
+         * whether FRAME/VSYNC/HSYNC edges are physically arriving. */
+        dci_demo_irq_report();
+
+        /*
+         * If nothing has latched yet, measure the sync pins before blocking.
+         *
+         * This runs BEFORE the wait rather than after the timeout on purpose: the probe is
+         * the only thing here that can tell a stuck level from a live signal, and after a
+         * full timeout budget the operator has already waited a minute for a log line that
+         * says less. RIS is checked first so a working capture is never delayed by it.
+         *
+         * The condition is deliberately RIS, not the frame counter: RIS latches without
+         * the interrupt reaching the CPU, so it stays 0 only when the peripheral itself
+         * has seen nothing - which is exactly when the probe has something to say.
+         */
+        if ((DCI->RIS & 0x1FU) == 0)
+        {
+            dci_demo_sync_probe();
+        }
+
+        /*
+         * Sliced rather than one long wait, so the wait itself reports progress. One
+         * WaitFrame(3000) is silent for its whole duration; N x WaitFrame(short) prints
+         * between slices, which distinguishes "still polling" from "hung in an ISR" -
+         * the two look identical from outside, and only one of them is a driver bug.
+         */
+        {
+            uint32_t slice;
+
+            /* Print every Nth slice, not every one. At the default budget this loop runs
+             * 300 times, and 300 identical "no frame yet" lines push the diagnosis that
+             * follows them off the top of a terminal scrollback - which is how a log ends
+             * up truncated exactly where it matters. Roughly 10 lines is enough to show
+             * the wait is progressing. */
+            const uint32_t step = (DEMO_WAIT_SLICES >= 10u) ? (DEMO_WAIT_SLICES / 10u) : 1u;
+
+            err = DCI_ERROR_TIMEOUT;
+            for (slice = 0; slice < DEMO_WAIT_SLICES; slice++)
+            {
+                err = DCI_Capture_WaitFrame(&f[shot], DEMO_WAIT_SLICE_MS);
+                if (err == DCI_SUCCESS)
+                {
+                    break;
+                }
+                if ((slice % step) == step - 1u)
+                {
+                    DEMO_LOG("    ... slice %u/%u: no frame yet "
+                             "(dci frame irq %u, dma err %u)",
+                             (unsigned)(slice + 1u), (unsigned)DEMO_WAIT_SLICES,
+                             (unsigned)dci_demo_irq.frame,
+                             (unsigned)rtl_dci_dma_err_count());
+                }
+            }
+        }
         if (err != DCI_SUCCESS)
         {
-            DEMO_LOG("  no frame in %u ms: %d", DCI_DEMO_TIMEOUT_MS, err);
+            DEMO_LOG("  NO FRAME: WaitFrame returned %d after the full budget", err);
+            DEMO_LOG("  -> no frame interrupt arrived, so nothing was delivered.");
+            DEMO_LOG("     Check in this order: PCLK present? VSYNC/HSYNC toggling?");
+            DEMO_LOG("     polarity matching the sensor? CR.ENABLE and CR.CAPTURE set?");
             dci_demo_irq_report();
             dci_demo_buf_report_range(NULL);
+#if (DCI_DEBUG_REG_DUMP == 1)
+            /* The registers at the moment of failure are the diagnostic - in particular
+             * CFG_HI.SRC_PER (should be 0x30 = 48), CH_EN for the channel, and whether
+             * CURR_DAR has moved from DAR at all. */
+            DCI_RegDump();
+#else
+            DEMO_LOG("     rebuild with DCI_DEBUG_REG_DUMP=1 for the register dump");
+#endif
             return DEMO_FAIL_TIMEOUT;
         }
 
@@ -350,27 +468,33 @@ dci_demo_result_t dci_demo_case_snapshot(const dci_demo_cfg_t *c)
      * Rotation: the two shots must land in different buffers and carry consecutive
      * sequence numbers. With one buffer there is nothing to rotate, which is why
      * dci_demo_config.h refuses SHOTS = 2 there.
+     *
+     * #if, not if: f is DCI_frame_t[DCI_DEMO_SHOTS], so at the default SHOTS = 1 the f[1]
+     * accesses below are out of bounds. A plain `if` on a compile-time constant leaves
+     * them compiled - dead at run time, but still an out-of-bounds subscript in the
+     * translation unit, which static analysis flags as an error and is entitled to.
+     * Preprocessing the block away means the code that indexes f[1] only exists in a
+     * build where f actually has an f[1].
      */
-    if (DCI_DEMO_SHOTS > 1)
+#if (DCI_DEMO_SHOTS > 1)
+    if (f[1].index == f[0].index)
     {
-        if (f[1].index == f[0].index)
-        {
-            DEMO_LOG("  both shots landed in buffer %u: rotation stalled while the "
-                     "first was still held", f[0].index);
-            r = DEMO_FAIL_SEQ;
-        }
-        else if (f[1].seq != f[0].seq + 1u)
-        {
-            DEMO_LOG("  seq %u then %u: a frame was delivered but never collected",
-                     (unsigned)f[0].seq, (unsigned)f[1].seq);
-            r = DEMO_FAIL_SEQ;
-        }
-        else
-        {
-            DEMO_LOG("  rotation ok: buffer %u then %u, seq %u then %u",
-                     f[0].index, f[1].index, (unsigned)f[0].seq, (unsigned)f[1].seq);
-        }
+        DEMO_LOG("  both shots landed in buffer %u: rotation stalled while the "
+                 "first was still held", f[0].index);
+        r = DEMO_FAIL_SEQ;
     }
+    else if (f[1].seq != f[0].seq + 1u)
+    {
+        DEMO_LOG("  seq %u then %u: a frame was delivered but never collected",
+                 (unsigned)f[0].seq, (unsigned)f[1].seq);
+        r = DEMO_FAIL_SEQ;
+    }
+    else
+    {
+        DEMO_LOG("  rotation ok: buffer %u then %u, seq %u then %u",
+                 f[0].index, f[1].index, (unsigned)f[0].seq, (unsigned)f[1].seq);
+    }
+#endif
 
     /*
      * The last frame stays locked on purpose - that is the deliverable for a JLink dump,

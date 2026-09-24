@@ -352,10 +352,105 @@ static void dci_demo_banner(const dci_demo_cfg_t *c)
     }
 }
 
+/*============================================================================*
+ *                         Test environment
+ *============================================================================*/
+/*
+ * Board bring-up writes that are NOT part of the DCI driver, which is why they live
+ * here and not in rtl_dci_int.c: the driver configures DCI, while this opens up the
+ * environment DCI needs to exist in on this bring-up platform.
+ *
+ * Transcribed from the JLink sequence used to bring the part up by hand:
+ *
+ *     w4 0x40701080, 0xFFFFFFFF
+ *     w4 0x40701084, 0xFFFFFFFF
+ *     w4 0x40701088, 0xFFFFFFFF
+ *     w4 0x4070108C, 0xFFFFFFFF
+ *     w4 0x40701090, 0xFFFFFFFF
+ *
+ * Five consecutive 32-bit words, all ones. Kept as the literal addresses the JLink
+ * script uses rather than being dressed up as named registers: no register table for
+ * this block has been seen, so inventing names would assert more than is known. When
+ * that table turns up, name them and say what the bits do.
+ *
+ * Idempotent and side-effect free as far as DCI is concerned, so it is safe to call
+ * from every case, including the ones that never touch a pixel.
+ */
+/*
+ * Overridable so the host-side build can point it at plain RAM. On target it is the
+ * literal address; nothing else should ever redefine it.
+ */
+#ifndef DEMO_ENV_REG_FIRST
+#define DEMO_ENV_REG_FIRST      0x40701080UL
+#endif
+#define DEMO_ENV_REG_COUNT      5U
+
+void dci_demo_env_init(void)
+{
+    uint32_t i;
+    uint32_t stuck = 0;
+
+    DEMO_LOG("[ENV] 0x%08X..0x%08X <- 0xFFFFFFFF (%u words)",
+             (unsigned)DEMO_ENV_REG_FIRST,
+             (unsigned)(DEMO_ENV_REG_FIRST + (DEMO_ENV_REG_COUNT - 1U) * 4U),
+             (unsigned)DEMO_ENV_REG_COUNT);
+
+    for (i = 0; i < DEMO_ENV_REG_COUNT; i++)
+    {
+        *(volatile uint32_t *)(DEMO_ENV_REG_FIRST + i * 4U) = 0xFFFFFFFFUL;
+    }
+
+    /*
+     * Read back and report, because up to now this block was written blind.
+     *
+     * These five words are the platform enables this bring-up depends on, and nothing
+     * downstream can work if they did not take. A write to an ungated-but-absent block,
+     * or to one whose own clock is off, is silently dropped on this bus - so "the log
+     * printed [ENV]" has never actually proven the writes landed.
+     *
+     * Not all-ones is NOT automatically a fault: these are unknown bits with no register
+     * table, so some are very likely read-only, reserved or write-1-to-clear, and reading
+     * back something else is expected for those. What matters is the all-zero case: a word
+     * that reads 0 right after 0xFFFFFFFF was written to it means the write went nowhere,
+     * and that is a finding rather than a curiosity.
+     */
+    for (i = 0; i < DEMO_ENV_REG_COUNT; i++)
+    {
+        uint32_t v = *(volatile uint32_t *)(DEMO_ENV_REG_FIRST + i * 4U);
+
+        DEMO_LOG("      [%u] 0x%08X -> reads 0x%08X%s", (unsigned)i,
+                 (unsigned)(DEMO_ENV_REG_FIRST + i * 4U), (unsigned)v,
+                 (v == 0xFFFFFFFFUL) ? "  (took)" :
+                 ((v == 0U) ? "  <- READS ZERO: write did not land" : "  (partial)"));
+
+        if (v == 0U)
+        {
+            stuck++;
+        }
+    }
+
+    if (stuck != 0)
+    {
+        DEMO_LOG("      *** %u of %u env words read back 0 after writing all-ones.",
+                 (unsigned)stuck, (unsigned)DEMO_ENV_REG_COUNT);
+        DEMO_LOG("      The writes are NOT reaching this block, so whatever it enables");
+        DEMO_LOG("      is still off. Everything downstream - including any external");
+        DEMO_LOG("      pin or clock it gates - has to be treated as unconfigured.");
+    }
+}
+
 dci_demo_result_t dci_demo_run(void)
 {
     const dci_demo_cfg_t *cp = NULL;
     dci_demo_result_t     r;
+
+    /*
+     * First thing, before the signal row is even resolved: every later step either
+     * reads DCI registers or arms the DMA, and both assume the environment is already
+     * open. An app that has its own bring-up can call dci_demo_env_init() itself and
+     * this second call costs five harmless stores.
+     */
+    dci_demo_env_init();
 
 #if (DEMO_NEEDS_CONFIG == 1)
     dci_demo_cfg_t cfg;

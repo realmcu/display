@@ -55,7 +55,7 @@
 /* #ifndef so a build system can override with -DDCI_DEMO_CASE=... without editing
  * this file - useful for a CI job that compiles every case in turn. */
 #ifndef DCI_DEMO_CASE
-#define DCI_DEMO_CASE               DCI_DEMO_CASE_REG_TEST
+#define DCI_DEMO_CASE               DCI_DEMO_CASE_SNAPSHOT
 #endif
 
 /*============================================================================*
@@ -72,7 +72,7 @@
  * board, because it is the only row where a failure cannot be a configuration mistake.
  */
 #ifndef DCI_DEMO_SIGNAL
-#define DCI_DEMO_SIGNAL             DCI_DEMO_SIG_QVGA_RGB565
+#define DCI_DEMO_SIGNAL             DCI_DEMO_SIG_QQVGA_RGB565
 #endif
 
 /*============================================================================*
@@ -146,7 +146,7 @@
  *   BUF_COUNT = 1 with FILL_MODE OVERWRITE -> viewfinder mode      (was continuous-1buf)
  */
 #ifndef DCI_DEMO_BUF_COUNT
-#define DCI_DEMO_BUF_COUNT          2
+#define DCI_DEMO_BUF_COUNT          1
 #endif
 
 /**
@@ -207,12 +207,12 @@
 
 /** \brief  Enable IT_VSYNC and count vertical syncs. */
 #ifndef DCI_DEMO_IRQ_VSYNC
-#define DCI_DEMO_IRQ_VSYNC          0
+#define DCI_DEMO_IRQ_VSYNC          1
 #endif
 
 /** \brief  Enable IT_LINE and count lines. See the bandwidth note above. */
 #ifndef DCI_DEMO_IRQ_LINE
-#define DCI_DEMO_IRQ_LINE           0
+#define DCI_DEMO_IRQ_LINE           1
 #endif
 
 /**
@@ -226,7 +226,7 @@
  * overrun is the single most expensive thing to debug in this peripheral.
  */
 #ifndef DCI_DEMO_IRQ_LOG
-#define DCI_DEMO_IRQ_LOG            0
+#define DCI_DEMO_IRQ_LOG            1
 #endif
 
 /*============================================================================*
@@ -247,6 +247,10 @@
  *
  * 0 disables holding, so CONTINUOUS runs its full DCI_DEMO_FRAMES and tears down
  * normally. That is the right setting for a stress run.
+ *
+ * Default 0, not 1: this only applies to CONTINUOUS, and the consistency check below
+ * rejects a non-zero value on SNAPSHOT. Defaulting to 1 would make the default SNAPSHOT
+ * build fail to compile on a macro the user never set.
  */
 #ifndef DCI_DEMO_CAPTURE_FRAME
 #define DCI_DEMO_CAPTURE_FRAME      0
@@ -256,30 +260,101 @@
  *                    RAM budget
  *============================================================================*/
 /*
- * Total RAM available to the demo is 1 MB. The pool is a single static arena carved
- * into buffers at run time; whatever is left of the 1 MB covers stack, globals and
- * the driver's descriptor ring (1320 bytes at DCI_MAX_CHUNK = 33).
+ * The pool is a single static arena carved into buffers at run time. A configuration
+ * that does not fit is reported as DEMO_FAIL_POOL with the exact shortfall - never
+ * silently truncated, because a short buffer would look like a capture fault.
  *
- * A configuration that does not fit is reported as DEMO_FAIL_POOL with the exact
- * shortfall - never silently truncated, because a short buffer would look like a
- * capture fault.
+ * ############################################################################
+ * # READ THIS FIRST IF THE LINKER COMPLAINS ABOUT RAM.                       #
+ * #                                                                          #
+ * # These two numbers describe the BOARD, not the test, and the defaults      #
+ * # assume a part with 1 MB of ordinary RW RAM. Many do not have it. On the    #
+ * # RTL87X3K AP ram_proj, DTCM is 128 KB total and its scatter file gives all  #
+ * # of RW+ZI just DATA_RAM_VECTOR_TABLE_SIZE = 10 KB, so a 960 KB pool fails   #
+ * # at LINK time, not run time:                                               #
+ * #                                                                          #
+ * #   L6221E: Execution region RW_SECTION ... overlaps with ARM_LIB_HEAP      #
+ * #   L6388E: ScatterAssert ... failed: (0xf1580 < 0x2800)                    #
+ * #                                                                          #
+ * # 0xF1580 is this pool. Two ways out, and they compose:                     #
+ * #                                                                          #
+ * #  1. For the two cases that never touch the pool - REG_TEST, and SNAPSHOT  #
+ * #     with NO_CAPTURE=1 - shrink it to nothing and link immediately:        #
+ * #                                                                          #
+ * #        -DDCI_DEMO_POOL_KB=1   -DDCI_DEMO_RAM_BUDGET_KB=1                  #
+ * #                                                                          #
+ * #     Those two are the whole no-camera part of bring-up, so this unblocks  #
+ * #     real testing today.                                                   #
+ * #                                                                          #
+ * #  2. To CAPTURE anything, the pool must go somewhere big, via              #
+ * #     DCI_DEMO_SECTION (below) plus a matching region in the scatter file.  #
+ * #     Shrinking is not an option: the smallest row in the table needs        #
+ * #     38 KB single-buffered, already more than the 10 KB RW+ZI budget.       #
+ * #     Measured requirements, single / double buffered:                       #
+ * #                                                                          #
+ * #        null-min, qqvga-rgb565      38 KB  /  76 KB                        #
+ * #        qvga-jpeg (64 KB cap)       65 KB  / 131 KB                        #
+ * #        qvga-raw8                   76 KB  / 150 KB                        #
+ * #        qvga-rgb565 and friends    150 KB  / 300 KB                        #
+ * #        466-raw8                   212 KB  / 424 KB                        #
+ * #        vga-rgb565                 600 KB  / 1200 KB                       #
+ * ############################################################################
  *
- * Run the SIGNAL_DUMP case to see the requirement of every row at 1x and 2x.
+ * Whatever is left of the budget covers stack, globals and the driver's descriptor
+ * ring (1320 bytes at DCI_MAX_CHUNK = 33).
  */
-#define DCI_DEMO_RAM_BUDGET_KB      1024
+/*
+ * Defaults sized for the RTL87X3K AP ram_proj bring-up: 40 KB in its own DTCM region,
+ * which is what 160x120 RGB565 single-buffered needs (38 432 B measured) with a little
+ * slack. Raise to 80 for double buffering at that size (76 848 B), and see the table
+ * above for the larger rows - those need a region outside DTCM, which is only 128 KB.
+ */
+#ifndef DCI_DEMO_RAM_BUDGET_KB
+#define DCI_DEMO_RAM_BUDGET_KB      40
+#endif
 
 #ifndef DCI_DEMO_POOL_KB
-#define DCI_DEMO_POOL_KB            960
+#define DCI_DEMO_POOL_KB            40
 #endif
 
 /*
- * Where the pool lives. Left empty so it lands in the default RW section; point it at
- * a placement section if 960 KB will not fit there.
+ * Where the pool lives. Placed in its own section rather than the default RW one,
+ * because RW+ZI on this part is capped at 10 KB by the scatter file and the pool does
+ * not fit - see the box above.
  *
- *   #define DCI_DEMO_SECTION  BUFFER_RAM_DATA_SECTION
+ * THIS NEEDS A MATCHING REGION IN THE LINKER SCRIPT. Two edits, both in
+ * soc/ram_proj/keil_proj/ap:
+ *
+ *   1. inc/mem_config.h - carve the pool off the front of the heap:
+ *
+ *        #define DCI_POOL_SIZE   (40*1024)
+ *        #define DCI_POOL_ADDR   (DATA_RAM_VECTOR_TABLE_ADDR + DATA_RAM_VECTOR_TABLE_SIZE)
+ *
+ *      and change DATA_HEAP_ADDR to start after it:
+ *
+ *        #define DATA_HEAP_ADDR  (DCI_POOL_ADDR + DCI_POOL_SIZE)
+ *
+ *      DATA_HEAP_SIZE is computed from DATA_HEAP_ADDR, so it shrinks on its own
+ *      (118 KB -> 78 KB at a 40 KB pool).
+ *
+ *   2. app_rom.sct - its OWN execution region, after the RW_SECTION ScatterAssert and
+ *      before ARM_LIB_HEAP. It must not land inside RW_SECTION or that assert catches
+ *      it again:
+ *
+ *        DCI_POOL DCI_POOL_ADDR DCI_POOL_SIZE
+ *        {
+ *            * (.dci_pool)
+ *        }
+ *
+ *      (app_ram.sct has no heap region, so there only the DCI_POOL region is needed.)
+ *
+ * Nothing in the driver or the demo cares where the pool is, as long as the DMA can
+ * write it: the buffer addresses are handed to the driver at run time. So an integrator
+ * who has somewhere better - SRAM, PSRAM, the DSP shared RAM - only has to change the
+ * section name and the region.
  */
 #ifndef DCI_DEMO_SECTION
-#define DCI_DEMO_SECTION
+#define DCI_DEMO_SECTION            __attribute__((section(".dci_pool")))
 #endif
 
 /*============================================================================*
@@ -301,9 +376,43 @@
 #define DCI_DEMO_FRAMES             8
 #endif
 
-/** \brief  How long to wait for one frame. */
+/**
+ * \brief   How long to wait for one frame.
+ *
+ * NOT MILLISECONDS ON THE WIRE. DCI_Capture_WaitFrame() has no clock; it spins
+ * timeout_ms * DCI_WAIT_ITER_PER_MS times, and that constant (20000, in rtl_dci.c) is a
+ * guess at how many polls fit in a millisecond. Each poll takes a critical section and
+ * several register reads, so on this part the default 3000 works out to 60 million polls
+ * - which can be a minute or more of apparent hang, not three seconds.
+ *
+ * So when nothing arrives, the symptom is a log that simply stops after the geometry
+ * line. If that happens, shorten the wait rather than waiting it out:
+ *
+ *     -DDCI_DEMO_TIMEOUT_MS=50
+ *
+ * 50 is still ~3 frame periods at 60 fps, i.e. long enough for a frame that is coming,
+ * and short enough that a frame that is not coming reports it in about a second.
+ * DCI_WAIT_ITER_PER_MS itself is overridable too if the ratio needs calibrating.
+ */
 #ifndef DCI_DEMO_TIMEOUT_MS
 #define DCI_DEMO_TIMEOUT_MS         3000
+#endif
+
+/**
+ * \brief   How many times dci_demo_sync_probe() samples SR.
+ *
+ * This is a CEILING, not a fixed cost: the probe stops as soon as it has seen both sync
+ * inputs toggle, because at that point the verdict can no longer change. Only a board
+ * that produces nothing pays the whole budget, and that is the case where a long window
+ * is the point.
+ *
+ * Must cover MORE THAN ONE FRAME PERIOD or a VSYNC edge can be missed and the probe
+ * reports "VSYNC never toggled" for a healthy signal. The loop body is a handful of
+ * register reads - call it ~20 cycles, so at a few tens of MHz the default 200 000 is
+ * comfortably tens of milliseconds, i.e. several frames at any sane frame rate.
+ */
+#ifndef DCI_DEMO_SYNC_PROBE_SAMPLES
+#define DCI_DEMO_SYNC_PROBE_SAMPLES 200000
 #endif
 
 /**
@@ -325,8 +434,15 @@
 /*============================================================================*
  *                    Logging
  *============================================================================*/
+/*
+ * soc_log.h, not trace.h: on RTL87X3K the logging header is
+ * kernel/logging/inc/rtl87x3k/soc_log.h, and there is no rtl87x3k trace.h at all - that
+ * name belongs to the older parts. The peripheral samples in soc/ram_proj do the same.
+ *
+ * Define DEMO_LOG before including this file to send the output somewhere else.
+ */
 #ifndef DEMO_LOG
-#include "trace.h"
+#include "soc_log.h"
 #define DEMO_LOG(...)               DBG_DIRECT(__VA_ARGS__)
 #endif
 
@@ -401,6 +517,17 @@
 
 #if (DCI_DEMO_DUMP_LEVEL > 2)
 #error "DCI_DEMO_DUMP_LEVEL must be 0, 1 or 2"
+#endif
+
+/* At least 8 because the probe's heartbeat divides the budget into 8 intervals, and its
+ * duty cycle computes active * 100 in 32 bits - so the budget also has to stay under
+ * 2^32/100 to not wrap. A window this small is useless anyway; the real floor is "longer
+ * than one frame period", which the comment on the macro explains. */
+#if (DCI_DEMO_SYNC_PROBE_SAMPLES < 8)
+#error "DCI_DEMO_SYNC_PROBE_SAMPLES must be at least 8, and should span over a frame"
+#endif
+#if (DCI_DEMO_SYNC_PROBE_SAMPLES > 42000000)
+#error "DCI_DEMO_SYNC_PROBE_SAMPLES over 42,000,000 overflows the duty-cycle arithmetic"
 #endif
 
 /* The odd-phase bits select between two halves of a decimation that is not happening.
