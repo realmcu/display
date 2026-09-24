@@ -1244,3 +1244,23 @@ typedef struct
 #define REG_EN_ALL_DIV2_POS                 (0)
 #define REG_EN_ALL_DIV2_MSK                 (0x1<<REG_EN_ALL_DIV2_POS)
 #define REG_EN_ALL_DIV2_CLR                 (~REG_EN_ALL_DIV2_MSK)
+
+
+/*============================================================================*
+ *                         Functions
+ *============================================================================*/
+/** \defgroup DPHY_Exported_Functions DPHY Exported Functions
+ * \brief
+ * \{
+ */
+/**
+* \brief       Initialize the DPHY.
+*
+*              Clears PWR_UP.shutdownz to put the DPHY core into reset /
+*              power-down state, so registers can be safely reconfigured.
+*
+* \param[in]   NumberOfLanes : Number of lanes to be used.
+*
+* \ingroup     DPHY_Exported_Functions
+*/
+void DPHY_Init(uint32_t NumberOfLanes);

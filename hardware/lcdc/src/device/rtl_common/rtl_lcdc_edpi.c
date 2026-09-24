@@ -12,16 +12,6 @@
 /*============================================================================*
  *                           Public Functions
  *============================================================================*/
-void EDPI_Videocfg()
-{
-
-}
-
-void EDPI_Cmdcfg()
-{
-
-}
-
 void EDPI_StructInit(LCDC_eDPICfgTypeDef *eDPICfg)
 {
     eDPICfg->eDPI_ClockDiv = EDPI_CLOCKDIV2;
@@ -118,7 +108,18 @@ void EDPI_Init(LCDC_eDPICfgTypeDef *eDPICfg)
         edpi_reg_0x38.b.sd_en = eDPICfg->eDPI_ShutdnEn;
         edpi_reg_0x38.b.clm_en = eDPICfg->eDPI_ColorModeEn;
         edpi_reg_0x38.b.up_en = eDPICfg->eDPI_UpdateCfgEn;
+        /* Video-only fields: pixel clock polarity, shutdown frame fill color. */
+        edpi_reg_0x38.b.dpiclk_polarity = 1;            /* 1 = rising edge, 0 = falling edge */
+        edpi_reg_0x38.b.sd_dis_fcolor = EDPI_SD_DIS_FCOLOR_BLACK;
+        edpi_reg_0x38.b.sd_en_fcolor = EDPI_SD_EN_FCOLOR_BLACK;
         EDPI->EDPI_VIDEO_CTL = edpi_reg_0x38.d32;
+
+        /* Drive DE/VSYNC/HSYNC from the controller (constant value 0x01). */
+        EDPI_RGB_COMPATIBLE_TypeDef edpi_reg_0x58 = {.d32 = EDPI->EDPI_RGB_COMPATIBLE};
+        edpi_reg_0x58.b.hsync_constant = EDPI_HSYNC_CONSTANT_NONE;
+        edpi_reg_0x58.b.vsync_constant = EDPI_VSYNC_CONSTANT_NONE;
+        edpi_reg_0x58.b.de_constant = EDPI_DE_CONSTANT_NONE;
+        EDPI->EDPI_RGB_COMPATIBLE = edpi_reg_0x58.d32;
     }
     EDPI_OP_MODE_TypeDef edpi_reg_0x34 = {.d32 = EDPI->EDPI_OP_MODE};
     edpi_reg_0x34.b.op_mode = eDPICfg->eDPI_OperateMode;

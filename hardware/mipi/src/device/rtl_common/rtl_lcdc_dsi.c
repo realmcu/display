@@ -74,18 +74,14 @@ static FlagStatus DSI_WaitPhyStopState(DSI_TypeDef *DSIx)
 
 void DSI_DeInit(DSI_TypeDef *DSIx)
 {
-    if (DSIx != NULL)
-    {
-        DSI_PWR_UP_TypeDef reg_0x04 = {.d32 = DSIx->PWR_UP};
-        reg_0x04.b.shutdownz = 0;           // reset dsi host controller
-        DSIx->PWR_UP = reg_0x04.d32;
-    }
+    DSI_PWR_UP_TypeDef reg_0x04 = {.d32 = DSIx->PWR_UP};
+    reg_0x04.b.shutdownz = 0;           // reset dsi host controller
+    DSIx->PWR_UP = reg_0x04.d32;
 }
 
 FlagStatus DSI_Init(DSI_TypeDef *DSIx, const DSI_InitTypeDef *DSI_Init)
 {
-    if ((DSIx == NULL) || (DSI_Init == NULL) ||
-        (DSI_Init->NumberOfLanes == 0U) || (DSI_Init->NumberOfLanes > 4U) ||
+    if ((DSI_Init->NumberOfLanes == 0U) || (DSI_Init->NumberOfLanes > 4U) ||
         (DSI_Init->ColorCoding > 0xFU))
     {
         return DSI_STATUS_ERROR;
@@ -183,13 +179,7 @@ FlagStatus DSI_Init(DSI_TypeDef *DSIx, const DSI_InitTypeDef *DSI_Init)
     DSIx->BTA_TO_CNT = bta.d32;
 
     DSI_PCKHDL_CFG_TypeDef pckhdl = {.d32 = DSIx->PCKHDL_CFG};
-    pckhdl.b.eotp_tx_en = DSI_Init->PeripherCharacteristics & 0x1;        // (42) 0x3F mask
-    pckhdl.b.eotp_rx_en = (DSI_Init->PeripherCharacteristics >> 1) & 0x1;
-    pckhdl.b.bta_en = ((DSI_Init->PeripherCharacteristics >> 2) & 0x1) |
-                      (DSI_Init->AcknowledgeRequest != 0U);
-    pckhdl.b.ecc_rx_en = (DSI_Init->PeripherCharacteristics >> 3) & 0x1;
-    pckhdl.b.crc_rx_en = (DSI_Init->PeripherCharacteristics >> 4) & 0x1;
-    pckhdl.b.eotp_tx_lp_en = (DSI_Init->PeripherCharacteristics >> 5) & 0x1;
+    pckhdl.d32 |= (DSI_Init->PeripherCharacteristics & 0x3F); // (42) 0x3F mask
     DSIx->PCKHDL_CFG = pckhdl.d32;
 
     DSI_GEN_VCID_TypeDef gen_vcid = {.d32 = DSIx->GEN_VCID};
@@ -221,11 +211,6 @@ FlagStatus DSI_Init(DSI_TypeDef *DSIx, const DSI_InitTypeDef *DSI_Init)
 
 FlagStatus DSI_ConfigVideoMode(DSI_TypeDef *DSIx, const DSI_VidCfgTypeDef *VidCfg)
 {
-    if ((DSIx == NULL) || (VidCfg == NULL))
-    {
-        return DSI_STATUS_ERROR;
-    }
-
     DSI_VID_MODE_CFG_TypeDef vid = {.d32 = DSIx->VID_MODE_CFG};
     vid.b.vid_mode_type = VidCfg->Mode;                 // (13) burst / non-burst
     vid.b.lp_cmd_en = VidCfg->LPCommandEnable;          // (14)
@@ -295,11 +280,6 @@ FlagStatus DSI_ConfigVideoMode(DSI_TypeDef *DSIx, const DSI_VidCfgTypeDef *VidCf
 FlagStatus DSI_ConfigAdaptedCommandMode(DSI_TypeDef *DSIx,
                                         const DSI_AdaptedCmdCfgTypeDef *AdaptedCmdCfg)
 {
-    if ((DSIx == NULL) || (AdaptedCmdCfg == NULL))
-    {
-        return DSI_STATUS_ERROR;
-    }
-
     DSI_CMD_MODE_CFG_TypeDef cmd_mode = {.d32 = DSIx->CMD_MODE_CFG};
     cmd_mode.b.tear_fx_en = AdaptedCmdCfg->TEAcknowledgeRequest; // (34)
     DSIx->CMD_MODE_CFG = cmd_mode.d32;
@@ -323,11 +303,6 @@ FlagStatus DSI_ConfigAdaptedCommandMode(DSI_TypeDef *DSIx,
 
 FlagStatus DSI_ConfigPhy(DSI_TypeDef *DSIx, const DSI_PhyCfgTypeDef *PhyCfg)
 {
-    if ((DSIx == NULL) || (PhyCfg == NULL))
-    {
-        return DSI_STATUS_ERROR;
-    }
-
     /* The RTL-specific D-PHY PLL must be configured before this host-side step. */
     {
         DSI_PHY_RSTZ_TypeDef phy_rstz = {.d32 = DSIx->PHY_RSTZ};
@@ -340,7 +315,7 @@ FlagStatus DSI_ConfigPhy(DSI_TypeDef *DSIx, const DSI_PhyCfgTypeDef *PhyCfg)
 
     {
         DSI_PHY_RSTZ_TypeDef phy_rstz = {.d32 = DSIx->PHY_RSTZ};
-        phy_rstz.b.phy_forcepll = PhyCfg->phy_forepll;
+        phy_rstz.b.phy_forcepll = PhyCfg->phy_forcepll;
         phy_rstz.b.phy_enableclk = PhyCfg->phy_enableclk;
         phy_rstz.b.phy_rstz = PhyCfg->phy_rstz;
         phy_rstz.b.phy_shutdownz = PhyCfg->phy_shutdownz;
@@ -353,8 +328,7 @@ FlagStatus DSI_ConfigPhy(DSI_TypeDef *DSIx, const DSI_PhyCfgTypeDef *PhyCfg)
 FlagStatus DSI_ConfigAutoUlps(DSI_TypeDef *DSIx,
                               const DSI_AutoUlpsCfgTypeDef *AutoUlpsCfg)
 {
-    if ((DSIx == NULL) || (AutoUlpsCfg == NULL) ||
-        (AutoUlpsCfg->WakeupClockDiv == 0U) || (AutoUlpsCfg->WakeupCount == 0U) ||
+    if ((AutoUlpsCfg->WakeupClockDiv == 0U) || (AutoUlpsCfg->WakeupCount == 0U) ||
         (AutoUlpsCfg->MinimumTime > 0x0FFFU))
     {
         return DSI_STATUS_ERROR;
@@ -384,12 +358,9 @@ FlagStatus DSI_ConfigAutoUlps(DSI_TypeDef *DSIx,
 
 void DSI_DisableAutoUlps(DSI_TypeDef *DSIx)
 {
-    if (DSIx != NULL)
-    {
-        DSI_AUTO_ULPS_MODE_TypeDef mode = {.d32 = DSIx->AUTO_ULPS_MODE};
-        mode.b.auto_ulps = 0U;
-        DSIx->AUTO_ULPS_MODE = mode.d32;
-    }
+    DSI_AUTO_ULPS_MODE_TypeDef mode = {.d32 = DSIx->AUTO_ULPS_MODE};
+    mode.b.auto_ulps = 0U;
+    DSIx->AUTO_ULPS_MODE = mode.d32;
 }
 
 static void DSI_ConfigPacketHeader(DSI_TypeDef *DSIx,
@@ -413,11 +384,6 @@ FlagStatus DSI_ShortWrite(DSI_TypeDef *DSIx,
                           uint32_t Param1,
                           uint32_t Param2)
 {
-    if (DSIx == NULL)
-    {
-        return DSI_STATUS_ERROR;
-    }
-
     if ((Mode == DSI_DCS_SHORT_PKT_WRITE_P0) || (Mode == DSI_GEN_SHORT_PKT_WRITE_P0))
     {
         Param2 = 0U;
@@ -449,8 +415,7 @@ FlagStatus DSI_LongWrite(DSI_TypeDef *DSIx,
     uint32_t fifoword;
     uint8_t *pparams = ParametersTable;
 
-    if ((DSIx == NULL) || (NbParams > (200U - 1U)) ||
-        ((NbParams != 0U) && (ParametersTable == NULL)))
+    if (NbParams > (200U - 1U))
     {
         return DSI_STATUS_ERROR;
     }
@@ -507,11 +472,6 @@ FlagStatus DSI_LongWrite(DSI_TypeDef *DSIx,
 
 FlagStatus DSI_Start(DSI_TypeDef *DSIx)
 {
-    if (DSIx == NULL)
-    {
-        return DSI_STATUS_ERROR;
-    }
-
     DSI_PWR_UP_TypeDef pwr_up = {.d32 = DSIx->PWR_UP};
     pwr_up.b.shutdownz = 1;             // power-up the DW DSI controller
     DSIx->PWR_UP = pwr_up.d32;

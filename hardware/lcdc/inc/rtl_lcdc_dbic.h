@@ -158,8 +158,6 @@ typedef struct
 /** End of LCDC_DBIC_Exported_Types
   * \}
   */
-
-#ifdef TARGET_RTL87x3EU
 typedef enum
 {
     DCX_IMDEPENDENT = 0x0,
@@ -201,8 +199,6 @@ typedef struct rtl_lcdc_dbic
     uint16_t                    data_head_value;
     uint16_t                    data_tail_value;
 } LCDC_DBIC_9BIT_TypeDef;
-
-#endif
 
 /*============================================================================*
  *                         Functions
@@ -380,6 +376,36 @@ void DBIC_StructInit(LCDC_DBICCfgTypeDef *DBIC_InitStruct);
  * \endcode
  */
 void DBIC_Init(LCDC_DBICCfgTypeDef *DBIC_InitStruct);
+
+/**
+ * \brief  Configure DCX command/data control for 9-bit DBIC mode.
+ *
+ * \param[in] NineBitCfg: Pointer to a LCDC_DBIC_9BIT_TypeDef structure that
+ *            contains the DCX head/tail value and control bit configuration.
+ *
+ * \note   This generation of the chip supports DCX (command/data eXtension)
+ *         on the DBIC/SDI interface: a configurable head/tail value is
+ *         inserted on the DCX line around the command/address/data phases,
+ *         with per-phase control-bit width and pattern. This helper programs
+ *         the four DCX registers from a LCDC_DBIC_9BIT_TypeDef; it must be
+ *         called after DBIC_Init().
+ *
+ * <b>Example usage</b>
+ * \code{.c}
+ *
+ * void driver_lcdc_dbic_init(void)
+ * {
+ *     LCDC_DBIC_9BIT_TypeDef ninebit_cfg = {0};
+ *     ninebit_cfg.cmd_head_en = ENABLE;
+ *     ninebit_cfg.cmd_head_value = 0x00;
+ *     ninebit_cfg.cmd_ctrl_bit = DCX_CRTL_1BIT;
+ *     ninebit_cfg.addr_head_en = ENABLE;
+ *     ninebit_cfg.addr_head_value = 0x1;
+ *     DBIC_DCX_Cfg(&ninebit_cfg);
+ * }
+ * \endcode
+ */
+void DBIC_DCX_Cfg(LCDC_DBIC_9BIT_TypeDef *NineBitCfg);
 
 /**
  * \brief  Send data through DBIC interface.

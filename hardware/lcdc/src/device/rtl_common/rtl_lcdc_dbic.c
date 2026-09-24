@@ -41,49 +41,63 @@ void DBIC_Init(LCDC_DBICCfgTypeDef *DBIC_InitStruct)
     DBIC_BAUDR_TypeDef dbic_reg_0x14 = {.d32 = DBIC->BAUDR};
     dbic_reg_0x14.b.sckdv = DBIC_InitStruct->DBIC_SPEED_SEL;
     DBIC->BAUDR = dbic_reg_0x14.d32;
+}
 
-#ifdef TARGET_RTL87x3EU
-    DBIC_DCX_CTRL_t dcx_ctrl_reg = {.d32 = DBIC->DCX_CTRL};
-    dcx_ctrl_reg.b.addr_head_en = DBICCfg->addr_head_en;
-    dcx_ctrl_reg.b.cmd_head_en = DBICCfg->cmd_head_en;
-    dcx_ctrl_reg.b.data_head_en = DBICCfg->data_head_en;
-    dcx_ctrl_reg.b.addr_tail_en = DBICCfg->addr_tail_en;
-    dcx_ctrl_reg.b.cmd_tail_en = DBICCfg->cmd_tail_en;
-    dcx_ctrl_reg.b.data_tail_en = DBICCfg->data_tail_en;
-    dcx_ctrl_reg.b.addr_ctrl_bit = DBICCfg->addr_ctrl_bit;
-    if (DBICCfg->addr_ctrl_bit)
+/**
+ * \brief  Configure DCX command/data control for 9-bit DBIC mode.
+ *
+ * \param[in] NineBitCfg: Pointer to a LCDC_DBIC_9BIT_TypeDef structure that
+ *            contains the DCX head/tail value and control bit configuration.
+ *
+ * \note   This generation of the chip supports DCX (command/data eXtension)
+ *         on the DBIC/SDI interface: a configurable head/tail value is
+ *         inserted on the DCX line around the command/address/data phases,
+ *         with per-phase control-bit width (4:2/12:10/20:18) and pattern
+ *         (7:5/15:13/23:21). This helper programs the four DCX registers from
+ *         a LCDC_DBIC_9BIT_TypeDef; it must be called after DBIC_Init().
+ */
+void DBIC_DCX_Cfg(LCDC_DBIC_9BIT_TypeDef *NineBitCfg)
+{
+    DBIC_DCX_CTRL_TypeDef dcx_ctrl_reg = {.d32 = DBIC->DCX_CTRL};
+    dcx_ctrl_reg.b.addr_head_en = NineBitCfg->addr_head_en;
+    dcx_ctrl_reg.b.cmd_head_en = NineBitCfg->cmd_head_en;
+    dcx_ctrl_reg.b.data_head_en = NineBitCfg->data_head_en;
+    dcx_ctrl_reg.b.addr_tail_en = NineBitCfg->addr_tail_en;
+    dcx_ctrl_reg.b.cmd_tail_en = NineBitCfg->cmd_tail_en;
+    dcx_ctrl_reg.b.data_tail_en = NineBitCfg->data_tail_en;
+    dcx_ctrl_reg.b.addr_ctrl_bit = NineBitCfg->addr_ctrl_bit;
+    if (NineBitCfg->addr_ctrl_bit)
     {
-        dcx_ctrl_reg.b.addr_ctrl = DBICCfg->addr_ctrl;
+        dcx_ctrl_reg.b.addr_ctrl = NineBitCfg->addr_ctrl;
     }
-    dcx_ctrl_reg.b.cmd_ctrl_bit = DBICCfg->cmd_ctrl_bit;
-    if (DBICCfg->cmd_ctrl_bit)
+    dcx_ctrl_reg.b.cmd_ctrl_bit = NineBitCfg->cmd_ctrl_bit;
+    if (NineBitCfg->cmd_ctrl_bit)
     {
-        dcx_ctrl_reg.b.cmd_ctrl = DBICCfg->cmd_ctrl;
+        dcx_ctrl_reg.b.cmd_ctrl = NineBitCfg->cmd_ctrl;
     }
-    dcx_ctrl_reg.b.data_ctrl_bit = DBICCfg->data_ctrl_bit;
-    if (DBICCfg->data_ctrl_bit)
+    dcx_ctrl_reg.b.data_ctrl_bit = NineBitCfg->data_ctrl_bit;
+    if (NineBitCfg->data_ctrl_bit)
     {
-        dcx_ctrl_reg.b.data_ctrl = DBICCfg->data_ctrl;
+        dcx_ctrl_reg.b.data_ctrl = NineBitCfg->data_ctrl;
     }
     DBIC->DCX_CTRL = dcx_ctrl_reg.d32;
 
-    DBIC_DCX_CMD_t dcx_cmd_reg = {.d32 = DBIC->DCX_CMD};
-    dcx_cmd_reg.b.cmd_head_val = DBICCfg->cmd_head_value;
-    dcx_cmd_reg.b.cmd_tail_val = DBICCfg->cmd_tail_value;
+    DBIC_DCX_CMD_TypeDef dcx_cmd_reg = {.d32 = DBIC->DCX_CMD};
+    dcx_cmd_reg.b.cmd_head_val = NineBitCfg->cmd_head_value;
+    dcx_cmd_reg.b.cmd_tail_val = NineBitCfg->cmd_tail_value;
     DBIC->DCX_CMD = dcx_cmd_reg.d32;
 
-    DBIC_DCX_ADDR_t dcx_addr_reg = {.d32 = DBIC->DCX_ADDR};
-    dcx_addr_reg.b.addr_head_val = DBICCfg->addr_head_value;
-    dcx_addr_reg.b.addr_tail_val = DBICCfg->addr_tail_value;
+    DBIC_DCX_ADDR_TypeDef dcx_addr_reg = {.d32 = DBIC->DCX_ADDR};
+    dcx_addr_reg.b.addr_head_val = NineBitCfg->addr_head_value;
+    dcx_addr_reg.b.addr_tail_val = NineBitCfg->addr_tail_value;
     DBIC->DCX_ADDR = dcx_addr_reg.d32;
 
-    DBIC_DCX_DATA_t dcx_data_reg = {.d32 = DBIC->DCX_DATA};
-    dcx_data_reg.b.data_head_val = DBICCfg->data_head_value;
-    dcx_data_reg.b.data_tail_val = DBICCfg->data_tail_value;
+    DBIC_DCX_DATA_TypeDef dcx_data_reg = {.d32 = DBIC->DCX_DATA};
+    dcx_data_reg.b.data_head_val = NineBitCfg->data_head_value;
+    dcx_data_reg.b.data_tail_val = NineBitCfg->data_tail_value;
     DBIC->DCX_DATA = dcx_data_reg.d32;
 
     DBIC->DMATDLR = 0x20;
-#endif
 }
 
 void DBIC_SendBuf(uint8_t *buf, uint32_t len)

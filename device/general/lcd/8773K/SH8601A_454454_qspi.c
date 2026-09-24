@@ -635,6 +635,52 @@ void rtk_lcd_hal_clear_screen(uint32_t ARGB_color)
     LCDC_AXIMUXMode(LCDC_FW_MODE);
 }
 
+void rtk_lcd_hal_clear_screen_by_const(uint32_t ARGB_color)
+{
+    rtk_lcd_hal_set_window(0, 0, SH8601A_LCD_WIDTH, SH8601A_LCD_HEIGHT);
+    uint8_t *RGB_transfer = (uint8_t *)&ARGB_color;
+    uint32_t pixel = 0;
+#if INPUT_PIXEL_BYTES == 4 || INPUT_PIXEL_BYTES == 3
+    uint8_t *rgb888_buf = (uint8_t *)&pixel;
+    rgb888_buf[0] = RGB_transfer[0];
+    rgb888_buf[1] = RGB_transfer[1];
+    rgb888_buf[2] = RGB_transfer[2];
+#elif INPUT_PIXEL_BYTES == 2
+    uint16_t color = 0;
+    color = (((RGB_transfer[0] & 0xF8) << 8) | ((RGB_transfer[1] & 0xFC) << 3) | ((
+            RGB_transfer[2] & 0xF8) >> 3));
+    pixel = color;
+#endif
+    LCDC_HANDLER_PIXEL_SOURCE_CTRL_TypeDef lcdc_reg_0x70 = {.d32 = LCDC_HANDLER->PIXEL_SOURCE_CTRL};
+    lcdc_reg_0x70.b.pixel_source = 1; // 1: const pixel source, 0: dma pixel source
+    lcdc_reg_0x70.b.const_pixel = pixel;
+    LCDC_HANDLER->PIXEL_SOURCE_CTRL = lcdc_reg_0x70.d32;
+
+    LCDC_ClearTxPixelCnt();
+
+    LCDC_SwitchMode(LCDC_AUTO_MODE);
+    LCDC_SwitchDirect(LCDC_TX_MODE);
+
+    LCDC_SetTxPixelLen(rtk_lcd_hal_get_height() * rtk_lcd_hal_get_width());
+
+    LCDC_Cmd(ENABLE);
+
+    LCDC_AutoWriteCmd(ENABLE);
+
+    LCDC_HANDLER_OPERATE_CTR_t handler_reg_0x14;
+    do
+    {
+        handler_reg_0x14.d32 = LCDC_HANDLER->OPERATE_CTR;
+    }
+    while (handler_reg_0x14.b.auto_write_start != RESET);
+    platform_delay_us(10);
+    LCDC_Cmd(DISABLE);
+    LCDC_ClearTxPixelCnt();
+    LCDC_AXIMUXMode(LCDC_FW_MODE);
+
+    LCDC_HANDLER->PIXEL_SOURCE_CTRL &= 0x8FFFFFFF;
+}
+
 void rtk_lcd_hal_start_transfer(uint8_t *buf, uint32_t len)
 {
     LCDC_DMA_InitTypeDef LCDC_DMA_InitStruct = {0};

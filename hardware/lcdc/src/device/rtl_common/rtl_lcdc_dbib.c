@@ -40,12 +40,6 @@ void DBIB_Init(LCDC_DBIBCfgTypeDef *DBIBCfg)
     DBIB->DBIB_CFG = dbib_reg_0x04.d32;
 }
 
-void DBIB_auto_write_set_window(uint16_t xStart, uint16_t yStart, uint16_t xEnd, uint16_t yEnd,
-                                uint16_t xOffset, uint16_t yOffset)
-{
-
-}
-
 void DBIB_SendCmd(uint8_t cmd)
 {
     /* Fill command */

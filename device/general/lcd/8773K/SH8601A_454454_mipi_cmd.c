@@ -263,7 +263,7 @@ void rtk_lcd_hal_init(void)
         0xFFFF;                 //for trigger timeout error measured in TO_CLK_DIVISION
     DSI_InitStruct.LP_RX_CNT =
         0xFFFF;                 //for trigger timeout error measured in TO_CLK_DIVISION
-    DSI_InitStruct.TOCkdiv = 0x4;
+    DSI_InitStruct.TOCkdiv = 0x14;
     DSI_InitStruct.TXEscapeCkdiv = 0x03;
     DSI_InitStruct.ModeCfg = 1;                   //config for video mode or cmd mode
     DSI_InitStruct.CommandSize                  = 598;
@@ -318,9 +318,10 @@ void rtk_lcd_hal_init(void)
 
     DSI_ConfigAdaptedCommandMode(DSI, &AdaptedCmd_InitStruct);
 
+    DPHY_Init(DSI_InitStruct.NumberOfLanes);
 
     DSI_PhyCfgTypeDef dsi_phy = {0};
-    dsi_phy.phy_forepll  = PHY_FORCEPLL_DISABLE;
+    dsi_phy.phy_forcepll  = PHY_FORCEPLL_DISABLE;
     dsi_phy.phy_enableclk  = PHY_CLK_ENABLE;
     dsi_phy.phy_rstz   = PHY_RST_ENABLE;
     dsi_phy.phy_shutdownz   = PHY_SHUTDOWN_ENABLE;

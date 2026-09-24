@@ -125,766 +125,766 @@ typedef union
     {
         uint32_t shutdownz: 1;
         const uint32_t reserved_0: 31;
-    } b;
-} DSI_PWR_UP_TypeDef;
+        } b;
+    } DSI_PWR_UP_TypeDef;
 
-/* CLKMGR_CFG  (0x08) */
-typedef union
-{
-    uint32_t d32;
-    uint8_t d8[4];
-    struct
-    {
-        uint32_t tx_esc_clk_division: 8;
-        uint32_t to_clk_division: 8;
-        const uint32_t reserved_0: 16;
-    } b;
-} DSI_CLKMGR_CFG_TypeDef;
+    /* CLKMGR_CFG  (0x08) */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t tx_esc_clk_division: 8;
+                uint32_t to_clk_division: 8;
+                const uint32_t reserved_0: 16;
+            } b;
+        } DSI_CLKMGR_CFG_TypeDef;
 
-/* DPI_VCID  (0x0c) */
-typedef union
-{
-    uint32_t d32;
-    uint8_t d8[4];
-    struct
-    {
-        uint32_t dpi_vcid: 2;
-        const uint32_t reserved_0: 30;
-    } b;
-} DSI_DPI_VCID_TypeDef;
+    /* DPI_VCID  (0x0c) */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t dpi_vcid: 2;
+                const uint32_t reserved_0: 30;
+            } b;
+        } DSI_DPI_VCID_TypeDef;
 
-/* DPI_COLOR_CODING  (0x10) */
-typedef union
-{
-    uint32_t d32;
-    uint8_t d8[4];
-    struct
-    {
-        uint32_t dpi_color_coding: 4;
-        const uint32_t reserved_0: 4;
-        uint32_t loosely18_en: 1;
-        const uint32_t reserved_1: 23;
-    } b;
-} DSI_DPI_COLOR_CODING_TypeDef;
+    /* DPI_COLOR_CODING  (0x10) */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t dpi_color_coding: 4;
+                const uint32_t reserved_0: 4;
+                uint32_t loosely18_en: 1;
+                const uint32_t reserved_1: 23;
+            } b;
+        } DSI_DPI_COLOR_CODING_TypeDef;
 
-/* DPI_CFG_POL  (0x14) */
-typedef union
-{
-    uint32_t d32;
-    uint8_t d8[4];
-    struct
-    {
-        uint32_t dataen_active_low: 1;
-        uint32_t vsync_active_low: 1;
-        uint32_t hsync_active_low: 1;
-        uint32_t shutd_active_low: 1;
-        uint32_t colorm_active_low: 1;
-        const uint32_t reserved_0: 27;
-    } b;
-} DSI_DPI_CFG_POL_TypeDef;
+    /* DPI_CFG_POL  (0x14) */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t dataen_active_low: 1;
+                uint32_t vsync_active_low: 1;
+                uint32_t hsync_active_low: 1;
+                uint32_t shutd_active_low: 1;
+                uint32_t colorm_active_low: 1;
+                const uint32_t reserved_0: 27;
+            } b;
+        } DSI_DPI_CFG_POL_TypeDef;
 
-/* DPI_LP_CMD_TIM  (0x18) */
-typedef union
-{
-    uint32_t d32;
-    uint8_t d8[4];
-    struct
-    {
-        uint32_t invact_lpcmd_time: 8;
-        const uint32_t reserved_0: 8;
-        uint32_t outvact_lpcmd_time: 8;
-        const uint32_t reserved_1: 8;
-    } b;
-} DSI_DPI_LP_CMD_TIM_TypeDef;
+    /* DPI_LP_CMD_TIM  (0x18) */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t invact_lpcmd_time: 8;
+                const uint32_t reserved_0: 8;
+                uint32_t outvact_lpcmd_time: 8;
+                const uint32_t reserved_1: 8;
+            } b;
+        } DSI_DPI_LP_CMD_TIM_TypeDef;
 
-/* PCKHDL_CFG  (0x2c) */
-typedef union
-{
-    uint32_t d32;
-    uint8_t d8[4];
-    struct
-    {
-        uint32_t eotp_tx_en: 1;
-        uint32_t eotp_rx_en: 1;
-        uint32_t bta_en: 1;
-        uint32_t ecc_rx_en: 1;
-        uint32_t crc_rx_en: 1;
-        uint32_t eotp_tx_lp_en: 1;
-        const uint32_t reserved_0: 26;
-    } b;
-} DSI_PCKHDL_CFG_TypeDef;
+    /* PCKHDL_CFG  (0x2c) */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t eotp_tx_en: 1;
+                uint32_t eotp_rx_en: 1;
+                uint32_t bta_en: 1;
+                uint32_t ecc_rx_en: 1;
+                uint32_t crc_rx_en: 1;
+                uint32_t eotp_tx_lp_en: 1;
+                const uint32_t reserved_0: 26;
+            } b;
+        } DSI_PCKHDL_CFG_TypeDef;
 
-/* GEN_VCID  (0x30) */
-typedef union
-{
-    uint32_t d32;
-    uint8_t d8[4];
-    struct
-    {
-        uint32_t gen_vcid_rx: 2;
-        const uint32_t reserved_0: 6;
-        uint32_t gen_vcid_tear_auto: 2;
-        const uint32_t reserved_1: 6;
-        uint32_t gen_vcid_tx_auto: 2;
-        const uint32_t reserved_2: 14;
-    } b;
-} DSI_GEN_VCID_TypeDef;
+    /* GEN_VCID  (0x30) */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t gen_vcid_rx: 2;
+                const uint32_t reserved_0: 6;
+                uint32_t gen_vcid_tear_auto: 2;
+                const uint32_t reserved_1: 6;
+                uint32_t gen_vcid_tx_auto: 2;
+                const uint32_t reserved_2: 14;
+            } b;
+        } DSI_GEN_VCID_TypeDef;
 
-/* MODE_CFG  (0x34) */
-typedef union
-{
-    uint32_t d32;
-    uint8_t d8[4];
-    struct
-    {
-        uint32_t cmd_video_mode: 1;
-        const uint32_t reserved_0: 31;
-    } b;
-} DSI_MODE_CFG_TypeDef;
+    /* MODE_CFG  (0x34) */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t cmd_video_mode: 1;
+                const uint32_t reserved_0: 31;
+            } b;
+        } DSI_MODE_CFG_TypeDef;
 
-/* VID_MODE_CFG  (0x38) */
-typedef union
-{
-    uint32_t d32;
-    uint8_t d8[4];
-    struct
-    {
-        uint32_t vid_mode_type: 2;
-        const uint32_t reserved_0: 6;
-        uint32_t lp_vsa_en: 1;
-        uint32_t lp_vbp_en: 1;
-        uint32_t lp_vfp_en: 1;
-        uint32_t lp_vact_en: 1;
-        uint32_t lp_hbp_en: 1;
-        uint32_t lp_hfp_en: 1;
-        uint32_t frame_bta_ack_en: 1;
-        uint32_t lp_cmd_en: 1;
-        uint32_t vpg_en: 1;
-        const uint32_t reserved_1: 3;
-        uint32_t vpg_mode: 1;
-        const uint32_t reserved_2: 3;
-        uint32_t vpg_orientation: 1;
-        const uint32_t reserved_3: 7;
-    } b;
-} DSI_VID_MODE_CFG_TypeDef;
+    /* VID_MODE_CFG  (0x38) */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t vid_mode_type: 2;
+                const uint32_t reserved_0: 6;
+                uint32_t lp_vsa_en: 1;
+                uint32_t lp_vbp_en: 1;
+                uint32_t lp_vfp_en: 1;
+                uint32_t lp_vact_en: 1;
+                uint32_t lp_hbp_en: 1;
+                uint32_t lp_hfp_en: 1;
+                uint32_t frame_bta_ack_en: 1;
+                uint32_t lp_cmd_en: 1;
+                uint32_t vpg_en: 1;
+                const uint32_t reserved_1: 3;
+                uint32_t vpg_mode: 1;
+                const uint32_t reserved_2: 3;
+                uint32_t vpg_orientation: 1;
+                const uint32_t reserved_3: 7;
+            } b;
+        } DSI_VID_MODE_CFG_TypeDef;
 
-/* VID_PKT_SIZE  (0x3c) */
-typedef union
-{
-    uint32_t d32;
-    uint8_t d8[4];
-    struct
-    {
-        uint32_t vid_pkt_size: 14;
-        const uint32_t reserved_0: 18;
-    } b;
-} DSI_VID_PKT_SIZE_TypeDef;
+    /* VID_PKT_SIZE  (0x3c) */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t vid_pkt_size: 14;
+                const uint32_t reserved_0: 18;
+            } b;
+        } DSI_VID_PKT_SIZE_TypeDef;
 
-/* VID_NUM_CHUNKS  (0x40) */
-typedef union
-{
-    uint32_t d32;
-    uint8_t d8[4];
-    struct
-    {
-        uint32_t vid_num_chunks: 13;
-        const uint32_t reserved_0: 19;
-    } b;
-} DSI_VID_NUM_CHUNKS_TypeDef;
+    /* VID_NUM_CHUNKS  (0x40) */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t vid_num_chunks: 13;
+                const uint32_t reserved_0: 19;
+            } b;
+        } DSI_VID_NUM_CHUNKS_TypeDef;
 
-/* VID_NULL_SIZE  (0x44) */
-typedef union
-{
-    uint32_t d32;
-    uint8_t d8[4];
-    struct
-    {
-        uint32_t vid_null_size: 13;
-        const uint32_t reserved_0: 19;
-    } b;
-} DSI_VID_NULL_SIZE_TypeDef;
+    /* VID_NULL_SIZE  (0x44) */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t vid_null_size: 13;
+                const uint32_t reserved_0: 19;
+            } b;
+        } DSI_VID_NULL_SIZE_TypeDef;
 
-/* VID_HSA_TIME  (0x48) */
-typedef union
-{
-    uint32_t d32;
-    uint8_t d8[4];
-    struct
-    {
-        uint32_t vid_hsa_time: 12;
-        const uint32_t reserved_0: 20;
-    } b;
-} DSI_VID_HSA_TIME_TypeDef;
+    /* VID_HSA_TIME  (0x48) */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t vid_hsa_time: 12;
+                const uint32_t reserved_0: 20;
+            } b;
+        } DSI_VID_HSA_TIME_TypeDef;
 
-/* VID_HBP_TIME  (0x4c) */
-typedef union
-{
-    uint32_t d32;
-    uint8_t d8[4];
-    struct
-    {
-        uint32_t vid_hbp_time: 12;
-        const uint32_t reserved_0: 20;
-    } b;
-} DSI_VID_HBP_TIME_TypeDef;
+    /* VID_HBP_TIME  (0x4c) */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t vid_hbp_time: 12;
+                const uint32_t reserved_0: 20;
+            } b;
+        } DSI_VID_HBP_TIME_TypeDef;
 
-/* VID_HLINE_TIME  (0x50) */
-typedef union
-{
-    uint32_t d32;
-    uint8_t d8[4];
-    struct
-    {
-        uint32_t vid_hline_time: 15;
-        const uint32_t reserved_0: 17;
-    } b;
-} DSI_VID_HLINE_TIME_TypeDef;
+    /* VID_HLINE_TIME  (0x50) */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t vid_hline_time: 15;
+                const uint32_t reserved_0: 17;
+            } b;
+        } DSI_VID_HLINE_TIME_TypeDef;
 
-/* VID_VSA_LINES  (0x54) */
-typedef union
-{
-    uint32_t d32;
-    uint8_t d8[4];
-    struct
-    {
-        uint32_t vsa_lines: 10;
-        const uint32_t reserved_0: 22;
-    } b;
-} DSI_VID_VSA_LINES_TypeDef;
+    /* VID_VSA_LINES  (0x54) */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t vsa_lines: 10;
+                const uint32_t reserved_0: 22;
+            } b;
+        } DSI_VID_VSA_LINES_TypeDef;
 
-/* VID_VBP_LINES  (0x58) */
-typedef union
-{
-    uint32_t d32;
-    uint8_t d8[4];
-    struct
-    {
-        uint32_t vbp_lines: 10;
-        const uint32_t reserved_0: 22;
-    } b;
-} DSI_VID_VBP_LINES_TypeDef;
+    /* VID_VBP_LINES  (0x58) */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t vbp_lines: 10;
+                const uint32_t reserved_0: 22;
+            } b;
+        } DSI_VID_VBP_LINES_TypeDef;
 
-/* VID_VFP_LINES  (0x5c) */
-typedef union
-{
-    uint32_t d32;
-    uint8_t d8[4];
-    struct
-    {
-        uint32_t vfp_lines: 10;
-        const uint32_t reserved_0: 22;
-    } b;
-} DSI_VID_VFP_LINES_TypeDef;
+    /* VID_VFP_LINES  (0x5c) */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t vfp_lines: 10;
+                const uint32_t reserved_0: 22;
+            } b;
+        } DSI_VID_VFP_LINES_TypeDef;
 
-/* VID_VACTIVE_LINES  (0x60) */
-typedef union
-{
-    uint32_t d32;
-    uint8_t d8[4];
-    struct
-    {
-        uint32_t v_active_lines: 14;
-        const uint32_t reserved_0: 18;
-    } b;
-} DSI_VID_VACTIVE_LINES_TypeDef;
+    /* VID_VACTIVE_LINES  (0x60) */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t v_active_lines: 14;
+                const uint32_t reserved_0: 18;
+            } b;
+        } DSI_VID_VACTIVE_LINES_TypeDef;
 
-/* EDPI_CMD_SIZE  (0x64) */
-typedef union
-{
-    uint32_t d32;
-    uint8_t d8[4];
-    struct
-    {
-        uint32_t edpi_allowed_cmd_size: 16;
-        const uint32_t reserved_0: 16;
-    } b;
-} DSI_EDPI_CMD_SIZE_TypeDef;
+    /* EDPI_CMD_SIZE  (0x64) */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t edpi_allowed_cmd_size: 16;
+                const uint32_t reserved_0: 16;
+            } b;
+        } DSI_EDPI_CMD_SIZE_TypeDef;
 
-/* CMD_MODE_CFG  (0x68) */
-typedef union
-{
-    uint32_t d32;
-    uint8_t d8[4];
-    struct
-    {
-        uint32_t tear_fx_en: 1;
-        uint32_t ack_rqst_en: 1;
-        const uint32_t reserved_0: 6;
-        uint32_t gen_sw_0p_tx: 1;
-        uint32_t gen_sw_1p_tx: 1;
-        uint32_t gen_sw_2p_tx: 1;
-        uint32_t gen_sr_0p_tx: 1;
-        uint32_t gen_sr_1p_tx: 1;
-        uint32_t gen_sr_2p_tx: 1;
-        uint32_t gen_lw_tx: 1;
-        const uint32_t reserved_1: 1;
-        uint32_t dcs_sw_0p_tx: 1;
-        uint32_t dcs_sw_1p_tx: 1;
-        uint32_t dcs_sr_0p_tx: 1;
-        uint32_t dcs_lw_tx: 1;
-        const uint32_t reserved_2: 4;
-        uint32_t max_rd_pkt_size: 1;
-        const uint32_t reserved_3: 7;
-    } b;
-} DSI_CMD_MODE_CFG_TypeDef;
+    /* CMD_MODE_CFG  (0x68) */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t tear_fx_en: 1;
+                uint32_t ack_rqst_en: 1;
+                const uint32_t reserved_0: 6;
+                uint32_t gen_sw_0p_tx: 1;
+                uint32_t gen_sw_1p_tx: 1;
+                uint32_t gen_sw_2p_tx: 1;
+                uint32_t gen_sr_0p_tx: 1;
+                uint32_t gen_sr_1p_tx: 1;
+                uint32_t gen_sr_2p_tx: 1;
+                uint32_t gen_lw_tx: 1;
+                const uint32_t reserved_1: 1;
+                uint32_t dcs_sw_0p_tx: 1;
+                uint32_t dcs_sw_1p_tx: 1;
+                uint32_t dcs_sr_0p_tx: 1;
+                uint32_t dcs_lw_tx: 1;
+                const uint32_t reserved_2: 4;
+                uint32_t max_rd_pkt_size: 1;
+                const uint32_t reserved_3: 7;
+            } b;
+        } DSI_CMD_MODE_CFG_TypeDef;
 
-/* GEN_HDR  (0x6c) */
-typedef union
-{
-    uint32_t d32;
-    uint8_t d8[4];
-    struct
-    {
-        uint32_t gen_dt: 6;
-        uint32_t gen_vc: 2;
-        uint32_t gen_wc_lsbyte: 8;
-        uint32_t gen_wc_msbyte: 8;
-        const uint32_t reserved_0: 8;
-    } b;
-} DSI_GEN_HDR_TypeDef;
+    /* GEN_HDR  (0x6c) */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t gen_dt: 6;
+                uint32_t gen_vc: 2;
+                uint32_t gen_wc_lsbyte: 8;
+                uint32_t gen_wc_msbyte: 8;
+                const uint32_t reserved_0: 8;
+            } b;
+        } DSI_GEN_HDR_TypeDef;
 
-/* GEN_PLD_DATA  (0x70) */
-typedef union
-{
-    uint32_t d32;
-    uint8_t d8[4];
-    struct
-    {
-        uint32_t gen_pld_b1: 8;
-        uint32_t gen_pld_b2: 8;
-        uint32_t gen_pld_b3: 8;
-        uint32_t gen_pld_b4: 8;
-    } b;
-} DSI_GEN_PLD_DATA_TypeDef;
+    /* GEN_PLD_DATA  (0x70) */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t gen_pld_b1: 8;
+                uint32_t gen_pld_b2: 8;
+                uint32_t gen_pld_b3: 8;
+                uint32_t gen_pld_b4: 8;
+            } b;
+        } DSI_GEN_PLD_DATA_TypeDef;
 
-/* CMD_PKT_STATUS  (0x74) */
-typedef union
-{
-    uint32_t d32;
-    uint8_t d8[4];
-    struct
-    {
-        const uint32_t gen_cmd_empty: 1;
-        const uint32_t gen_cmd_full: 1;
-        const uint32_t gen_pld_w_empty: 1;
-        const uint32_t gen_pld_w_full: 1;
-        const uint32_t gen_pld_r_empty: 1;
-        const uint32_t gen_pld_r_full: 1;
-        const uint32_t gen_rd_cmd_busy: 1;
-        const uint32_t reserved_0: 1;
-        const uint32_t dbi_cmd_empy: 1;
-        const uint32_t dbi_cmd_full: 1;
-        const uint32_t dbi_pld_w_empty: 1;
-        const uint32_t dbi_pld_w_full: 1;
-        const uint32_t dbi_pld_r_empty: 1;
-        const uint32_t dbi_pld_r_full: 1;
-        const uint32_t dbi_rd_cmd_busy: 1;
-        const uint32_t reserved_1: 1;
-        const uint32_t gen_buff_cmd_empty: 1;
-        const uint32_t gen_buff_cmd_full: 1;
-        const uint32_t gen_buff_pld_empty: 1;
-        const uint32_t gen_buff_pld_full: 1;
-        const uint32_t reserved_2: 4;
-        const uint32_t dbi_buff_cmd_empty: 1;
-        const uint32_t dbi_buff_cmd_full: 1;
-        const uint32_t dbi_buff_pld_empty: 1;
-        const uint32_t dbi_buff_pld_full: 1;
-        const uint32_t reserved_3: 4;
-    } b;
-} DSI_CMD_PKT_STATUS_TypeDef;
+    /* CMD_PKT_STATUS  (0x74) */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                const uint32_t gen_cmd_empty: 1;
+                const uint32_t gen_cmd_full: 1;
+                const uint32_t gen_pld_w_empty: 1;
+                const uint32_t gen_pld_w_full: 1;
+                const uint32_t gen_pld_r_empty: 1;
+                const uint32_t gen_pld_r_full: 1;
+                const uint32_t gen_rd_cmd_busy: 1;
+                const uint32_t reserved_0: 1;
+                const uint32_t dbi_cmd_empy: 1;
+                const uint32_t dbi_cmd_full: 1;
+                const uint32_t dbi_pld_w_empty: 1;
+                const uint32_t dbi_pld_w_full: 1;
+                const uint32_t dbi_pld_r_empty: 1;
+                const uint32_t dbi_pld_r_full: 1;
+                const uint32_t dbi_rd_cmd_busy: 1;
+                const uint32_t reserved_1: 1;
+                const uint32_t gen_buff_cmd_empty: 1;
+                const uint32_t gen_buff_cmd_full: 1;
+                const uint32_t gen_buff_pld_empty: 1;
+                const uint32_t gen_buff_pld_full: 1;
+                const uint32_t reserved_2: 4;
+                const uint32_t dbi_buff_cmd_empty: 1;
+                const uint32_t dbi_buff_cmd_full: 1;
+                const uint32_t dbi_buff_pld_empty: 1;
+                const uint32_t dbi_buff_pld_full: 1;
+                const uint32_t reserved_3: 4;
+            } b;
+        } DSI_CMD_PKT_STATUS_TypeDef;
 
-/* TO_CNT_CFG  (0x78) */
-typedef union
-{
-    uint32_t d32;
-    uint8_t d8[4];
-    struct
-    {
-        uint32_t lprx_to_cnt: 16;
-        uint32_t hstx_to_cnt: 16;
-    } b;
-} DSI_TO_CNT_CFG_TypeDef;
+    /* TO_CNT_CFG  (0x78) */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t lprx_to_cnt: 16;
+                uint32_t hstx_to_cnt: 16;
+            } b;
+        } DSI_TO_CNT_CFG_TypeDef;
 
-/* HS_RD_TO_CNT  (0x7c) */
-typedef union
-{
-    uint32_t d32;
-    uint8_t d8[4];
-    struct
-    {
-        uint32_t hs_rd_to_cnt: 16;
-        const uint32_t reserved_0: 16;
-    } b;
-} DSI_HS_RD_TO_CNT_TypeDef;
+    /* HS_RD_TO_CNT  (0x7c) */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t hs_rd_to_cnt: 16;
+                const uint32_t reserved_0: 16;
+            } b;
+        } DSI_HS_RD_TO_CNT_TypeDef;
 
-/* LP_RD_TO_CNT  (0x80) */
-typedef union
-{
-    uint32_t d32;
-    uint8_t d8[4];
-    struct
-    {
-        uint32_t lp_rd_to_cnt: 16;
-        const uint32_t reserved_0: 16;
-    } b;
-} DSI_LP_RD_TO_CNT_TypeDef;
+    /* LP_RD_TO_CNT  (0x80) */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t lp_rd_to_cnt: 16;
+                const uint32_t reserved_0: 16;
+            } b;
+        } DSI_LP_RD_TO_CNT_TypeDef;
 
-/* HS_WR_TO_CNT  (0x84) */
-typedef union
-{
-    uint32_t d32;
-    uint8_t d8[4];
-    struct
-    {
-        uint32_t hs_wr_to_cnt: 16;
-        const uint32_t reserved_0: 8;
-        uint32_t presp_to_mode: 1;
-        const uint32_t reserved_1: 7;
-    } b;
-} DSI_HS_WR_TO_CNT_TypeDef;
+    /* HS_WR_TO_CNT  (0x84) */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t hs_wr_to_cnt: 16;
+                const uint32_t reserved_0: 8;
+                uint32_t presp_to_mode: 1;
+                const uint32_t reserved_1: 7;
+            } b;
+        } DSI_HS_WR_TO_CNT_TypeDef;
 
-/* LP_WR_TO_CNT  (0x88) */
-typedef union
-{
-    uint32_t d32;
-    uint8_t d8[4];
-    struct
-    {
-        uint32_t lp_wr_to_cnt: 16;
-        const uint32_t reserved_0: 16;
-    } b;
-} DSI_LP_WR_TO_CNT_TypeDef;
+    /* LP_WR_TO_CNT  (0x88) */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t lp_wr_to_cnt: 16;
+                const uint32_t reserved_0: 16;
+            } b;
+        } DSI_LP_WR_TO_CNT_TypeDef;
 
-/* BTA_TO_CNT  (0x8c) */
-typedef union
-{
-    uint32_t d32;
-    uint8_t d8[4];
-    struct
-    {
-        uint32_t bta_to_cnt: 16;
-        const uint32_t reserved_0: 16;
-    } b;
-} DSI_BTA_TO_CNT_TypeDef;
+    /* BTA_TO_CNT  (0x8c) */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t bta_to_cnt: 16;
+                const uint32_t reserved_0: 16;
+            } b;
+        } DSI_BTA_TO_CNT_TypeDef;
 
-/* LPCLK_CTRL  (0x94) */
-typedef union
-{
-    uint32_t d32;
-    uint8_t d8[4];
-    struct
-    {
-        uint32_t phy_txrequestclkhs: 1;
-        uint32_t auto_clklane_ctrl: 1;
-        const uint32_t reserved_0: 30;
-    } b;
-} DSI_LPCLK_CTRL_TypeDef;
+    /* LPCLK_CTRL  (0x94) */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t phy_txrequestclkhs: 1;
+                uint32_t auto_clklane_ctrl: 1;
+                const uint32_t reserved_0: 30;
+            } b;
+        } DSI_LPCLK_CTRL_TypeDef;
 
-/* PHY_TMR_LPCLK_CFG  (0x98) */
-typedef union
-{
-    uint32_t d32;
-    uint8_t d8[4];
-    struct
-    {
-        uint32_t phy_clklp2hs_time: 10;
-        const uint32_t reserved_0: 6;
-        uint32_t phy_clkhs2lp_time: 10;
-        const uint32_t reserved_1: 6;
-    } b;
-} DSI_PHY_TMR_LPCLK_CFG_TypeDef;
+    /* PHY_TMR_LPCLK_CFG  (0x98) */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t phy_clklp2hs_time: 10;
+                const uint32_t reserved_0: 6;
+                uint32_t phy_clkhs2lp_time: 10;
+                const uint32_t reserved_1: 6;
+            } b;
+        } DSI_PHY_TMR_LPCLK_CFG_TypeDef;
 
-/* PHY_TMR_CFG  (0x9c) */
-typedef union
-{
-    uint32_t d32;
-    uint8_t d8[4];
-    struct
-    {
-        uint32_t phy_lp2hs_time: 10;
-        const uint32_t reserved_0: 6;
-        uint32_t phy_hs2lp_time: 10;
-        const uint32_t reserved_1: 6;
-    } b;
-} DSI_PHY_TMR_CFG_TypeDef;
+    /* PHY_TMR_CFG  (0x9c) */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t phy_lp2hs_time: 10;
+                const uint32_t reserved_0: 6;
+                uint32_t phy_hs2lp_time: 10;
+                const uint32_t reserved_1: 6;
+            } b;
+        } DSI_PHY_TMR_CFG_TypeDef;
 
-/* PHY_RSTZ  (0xa0) */
-typedef union
-{
-    uint32_t d32;
-    uint8_t d8[4];
-    struct
-    {
-        uint32_t phy_shutdownz: 1;
-        uint32_t phy_rstz: 1;
-        uint32_t phy_enableclk: 1;
-        uint32_t phy_forcepll: 1;
-        const uint32_t reserved_0: 28;
-    } b;
-} DSI_PHY_RSTZ_TypeDef;
+    /* PHY_RSTZ  (0xa0) */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t phy_shutdownz: 1;
+                uint32_t phy_rstz: 1;
+                uint32_t phy_enableclk: 1;
+                uint32_t phy_forcepll: 1;
+                const uint32_t reserved_0: 28;
+            } b;
+        } DSI_PHY_RSTZ_TypeDef;
 
-/* PHY_IF_CFG  (0xa4) */
-typedef union
-{
-    uint32_t d32;
-    uint8_t d8[4];
-    struct
-    {
-        uint32_t n_lanes: 2;
-        const uint32_t reserved_0: 6;
-        uint32_t phy_stop_wait_time: 8;
-        const uint32_t reserved_1: 16;
-    } b;
-} DSI_PHY_IF_CFG_TypeDef;
+    /* PHY_IF_CFG  (0xa4) */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t n_lanes: 2;
+                const uint32_t reserved_0: 6;
+                uint32_t phy_stop_wait_time: 8;
+                const uint32_t reserved_1: 16;
+            } b;
+        } DSI_PHY_IF_CFG_TypeDef;
 
-/* PHY_STATUS  (0xb0) */
-typedef union
-{
-    uint32_t d32;
-    uint8_t d8[4];
-    struct
-    {
-        const uint32_t phy_lock: 1;
-        const uint32_t phy_direction: 1;
-        const uint32_t phy_stopstateclklane: 1;
-        const uint32_t phy_ulpsactivenotclk: 1;
-        const uint32_t phy_stopstate0lane: 1;
-        const uint32_t phy_ulpsactivenot0lane: 1;
-        const uint32_t phy_rxulpsesc0lane: 1;
-        const uint32_t phy_stopstate1lane: 1;
-        const uint32_t phy_ulpsactivenot1lane: 1;
-        const uint32_t phy_stopstate2lane: 1;
-        const uint32_t phy_ulpsactivenot2lane: 1;
-        const uint32_t phy_stopstate3lane: 1;
-        const uint32_t phy_ulpsactivenot3lane: 1;
-        const uint32_t reserved_0: 19;
-    } b;
-} DSI_PHY_STATUS_TypeDef;
+    /* PHY_STATUS  (0xb0) */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                const uint32_t phy_lock: 1;
+                const uint32_t phy_direction: 1;
+                const uint32_t phy_stopstateclklane: 1;
+                const uint32_t phy_ulpsactivenotclk: 1;
+                const uint32_t phy_stopstate0lane: 1;
+                const uint32_t phy_ulpsactivenot0lane: 1;
+                const uint32_t phy_rxulpsesc0lane: 1;
+                const uint32_t phy_stopstate1lane: 1;
+                const uint32_t phy_ulpsactivenot1lane: 1;
+                const uint32_t phy_stopstate2lane: 1;
+                const uint32_t phy_ulpsactivenot2lane: 1;
+                const uint32_t phy_stopstate3lane: 1;
+                const uint32_t phy_ulpsactivenot3lane: 1;
+                const uint32_t reserved_0: 19;
+            } b;
+        } DSI_PHY_STATUS_TypeDef;
 
-/* PHY_TST_CTRL0  (0xb4) */
-typedef union
-{
-    uint32_t d32;
-    uint8_t d8[4];
-    struct
-    {
-        uint32_t phy_testclr: 1;
-        uint32_t phy_testclk: 1;
-        const uint32_t reserved_0: 30;
-    } b;
-} DSI_PHY_TST_CTRL0_TypeDef;
+    /* PHY_TST_CTRL0  (0xb4) */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t phy_testclr: 1;
+                uint32_t phy_testclk: 1;
+                const uint32_t reserved_0: 30;
+            } b;
+        } DSI_PHY_TST_CTRL0_TypeDef;
 
-/* PHY_TST_CTRL1  (0xb8) */
-typedef union
-{
-    uint32_t d32;
-    uint8_t d8[4];
-    struct
-    {
-        uint32_t phy_testdin: 8;
-        const uint32_t phy_testdout: 8;
-        uint32_t phy_testen: 1;
-        uint32_t phy_testsel: 1;
-        const uint32_t reserved_0: 14;
-    } b;
-} DSI_PHY_TST_CTRL1_TypeDef;
+    /* PHY_TST_CTRL1  (0xb8) */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t phy_testdin: 8;
+                const uint32_t phy_testdout: 8;
+                uint32_t phy_testen: 1;
+                uint32_t phy_testsel: 1;
+                const uint32_t reserved_0: 14;
+            } b;
+        } DSI_PHY_TST_CTRL1_TypeDef;
 
-/* AUTO_ULPS_MODE  (0xe0) */
-typedef union
-{
-    uint32_t d32;
-    uint8_t d8[4];
-    struct
-    {
-        uint32_t auto_ulps: 1;
-        const uint32_t reserved_0: 15;
-        uint32_t pll_off_ulps: 1;
-        uint32_t pre_pll_off_req: 1;
-        const uint32_t reserved_1: 14;
-    } b;
-} DSI_AUTO_ULPS_MODE_TypeDef;
+    /* AUTO_ULPS_MODE  (0xe0) */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t auto_ulps: 1;
+                const uint32_t reserved_0: 15;
+                uint32_t pll_off_ulps: 1;
+                uint32_t pre_pll_off_req: 1;
+                const uint32_t reserved_1: 14;
+            } b;
+        } DSI_AUTO_ULPS_MODE_TypeDef;
 
-/* AUTO_ULPS_ENTRY_DELAY  (0xe4) */
-typedef union
-{
-    uint32_t d32;
-    uint8_t d8[4];
-    struct
-    {
-        uint32_t ulps_entry_delay: 32;
-    } b;
-} DSI_AUTO_ULPS_ENTRY_DELAY_TypeDef;
+    /* AUTO_ULPS_ENTRY_DELAY  (0xe4) */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t ulps_entry_delay: 32;
+            } b;
+        } DSI_AUTO_ULPS_ENTRY_DELAY_TypeDef;
 
-/* AUTO_ULPS_WAKEUP_TIME  (0xe8) */
-typedef union
-{
-    uint32_t d32;
-    uint8_t d8[4];
-    struct
-    {
-        uint32_t twakeup_clk_div: 16;
-        uint32_t twakeup_cnt: 16;
-    } b;
-} DSI_AUTO_ULPS_WAKEUP_TIME_TypeDef;
+    /* AUTO_ULPS_WAKEUP_TIME  (0xe8) */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t twakeup_clk_div: 16;
+                uint32_t twakeup_cnt: 16;
+            } b;
+        } DSI_AUTO_ULPS_WAKEUP_TIME_TypeDef;
 
-/* PHY_TMR_RD_CFG  (0xf4) */
-typedef union
-{
-    uint32_t d32;
-    uint8_t d8[4];
-    struct
-    {
-        uint32_t max_rd_time: 15;
-        const uint32_t reserved_0: 17;
-    } b;
-} DSI_PHY_TMR_RD_CFG_TypeDef;
+    /* PHY_TMR_RD_CFG  (0xf4) */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t max_rd_time: 15;
+                const uint32_t reserved_0: 17;
+            } b;
+        } DSI_PHY_TMR_RD_CFG_TypeDef;
 
-/* AUTO_ULPS_MIN_TIME  (0xf8) */
-typedef union
-{
-    uint32_t d32;
-    uint8_t d8[4];
-    struct
-    {
-        uint32_t ulps_min_time: 12;
-        const uint32_t reserved_0: 20;
-    } b;
-} DSI_AUTO_ULPS_MIN_TIME_TypeDef;
+    /* AUTO_ULPS_MIN_TIME  (0xf8) */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t ulps_min_time: 12;
+                const uint32_t reserved_0: 20;
+            } b;
+        } DSI_AUTO_ULPS_MIN_TIME_TypeDef;
 
-/* PHY_MODE  (0xfc) */
-typedef union
-{
-    uint32_t d32;
-    uint8_t d8[4];
-    struct
-    {
-        uint32_t phy_mode: 1;
-        const uint32_t reserved_0: 31;
-    } b;
-} DSI_PHY_MODE_TypeDef;
+    /* PHY_MODE  (0xfc) */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t phy_mode: 1;
+                const uint32_t reserved_0: 31;
+            } b;
+        } DSI_PHY_MODE_TypeDef;
 
-/* EDPI_TE_HW_CFG  (0x11c) */
-typedef union
-{
-    uint32_t d32;
-    uint8_t d8[4];
-    struct
-    {
-        uint32_t hw_tear_effect_on: 1;
-        uint32_t hw_tear_effect_gen: 1;
-        const uint32_t reserved_0: 2;
-        uint32_t hw_set_scan_line: 1;
-        const uint32_t reserved_1: 11;
-        uint32_t scan_line_parameter: 16;
-    } b;
-} DSI_EDPI_TE_HW_CFG_TypeDef;
+    /* EDPI_TE_HW_CFG  (0x11c) */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t hw_tear_effect_on: 1;
+                uint32_t hw_tear_effect_gen: 1;
+                const uint32_t reserved_0: 2;
+                uint32_t hw_set_scan_line: 1;
+                const uint32_t reserved_1: 11;
+                uint32_t scan_line_parameter: 16;
+            } b;
+        } DSI_EDPI_TE_HW_CFG_TypeDef;
 
-/* INT_ST0  (0xbc) */
-typedef union
-{
-    uint32_t d32;
-    uint8_t d8[4];
-    struct
-    {
-        const uint32_t int_st0: 21;
-        const uint32_t reserved_0: 11;
-    } b;
-} DSI_INT_ST0_TypeDef;
+    /* INT_ST0  (0xbc) */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                const uint32_t int_st0: 21;
+                const uint32_t reserved_0: 11;
+            } b;
+        } DSI_INT_ST0_TypeDef;
 
-/* INT_ST1  (0xc0) */
-typedef union
-{
-    uint32_t d32;
-    uint8_t d8[4];
-    struct
-    {
-        const uint32_t int_st1: 21;
-        const uint32_t reserved_0: 11;
-    } b;
-} DSI_INT_ST1_TypeDef;
+    /* INT_ST1  (0xc0) */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                const uint32_t int_st1: 21;
+                const uint32_t reserved_0: 11;
+            } b;
+        } DSI_INT_ST1_TypeDef;
 
-/* INT_MSK0  (0xc4) */
-typedef union
-{
-    uint32_t d32;
-    uint8_t d8[4];
-    struct
-    {
-        uint32_t int_msk0: 21;
-        const uint32_t reserved_0: 11;
-    } b;
-} DSI_INT_MSK0_TypeDef;
+    /* INT_MSK0  (0xc4) */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t int_msk0: 21;
+                const uint32_t reserved_0: 11;
+            } b;
+        } DSI_INT_MSK0_TypeDef;
 
-/* INT_MSK1  (0xc8) */
-typedef union
-{
-    uint32_t d32;
-    uint8_t d8[4];
-    struct
-    {
-        uint32_t int_msk1: 21;
-        const uint32_t reserved_0: 11;
-    } b;
-} DSI_INT_MSK1_TypeDef;
+    /* INT_MSK1  (0xc8) */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t int_msk1: 21;
+                const uint32_t reserved_0: 11;
+            } b;
+        } DSI_INT_MSK1_TypeDef;
 
-/* INT_FORCE0  (0xd8) */
-typedef union
-{
-    uint32_t d32;
-    uint8_t d8[4];
-    struct
-    {
-        uint32_t int_force0: 32;
-    } b;
-} DSI_INT_FORCE0_TypeDef;
+    /* INT_FORCE0  (0xd8) */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t int_force0: 32;
+            } b;
+        } DSI_INT_FORCE0_TypeDef;
 
-/* INT_FORCE1  (0xdc) */
-typedef union
-{
-    uint32_t d32;
-    uint8_t d8[4];
-    struct
-    {
-        uint32_t int_force1: 32;
-    } b;
-} DSI_INT_FORCE1_TypeDef;
+    /* INT_FORCE1  (0xdc) */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t int_force1: 32;
+            } b;
+        } DSI_INT_FORCE1_TypeDef;
 
 
-/*============================================================================*
-*                         DSI Declaration
-*============================================================================*/
+    /*============================================================================*
+    *                         DSI Declaration
+    *============================================================================*/
 #define DSI                            ((DSI_TypeDef           *) MIPI_REG_BASE)
 
-/** \defgroup DSI         DSI
-     * \brief
-     * \{
-     */
+    /** \defgroup DSI         DSI
+         * \brief
+         * \{
+         */
 
-/*============================================================================*
-    *                         Constants
-    *============================================================================*/
-/** \defgroup DSI_Exported_Constants DSI Exported Constants
-     * \brief
-     * \{
-     */
+    /*============================================================================*
+        *                         Constants
+        *============================================================================*/
+    /** \defgroup DSI_Exported_Constants DSI Exported Constants
+         * \brief
+         * \{
+         */
 
-/**
- * \defgroup    DSI_Mode DSI Mode
- * \{
- * \ingroup     DSI_Exported_Constants
- */
+    /**
+     * \defgroup    DSI_Mode DSI Mode
+     * \{
+     * \ingroup     DSI_Exported_Constants
+     */
 #define DSI_MODE_VIDEO      0
 #define DSI_MODE_CMD        1
 
-/** End of DSI_Mode
-     * \}
-     */
+    /** End of DSI_Mode
+         * \}
+         */
 
-/**
- * \defgroup    DSI_LP DSI LP
- * \{
- * \ingroup     DSI_Exported_Constants
- */
+    /**
+     * \defgroup    DSI_LP DSI LP
+     * \{
+     * \ingroup     DSI_Exported_Constants
+     */
 #define DSI_LP_GSW0P_DISABLE     0
 #define DSI_LP_GSW0P_ENABLE      1
 #define DSI_LP_GSW1P_DISABLE     0
@@ -910,99 +910,99 @@ typedef union
 #define DSI_LP_MRDP_DISABLE      0
 #define DSI_LP_MRDP_ENABLE       1
 
-/** End of DSI_LP
-     * \}
-     */
+    /** End of DSI_LP
+         * \}
+         */
 
-/**
- * \defgroup    DSI_ACKNOWLEDGE DSI ACKNOWLEDGE
- * \{
- * \ingroup     DSI_Exported_Constants
- */
+    /**
+     * \defgroup    DSI_ACKNOWLEDGE DSI ACKNOWLEDGE
+     * \{
+     * \ingroup     DSI_Exported_Constants
+     */
 #define DSI_TE_ACKNOWLEDGE_DISABLE 0
 #define DSI_TE_ACKNOWLEDGE_ENABLE  1
 #define DSI_ACKNOWLEDGE_DISABLE   0
 #define DSI_ACKNOWLEDGE_ENABLE    1
 
-/** End of DSI_ACKNOWLEDGE
-     * \}
-     */
+    /** End of DSI_ACKNOWLEDGE
+         * \}
+         */
 
-/**
- * \defgroup    DSI_SHORT_WRITE_PKT_Data_Type DSI SHORT WRITE PKT Data Type
- * \{
- * \ingroup     DSI_Exported_Constants
- */
+    /**
+     * \defgroup    DSI_SHORT_WRITE_PKT_Data_Type DSI SHORT WRITE PKT Data Type
+     * \{
+     * \ingroup     DSI_Exported_Constants
+     */
 #define DSI_DCS_SHORT_PKT_WRITE_P0  0x00000005U /*!< DCS short write, no parameters      */
 #define DSI_DCS_SHORT_PKT_WRITE_P1  0x00000015U /*!< DCS short write, one parameter      */
 #define DSI_GEN_SHORT_PKT_WRITE_P0  0x00000003U /*!< Generic short write, no parameters  */
 #define DSI_GEN_SHORT_PKT_WRITE_P1  0x00000013U /*!< Generic short write, one parameter  */
 #define DSI_GEN_SHORT_PKT_WRITE_P2  0x00000023U /*!< Generic short write, two parameters */
 
-/** End of DSI_SHORT_WRITE_PKT_Data_Type
-     * \}
-     */
+    /** End of DSI_SHORT_WRITE_PKT_Data_Type
+         * \}
+         */
 
-/**
- * \defgroup    DSI_LONG_WRITE_PKT_Data_Type DSI LONG WRITE PKT Data Type
- * \{
- * \ingroup     DSI_Exported_Constants
- */
+    /**
+     * \defgroup    DSI_LONG_WRITE_PKT_Data_Type DSI LONG WRITE PKT Data Type
+     * \{
+     * \ingroup     DSI_Exported_Constants
+     */
 #define DSI_DCS_LONG_PKT_WRITE      0x00000039U /*!< DCS long write     */
 #define DSI_GEN_LONG_PKT_WRITE      0x00000029U /*!< Generic long write */
 
-/** End of DSI_LONG_WRITE_PKT_Data_Type
-     * \}
-     */
+    /** End of DSI_LONG_WRITE_PKT_Data_Type
+         * \}
+         */
 
-/**
- * \defgroup    DSI_SHORT_READ_PKT_Data_Type DSI SHORT READ PKT Data Type
- * \{
- * \ingroup     DSI_Exported_Constants
- */
+    /**
+     * \defgroup    DSI_SHORT_READ_PKT_Data_Type DSI SHORT READ PKT Data Type
+     * \{
+     * \ingroup     DSI_Exported_Constants
+     */
 #define DSI_DCS_SHORT_PKT_READ      0x00000006U /*!< DCS short read                     */
 #define DSI_GEN_SHORT_PKT_READ_P0   0x00000004U /*!< Generic short read, no parameters  */
 #define DSI_GEN_SHORT_PKT_READ_P1   0x00000014U /*!< Generic short read, one parameter  */
 #define DSI_GEN_SHORT_PKT_READ_P2   0x00000024U /*!< Generic short read, two parameters */
 
-/** End of DSI_SHORT_READ_PKT_Data_Type
-     * \}
-     */
+    /** End of DSI_SHORT_READ_PKT_Data_Type
+         * \}
+         */
 
-/**
- * \defgroup    DSI_BURST DSI BURST
- * \{
- * \ingroup     DSI_Exported_Constants
- */
+    /**
+     * \defgroup    DSI_BURST DSI BURST
+     * \{
+     * \ingroup     DSI_Exported_Constants
+     */
 #define VIDEO_NON_BURST_WITH_SYNC_PULSES    0
 #define VIDEO_NON_BURST_WITH_SYNC_EVENTS    1
 #define VIDEO_BURST_MODE_2    2
 #define VIDEO_BURST_MODE_3    3
 
-/** End of DSI_BURST
-     * \}
-     */
+    /** End of DSI_BURST
+         * \}
+         */
 
-/**
- * \defgroup    DSI_VPG DSI VPG
- * \{
- * \ingroup     DSI_Exported_Constants
- */
+    /**
+     * \defgroup    DSI_VPG DSI VPG
+     * \{
+     * \ingroup     DSI_Exported_Constants
+     */
 #define VIDEO_VPG_MODE_V_AND_H    0
 #define VIDEO_VPG_MODE_ONLY_V     1
 
 #define VIDEO_VPG_ORIENTATION_V    0
 #define VIDEO_VPG_ORIENTATION_H    1
 
-/** End of DSI_VPG
-     * \}
-     */
+    /** End of DSI_VPG
+         * \}
+         */
 
-/**
- * \defgroup    DSI_PHY DSI PHY
- * \{
- * \ingroup     DSI_Exported_Constants
- */
+    /**
+     * \defgroup    DSI_PHY DSI PHY
+     * \{
+     * \ingroup     DSI_Exported_Constants
+     */
 #define PHY_FORCEPLL_ENABLE     1
 #define PHY_FORCEPLL_DISABLE    0
 #define PHY_CLK_ENABLE     1
@@ -1019,27 +1019,27 @@ typedef union
 #endif
 
 
-/** End of DSI_PHY
-     * \}
-     */
+    /** End of DSI_PHY
+         * \}
+         */
 
-/** End of DSI_Exported_Constants
-     * \}
-     */
+    /** End of DSI_Exported_Constants
+         * \}
+         */
 
-/*============================================================================*
-    *                         Types
-    *============================================================================*/
-/** \defgroup DSI_Exported_Types DSI Exported Types
-     * \brief
-     * \{
-     */
+    /*============================================================================*
+        *                         Types
+        *============================================================================*/
+    /** \defgroup DSI_Exported_Types DSI Exported Types
+         * \brief
+         * \{
+         */
 
-/**
- * \brief       DSI init structure definition.
- *
- * \ingroup     DSI_Exported_Types
- */
+    /**
+     * \brief       DSI init structure definition.
+     *
+     * \ingroup     DSI_Exported_Types
+     */
     typedef struct
 {
     uint32_t phy_mode;
@@ -1150,7 +1150,7 @@ typedef struct
 
 typedef struct
 {
-    uint32_t phy_forepll;
+    uint32_t phy_forcepll;
     uint32_t phy_enableclk;
     uint32_t phy_rstz;
     uint32_t phy_shutdownz;
@@ -1169,6 +1169,56 @@ typedef struct
 /** End of DSI_Exported_Types
   * \}
   */
+
+/* Register: PHY_RSTZ -------------------------------------------------------*/
+/* Description: Control register. Offset: 0xA0. Address: . */
+
+/*PHY_RSTZ[3]:phy_forcepll*/
+#define DSI_PHY_FORCEPLL_POS    (3)
+#define DSI_PHY_FORCEPLL_MSK    (0x1 << DSI_PHY_FORCEPLL_POS)
+#define DSI_PHY_FORCEPLL_CLR    (~DSI_PHY_FORCEPLL_MSK)
+
+/*PHY_RSTZ[2]:phy_enableclk*/
+#define DSI_PHY_ENABLECLK_POS   (2)
+#define DSI_PHY_ENABLECLK_MSK   (0x1 << DSI_PHY_ENABLECLK_POS)
+#define DSI_PHY_ENABLECLK_CLR   (~DSI_PHY_ENABLECLK_MSK)
+
+/*PHY_RSTZ[1]:phy_rstz*/
+#define DSI_PHY_RSTZ_POS    (1)
+#define DSI_PHY_RSTZ_MSK    (0x1 << DSI_PHY_RSTZ_POS)
+#define DSI_PHY_RSTZ_CLR    (~DSI_PHY_RSTZ_MSK)
+
+/*PHY_RSTZ[0]:phy_shutdownz*/
+#define DSI_PHY_SHUTDOWNZ_POS   (0)
+#define DSI_PHY_SHUTDOWNZ_MSK   (0x1 << DSI_PHY_SHUTDOWNZ_POS)
+#define DSI_PHY_SHUTDOWNZ_CLR   (~DSI_PHY_SHUTDOWNZ_MSK)
+
+/*PHY_STATUS[4]:phy_stopstate0lane*/
+#define DSI_PHY_STOPSTATE0LANE_POS  (4)
+#define DSI_PHY_STOPSTATE0LANE_MSK  (0x1 << DSI_PHY_STOPSTATE0LANE_POS)
+#define DSI_PHY_STOPSTATE0LANE_CLR  (~DSI_PHY_STOPSTATE0LANE_MSK)
+
+/*PHY_STATUS[2]:phy_stopstateclklane*/
+#define DSI_PHY_STOPSTATECLKLANE_POS    (2)
+#define DSI_PHY_STOPSTATECLKLANE_MSK    (0x1 << DSI_PHY_STOPSTATECLKLANE_POS)
+#define DSI_PHY_STOPSTATECLKLANE_CLR    (~DSI_PHY_STOPSTATECLKLANE_MSK)
+
+
+#define TEST_BITCLK_PERIOD_NS               3       // 2.5ns actually,400MHz
+#define TEST_LANEBYTECLK_PERIOD_NS          20      // 50MHz
+#define TEST_LANEBYTECLK_DIV                3       // source lanebyte_clk,can not be set to 0 or 1
+#define TEST_ESCAPECLK_PERIOD_NS            TEST_LANEBYTECLK_DIV*TEST_LANEBYTECLK_PERIOD_NS
+
+#define  TX_LPX_TIME                        (TEST_ESCAPECLK_PERIOD_NS / TEST_LANEBYTECLK_PERIOD_NS)     // escape clock period, min 50ns
+#define  HS_EXIT_TIME                       (100 / TEST_LANEBYTECLK_PERIOD_NS)                                              // min 100ns
+#define  CLK_PRE_TIME                       (TEST_LANEBYTECLK_PERIOD_NS)                                                            // min 8 UI(bit clock period)
+#define  CLK_ZERO_TIME                      (300 / TEST_LANEBYTECLK_PERIOD_NS)                                              // min 300ns(clk_prepare+clk_zero)
+#define  CLK_PRPR_TIME                      (70 / TEST_LANEBYTECLK_PERIOD_NS)                                                   // 38-95ns
+#define  CLK_POST_TIME                      (60 / TEST_LANEBYTECLK_PERIOD_NS + 52 / 8)                              // min 60ns+52UI
+
+#define  TX_TAIL_TIME                       (60 / TEST_LANEBYTECLK_PERIOD_NS + 4 / 8)                                   // min 60ns + 4UI
+#define  HS_ZERO_TIME                       (100)
+#define  HS_PRPR_TIME                       (40 / TEST_LANEBYTECLK_PERIOD_NS + 4 / 8)
 
 /*============================================================================*
  *                         Functions

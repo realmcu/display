@@ -51,7 +51,7 @@ typedef struct
 /* Description: RLSPI_VSYNC_CMD. Offset: 0x00. Address: . */
 /* RLSPI_VSYNC_CMD[23:0]: . */
 #define RLSPI_VSYNC_CMD_POS                         (0)
-#define RLSPI_VSYNC_CMD_MSK                         (0xFFFFFF << RLSPI_VSYNC_CMD_POS)
+#define RLSPI_VSYNC_CMD_MSK                         (0x7FFFFF << RLSPI_VSYNC_CMD_POS)
 #define RLSPI_VSYNC_CMD_CLR                         (~RLSPI_VSYNC_CMD_MSK)
 
 /* Register: RLSPI_VSYNC_CMD_ADDR -------------------------------------------------------*/
@@ -77,9 +77,9 @@ typedef struct
 
 /* Register: RLSPI_HSYNC_CMD_VACTIVE -------------------------------------------------------*/
 /* Description: RLSPI_HSYNC_CMD_VACTIVE. Offset: 0x10. Address: . */
-/* RLSPI_HSYNC_CMD_VACTIVE[23:0]: . */
+/* RLSPI_HSYNC_CMD_VACTIVE[31:0]: . */
 #define RLSPI_HSYNC_CMD_VACTIVE_POS                 (0)
-#define RLSPI_HSYNC_CMD_VACTIVE_MSK                 (0xFFFFFF << RLSPI_HSYNC_CMD_VACTIVE_POS)
+#define RLSPI_HSYNC_CMD_VACTIVE_MSK                 (0xFFFFFFFF << RLSPI_HSYNC_CMD_VACTIVE_POS)
 #define RLSPI_HSYNC_CMD_VACTIVE_CLR                 (~RLSPI_HSYNC_CMD_VACTIVE_MSK)
 
 /* Register: RLSPI_HSYNC_CMD_ADDR_VACTIVE -------------------------------------------------------*/

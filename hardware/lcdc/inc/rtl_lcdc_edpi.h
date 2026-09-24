@@ -70,6 +70,8 @@ typedef struct
                                               This parameter can be a value of @ref LCDC_EDPI_LCD_ARC */
     uint32_t eDPI_ShutdnPolarity;      /*!< Shutdown polarity setting.
                                               This parameter can be a value of @ref LCDC_EDPI_Shutdown_Polarity */
+    uint32_t eDPI_DpiclkPolarity;      /*!< DPI clock polarity setting.
+                                              This parameter can be a value of @ref LCDC_EDPI_Dpi_Clock_Polarity */
     uint32_t eDPI_ColorModePolarity;   /*!< EDPI Color Mode Polarity.
                                               This parameter can be a value of @ref LCDC_EDPI_Color_Mode_Polarity */
     uint32_t eDPI_ShutdnEn;            /*!< EDPI shut down signal control.
