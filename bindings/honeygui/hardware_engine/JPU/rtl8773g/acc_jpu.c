@@ -9,17 +9,47 @@
 #include <stdint.h>
 #include <string.h>
 #include <rtl876x_rcc.h>
+#include <rtl876x_nvic.h>
 #include "os_mem.h"
+#include "os_sync.h"
 #include "draw_img.h"
+#include "vector_table.h"
 
 #include "trace.h"
 
 #include "rtl_hal_jpu.h"
 
+#define JPU_WAIT_FOREVER 2000
+
+static void *jpu_sync_sem;
+static void *jpu_mutex;
+
+static bool hw_jpeg_thread_sync_enabled(void)
+{
+    struct acc_engine *acc = gui_get_acc();
+    return acc != NULL && acc->enable_thread_sync &&
+           jpu_sync_sem != NULL && jpu_mutex != NULL;
+}
+
+static void hw_jpeg_handler(void)
+{
+    if (!JPU_Wrap_Get_Finish_Int_Status())
+    {
+        return;
+    }
+
+    JPU_Wrap_Clear_Finish_Int();
+    NVIC_DisableIRQ(MJPEG_IRQn);
+    if (jpu_sync_sem != NULL)
+    {
+        os_sem_give(jpu_sync_sem);
+    }
+}
 
 void *hw_jpeg_load(void *input, int len, int *w, int *h, int *channel)
 {
     JPU_DEC_PARAM dec_param;
+    JPU_DEC_STATE_RECORD record = {0};
     uint8_t *output = NULL;
     uint32_t dec_size = 0, dec_w = 0, dec_h = 0;
 
@@ -30,12 +60,52 @@ void *hw_jpeg_load(void *input, int len, int *w, int *h, int *channel)
     dec_param.size = len;
     dec_param.frameFormat = PACKED_FORMAT_422_YUYV;
     dec_param.useWrapper = 1;
-    // TODO: need more info from upper layer to determine output RGB type
     dec_param.rgbType = JPU_RGB565;
 
     // DBG_DIRECT("img 0x%x, sz %d", dec_param.data, dec_param.size);
 
-    err = hal_jpu_decode(&dec_param, &output, &dec_size, &dec_w, &dec_h);
+    bool mutex_locked = false;
+    if (jpu_mutex != NULL)
+    {
+        if (!os_mutex_take(jpu_mutex, 1000))
+        {
+            DBG_DIRECT("JPEG mutex take failed");
+            return NULL;
+        }
+        mutex_locked = true;
+    }
+
+    if (!hw_jpeg_thread_sync_enabled())
+    {
+        err = hal_jpu_decode(&dec_param, &record, &output, &dec_size, &dec_w, &dec_h);
+    }
+    else
+    {
+        err = hal_jpu_decode_start(&dec_param, &record);
+        if (err == JPU_SUCCESS)
+        {
+            NVIC_EnableIRQ(MJPEG_IRQn);
+            if (os_sem_take(jpu_sync_sem, JPU_WAIT_FOREVER))
+            {
+                err = hal_jpu_decode_finish(&record, &output, &dec_size, &dec_w, &dec_h);
+            }
+            else
+            {
+                NVIC_DisableIRQ(MJPEG_IRQn);
+                err = JPU_ERR_FAILURE;
+            }
+        }
+        else
+        {
+            NVIC_DisableIRQ(MJPEG_IRQn);
+        }
+    }
+
+    if (mutex_locked)
+    {
+        os_mutex_give(jpu_mutex);
+    }
+
     if (err != JPU_SUCCESS)
     {
         DBG_DIRECT("img 0x%x, sz %d", dec_param.data, dec_param.size);
@@ -66,13 +136,61 @@ void hw_jpeg_free(void *ptr)
 
 void hw_jpeg_init(void)
 {
+    NVIC_InitTypeDef nvic_init = {0};
+
+    if (jpu_sync_sem != NULL || jpu_mutex != NULL)
+    {
+        return;
+    }
+
     JPU_Clk_Init();
     hal_jpu_mem_init(gui_malloc, gui_free);
     hal_jpu_add_dec_header(sizeof(gui_rgb_data_head_t));
+
+    struct acc_engine *acc = gui_get_acc();
+    if (acc == NULL || !acc->enable_thread_sync)
+    {
+        return;
+    }
+
+    if (!os_mutex_create(&jpu_mutex))
+    {
+        jpu_mutex = NULL;
+        return;
+    }
+    if (!os_sem_create(&jpu_sync_sem, "jpu_sync_sem", 0, 1))
+    {
+        os_mutex_delete(jpu_mutex);
+        jpu_mutex = NULL;
+        jpu_sync_sem = NULL;
+        return;
+    }
+
+    RamVectorTableUpdate(MJPEG_VECTORn, hw_jpeg_handler);
+    nvic_init.NVIC_IRQChannel = MJPEG_IRQn;
+    nvic_init.NVIC_IRQChannelPriority = 3;
+    nvic_init.NVIC_IRQChannelCmd = DISABLE;
+    NVIC_Init(&nvic_init);
+    NVIC_ClearPendingIRQ(MJPEG_IRQn);
 }
 
 void hw_jpeg_deinit(void)
 {
+    NVIC_DisableIRQ(MJPEG_IRQn);
+    JPU_Wrap_Clear_Finish_Int();
+    NVIC_ClearPendingIRQ(MJPEG_IRQn);
+
+    if (jpu_mutex != NULL)
+    {
+        os_mutex_delete(jpu_mutex);
+        jpu_mutex = NULL;
+    }
+    if (jpu_sync_sem != NULL)
+    {
+        os_sem_delete(jpu_sync_sem);
+        jpu_sync_sem = NULL;
+    }
+
     JPU_Clk_Deinit();
 }
 

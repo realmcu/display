@@ -1520,8 +1520,11 @@ void *hal_jpu_get_raw_buffer(void *ptr)
 #if 0
 {
     JPU_DEC_PARAM param;
+    JPU_DEC_STATE_RECORD record = {0};
     uint8_t *output = NULL;
-
+    uint32_t output_size = 0;
+    uint32_t width = 0;
+    uint32_t height = 0;
 
     memset((void *)&param, 0, sizeof(param));
     param.data = (uint8_t *)pic;
@@ -1545,7 +1548,7 @@ void *hal_jpu_get_raw_buffer(void *ptr)
     // ARGB: A(8 bit)
     param.opacity = 0xa5;
 
-    hal_jpu_decode(&param, &output);
+    hal_jpu_decode(&param, &record, &output, &output_size, &width, &height);
 }
 #endif
 
@@ -1667,32 +1670,30 @@ static void log_dec_info(JPU_DEC_INFO *info)
     DBG_DIRECT("\n");
 }
 
-JPU_ERROR hal_jpu_decode(JPU_DEC_PARAM *dec_param, uint8_t **frame_buff, uint32_t *frame_size,
-                         uint32_t *dec_w, uint32_t *dec_h)
+/* Full decode setup: parse the header, select or allocate the frame buffer and
+ * build the hardware config into the caller-owned record. Does not launch the codec. */
+static JPU_ERROR hal_jpu_dec_prepare(JPU_DEC_PARAM *dec_param, uint8_t *frame_buffer,
+                                     uint32_t frame_buffer_size,
+                                     JPU_DEC_STATE_RECORD *record)
 {
-    JPU_DEC_PARAM_INT g_dec_param;
-    JPU_DEC_INFO g_dec_info;
-    JPU_DEC_CFG g_dec_config;
     JPU_ERROR err = JPU_ERR_FAILURE;
     int ret = -1;
 
-    // JPU_DEC_PARAM_INT *param = JPU_MALLOC(sizeof(JPU_DEC_PARAM_INT));
-    // JPU_DEC_INFO *info = JPU_MALLOC(sizeof(JPU_DEC_INFO));
-
-    JPU_DEC_PARAM_INT *param = &g_dec_param;
-    JPU_DEC_INFO *info = &g_dec_info;
-    JPU_DEC_CFG *config = &g_dec_config;
-
     // check input validate
     if (!dec_param || !dec_param->data || ((uint32_t)dec_param->data & 0x7) || !dec_param->size ||
-        !frame_buff || !frame_size || !dec_w || !dec_h)
+        !record)
     {
         return JPU_ERR_INVALID_PARAM;
     }
+    if (!frame_buffer && !jpu_heap_available)
+    {
+        return JPU_ERR_HEAP_NOT_AVAILABLE;
+    }
 
-    memset((void *)param, 0, sizeof(JPU_DEC_PARAM_INT));
-    memset((void *)info, 0, sizeof(JPU_DEC_INFO));
-    memset((void *)config, 0, sizeof(JPU_DEC_CFG));
+    memset(record, 0, sizeof(*record));
+    JPU_DEC_PARAM_INT *param = &record->param;
+    JPU_DEC_INFO *info = &record->info;
+    JPU_DEC_CFG *config = &record->config;
 
     err = JPU_Dec_Prepare(dec_param, param);
     if (err != JPU_SUCCESS)
@@ -1808,13 +1809,35 @@ JPU_ERROR hal_jpu_decode(JPU_DEC_PARAM *dec_param, uint8_t **frame_buff, uint32_
         fb_size = fb_width * fb_height;
     }
 
-    uint8_t *fb_raw = (uint8_t *)jpu_malloc(fb_size + 7 + header_sz);
-    if (!fb_raw)
+    uint32_t required_size = fb_size + 7 + header_sz;
+    uint8_t *fb_raw = frame_buffer;
+    uint8_t *fb = NULL;
+    bool fb_owned = false;
+
+    if (fb_raw)
     {
-        DBG_DIRECT("fb malloc failed, size %d\n", fb_size + 7 + header_sz);
-        return JPU_ERR_MALLOC_FAIL;
+        uint32_t fb_addr = (((uint32_t)fb_raw + 7 + header_sz) >> 3) << 3;
+        uint32_t fb_offset = fb_addr - (uint32_t)fb_raw;
+
+        if (frame_buffer_size < fb_offset || frame_buffer_size - fb_offset < fb_size)
+        {
+            DBG_DIRECT("external fb too small, have %d need %d\n", frame_buffer_size,
+                       fb_offset + fb_size);
+            return JPU_ERR_INVALID_FRAME_BUFFER;
+        }
+        fb = (uint8_t *)fb_addr;
     }
-    uint8_t *fb = (uint8_t *)((((uint32_t)fb_raw + 7 + header_sz) >> 3) << 3);  // align to 8
+    else
+    {
+        fb_raw = (uint8_t *)jpu_malloc(required_size);
+        if (!fb_raw)
+        {
+            DBG_DIRECT("fb malloc failed, size %d\n", required_size);
+            return JPU_ERR_MALLOC_FAIL;
+        }
+        fb = (uint8_t *)((((uint32_t)fb_raw + 7 + header_sz) >> 3) << 3);  // align to 8
+        fb_owned = true;
+    }
     // DBG_DIRECT("fb 0x%x fb_raw 0x%x, *output 0x%x, sz %d \n", fb, fb_raw, *output, fb_size);
 
 
@@ -1953,12 +1976,25 @@ JPU_ERROR hal_jpu_decode(JPU_DEC_PARAM *dec_param, uint8_t **frame_buff, uint32_
     poutput_info->alignedHeight = info->alignedHeight;
     poutput_info->buff_raw = fb_raw;
     poutput_info->buff = fb;
-    poutput_info->buff_size = fb_size + 7 + header_sz;
+    poutput_info->buff_size = required_size;
 
 
-    // start decode
-    ret = JPU_Decode(config);
+    record->frame_buffer = fb;
+    record->frame_buffer_raw = fb_raw;
+    record->frame_buffer_size = fb_size;
+    record->frame_buffer_owned = fb_owned;
 
+    return JPU_SUCCESS;
+}
+
+/* Read the decode result and publish it to the caller. Shared by the
+ * synchronous hal_jpu_decode() and the interrupt-driven finish entry point. */
+static JPU_ERROR hal_jpu_dec_output(JPU_DEC_STATE_RECORD *record, uint32_t ret,
+                                    uint8_t **frame_buff, uint32_t *frame_size,
+                                    uint32_t *dec_w, uint32_t *dec_h)
+{
+    JPU_DEC_INFO *info = &record->info;
+    JPU_OUTPUT_INFO *poutput_info = hal_jpu_get_info();
     JPU_HW_INFO *hw_info = JPU_Read_Output();
     poutput_info->state = hw_info->status.d32;
     poutput_info->cycle = hw_info->cycle;
@@ -1970,12 +2006,15 @@ JPU_ERROR hal_jpu_decode(JPU_DEC_PARAM *dec_param, uint8_t **frame_buff, uint32_
                    hw_info->dec_errmb.b.err_mcu_y);
         poutput_info->err_mcu_x = hw_info->dec_errmb.b.err_mcu_x;
         poutput_info->err_mcu_y = hw_info->dec_errmb.b.err_mcu_y;
-        hal_jpu_free_cache(fb_raw);
+        if (record->frame_buffer_owned)
+        {
+            hal_jpu_free_cache(record->frame_buffer_raw);
+        }
         return JPU_ERR_DECODE;
     }
 
-    *frame_buff = fb - header_sz;
-    *frame_size = fb_size;
+    *frame_buff = record->frame_buffer - header_sz;
+    *frame_size = record->frame_buffer_size;
     *dec_w = info->alignedWidth;
     *dec_h = info->alignedHeight;
 
@@ -1984,8 +2023,67 @@ JPU_ERROR hal_jpu_decode(JPU_DEC_PARAM *dec_param, uint8_t **frame_buff, uint32_
     return JPU_SUCCESS;
 }
 
+JPU_ERROR hal_jpu_decode(JPU_DEC_PARAM *dec_param, JPU_DEC_STATE_RECORD *record,
+                         uint8_t **frame_buff, uint32_t *frame_size,
+                         uint32_t *dec_w, uint32_t *dec_h)
+{
+    if (!record || !frame_buff || !frame_size || !dec_w || !dec_h)
+    {
+        return JPU_ERR_INVALID_PARAM;
+    }
 
+    JPU_ERROR err = hal_jpu_dec_prepare(dec_param, NULL, 0, record);
+    if (err != JPU_SUCCESS)
+    {
+        return err;
+    }
 
+    uint32_t ret = JPU_Decode(&record->config);
+    return hal_jpu_dec_output(record, ret, frame_buff, frame_size, dec_w, dec_h);
+}
+
+JPU_ERROR hal_jpu_decode_start(JPU_DEC_PARAM *dec_param, JPU_DEC_STATE_RECORD *record)
+{
+    JPU_ERROR err = hal_jpu_dec_prepare(dec_param, NULL, 0, record);
+    if (err != JPU_SUCCESS)
+    {
+        return err;
+    }
+
+    JPU_Decode_Start(&record->config);
+    return JPU_SUCCESS;
+}
+
+JPU_ERROR hal_jpu_decode_start_to_buffer(JPU_DEC_PARAM *dec_param, uint8_t *frame_buffer,
+                                         uint32_t frame_buffer_size,
+                                         JPU_DEC_STATE_RECORD *record)
+{
+    if (!frame_buffer || !frame_buffer_size || !record)
+    {
+        return JPU_ERR_INVALID_PARAM;
+    }
+
+    JPU_ERROR err = hal_jpu_dec_prepare(dec_param, frame_buffer, frame_buffer_size, record);
+    if (err != JPU_SUCCESS)
+    {
+        return err;
+    }
+
+    JPU_Decode_Start(&record->config);
+    return JPU_SUCCESS;
+}
+
+JPU_ERROR hal_jpu_decode_finish(JPU_DEC_STATE_RECORD *record, uint8_t **frame_buff,
+                                uint32_t *frame_size, uint32_t *dec_w, uint32_t *dec_h)
+{
+    if (!record || !frame_buff || !frame_size || !dec_w || !dec_h)
+    {
+        return JPU_ERR_INVALID_PARAM;
+    }
+
+    uint32_t ret = JPU_Decode_Finish(&record->config);
+    return hal_jpu_dec_output(record, ret, frame_buff, frame_size, dec_w, dec_h);
+}
 
 static void log_enc_param(JPU_ENC_PARAM *param)
 {
@@ -2470,4 +2568,12 @@ void hal_jpu_mem_init(void *(*jmalloc)(size_t), void (*jfree)(void *))
         JPU_FREE = jfree;
         jpu_heap_available = true;
     }
+}
+
+void hal_jpu_mem_deinit(void)
+{
+    JPU_MALLOC = NULL;
+    JPU_FREE = NULL;
+    jpu_heap_available = false;
+    memset(jcache_buffer, 0, sizeof(jcache_buffer));
 }

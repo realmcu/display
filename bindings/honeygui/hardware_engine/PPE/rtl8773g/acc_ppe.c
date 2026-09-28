@@ -2860,11 +2860,13 @@ bool hw_acc_blit_scale(uint8_t *target_buffer, const uint8_t *source_buffer,
     ppe_scale(scale, scale, &inverse);
     ppe_rect_t constraint = {.x1 = 0, .y1 = 0, .x2 = target.width - 1, .y2 = target.height - 1};
     PPE_ERR err = PPE_Blit_Inverse(&target, &source, NULL, &inverse, &constraint, PPE_BLEND_BYPASS);
+    PPE_Clear_Interrupt(PPE_ALL_OVER_INT);
+    PPE_Mask_All_Interrupt(ENABLE);
     if (err != PPE_SUCCESS)
     {
         return false;
     }
-    ppe_wait_finish_blocking();
+    PPE_Finish();
     return true;
 }
 

@@ -319,14 +319,17 @@ typedef struct
 } JPU_ENC_CFG;
 
 void JPU_Clk_Init(void);
-void JPU_Clk_Deinit(void);
 void JPU_Deinit(void);
 void JPU_Reset(void);
 JPU_HW_INFO *JPU_Read_Output(void);
 
 uint32_t JPU_Decode(JPU_DEC_CFG *config);
+uint32_t JPU_Decode_Start(JPU_DEC_CFG *config);
+uint32_t JPU_Decode_Finish(JPU_DEC_CFG *config);
+uint32_t JPU_Wrap_Get_Finish_Int_Status(void);
+void JPU_Wrap_Clear_Finish_Int(void);
 uint32_t JPU_Encode(JPU_ENC_CFG *config);
-
+void JPU_Clk_Deinit(void);
 bool JPU_Busy(void);
 void JPU_Dump(void);
 

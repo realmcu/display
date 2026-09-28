@@ -301,6 +301,18 @@ typedef struct
 } JPU_DEC_INFO;
 
 
+typedef struct
+{
+    JPU_DEC_PARAM_INT param;
+    JPU_DEC_INFO info;
+    JPU_DEC_CFG config;
+    uint8_t *frame_buffer;
+    uint8_t *frame_buffer_raw;
+    uint32_t frame_buffer_size;
+    bool frame_buffer_owned;
+} JPU_DEC_STATE_RECORD;
+
+
 
 // Encoder
 typedef struct
@@ -454,6 +466,15 @@ typedef struct
 void hal_jpu_mem_init(void *(*jmalloc)(size_t), void (*jfree)(void *));
 
 /**
+ * @brief      Disables the JPU driver's dynamic allocator callbacks.
+ *
+ * Decode can still use hal_jpu_decode_start_to_buffer(); APIs that require
+ * internally allocated storage return JPU_ERR_HEAP_NOT_AVAILABLE or
+ * JPU_ERR_MALLOC_FAIL.
+ */
+void hal_jpu_mem_deinit(void);
+
+/**
  * @brief      Frees a buffer that was allocated by the JPU driver.
  *
  * @param[in]  ptr    Pointer to the memory buffer to be freed. This buffer should have been previously allocated by the JPU
@@ -465,7 +486,6 @@ void hal_jpu_mem_init(void *(*jmalloc)(size_t), void (*jfree)(void *));
  *
  * @example
  *     uint8_t *jpeg_data = NULL;
- *     // ... jpeg_data receives memory from a JPU encode/decode API
  *     hal_jpu_free_cache(jpeg_data); // Safe way to clean up JPU-allocated output
  *     jpeg_data = NULL;
  */
@@ -571,21 +591,25 @@ void hal_jpu_add_dec_header(uint32_t size);
  * @brief      Decodes a JPEG image using the hardware JPEG decoder (JPU).
  *
  * @param[in]  dec_param    Pointer to the decoding parameter structure containing JPEG bitstream and decoding settings.
+ *                          The JPEG bitstream address must be 8-byte aligned.
+ * @param[out] record       Pointer to caller-owned state storage initialized by this function. It must not be NULL.
  * @param[out] frame_buff   Pointer to a pointer that will be set to a buffer allocated internally by the function,
  *                          containing the decoded raw image data (such as YUV, RGB, etc. format depending on settings).
  *                          The caller is responsible for releasing this buffer when it is no longer needed.
- * @param[out] frame_size   Pointer to a variable that will receive the number of bytes written to the output buffer.
- * @param[out] dec_w        Pointer to a variable that will receive the width (in pixels) of the decoded image.
- * @param[out] dec_h        Pointer to a variable that will receive the height (in pixels) of the decoded image.
+ * @param[out] frame_size   Pointer to a variable that will receive the number of valid payload bytes in the output buffer,
+ *                          excluding alignment padding and the reserved header area.
+ * @param[out] dec_w        Pointer to a variable that will receive the hardware-aligned decoded image width (in pixels).
+ * @param[out] dec_h        Pointer to a variable that will receive the hardware-aligned decoded image height (in pixels).
  *
  * @return     JPU_ERROR code indicating success or failure of the decoding operation.
  *
- * @note       The output buffer is dynamically allocated within this function.
- *             The caller must free the buffer after use to prevent memory leaks.
- *             All output parameters are valid only if the function returns a success code.
+ * @note       All pointer parameters are required and must not be NULL. The output buffer is dynamically allocated
+ *             within this function. The caller must free the buffer after use to prevent memory leaks. All output
+ *             parameters are valid only if the function returns JPU_SUCCESS. The caller must serialize access to JPU.
  *
  * @example
  *      JPU_DEC_PARAM dec_param;
+ *      JPU_DEC_STATE_RECORD record = {0};
  *      uint8_t *fb_data = NULL;
  *      uint32_t fb_size = 0, w = 0, h = 0;
  *      JPU_ERROR err;
@@ -598,7 +622,7 @@ void hal_jpu_add_dec_header(uint32_t size);
  *      dec_param.rgbType = JPU_RGB565;
  *
  *      hal_jpu_mem_init(lv_malloc, lv_free);
- *      err = hal_jpu_decode(&dec_param, &fb_data, &fb_size, &w, &h);
+ *      err = hal_jpu_decode(&dec_param, &record, &fb_data, &fb_size, &w, &h);
  *      if (err != JPU_SUCCESS)
  *      {
  *          DBG_DIRECT("decode jpeg file failed, err: %d", err);
@@ -609,8 +633,82 @@ void hal_jpu_add_dec_header(uint32_t size);
  *      // After usage, remember to free the buffer
  *      hal_jpu_free_cache(fb_data);
 */
-JPU_ERROR hal_jpu_decode(JPU_DEC_PARAM *dec_param, uint8_t **frame_buff, uint32_t *frame_size,
+JPU_ERROR hal_jpu_decode(JPU_DEC_PARAM *dec_param, JPU_DEC_STATE_RECORD *record,
+                         uint8_t **frame_buff, uint32_t *frame_size,
                          uint32_t *dec_w, uint32_t *dec_h);
+
+/**
+ * @brief      Starts an interrupt-driven JPEG decode using an internally allocated frame buffer.
+ *
+ * @param[in]  dec_param    Pointer to the decoding parameter structure containing JPEG bitstream and decoding settings.
+ *                          The JPEG bitstream address must be 8-byte aligned.
+ * @param[out] record       Pointer to caller-owned state storage initialized by this function. It must not be NULL and
+ *                          must remain valid and unmodified until the matching hal_jpu_decode_finish() returns.
+ *
+ * @return     JPU_ERROR code indicating whether the decode was successfully prepared and launched.
+ *
+ * @note       This function returns immediately without waiting for hardware completion. Only one JPU decode may be
+ *             in flight. The caller must serialize access and pair a successful call with hal_jpu_decode_finish().
+ *
+ * @example
+ *      JPU_DEC_PARAM dec_param;
+ *      JPU_DEC_STATE_RECORD record = {0};
+ *      // ... initialize dec_param ...
+ *      JPU_ERROR err = hal_jpu_decode_start(&dec_param, &record);
+ */
+JPU_ERROR hal_jpu_decode_start(JPU_DEC_PARAM *dec_param, JPU_DEC_STATE_RECORD *record);
+
+/**
+ * @brief      Starts an interrupt-driven JPEG decode into a caller-provided frame buffer.
+ *
+ * @param[in]  dec_param          Pointer to the decoding parameter structure containing JPEG bitstream and decoding settings.
+ *                                The JPEG bitstream address must be 8-byte aligned.
+ * @param[in]  frame_buffer       Pointer to caller-owned output storage. It must not be NULL and must remain valid and
+ *                                unmodified until hal_jpu_decode_finish() returns. The JPU driver never frees this buffer.
+ * @param[in]  frame_buffer_size  The total available size in bytes starting at frame_buffer. It must include any reserved
+ *                                header area, 8-byte alignment loss, and the complete decoded payload.
+ * @param[out] record             Pointer to caller-owned state storage initialized by this function. It must not be NULL
+ *                                and must remain valid and unmodified until hal_jpu_decode_finish() returns.
+ *
+ * @return     JPU_ERROR code indicating whether the decode was successfully prepared and launched.
+ *
+ * @note       This function returns immediately without waiting for hardware completion. Only one JPU decode may be
+ *             in flight. The caller must serialize access. Do not pass frame_buffer to hal_jpu_free_cache().
+ *
+ * @example
+ *      JPU_DEC_STATE_RECORD record = {0};
+ *      JPU_ERROR err = hal_jpu_decode_start_to_buffer(&dec_param, frame_buffer,
+ *                                                     frame_buffer_size, &record);
+ */
+JPU_ERROR hal_jpu_decode_start_to_buffer(JPU_DEC_PARAM *dec_param, uint8_t *frame_buffer,
+                                         uint32_t frame_buffer_size,
+                                         JPU_DEC_STATE_RECORD *record);
+
+/**
+ * @brief      Finishes an interrupt-driven JPEG decode and returns its result.
+ *
+ * @param[in]  record       Pointer to the same caller-owned state record passed to the matching start function.
+ *                          It must not be NULL and must not have been modified while the decode was in flight.
+ * @param[out] frame_buff   Pointer to a pointer that will be set to the decoded image buffer. For internally allocated
+ *                          output, the caller must release this buffer with hal_jpu_free_cache(). For caller-provided
+ *                          output, this pointer refers to that external buffer and must not be freed by the JPU driver.
+ * @param[out] frame_size   Pointer to a variable that will receive the number of valid payload bytes in the output buffer,
+ *                          excluding alignment padding and the reserved header area.
+ * @param[out] dec_w        Pointer to a variable that will receive the hardware-aligned decoded image width (in pixels).
+ * @param[out] dec_h        Pointer to a variable that will receive the hardware-aligned decoded image height (in pixels).
+ *
+ * @return     JPU_ERROR code indicating success or failure of the decoding operation.
+ *
+ * @note       Call this function only after a successful hal_jpu_decode_start() or
+ *             hal_jpu_decode_start_to_buffer() and after the wrapper completion interrupt has fired.
+ *
+ * @example
+ *      uint8_t *frame_buff = NULL;
+ *      uint32_t frame_size = 0, width = 0, height = 0;
+ *      JPU_ERROR err = hal_jpu_decode_finish(&record, &frame_buff, &frame_size, &width, &height);
+ */
+JPU_ERROR hal_jpu_decode_finish(JPU_DEC_STATE_RECORD *record, uint8_t **frame_buff,
+                                uint32_t *frame_size, uint32_t *dec_w, uint32_t *dec_h);
 
 
 /**

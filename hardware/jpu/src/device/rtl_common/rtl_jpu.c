@@ -1068,7 +1068,7 @@ JPU_HW_INFO *JPU_Read_Output(void)
     return &output_hw_info;
 }
 
-uint32_t JPU_Decode(JPU_DEC_CFG *config)
+uint32_t JPU_Decode_Start(JPU_DEC_CFG *config)
 {
     JPU_Clk_Init();
     // bs
@@ -1354,11 +1354,52 @@ uint32_t JPU_Decode(JPU_DEC_CFG *config)
 
     // JPU_Dump();
 
+
+    if (config->wrapper_en)
+    {
+        JPU->INTR_MASK = 0x000001FF;
+
+        JPU_WRAP->INT_CLEAR  = 0x1;   // W1C: clear any stale finish flag
+        JPU_WRAP->INT_MASK   = 0x0;   // unmask finish_int
+        JPU_WRAP->INT_ENABLE = 0x1;   // enable finish_int
+    }
+
     // launch decoder
     JPU_PIC_START_TypeDef jpu_reg_0x00 = {.d32 = 0};
     jpu_reg_0x00.b.start_codec = 1;
     JPU->PIC_START = jpu_reg_0x00.d32;
 
+    return 0;
+}
+
+uint32_t JPU_Decode_Finish(JPU_DEC_CFG *config)
+{
+    JPU_PIC_STATUS_TypeDef jpu_reg_0x04 = {.d32 = JPU->PIC_STATUS};
+    uint32_t ret = jpu_reg_0x04.b.jpg_done ? true : false;
+
+    output_hw_info.status.d32 = jpu_reg_0x04.d32;
+    JPU_PIC_ERRMB_TypeDef jpu_reg_0x08 = {.d32 = JPU->PIC_ERRMB};
+    output_hw_info.dec_errmb.d32 = jpu_reg_0x08.d32;
+    JPU_CYCLE_INFO_TypeDef jpu_reg_0xc8 = {.d32 = JPU->CYCLE_INFO};
+    output_hw_info.cycle = jpu_reg_0xc8.d32;
+
+    // clear int
+    if (jpu_reg_0x04.d32)
+    {
+        JPU->PIC_STATUS = jpu_reg_0x04.d32;
+    }
+    if (config->wrapper_en)
+    {
+        JPU_WRAP->INT_ENABLE = 0x0;   // disable finish_int
+        JPU_WRAP->INT_CLEAR  = 0x1;   // W1C: clear finish flag
+    }
+
+    return ret;
+}
+
+uint32_t JPU_Decode(JPU_DEC_CFG *config)
+{
+    JPU_Decode_Start(config);
 
     // jpu done
     JPU_PIC_STATUS_TypeDef jpu_reg_0x04 = {.d32 = JPU->PIC_STATUS};
@@ -1385,22 +1426,20 @@ uint32_t JPU_Decode(JPU_DEC_CFG *config)
         }
     }
 
-    uint32_t ret = false;
-    ret = jpu_reg_0x04.b.jpg_done ? true : false;
+    return JPU_Decode_Finish(config);
+}
 
-    output_hw_info.status.d32 = jpu_reg_0x04.d32;
-    JPU_PIC_ERRMB_TypeDef jpu_reg_0x08 = {.d32 = JPU->PIC_ERRMB};
-    output_hw_info.dec_errmb.d32 = jpu_reg_0x08.d32;
-    JPU_CYCLE_INFO_TypeDef jpu_reg_0xc8 = {.d32 = JPU->CYCLE_INFO};
-    output_hw_info.cycle = jpu_reg_0xc8.d32;
+uint32_t JPU_Wrap_Get_Finish_Int_Status(void)
+{
+    JPU_WRAP_INT_STATUS_TypeDef st = {.d32 = JPU_WRAP->INT_STATUS};
+    JPU_WRAP_INT_RAW_STATUS_TypeDef raw = {.d32 = JPU_WRAP->INT_RAW_STATUS};
+    return (st.b.finish_int_status || raw.b.finish_int_raw_status) ? 1 : 0;
+}
 
-    // clear int
-    if (jpu_reg_0x04.d32)
-    {
-        JPU->PIC_STATUS = jpu_reg_0x04.d32;
-    }
-
-    return ret;
+void JPU_Wrap_Clear_Finish_Int(void)
+{
+    JPU_WRAP->INT_ENABLE = 0x0;
+    JPU_WRAP->INT_CLEAR  = 0x1;
 }
 
 uint32_t JPU_Encode(JPU_ENC_CFG *config)
