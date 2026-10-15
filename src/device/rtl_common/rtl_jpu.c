@@ -1050,15 +1050,25 @@ void JPU_Reset(void)
     JPU_BBC_RD_PTR_TypeDef jpu_reg_0x210 = {.d32 = JPU->BBC_RD_PTR};
     JPU_BBC_WR_PTR_TypeDef jpu_reg_0x20c = {.d32 = JPU->BBC_WR_PTR};
 
-    /*
-     * Gates every codec run: PIC_START bit4 is only examined in S_INST_RUN,
-     * unreachable while this bit is 0.
-     *
-     * KNOWN INEFFECTIVE on the current bitfile -- the APB decode window ends at
-     * 0x8FF, so 0xC00 reads and writes as 0. The J12 software reset (bit2, poll
-     * STATUS[8:4]) is left out for the same reason.
-     */
+    /* Software reset: inst_init returns the instance FSM to IDLE. The wait is bounded. */
     JPU_INST_CTRL_START_TypeDef jpu_reg_0xc00 = {.d32 = JPU_PROC->INST_CTRL_START};
+    jpu_reg_0xc00.b.inst_init = 1;
+    JPU_PROC->INST_CTRL_START = jpu_reg_0xc00.d32;
+
+    uint32_t spins = 0;
+    while (spins < JPU_POLL_MAX_SPINS && (JPU_PROC->INST_CTRL_STATUS & (0x1FU << 4)))
+    {
+        spins++;
+    }
+    if (spins == JPU_POLL_MAX_SPINS)
+    {
+        DBG_DIRECT("JPU_Reset: instance controller not idle, 0xC04 0x%x\n",
+                   JPU_PROC->INST_CTRL_STATUS);
+    }
+    JPU_PROC->INST_CTRL_START = 0;
+
+    /* Gates every codec run: PIC_START bit4 is only examined in S_INST_RUN. */
+    jpu_reg_0xc00.d32 = 0;
     jpu_reg_0xc00.b.inst_start = 1;
     JPU_PROC->INST_CTRL_START = jpu_reg_0xc00.d32;
 
