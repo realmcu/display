@@ -1372,15 +1372,19 @@ uint32_t JPU_Decode(JPU_DEC_CFG *config)
     JPU->CLP_INFO = jpu_reg_0x28.d32;
 
 
-    // wrapper
-    JPU_WRAP_CFG_TypeDef jpu_wrap_reg_0x04 = {.d32 = 0};
-    jpu_wrap_reg_0x04.b.axi_wr_mstr = config->wrapper_en ? 0x01 : 0x00;
-    JPU_WRAP->CONFIG = jpu_wrap_reg_0x04.d32;
+    // The current bitfile has no wrapper, so skip it when disabled. If a wrapper
+    // returns, write CONFIG = 0 here, or axi_wr_mstr stays set from a prior run.
+    if (config->wrapper_en)
+    {
+        JPU_WRAP_CFG_TypeDef jpu_wrap_reg_0x04 = {.d32 = 0};
+        jpu_wrap_reg_0x04.b.axi_wr_mstr = 0x01;
+        JPU_WRAP->CONFIG = jpu_wrap_reg_0x04.d32;
 
-    JPU_WRAP_RGB_PF_TypeDef jpu_wrap_reg_0x00 = {.d32 = 0};
-    jpu_wrap_reg_0x00.b.rgb_format = config->rgb_type;
-    jpu_wrap_reg_0x00.b.alpha = config->opa;
-    JPU_WRAP->RGB_PF = jpu_wrap_reg_0x00.d32;
+        JPU_WRAP_RGB_PF_TypeDef jpu_wrap_reg_0x00 = {.d32 = 0};
+        jpu_wrap_reg_0x00.b.rgb_format = config->rgb_type;
+        jpu_wrap_reg_0x00.b.alpha = config->opa;
+        JPU_WRAP->RGB_PF = jpu_wrap_reg_0x00.d32;
+    }
 
     // JPU_Dump();
 
@@ -1609,14 +1613,18 @@ uint32_t JPU_Encode(JPU_ENC_CFG *config)
     JPU->DPB_CSTRIDE = jpu_reg_0x68.d32;
 
 
-    // wrapper
-    JPU_WRAP_CFG_TypeDef jpu_wrap_reg_0x04 = {.d32 = 0};
-    jpu_wrap_reg_0x04.b.axi_wr_mstr = config->wrapper_en ? 0x01 : 0x00;
-    JPU_WRAP->CONFIG = jpu_wrap_reg_0x04.d32;
+    // The current bitfile has no wrapper, so skip it when disabled. If a wrapper
+    // returns, write CONFIG = 0 here, or axi_wr_mstr stays set from a prior run.
+    if (config->wrapper_en)
+    {
+        JPU_WRAP_CFG_TypeDef jpu_wrap_reg_0x04 = {.d32 = 0};
+        jpu_wrap_reg_0x04.b.axi_wr_mstr = 0x01;
+        JPU_WRAP->CONFIG = jpu_wrap_reg_0x04.d32;
 
-    JPU_WRAP_RGB_PF_TypeDef jpu_wrap_reg_0x00 = {.d32 = 0};
-    jpu_wrap_reg_0x00.b.rgb_format = config->rgb_type;
-    JPU_WRAP->RGB_PF = jpu_wrap_reg_0x00.d32;
+        JPU_WRAP_RGB_PF_TypeDef jpu_wrap_reg_0x00 = {.d32 = 0};
+        jpu_wrap_reg_0x00.b.rgb_format = config->rgb_type;
+        JPU_WRAP->RGB_PF = jpu_wrap_reg_0x00.d32;
+    }
 
 
     JPU_PIC_STATUS_TypeDef jpu_reg_0x04 = {.d32 = JPU->PIC_STATUS};
