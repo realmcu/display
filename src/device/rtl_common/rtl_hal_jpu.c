@@ -289,6 +289,14 @@ static JPU_ERROR JPU_Dec_Prepare(JPU_DEC_PARAM *usr_param, JPU_DEC_PARAM_INT *pa
         param->roiHeight = usr_param->roiHeight;
     }
 
+    if (usr_param->iHorScaleMode < JPU_DOWN_SCALE_NONE || usr_param->iHorScaleMode > JPU_DOWN_SCALE_1_8 ||
+        usr_param->iVerScaleMode < JPU_DOWN_SCALE_NONE || usr_param->iVerScaleMode > JPU_DOWN_SCALE_1_8)
+    {
+        return JPU_ERR_INVALID_PARAM;
+    }
+    param->iHorScaleMode = usr_param->iHorScaleMode;
+    param->iVerScaleMode = usr_param->iVerScaleMode;
+
     if (!param->roiEnable && !param->packedFormat)
     {
         // partial Mode(0: OFF 1: ON);
@@ -307,7 +315,7 @@ static JPU_ERROR JPU_Dec_Prepare(JPU_DEC_PARAM *usr_param, JPU_DEC_PARAM_INT *pa
     if (!param->usePartialMode)
     {
         // rotation angle in degrees(0, 90, 180, 270);
-        // param->rotAngle = usr_param->rotAngle;
+        param->rotAngle = usr_param->rotAngle;
         if (param->rotAngle != ROT_ANGLE_0 && param->rotAngle != ROT_ANGLE_90 &&
             param->rotAngle != ROT_ANGLE_180 &&
             param->rotAngle != ROT_ANGLE_270)
@@ -316,7 +324,7 @@ static JPU_ERROR JPU_Dec_Prepare(JPU_DEC_PARAM *usr_param, JPU_DEC_PARAM_INT *pa
             return JPU_ERR_INVALID_PARAM;
         }
         // mirror direction(0-no mirror, 1-vertical, 2-horizontal, 3-both);
-        // param->mirDir = usr_param->mirDir;
+        param->mirDir = usr_param->mirDir;
         if (param->mirDir != MIRDIR_NONE && param->mirDir != MIRDIR_VER && param->mirDir != MIRDIR_HOR &&
             param->mirDir != MIRDIR_HOR_VER)
         {
@@ -1743,7 +1751,9 @@ JPU_ERROR hal_jpu_decode(JPU_DEC_PARAM *dec_param, uint8_t **frame_buff, uint32_
 
     if (param->iHorScaleMode || param->iVerScaleMode)
     {
-        fb_width = ((fb_width + 15) >> 4) << 4;    // 16
+        // hw-contract section 4: planar 4:2:0/4:2:2 with the scaler needs a 32-aligned luma stride
+        uint32_t align = (info->format == JPU_FORMAT_420 || info->format == JPU_FORMAT_422) ? 32 : 16;
+        fb_width = (fb_width + align - 1) / align * align;
     }
 
     uint8_t wrapper_factor = 0;
