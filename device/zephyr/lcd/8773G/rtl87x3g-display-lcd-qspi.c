@@ -14,6 +14,9 @@
 #ifdef CONFIG_REALTEK_LCD_ST77916_360_360_QSPI
 #include "lcd_st77916_360_360_qspi.h"
 #endif
+#ifdef CONFIG_REALTEK_LCD_JD9855_360_360_QSPI
+#include "lcd_jd9855_360_360_qspi.h"
+#endif
 #ifdef CONFIG_REALTEK_LCD_ICNA3310_466_466_QSPI
 #include "lcd_icna3310_466_466_qspi.h"
 #endif

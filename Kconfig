@@ -63,6 +63,12 @@ config REALTEK_LCD_ST77916_360_360_QSPI
 	help
 		This config for realtek display lcd device driver
 
+config REALTEK_LCD_JD9855_360_360_QSPI
+	bool "Enable Realtek LCD Device Driver JD9855 360 360"
+	default n
+	help
+		This config for realtek display lcd device driver JD9855
+
 config REALTEK_LCD_ICNA3310_466_466_QSPI
 	bool "Enable Realtek LCD Device Driver 466 466"
 	default n

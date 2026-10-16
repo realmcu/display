@@ -28,6 +28,8 @@ if GetDepend(['CONFIG_REALTEK_ST7701S_480480_RGB']):
     src += ['st7701s_480480_rgb.c']
 if GetDepend(['CONFIG_REALTEK_LCD_ST7801N_466_466_QSPI']):
     src += ['lcd_st7801n_466_466_qspi.c']
+if GetDepend(['CONFIG_REALTEK_LCD_JD9855_360_360_QSPI']):
+    src += ['lcd_jd9855_360_360_qspi.c']
 
 
 group = DefineGroup('lcd_low_driver', src, depend = [''], CPPPATH = CPPPATH)
