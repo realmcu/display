@@ -1,0 +1,30 @@
+content:
+  hardware/lcdc:
+    owner:
+    - julie_ju
+    - astor_zhang
+    - jintong_wang
+    exclude: []
+  hardware/ppe:
+    owner:
+    - julie_ju
+    - astor_zhang
+    - jintong_wang
+    exclude: []
+  hardware/idu:
+    owner:
+    - julie_ju
+    - astor_zhang
+    - jintong_wang
+    exclude: []
+  hardware/jpu:
+    owner:
+    - roy_xie
+    - julie_ju
+    - jintong_wang
+    exclude: []
+  doc/:
+    owner:
+    - julie_ju
+    - jintong_wang
+    exclude: []
