@@ -1,0 +1,46 @@
+agent_page_id: https://wiki.realtek.com/pages/viewpage.action?pageId=157360872
+data:
+
+  Display Control Driver:
+    function_owner_list:
+      - astor_zhang
+    reviewer_list: []
+    file_list:
+      - hardware/lcdc
+    exclude_file_list: []
+    lock_status: false
+
+  PPE:
+    function_owner_list:
+      - astor_zhang
+    reviewer_list: []
+    file_list:
+      - hardware/ppe
+    exclude_file_list: []
+    lock_status: false
+
+  IDU:
+    function_owner_list:
+      - astor_zhang
+    reviewer_list: []
+    file_list:
+      - hardware/idu
+    exclude_file_list: []
+    lock_status: false
+
+  JPU:
+    function_owner_list:
+      - roy_xie
+      - howie_wang
+    reviewer_list: []
+    file_list:
+      - hardware/jpu
+    exclude_file_list: []
+    lock_status: false
+repo_onwer:
+
+  - howie_wang
+coverity_onwer:
+
+  - astor_zhang
+path: realtek/driver/display
