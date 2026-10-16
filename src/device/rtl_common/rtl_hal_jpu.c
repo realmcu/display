@@ -279,7 +279,7 @@ static JPU_ERROR JPU_Dec_Prepare(JPU_DEC_PARAM *usr_param, JPU_DEC_PARAM_INT *pa
         }
     }
 
-    // param->roiEnable = usr_param->roiEnable;
+    param->roiEnable = usr_param->roiEnable;
 
     if (param->roiEnable)
     {
@@ -342,11 +342,11 @@ static JPU_ERROR JPU_Dec_Prepare(JPU_DEC_PARAM *usr_param, JPU_DEC_PARAM_INT *pa
         //- DBG_DIRECT("Invalid operation mode : partial and ROI mode can not be worked\n");
         return JPU_ERR_INVALID_PARAM;
     }
-    // if (param->packedFormat && param->roiEnable)
-    // {
-    //     //- DBG_DIRECT("Invalid operation mode : packed mode and ROI mode can not be worked\n");
-    // return JPU_ERR_INVALID_PARAM;
-    // }
+    if (param->packedFormat && param->roiEnable)
+    {
+        //- DBG_DIRECT("Invalid operation mode : packed mode and ROI mode can not be worked\n");
+        return JPU_ERR_INVALID_PARAM;
+    }
     if ((param->iHorScaleMode || param->iVerScaleMode) && param->roiEnable)
     {
         //- DBG_DIRECT("Invalid operation mode : Scaler mode and ROI mode can not be worked\n");
@@ -1714,6 +1714,20 @@ JPU_ERROR hal_jpu_decode(JPU_DEC_PARAM *dec_param, uint8_t **frame_buff, uint32_
     }
     // log_dec_info(info);
 
+    // ROI is floored to MCU units; it must keep at least one MCU inside the image
+    if (param->roiEnable)
+    {
+        uint32_t offX = (uint32_t)param->roiOffsetX, offY = (uint32_t)param->roiOffsetY;
+        uint32_t rw = (uint32_t)param->roiWidth, rh = (uint32_t)param->roiHeight;
+        if (offX > info->alignedWidth || offY > info->alignedHeight ||
+            rw > info->alignedWidth - offX || rh > info->alignedHeight - offY ||
+            rw < info->mcuWidth || rh < info->mcuHeight)
+        {
+            DBG_DIRECT("ROI out of image or smaller than one MCU\n");
+            return JPU_ERR_INVALID_PARAM;
+        }
+    }
+
     // reset JPU reg
     JPU_Clk_Init();
     JPU_Reset();
@@ -1748,6 +1762,8 @@ JPU_ERROR hal_jpu_decode(JPU_DEC_PARAM *dec_param, uint8_t **frame_buff, uint32_
         fb_width = fb_height;
         fb_height = temp;
     }
+    uint32_t out_w = fb_width;
+    uint32_t out_h = fb_height;
 
     if (param->iHorScaleMode || param->iVerScaleMode)
     {
@@ -1916,13 +1932,11 @@ JPU_ERROR hal_jpu_decode(JPU_DEC_PARAM *dec_param, uint8_t **frame_buff, uint32_
 
     // roi
     config->roiEnable = param->roiEnable;
-    config->roiOffsetX = param->roiOffsetX / info->mcuWidth * info->mcuWidth;
-    config->roiOffsetY = param->roiOffsetY / info->mcuHeight * info->mcuHeight;
-    config->roiMcuWidth = (param->roiOffsetX + param->roiWidth + info->mcuWidth - 1) / info->mcuWidth *
-                          info->mcuWidth - config->roiOffsetX;
-    config->roiMcuHeight = (param->roiOffsetY + param->roiHeight + info->mcuHeight - 1) /
-                           info->mcuHeight *
-                           info->mcuHeight - config->roiOffsetY;
+    config->roiOffsetX = param->roiOffsetX;   // pixel unit, passed through like vendor
+    config->roiOffsetY = param->roiOffsetY;
+    // in MCU units: JPU_Decode multiplies by mcuWidth/mcuHeight to get CLP_SIZE
+    config->roiMcuWidth = alignedRoiWidth / info->mcuWidth;
+    config->roiMcuHeight = alignedRoiHeight / info->mcuHeight;
     config->mcuWidth = info->mcuWidth;
     config->mcuHeight = info->mcuHeight;
 
@@ -1959,6 +1973,9 @@ JPU_ERROR hal_jpu_decode(JPU_DEC_PARAM *dec_param, uint8_t **frame_buff, uint32_
     poutput_info->buff_raw = fb_raw;
     poutput_info->buff = fb;
     poutput_info->buff_size = fb_size + 7 + header_sz;
+    poutput_info->outWidth = out_w;
+    poutput_info->outHeight = out_h;
+    poutput_info->outStride = fb_width;
 
 
     // start decode
@@ -1981,8 +1998,8 @@ JPU_ERROR hal_jpu_decode(JPU_DEC_PARAM *dec_param, uint8_t **frame_buff, uint32_
 
     *frame_buff = fb - header_sz;
     *frame_size = fb_size;
-    *dec_w = info->alignedWidth;
-    *dec_h = info->alignedHeight;
+    *dec_w = out_w;
+    *dec_h = out_h;
 
     // DBG_DIRECT("INT_JPU_DONE cnt %d\n", hw_info->cycle);
 

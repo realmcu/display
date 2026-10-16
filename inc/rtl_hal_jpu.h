@@ -409,7 +409,7 @@ typedef struct
     uint32_t cycle;
     uint32_t picWidth;       /**< Input Picture size*/
     uint32_t picHeight;
-    uint32_t alignedWidth;   /**< Output Picture size*/
+    uint32_t alignedWidth;   /**< Source picture size aligned to MCU, before ROI/scale/rotate*/
     uint32_t alignedHeight;
 
     uint8_t *buff_raw;       /**< Dec: RGB/YUV buffer, Enc: JPEG buffer*/
@@ -421,6 +421,9 @@ typedef struct
 
     uint32_t jpg_format;     /**< JPEG image sample rate, see `JPU_JPG_FORMAT`*/
 
+    uint32_t outWidth;       /**< Dec only: output size in pixels after ROI/scale/rotate*/
+    uint32_t outHeight;
+    uint32_t outStride;      /**< Dec only: row pitch of the output in bytes, may exceed outWidth*/
 
 } JPU_OUTPUT_INFO;
 
@@ -575,8 +578,9 @@ void hal_jpu_add_dec_header(uint32_t size);
  *                          containing the decoded raw image data (such as YUV, RGB, etc. format depending on settings).
  *                          The caller is responsible for releasing this buffer when it is no longer needed.
  * @param[out] frame_size   Pointer to a variable that will receive the number of bytes written to the output buffer.
- * @param[out] dec_w        Pointer to a variable that will receive the width (in pixels) of the decoded image.
- * @param[out] dec_h        Pointer to a variable that will receive the height (in pixels) of the decoded image.
+ * @param[out] dec_w        Pointer to a variable that will receive the width (in pixels) of the output buffer,
+ *                          after ROI, down-scale and rotation. The row pitch is `hal_jpu_get_info()->outStride`.
+ * @param[out] dec_h        Pointer to a variable that will receive the height (in pixels) of the output buffer.
  *
  * @return     JPU_ERROR code indicating success or failure of the decoding operation.
  *
