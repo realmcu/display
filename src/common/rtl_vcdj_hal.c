@@ -618,6 +618,7 @@ static void vcdj_setup_ppu(PpUnitConfig *ppu, const vcdj_pp_config_t *config)
 
     ppu[0].enabled = 1U;
     ppu[0].align = DEC_ALIGN_64B;
+    ppu[0].shaper_enabled = 1U;
     ppu[0].crop.enabled = config->crop_enabled;
     ppu[0].crop.set_by_user = config->crop_enabled;
     ppu[0].crop.x = config->crop.x;

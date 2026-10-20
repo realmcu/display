@@ -269,6 +269,7 @@ vcdj_error_t hal_vcdj_selftest(const void *jpeg, uint32_t jpeg_size)
     work->cfg.dec_image_type = JPEGDEC_IMAGE;
     work->cfg.ppu_config[0].enabled = 1U;
     work->cfg.ppu_config[0].align = DEC_ALIGN_64B;
+    work->cfg.ppu_config[0].shaper_enabled = 1U;
     work->cfg.ppu_config[0].rgb = 1U;
     work->cfg.ppu_config[0].rgb_format = DEC_OUT_FRM_RGB565;
 
