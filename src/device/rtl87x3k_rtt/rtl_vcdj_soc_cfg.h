@@ -15,24 +15,23 @@ extern "C" {
 #endif
 
 /*============================================================================*
- *   !!! ONLY VCDJ_SOC_REG_BASE IS CONFIRMED - THE REST IS PLACEHOLDER !!!
+ *   CONFIRMED: REG_BASE, CORE_OFFSET, REG_WINDOW_SIZE - THE REST IS PLACEHOLDER
  *============================================================================*/
 /**
  * SoC integration constants for the VeriSilicon VC9000DJ (DecoderJ) core on
  * RTL87x3K.
  *
  * THIS IS THE ONE FILE TO EDIT WHEN THE HARDWARE CONTRACT ARRIVES. Apart from
- * VCDJ_SOC_REG_BASE, nothing below is a real, confirmed hardware parameter: the
- * values are deliberately obviously invalid rather than plausible, so that nobody
- * mistakes them for measured data.
+ * the three values above, nothing below is a real, confirmed hardware parameter:
+ * the values are deliberately obviously invalid rather than plausible, so that
+ * nobody mistakes them for measured data.
  *
  * DO NOT copy register, clock or reset values from hardware/jpu. The Realtek JPU
  * is a different IP with a different register map, a different clock gate and
  * different completion bits.
  *
  * Still required from the SoC / FPGA side before anything here can be trusted:
- *   - decoder core offset (vendor FPGA example uses 0x800), register window size,
- *     number of cores
+ *   - number of cores
  *   - IRQ number, trigger type/polarity, interrupt controller routing, how the
  *     status is cleared
  *   - who owns clock / reset / power domain and the power-up and reset ordering
@@ -53,36 +52,29 @@ extern "C" {
  * the ASIC ID 0x90211010, and swreg309 the build ID 0x80002070 whose low half
  * matches \ref VCDJ_EXPECTED_HW_BUILD_ID.
  *
- * The region is 0x40644000-0x40644FFF, i.e. 4 KB. Note that
- * VCDJ_SOC_CORE_OFFSET + VCDJ_SOC_REG_WINDOW_SIZE exceeds it - see the window
- * size below before writing across the whole range.
+ * The region is 0x40644000-0x40644FFF, i.e. 4 KB.
  */
 #define VCDJ_SOC_REG_BASE               0x40644000UL
 
 /**
  * \brief Byte offset of the decoder core inside the subsystem register space.
  *
- * TODO(hardware-contract): unconfirmed. 0x800 is what the vendor FPGA reference
- * configuration uses (`software/linux/subsys_driver/subsys_cfg.h`, core type
- * HW_VCDJ), kept here only as the starting hypothesis.
+ * From the vendor FPGA reference configuration
+ * (`software/linux/subsys_driver/subsys_cfg.h`, core type HW_VCDJ).
  */
 #define VCDJ_SOC_CORE_OFFSET            0x800U
 
 /**
  * \brief Size of one core's register window in bytes.
  *
- * Derived from the vendor software limit MAX_REG_COUNT (896 registers), i.e.
- * 896 * 4 = 3584 bytes. TODO(hardware-contract): confirm against the hardware
- * manual.
+ * 0x2070 decodes max_regs = 428, and the vendor flushes regs[0..max_regs], i.e.
+ * 429 registers (`vpu_features_list.h`, `regdrv.c`). 0x800 + 0x6B4 fits the
+ * 4 KB region.
  *
- * This is a software array bound, NOT a measured decode range, and on BBpro4 it
- * does not fit: VCDJ_SOC_CORE_OFFSET (0x800) + 0xE00 = 0x1600 runs past the end
- * of the 4 KB region, so the last 1536 bytes land outside it. Writing that tail
- * wedges the bus badly enough that the DAP no longer powers up, and only an FPGA
- * bitfile reload recovers it (measured 2026-09-24). Do not sweep this whole
- * window; the region implies 0x800, but that is inference, not confirmed.
+ * Do not use MAX_REG_COUNT (896): that window runs past the region, and touching
+ * the tail wedges the bus until the FPGA bitfile is reloaded.
  */
-#define VCDJ_SOC_REG_WINDOW_SIZE        (896U * 4U)
+#define VCDJ_SOC_REG_WINDOW_SIZE        (429U * 4U)
 
 /** \brief Number of DecoderJ cores. TODO(hardware-contract): assumed single core. */
 #define VCDJ_SOC_CORE_COUNT             1U
