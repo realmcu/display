@@ -76,6 +76,12 @@
  */
 #define VCDJ_DMB()              __asm__ volatile("dmb 0xF" ::: "memory")
 
+/* swreg1 bits for the reset abort, from the vendor hantrodec_defs.h. */
+#define VCDJ_PLAT_SWREG_IRQ_OFFSET  0x04U
+#define VCDJ_PLAT_DEC_E             0x01U
+#define VCDJ_PLAT_DEC_IRQ_DISABLE   0x10U
+#define VCDJ_PLAT_DEC_ABORT         0x20U
+
 /*
  * Object pool sizing for the JPEG + PNG closure that is actually compiled:
  *   mutexes    input_queue (cs, cnt_release, buf_release) = 3 per queue,
@@ -460,14 +466,30 @@ static void vcdj_plat_clock_disable(void *ctx)
 
 static int vcdj_plat_reset(void *ctx)
 {
-    (void)ctx;
-
 #if VCDJ_SOC_HAS_RESET_CONTROL
 #error "VCDJ_SOC_HAS_RESET_CONTROL is set but no reset sequence is implemented"
-#else
-    /* TODO(hardware-contract): reset controller and ordering are unknown. */
-    return 0;
 #endif
+
+#if VCDJ_SOC_REG_BASE_VALID
+    uint32_t status;
+
+    /*
+     * Abort step of the vendor ResetAsic(), which touches no SoC reset or clock
+     * control. Only swreg1 is written: its full-window zero fill over 896 regs
+     * wedges the bus. Runs before vcdj_core_up is set, so the platform accessors
+     * are used directly; vcdj_core_write_reg() would drop the write.
+     */
+    status = vcdj_plat_reg_read32(ctx, VCDJ_PLAT_SWREG_IRQ_OFFSET);
+    if ((status & VCDJ_PLAT_DEC_E) != 0U)
+    {
+        vcdj_plat_reg_write32(ctx, VCDJ_PLAT_SWREG_IRQ_OFFSET,
+                              VCDJ_PLAT_DEC_ABORT | VCDJ_PLAT_DEC_IRQ_DISABLE);
+    }
+#else
+    (void)ctx;
+#endif
+
+    return 0;
 }
 
 static uint32_t vcdj_plat_get_time_ms(void *ctx)

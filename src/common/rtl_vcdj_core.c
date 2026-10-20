@@ -36,6 +36,7 @@
  *   bit 11  DEC_ABORT_INT
  *   bit 12  DEC_RDY_INT     decoding finished
  *   bit 13  DEC_BUS_INT     bus error
+ *   bit 16  DEC_ERROR_INT   stream error detected
  *   bit 18  DEC_TIMEOUT     hardware watchdog
  *
  * This is software-side register layout knowledge from the vendor package, not
@@ -43,16 +44,25 @@
  */
 #define VCDJ_SWREG_IRQ_OFFSET           0x04U
 #define VCDJ_IRQ_BIT_DEC_E              (1U << 0)
+#define VCDJ_IRQ_BIT_IRQ_DIS            (1U << 4)
+#define VCDJ_IRQ_BIT_ABORT_E            (1U << 5)
 #define VCDJ_IRQ_BIT_DEC_IRQ            (1U << 8)
 #define VCDJ_IRQ_BIT_ABORT_INT          (1U << 11)
 #define VCDJ_IRQ_BIT_RDY_INT            (1U << 12)
 #define VCDJ_IRQ_BIT_BUS_INT            (1U << 13)
+#define VCDJ_IRQ_BIT_ERROR_INT          (1U << 16)
 #define VCDJ_IRQ_BIT_TIMEOUT            (1U << 18)
 
+/*
+ * Every terminating condition, not just success; CtrlSW classifies the status.
+ * DEC_ERROR_INT is listed even though DEC_IRQ usually comes with it: relying on
+ * that pairing would turn a stream error into a full timeout wait.
+ */
 #define VCDJ_IRQ_DONE_MASK              (VCDJ_IRQ_BIT_DEC_IRQ | \
                                          VCDJ_IRQ_BIT_ABORT_INT | \
                                          VCDJ_IRQ_BIT_RDY_INT | \
                                          VCDJ_IRQ_BIT_BUS_INT | \
+                                         VCDJ_IRQ_BIT_ERROR_INT | \
                                          VCDJ_IRQ_BIT_TIMEOUT)
 
 /** Interval between two status reads while polling. */
@@ -60,6 +70,9 @@
 
 /** Fallback bound applied when the platform config leaves `hw_timeout_ms` at 0. */
 #define VCDJ_DEFAULT_TIMEOUT_MS         2000U
+
+/** Upper bound for an abort request to clear DEC_E. */
+#define VCDJ_ABORT_TIMEOUT_MS           10U
 
 /*============================================================================*
  *                        Local Variables
@@ -113,6 +126,39 @@ static uint32_t vcdj_core_reg_offset(int core_id, uint32_t offset)
     }
 
     return core_base + offset;
+}
+
+/*
+ * Stop a core whose wait expired with DEC_E still set; left running, every
+ * later decode times out too. Same request as the vendor ResetAsic() abort.
+ *
+ * \return 0 when the core is stopped, -1 when DEC_E outlived the abort.
+ */
+static int vcdj_core_abort(int core_id)
+{
+    uint32_t start;
+
+    if ((vcdj_core_read_reg(core_id, VCDJ_SWREG_IRQ_OFFSET) & VCDJ_IRQ_BIT_DEC_E) == 0U)
+    {
+        return 0;
+    }
+
+    vcdj_core_write_reg(core_id, VCDJ_SWREG_IRQ_OFFSET,
+                        VCDJ_IRQ_BIT_ABORT_E | VCDJ_IRQ_BIT_IRQ_DIS);
+
+    start = vcdj_cfg->ops->get_time_ms(vcdj_cfg->ctx);
+    while ((vcdj_core_read_reg(core_id, VCDJ_SWREG_IRQ_OFFSET) & VCDJ_IRQ_BIT_DEC_E) != 0U)
+    {
+        if ((vcdj_cfg->ops->get_time_ms(vcdj_cfg->ctx) - start) >= VCDJ_ABORT_TIMEOUT_MS)
+        {
+            return -1;
+        }
+
+        vcdj_cfg->ops->delay_us(vcdj_cfg->ctx, VCDJ_POLL_INTERVAL_US);
+    }
+
+    vcdj_core_write_reg(core_id, VCDJ_SWREG_IRQ_OFFSET, 0U);
+    return 0;
 }
 
 /*============================================================================*
@@ -323,6 +369,13 @@ void vcdj_core_enable(int core_id, uint32_t offset, uint32_t value)
 
 void vcdj_core_disable(int core_id, uint32_t offset, uint32_t value)
 {
+    /* The PNG timeout path passes back a swreg1 snapshot with DEC_E still set;
+     * written as-is it would restart the core that was just aborted. */
+    if (offset == VCDJ_SWREG_IRQ_OFFSET)
+    {
+        value &= ~VCDJ_IRQ_BIT_DEC_E;
+    }
+
     vcdj_core_write_reg(core_id, offset, value);
 }
 
@@ -367,7 +420,8 @@ int vcdj_core_wait_done(int core_id, uint32_t timeout_ms)
                 return VCDJ_CORE_WAIT_OK;
             }
 
-            return VCDJ_CORE_WAIT_TIMEOUT;
+            return (vcdj_core_abort(core_id) == 0) ? VCDJ_CORE_WAIT_TIMEOUT
+                   : VCDJ_CORE_WAIT_ERROR;
         }
 
         /* VCDJ_PLAT_ENOTSUP: this build has no interrupt wired, so
@@ -389,7 +443,8 @@ int vcdj_core_wait_done(int core_id, uint32_t timeout_ms)
 
         if ((vcdj_cfg->ops->get_time_ms(vcdj_cfg->ctx) - start) >= bound)
         {
-            return VCDJ_CORE_WAIT_TIMEOUT;
+            return (vcdj_core_abort(core_id) == 0) ? VCDJ_CORE_WAIT_TIMEOUT
+                   : VCDJ_CORE_WAIT_ERROR;
         }
 
         vcdj_cfg->ops->delay_us(vcdj_cfg->ctx, VCDJ_POLL_INTERVAL_US);

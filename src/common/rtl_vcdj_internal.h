@@ -249,7 +249,11 @@ void vcdj_core_disable(int core_id, uint32_t offset, uint32_t value);
  * deliberate difference from the existing Realtek JPU driver, which polls its
  * status bits in an unbounded loop.
  *
- * \return one of \ref vcdj_core_wait.
+ * On expiry a core that is still running is aborted before returning, so the
+ * next job starts on an idle core.
+ *
+ * \return one of \ref vcdj_core_wait; \ref VCDJ_CORE_WAIT_ERROR when the core
+ *         could not be stopped after the timeout.
  */
 int vcdj_core_wait_done(int core_id, uint32_t timeout_ms);
 
