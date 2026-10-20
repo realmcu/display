@@ -345,6 +345,8 @@ vcdj_error_t hal_vcdj_selftest(const void *jpeg, uint32_t jpeg_size)
     }
 
     /* ---- step 8: apply the post processing configuration ------------- */
+    /* As in the HAL: left at 0, JpegDecSetInfo() configures the PPU as 4:0:0. */
+    work->cfg.chroma_format = work->image_info.output_format;
     ret = JpegDecSetInfo(inst, &work->cfg);
     if (ret != DEC_OK)
     {
@@ -402,11 +404,15 @@ vcdj_error_t hal_vcdj_selftest(const void *jpeg, uint32_t jpeg_size)
         negotiations++;
         /* Print the per-plane breakdown, not just the total: a wrong plane split
          * is the failure this negotiation is most likely to produce, and the
-         * total alone would hide it. */
-        vcdj_plat_log("[vcdj] step 9 BUF : %u buffer(s), total=%llu planes=%llu/%llu/%llu "
+         * total alone would hide it. 64-bit values are split in halves: the
+         * board's rt_vsnprintf has no %llu. */
+        vcdj_plat_log("[vcdj] step 9 BUF : %u buffer(s), total=%u:%08x planes=%u:%08x/%u:%08x/%u:%08x "
                    "ystride=%u cstride=%u\n",
-                   external_count, layout.total_size,
-                   layout.plane_size[0], layout.plane_size[1], layout.plane_size[2],
+                   external_count,
+                   (unsigned)(layout.total_size >> 32), (unsigned)layout.total_size,
+                   (unsigned)(layout.plane_size[0] >> 32), (unsigned)layout.plane_size[0],
+                   (unsigned)(layout.plane_size[1] >> 32), (unsigned)layout.plane_size[1],
+                   (unsigned)(layout.plane_size[2] >> 32), (unsigned)layout.plane_size[2],
                    (unsigned)layout.ystride, (unsigned)layout.cstride);
         ret = (enum DecRet)vcdj_internal_jpeg_decode(inst, &work->dec_in, dec_out);
     }
