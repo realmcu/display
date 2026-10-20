@@ -58,6 +58,16 @@
 /** Maximum number of cores this first version tracks. */
 #define VCDJ_MAX_CORES                  1
 
+/**
+ * Shadow register file depth, in 32-bit words.
+ *
+ * Like the vendor DWL, DWLWriteReg()/DWLReadReg() only touch this shadow;
+ * DWLEnableHw() pushes it in one sweep and DWLWaitHwReady() pulls it back.
+ * Writing registers one by one would set DEC_E (swreg1) before the rest of the
+ * configuration lands. Pushes and pulls are bounded by reg_window_size.
+ */
+#define VCDJ_SHADOW_REG_COUNT           896U
+
 /*
  * pthread_cond_wait() blocks forever. With NON_PTHREAD_H the vendor code also
  * turns pthread_create() into a no-op, so nothing else is running to signal the
@@ -88,6 +98,9 @@ struct vcdj_dwl_inst
     i32 reserved_core;
     DWLIRQCallbackFn *irq_callback[VCDJ_MAX_CORES];
     void *irq_arg[VCDJ_MAX_CORES];
+
+    /** Shadow register file, see VCDJ_SHADOW_REG_COUNT. */
+    u32 shadow_regs[VCDJ_MAX_CORES][VCDJ_SHADOW_REG_COUNT];
 };
 
 /*============================================================================*
@@ -112,6 +125,104 @@ static struct vcdj_dwl_inst *vcdj_dwl_of(const void *instance)
     }
 
     return inst;
+}
+
+/**
+ * \brief Shadow slot for one register, or NULL if the access is out of range.
+ *
+ * \param inst    DWL instance.
+ * \param core_id Core index.
+ * \param offset  Byte offset of the register inside the core window.
+ */
+static u32 *vcdj_shadow_slot(struct vcdj_dwl_inst *inst, i32 core_id, u32 offset)
+{
+    u32 index = offset / 4U;
+
+    if ((core_id < 0) || ((u32)core_id >= inst->n_cores) ||
+        (index >= VCDJ_SHADOW_REG_COUNT))
+    {
+        return NULL;
+    }
+
+    return &inst->shadow_regs[core_id][index];
+}
+
+/**
+ * \brief Number of registers the hardware window actually decodes.
+ *
+ * Hard limit for every push and pull: accessing past the decoded range hangs
+ * the bus until the FPGA bitfile is reloaded.
+ */
+static u32 vcdj_shadow_hw_count(void)
+{
+    const struct vcdj_platform_config *cfg = vcdj_core_config();
+    u32 count;
+
+    if (cfg == NULL)
+    {
+        return 0U;
+    }
+
+    count = cfg->reg_window_size / 4U;
+
+    return (count > VCDJ_SHADOW_REG_COUNT) ? VCDJ_SHADOW_REG_COUNT : count;
+}
+
+/**
+ * \brief Push the shadow register file to the hardware.
+ *
+ * swreg1 carries DEC_E and is written last, after a barrier.
+ */
+static void vcdj_shadow_push(struct vcdj_dwl_inst *inst, i32 core_id)
+{
+    const u32 *regs;
+    u32 count = vcdj_shadow_hw_count();
+    u32 i;
+
+    if ((count == 0U) || (vcdj_shadow_slot(inst, core_id, 0U) == NULL))
+    {
+        return;
+    }
+
+    regs = inst->shadow_regs[core_id];
+
+    for (i = 0U; i < count; i++)
+    {
+        if (i != 1U)
+        {
+            vcdj_core_write_reg(core_id, i * 4U, regs[i]);
+        }
+    }
+
+    if (count > 1U)
+    {
+        vcdj_core_enable(core_id, 1U * 4U, regs[1]);
+    }
+}
+
+/**
+ * \brief Pull every hardware register into the shadow file.
+ *
+ * Called once when the wait ends. CtrlSW reads status and counters from this
+ * snapshot; its error path clears swreg1, so a later live read returns zero.
+ */
+static void vcdj_shadow_pull(struct vcdj_dwl_inst *inst, i32 core_id)
+{
+    u32 *regs;
+    u32 count = vcdj_shadow_hw_count();
+    u32 i;
+
+    if ((count == 0U) || (vcdj_shadow_slot(inst, core_id, 0U) == NULL))
+    {
+        return;
+    }
+
+    regs = inst->shadow_regs[core_id];
+
+    for (i = 0U; i < count; i++)
+    {
+        regs[i] = vcdj_core_read_reg(core_id, i * 4U);
+    }
 }
 
 /*============================================================================*
@@ -333,67 +444,122 @@ void *DWLLinearMemset(const void *instance, struct DWLLinearMem *mem, i32 offset
 /*============================================================================*
  *                        DWL: register access
  *============================================================================*/
+/* These accessors serve the shadow, see VCDJ_SHADOW_REG_COUNT. */
 void DWLWriteReg(const void *instance, i32 core_id, u32 offset, u32 value)
 {
-    if (vcdj_dwl_of(instance) == NULL)
+    struct vcdj_dwl_inst *inst = vcdj_dwl_of(instance);
+    u32 *slot;
+
+    if (inst == NULL)
     {
         return;
     }
 
-    vcdj_core_write_reg(core_id, offset, value);
+    slot = vcdj_shadow_slot(inst, core_id, offset);
+    if (slot != NULL)
+    {
+        *slot = value;
+    }
 }
 
 u32 DWLReadReg(const void *instance, i32 core_id, u32 offset)
 {
-    if (vcdj_dwl_of(instance) == NULL)
+    struct vcdj_dwl_inst *inst = vcdj_dwl_of(instance);
+    const u32 *slot;
+
+    if (inst == NULL)
     {
         return 0U;
     }
 
-    return vcdj_core_read_reg(core_id, offset);
+    slot = vcdj_shadow_slot(inst, core_id, offset);
+
+    return (slot != NULL) ? *slot : 0U;
 }
 
 void DWLWriteRegs(const void *instance, i32 core_id, u32 offset, u32 *from,
                   u32 num_regs, u32 print_flag)
 {
+    struct vcdj_dwl_inst *inst = vcdj_dwl_of(instance);
     u32 i;
 
     (void)print_flag;
 
-    if ((vcdj_dwl_of(instance) == NULL) || (from == NULL))
+    if ((inst == NULL) || (from == NULL))
     {
         return;
     }
 
     for (i = 0U; i < num_regs; i++)
     {
-        vcdj_core_write_reg(core_id, offset + (i * 4U), from[i]);
+        u32 *slot = vcdj_shadow_slot(inst, core_id, offset + (i * 4U));
+
+        if (slot == NULL)
+        {
+            return;
+        }
+
+        *slot = from[i];
     }
 }
 
 void DWLReadRegs(const void *instance, i32 core_id, u32 offset, u32 *dest, u32 num)
 {
+    struct vcdj_dwl_inst *inst = vcdj_dwl_of(instance);
     u32 i;
 
-    if ((vcdj_dwl_of(instance) == NULL) || (dest == NULL))
+    if ((inst == NULL) || (dest == NULL))
     {
         return;
     }
 
     for (i = 0U; i < num; i++)
     {
-        dest[i] = vcdj_core_read_reg(core_id, offset + (i * 4U));
+        const u32 *slot = vcdj_shadow_slot(inst, core_id, offset + (i * 4U));
+
+        if (slot == NULL)
+        {
+            return;
+        }
+
+        dest[i] = *slot;
     }
 }
 
+/* Live hardware access; the shadow is kept in step. */
 void DWLWriteRegToHw(const void *instance, i32 core_id, u32 offset, u32 value)
 {
+    struct vcdj_dwl_inst *inst = vcdj_dwl_of(instance);
+
+    if (inst == NULL)
+    {
+        return;
+    }
+
     DWLWriteReg(instance, core_id, offset, value);
+    vcdj_core_write_reg(core_id, offset, value);
 }
 
 u32 DWLReadRegFromHw(const void *instance, i32 core_id, u32 offset)
 {
-    return DWLReadReg(instance, core_id, offset);
+    struct vcdj_dwl_inst *inst = vcdj_dwl_of(instance);
+    u32 *slot;
+    u32 value;
+
+    if (inst == NULL)
+    {
+        return 0U;
+    }
+
+    value = vcdj_core_read_reg(core_id, offset);
+
+    slot = vcdj_shadow_slot(inst, core_id, offset);
+    if (slot != NULL)
+    {
+        *slot = value;
+    }
+
+    return value;
 }
 
 /*============================================================================*
@@ -424,21 +590,31 @@ enum DWLRet DWLReserveHw(const void *instance, struct DWLReqInfo *info, i32 *cor
 
 void DWLEnableHw(const void *instance, i32 core_id, u32 offset, u32 value)
 {
-    if (vcdj_dwl_of(instance) == NULL)
+    struct vcdj_dwl_inst *inst = vcdj_dwl_of(instance);
+
+    if (inst == NULL)
     {
         return;
     }
 
-    vcdj_core_enable(core_id, offset, value);
+    DWLWriteReg(instance, core_id, offset, value);
+
+    /* Per-job cache/shaper setup, at the same point as the vendor Linux DWL. */
+    SwSetCacheShaperReg(inst->shadow_regs[core_id], 0);
+
+    vcdj_shadow_push(inst, core_id);
 }
 
 void DWLDisableHw(const void *instance, i32 core_id, u32 offset, u32 value)
 {
-    if (vcdj_dwl_of(instance) == NULL)
+    struct vcdj_dwl_inst *inst = vcdj_dwl_of(instance);
+
+    if (inst == NULL)
     {
         return;
     }
 
+    DWLWriteReg(instance, core_id, offset, value);
     vcdj_core_disable(core_id, offset, value);
 }
 
@@ -459,6 +635,8 @@ enum DWLRet DWLWaitHwReady(const void *instance, i32 core_id, u32 timeout)
      * or wedged.
      */
     ret = vcdj_core_wait_done(core_id, timeout);
+
+    vcdj_shadow_pull(vcdj_dwl_of(instance), core_id);
 
     switch (ret)
     {
