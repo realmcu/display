@@ -21,13 +21,17 @@
 
 #define JPU_WAIT_FOREVER 2000
 
+#ifndef ACC_JPU_THREAD_SYNC
+#define ACC_JPU_THREAD_SYNC 1
+#endif
+
 static void *jpu_sync_sem;
 static void *jpu_mutex;
 
 static bool hw_jpeg_thread_sync_enabled(void)
 {
     struct acc_engine *acc = gui_get_acc();
-    return acc != NULL && acc->enable_thread_sync &&
+    return ACC_JPU_THREAD_SYNC && acc != NULL && acc->enable_thread_sync &&
            jpu_sync_sem != NULL && jpu_mutex != NULL;
 }
 
@@ -148,7 +152,7 @@ void hw_jpeg_init(void)
     hal_jpu_add_dec_header(sizeof(gui_rgb_data_head_t));
 
     struct acc_engine *acc = gui_get_acc();
-    if (acc == NULL || !acc->enable_thread_sync)
+    if (!ACC_JPU_THREAD_SYNC || acc == NULL || !acc->enable_thread_sync)
     {
         return;
     }

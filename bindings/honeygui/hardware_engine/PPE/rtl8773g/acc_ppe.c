@@ -29,6 +29,16 @@
 
 #define F_APP_GUI_USE_PSRAM 1
 #define PSRAM_GUI_HEAP_ADDR SPIC1_MEM_BASE
+
+#ifndef ACC_PPE_THREAD_SYNC
+#define ACC_PPE_THREAD_SYNC 1
+#endif
+#ifndef ACC_IDU_THREAD_SYNC
+#define ACC_IDU_THREAD_SYNC 1
+#endif
+#define PPE_THREAD_SYNC_ON() (ACC_PPE_THREAD_SYNC && gui_get_acc()->enable_thread_sync)
+#define IDU_THREAD_SYNC_ON() (ACC_IDU_THREAD_SYNC && gui_get_acc()->enable_thread_sync)
+
 static void *ppe_sync_sem;
 static void *idu_sync_sem;
 static uint8_t hw_acc_init_count;
@@ -393,7 +403,7 @@ bool hw_idu_decode(ppe_rect_t *rect, uint8_t *input, uint32_t buffer_stride, uin
     dma_cfg.TX_DMA_channel_num = high_speed_dma_channel_num;
     dma_cfg.TX_FIFO_INT_threshold = 8;
     dma_cfg.RX_FIFO_INT_threshold = 8;
-    if (gui_get_acc()->enable_thread_sync)
+    if (IDU_THREAD_SYNC_ON())
     {
         IDU_State_Record record = {0};
         IDU_Interrupt_Config int_cfg = {0};
@@ -667,7 +677,7 @@ static void setup_filter_black_color_key(ppe_buffer_t *source)
 
 static void ppe_wait_finish_blocking(void)
 {
-    if (gui_get_acc()->enable_thread_sync && ppe_sync_sem != NULL)
+    if (PPE_THREAD_SYNC_ON() && ppe_sync_sem != NULL)
     {
         while (PPE_Is_Busy())
         {
@@ -2688,6 +2698,12 @@ static void idu_handler(void)
             os_sem_give(idu_sync_sem);
         }
     }
+    if (IDU_GetINTStatus(IDU_DECOMPRESS_ERROR_INT))
+    {
+        IDU_INTConfig(IDU_DECOMPRESS_ERROR_INT, DISABLE);
+        IDU_MaskINTConfig(IDU_DECOMPRESS_ERROR_INT, ENABLE);
+        IDU_ClearINTPendingBit(IDU_DECOMPRESS_ERROR_INT);
+    }
 }
 
 void hw_acc_init(void)
@@ -2723,15 +2739,11 @@ void hw_acc_init(void)
     {
         GDMA_channel_request(&low_speed_dma_channel_num, NULL, false);
     }
-    if (acc->enable_thread_sync)
+    if (PPE_THREAD_SYNC_ON())
     {
         if (!os_sem_create(&ppe_sync_sem, "ppe_sync_sem", 0, 1))
         {
             ppe_sync_sem = NULL;
-        }
-        if (!os_sem_create(&idu_sync_sem, "idu_sync_sem", 0, 1))
-        {
-            idu_sync_sem = NULL;
         }
         RamVectorTableUpdate(PPE_VECTORn, ppe_handler);
         PPE_Clear_Interrupt(PPE_ALL_OVER_INT);
@@ -2741,7 +2753,13 @@ void hw_acc_init(void)
         PPE_NVIC_InitStruct.NVIC_IRQChannelPriority = 3;
         PPE_NVIC_InitStruct.NVIC_IRQChannelCmd = ENABLE;
         NVIC_Init(&PPE_NVIC_InitStruct);
-
+    }
+    if (IDU_THREAD_SYNC_ON())
+    {
+        if (!os_sem_create(&idu_sync_sem, "idu_sync_sem", 0, 1))
+        {
+            idu_sync_sem = NULL;
+        }
         RamVectorTableUpdate(IDU_VECTORn, idu_handler);
         IDU_MaskINTConfig(IDU_LINE_DECOMPRESS_FINISH_INT, ENABLE);
         IDU_MaskINTConfig(IDU_RX_FIFO_THRESHOLD_INT, ENABLE);
