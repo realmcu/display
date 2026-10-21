@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RTL8773G PPE Performance Benchmark Report</title>
+<style>
+  :root{
+    --bg:#0d1117; --bg-2:#10161f; --card:#151c26; --card-2:#1a2330;
+    --line:#242f40; --line-soft:#1c2533;
+    --text:#e6edf5; --text-dim:#9aa7ba; --text-faint:#6b7a8f;
+    --accent:#38bdf8; --accent-2:#818cf8; --green:#34d399; --amber:#fbbf24; --pink:#f472b6;
+    --red:#fb7185; --mono:ui-monospace,"SF Mono",Consolas,"Cascadia Code",monospace;
+    --sans:"Inter","Segoe UI",system-ui,-apple-system,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    background:
+      radial-gradient(1200px 600px at 80% -10%, rgba(56,189,248,.10), transparent 60%),
+      radial-gradient(900px 500px at 10% 0%, rgba(129,140,248,.10), transparent 55%),
+      var(--bg);
+    color:var(--text);
+    font-family:var(--sans);
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1180px;margin:0 auto;padding:0 22px 80px}
+
+  /* ---------- hero ---------- */
+  header.hero{padding:52px 0 30px;position:relative}
+  .kicker{
+    display:inline-flex;align-items:center;gap:8px;
+    font-size:12px;letter-spacing:.14em;color:var(--text-faint);
+    font-family:var(--mono);text-transform:uppercase;
+    border:1px solid var(--line);border-radius:999px;padding:4px 12px;background:var(--card);
+    margin-bottom:18px;
+  }
+  .kicker .dot{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--accent)}
+  h1{font-size:34px;font-weight:700;letter-spacing:.01em;line-height:1.25;margin-bottom:12px}
+  h1 .hl{background:linear-gradient(90deg,var(--accent),var(--accent-2));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .sub{color:var(--text-dim);font-size:15px;max-width:760px}
+  .sub code{font-family:var(--mono);color:var(--accent);background:var(--card);border:1px solid var(--line);padding:1px 7px;border-radius:6px;font-size:.9em}
+
+  /* ---------- meta strip ---------- */
+  .meta{
+    display:flex;flex-wrap:wrap;gap:12px;margin:26px 0 8px;
+  }
+  .chip{
+    background:var(--card);border:1px solid var(--line);border-radius:12px;
+    padding:8px 14px;font-size:13px;color:var(--text-dim);display:inline-flex;align-items:center;gap:8px;
+  }
+  .chip b{color:var(--text)}
+
+  /* ---------- section headings ---------- */
+  .section{margin-top:46px}
+  .sec-head{display:flex;align-items:center;gap:14px;margin-bottom:8px}
+  .sec-num{
+    width:40px;height:40px;flex:none;border-radius:11px;display:grid;place-items:center;
+    font-family:var(--mono);font-weight:700;font-size:17px;color:#06121f;
+    background:linear-gradient(135deg,var(--accent),var(--accent-2));
+    box-shadow:0 4px 16px rgba(56,189,248,.25);
+  }
+  .sec-title{font-size:22px;font-weight:700}
+  .sec-desc{color:var(--text-dim);font-size:14px;margin:2px 0 18px;max-width:900px}
+  .sec-desc code{font-family:var(--mono);color:var(--accent)}
+
+  /* ---------- summary cards ---------- */
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin:8px 0 6px}
+  .card{
+    background:linear-gradient(160deg,var(--card),var(--card-2));
+    border:1px solid var(--line);border-radius:16px;padding:18px 20px;
+    transition:transform .18s ease,border-color .18s ease;
+  }
+  .card:hover{transform:translateY(-3px);border-color:#33507a}
+  .card .label{font-size:12.5px;color:var(--text-faint);letter-spacing:.04em;margin-bottom:8px}
+  .card .val{font-size:25px;font-weight:700;font-family:var(--mono)}
+  .card .val .unit{font-size:13px;color:var(--text-dim);font-family:var(--sans);font-weight:400;margin-left:4px}
+  .card .note{font-size:12px;color:var(--text-dim);margin-top:6px}
+  .t-accent{color:var(--accent)} .t-green{color:var(--green)} .t-amber{color:var(--amber)} .t-pink{color:var(--pink)}
+
+  /* ---------- table ---------- */
+  .table-card{
+    background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:auto;
+    box-shadow:0 10px 30px rgba(0,0,0,.25);
+  }
+  table{border-collapse:collapse;width:100%;min-width:760px;font-size:13.5px}
+  thead th{
+    background:var(--card-2);color:var(--text-dim);font-weight:600;font-size:12px;
+    letter-spacing:.06em;padding:11px 14px;text-align:center;border-bottom:1px solid var(--line);
+    position:sticky;top:0;white-space:nowrap;
+  }
+  thead th.hl-cell{color:#06121f;background:linear-gradient(135deg,var(--accent),var(--accent-2))}
+  tbody td{padding:10px 14px;border-bottom:1px solid var(--line-soft);text-align:center;white-space:nowrap}
+  tbody tr:last-child td{border-bottom:none}
+  tbody tr:hover{background:rgba(56,189,248,.05)}
+  td.row-label{text-align:left;font-family:var(--mono);color:var(--text)}
+  td.row-label .gb{color:var(--accent)}
+  .badge-en{color:var(--green);font-weight:600}
+  .badge-dis{color:var(--text-faint);font-weight:600}
+  .perf{font-family:var(--mono);font-weight:700;color:var(--text)}
+  .perf.top{color:var(--accent)}
+  .rate{font-family:var(--mono);color:var(--text)}
+  .grp{background:var(--card-2);color:var(--text);font-weight:600;font-family:var(--mono)}
+
+  /* group config cell spanning several perf rows */
+  td.config{
+    background:var(--card-2);font-family:var(--mono);color:var(--text);
+    vertical-align:middle;text-align:center;
+  }
+  td.config .w{display:block;color:var(--text-dim);font-size:11.5px;margin-top:2px;font-family:var(--sans)}
+
+  /* ---------- sub block headings ---------- */
+  .block-title{
+    display:flex;align-items:center;gap:10px;margin:26px 0 12px;
+    font-size:16px;font-weight:700;
+  }
+  .block-title::before{content:"";width:4px;height:16px;border-radius:2px;background:linear-gradient(var(--accent),var(--accent-2))}
+  .block-title .tag{
+    font-size:11px;font-weight:500;color:var(--text-faint);font-family:var(--mono);
+    border:1px solid var(--line);border-radius:6px;padding:1px 8px;letter-spacing:.05em;
+  }
+
+  /* ---------- chart card ---------- */
+  .chart-card{
+    background:var(--card);border:1px solid var(--line);border-radius:16px;
+    padding:20px 20px 12px;margin-top:16px;
+  }
+  .chart-head{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px;margin-bottom:4px}
+  .chart-head h3{font-size:15px;font-weight:700}
+  .chart-head .cap{font-size:12px;color:var(--text-faint)}
+  .legend{display:flex;gap:16px;margin:8px 0 4px;font-size:12px;color:var(--text-dim);flex-wrap:wrap}
+  .legend .lv{display:inline-flex;align-items:center;gap:6px}
+  .legend .sw{width:11px;height:11px;border-radius:3px;display:inline-block}
+
+  /* ---------- notes / footnote ---------- */
+  .notes{margin-top:18px;background:var(--card);border:1px dashed var(--line);border-radius:14px;padding:16px 18px;font-size:12.5px;color:var(--text-dim)}
+  .notes h4{color:var(--text);font-size:13px;margin-bottom:8px}
+  .notes ul{padding-left:18px}
+  .notes li{margin:4px 0}
+
+  footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--line);color:var(--text-faint);font-size:12.5px;display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap}
+  footer code{font-family:var(--mono)}
+  @media (max-width:640px){h1{font-size:26px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ================= HERO ================= -->
+  <header class="hero">
+    <div class="kicker"><span class="dot"></span>PPE &middot; Performance Benchmark</div>
+    <h1>RTL8773G <span class="hl">PPE Performance</span> Benchmark Report</h1>
+    <p class="sub">
+      This report captures the measured throughput of the
+      <b>Blend</b> and <b>Fill</b> engines across different bit depths, interpolation settings, and memory combinations.
+    </p>
+    <div class="meta">
+      <span class="chip">Target platform <b>RTL8773G</b></span>
+      <span class="chip">Data source <b>PPE_Performance.xlsx</b></span>
+      <span class="chip">Worksheets <b>Blend / Fill</b></span>
+      <span class="chip">Unit <b>M Pixel/s</b></span>
+    </div>
+  </header>
+
+  <!-- ================= SUMMARY ================= -->
+  <div class="cards">
+    <div class="card">
+      <div class="label">Blend &middot; SRAM&rarr;SRAM Peak</div>
+      <div class="val t-accent">98.4<span class="unit">M Pixel/s</span></div>
+      <div class="note">16-bit&times;16-bit &middot; Bypass &middot; Two separate banks</div>
+    </div>
+    <div class="card">
+      <div class="label">Blend &middot; PSRAM&rarr;SRAM Peak</div>
+      <div class="val t-green">47.0<span class="unit">M Pixel/s</span></div>
+      <div class="note">16-bit&times;16-bit &middot; Bypass &middot; Scenario 1</div>
+    </div>
+    <div class="card">
+      <div class="label">Blend &middot; PSRAM&rarr;PSRAM Peak</div>
+      <div class="val t-amber">40.7<span class="unit">M Pixel/s</span></div>
+      <div class="note">16-bit&times;16-bit &middot; Bypass &middot; Two separate banks</div>
+    </div>
+    <div class="card">
+      <div class="label">Fill &middot; SRAM / PSRAM</div>
+      <div class="val t-pink">192.9<span class="unit">M Pixel/s</span></div>
+      <div class="note">SRAM 192.9 at every bit depth; PSRAM peaks at 114.4 (16-bit)</div>
+    </div>
+  </div>
+
+  <!-- ================= 1. BLEND ================= -->
+  <section class="section" id="blend">
+    <div class="sec-head">
+      <div class="sec-num">1</div>
+      <div>
+        <div class="sec-title">Blend Engine</div>
+        <div class="sec-desc">
+          <code>Layer1: background (READ)</code> &middot; <code>Layer2: foreground (READ)</code> &middot; <code>blended output (WRITE)</code>.
+          Data is grouped by memory path: SRAM&rarr;SRAM, PSRAM&rarr;PSRAM, and PSRAM&rarr;SRAM.
+        </div>
+      </div>
+    </div>
+
+    <!-- ---- 1.1 SRAM->SRAM ---- -->
+    <div class="block-title">1.1 &nbsp;From SRAM to SRAM <span class="tag">One vs. two memory banks</span></div>
+    <div class="table-card">
+      <table>
+        <thead>
+          <tr>
+            <th>Input<br>Width</th>
+            <th>Output<br>Width</th>
+            <th>Bilinear</th>
+            <th class="hl-cell">One SRAM Bank</th>
+            <th class="hl-cell">2 Separate SRAM Bank</th>
+          </tr>
+        </thead>
+        <tbody id="tbl-sram2sram"></tbody>
+      </table>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-head">
+        <h3>SRAM&rarr;SRAM Throughput Comparison</h3>
+        <span class="cap">Groups: <code>input depth&rarr;output depth &middot; interpolation</code></span>
+      </div>
+      <div class="legend">
+        <span class="lv"><span class="sw" style="background:linear-gradient(#38bdf8,#2f6fed)"></span>One Bank</span>
+        <span class="lv"><span class="sw" style="background:linear-gradient(#34d399,#0ea5e9)"></span>2 Separate Banks</span>
+      </div>
+      <div id="chart-sram2sram"></div>
+    </div>
+
+    <!-- ---- 1.2 PSRAM->PSRAM ---- -->
+    <div class="block-title">1.2 &nbsp;From PSRAM to PSRAM <span class="tag">Two banks &middot; three scenarios &times; cache stats</span></div>
+    <div class="table-card">
+      <table>
+        <thead>
+          <tr>
+            <th>Input<br>Width</th>
+            <th>Output<br>Width</th>
+            <th>Bilinear</th>
+            <th>Scenario</th>
+            <th class="hl-cell">One PSRAM Bank</th>
+            <th class="hl-cell">2 Separate PSRAM Bank</th>
+            <th>Cache<br>Hit Rate</th>
+            <th>Access<br>Data</th>
+            <th>Cache<br>Hit</th>
+            <th>Cache<br>Miss</th>
+          </tr>
+        </thead>
+        <tbody id="tbl-psram2psram"></tbody>
+      </table>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-head">
+        <h3>PSRAM&rarr;PSRAM Dual-Bank Throughput (Scenario 1 &ge; Scenario 2 &ge; Scenario 3)</h3>
+        <span class="cap">Bilinear vs. Nearest comparison</span>
+      </div>
+      <div class="legend">
+        <span class="lv"><span class="sw" style="background:var(--accent)"></span>Bilinear Enabled</span>
+        <span class="lv"><span class="sw" style="background:var(--accent-2)"></span>Bilinear Disabled</span>
+      </div>
+      <div id="chart-psram2psram"></div>
+    </div>
+
+    <!-- ---- 1.3 PSRAM->SRAM ---- -->
+    <div class="block-title">1.3 &nbsp;From PSRAM to SRAM <span class="tag">Single target &middot; three scenarios &times; cache stats</span></div>
+    <div class="table-card">
+      <table>
+        <thead>
+          <tr>
+            <th>Input<br>Width</th>
+            <th>Output<br>Width</th>
+            <th>Bilinear</th>
+            <th>Scenario</th>
+            <th class="hl-cell">Performance</th>
+            <th>Cache<br>Hit Rate</th>
+            <th>Access<br>Data</th>
+            <th>Cache<br>Hit</th>
+            <th>Cache<br>Miss</th>
+          </tr>
+        </thead>
+        <tbody id="tbl-psram2sram"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ================= 2. FILL ================= -->
+  <section class="section" id="fill">
+    <div class="sec-head">
+      <div class="sec-num">2</div>
+      <div>
+        <div class="sec-title">Fill Engine</div>
+        <div class="sec-desc">
+          Compares fill throughput when writing to <code>SRAM</code> versus <code>PSRAM</code>, keyed by target width (bit depth).
+        </div>
+      </div>
+    </div>
+
+    <div class="table-card">
+      <table>
+        <thead>
+          <tr>
+            <th>Target Width (bit depth)</th>
+            <th class="hl-cell">SRAM</th>
+            <th class="hl-cell">PSRAM</th>
+          </tr>
+        </thead>
+        <tbody id="tbl-fill"></tbody>
+      </table>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-head">
+        <h3>Fill Throughput Comparison</h3>
+        <span class="cap">Unit: M Pixel/s</span>
+      </div>
+      <div class="legend">
+        <span class="lv"><span class="sw" style="background:linear-gradient(#38bdf8,#2f6fed)"></span>SRAM</span>
+        <span class="lv"><span class="sw" style="background:linear-gradient(#f472b6,#a78bfa)"></span>PSRAM</span>
+      </div>
+      <div id="chart-fill"></div>
+    </div>
+  </section>
+
+  <!-- ================= NOTES ================= -->
+  <section class="section">
+    <div class="notes">
+      <h4>Notes & Remarks</h4>
+      <ul>
+        <li><b>Cache statistics</b>: Hit Rate = Cache Hit / Access Data.</li>
+        <li><b>About PPE</b>: PPE (Pixel Processing Engine) handles layer blending and rectangular fills; the bandwidth of its read/write paths sets the upper bound on throughput.</li>
+      </ul>
+    </div>
+  </section>
+
+  <footer>
+    <span>RTL8773G &middot; PPE Performance Benchmark</span>
+    <span>Generated from <code>hardware/ppe/src/device/rtl8773g/PPE_Performance.xlsx</code></span>
+  </footer>
+</div>
+
+
+<script>
+/* =========================================================
+   Data - extracted directly from PPE_Performance.xlsx
+   ========================================================= */
+const SRAM2SRAM = [
+  ["8-bit","16-bit",true ,50.0,50.0],
+  ["8-bit","16-bit",false,86.6,87.0],
+  ["16-bit","16-bit",true ,44.2,49.7],
+  ["16-bit","16-bit",false,79.0,98.4],
+  ["24-bit","16-bit",true ,33.4,36.4],
+  ["24-bit","16-bit",false,66.3,78.6],
+  ["24-bit","24-bit",true ,28.9,33.1],
+  ["24-bit","24-bit",false,52.0,65.6],
+  ["32-bit","16-bit",true ,33.4,36.4],
+  ["32-bit","16-bit",false,77.4,78.6],
+  ["32-bit","32-bit",true ,33.3,40.1],
+  ["32-bit","32-bit",false,65.1,82.0],
+];
+
+/* [in, out, bilinear, [perf1,perf2,perf3], [hit1,hit2,hit3], [accX3], [hitcX3], [missX3]]  two banks */
+const PSRAM2PSRAM = [
+  ["16-bit","16-bit",true ,
+     [28.0,19.0,16.6],[31.7,24.1,21.5],
+     [0.989,0.9864740154870492,0.9786],[615482,615482,615482],[609410,607157,602710],[6072,8325,12772]],
+  ["16-bit","16-bit",false,
+     [26.8,21.4,18.2],[40.7,27.4,26.3],
+     [0.9687,0.9665,0.9398],[205820,205820,205820],[199388,198938,193438],[6432,6882,12382]],
+  ["24-bit","24-bit",true ,
+     [16.0,13.5,7.6],[19.4,17.9,11.3],
+     [0.9895614240087248,0.9880640163416513,0.9786],[924264,924264,924264],[914616,913232,896046],[9648,11032,28218]],
+  ["24-bit","24-bit",false,
+     [17.8,15.3,8.3],[28.0,19.9,11.9],
+     [0.9687493926732096,0.9673403945194831,0.9237877757263628],[308730,308730,308730],[299082,298647,285201],[9648,10083,23529]],
+  ["32-bit","32-bit",true ,
+     [12.7,11.3,10.5],[20.3,16.3,16.1],
+     [0.9843040729798523,0.981800077177119,0.9786],[821487,821487,821487],[808593,806536,803832],[12894,14951,17655]],
+  ["32-bit","32-bit",false,
+     [14.2,13.1,12.2],[23.6,17.3,17.0],
+     [0.9374987853464192,0.9354241570304149,0.9184044310562628],[205820,205820,205820],[192956,192529,189026],[12864,13291,16794]],
+];
+
+/* [in, out, bilinear, [perf1..3], [hit1..3], [accX3], [hitcX3], [missX3]] */
+const PSRAM2SRAM = [
+  ["16-bit","16-bit",true,
+     [32.0,26.6,25.5],
+     [0.989,0.9836790673752785,0.9821018343905366],[58330,58330,58330],[57715,57378,57286],[615,952,1044]],
+  ["16-bit","16-bit",false,
+     [47.0,38.2,36.1],
+     [0.96875,0.9532012195121952,0.948170731707317],[19680,19680,19680],[19065,18759,18660],[615,921,1020]],
+  ["24-bit","24-bit",true,
+     [21.0,18.4,18.0],
+     [0.9894564894564895,0.9853327545635238,0.9844189074958306],[87542,87542,87542],[86619,86258,86178],[923,1284,1364]],
+  ["24-bit","24-bit",false,
+     [32.4,27.8,26.6],
+     [0.9687330623306233,0.9579945799457995,0.9546070460704607],[29520,29520,29520],[28597,28280,28180],[923,1240,1340]],
+  ["32-bit","32-bit",true,
+     [20.8,18.3,17.9],
+     [0.9841912473491421,0.979628558575927,0.978716020821284],[77805,77805,77805],[76575,76220,76149],[1230,1585,1656]],
+  ["32-bit","32-bit",false,
+     [32.2,28.2,27.1],
+     [0.9375,0.9229674796747968,0.9182926829268293],[19680,19680,19680],[18450,18164,18072],[1230,1516,1608]],
+];
+
+const FILL = [
+  ["16-bit",192.9,114.4],
+  ["24-bit",192.9,74.5],
+  ["32-bit",192.9,58.0],
+];
+
+/* =========================================================
+   Helpers
+   ========================================================= */
+const fmt = n => (Math.round(n*10)/10).toFixed(1);
+const pct = n => (n*100).toFixed(2)+"%";
+const esc = s => String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+const badge = on => `<span class="${on?"badge-en":"badge-dis"}">${on?"Enabled":"Disabled"}</span>`;
+/* Input/Output each get their own cell so columns never shift */
+const inCell  = w => `<td class="config">${esc(w)}</td>`;
+const outCell = w => `<td class="config">${esc(w)}</td>`;
+const inCellRow  = (w,n) => `<td class="config" rowspan="${n}">${esc(w)}</td>`;
+const outCellRow = (w,n) => `<td class="config" rowspan="${n}">${esc(w)}</td>`;
+
+/* =========================================================
+   1) SRAM->SRAM table
+   ========================================================= */
+(function(){
+  const tb = document.getElementById("tbl-sram2sram");
+  let html="";
+  SRAM2SRAM.forEach(r=>{
+    const [inw,outw,on,one,two]=r;
+    html+=`<tr>${inCell(inw)}${outCell(outw)}
+      <td style="text-align:center">${badge(on)}</td>
+      <td class="perf">${fmt(one)} M</td>
+      <td class="perf">${fmt(two)} M</td></tr>`;
+  });
+  tb.innerHTML = html;
+})();
+
+/* =========================================================
+   2) PSRAM->PSRAM table (config columns span all 3 scenario rows)
+   ========================================================= */
+(function(){
+  const tb = document.getElementById("tbl-psram2psram");
+  let html="";
+  PSRAM2PSRAM.forEach(g=>{
+    const [inw,outw,on,p1,p2,h,acc,hc,miss]=g;
+    for(let i=0;i<3;i++){
+      html+=`<tr>`;
+      if(i===0){ html+=`${inCellRow(inw,3)}${outCellRow(outw,3)}<td style="text-align:center" rowspan="3">${badge(on)}</td>`; }
+      html+=`<td class="grp">Scenario ${i+1}</td>
+        <td class="perf">${fmt(p1[i])} M</td>
+        <td class="perf">${fmt(p2[i])} M</td>
+        <td class="rate">${pct(h[i])}</td>
+        <td class="rate">${acc[i].toLocaleString()}</td>
+        <td class="rate">${hc[i].toLocaleString()}</td>
+        <td class="rate" style="color:var(--red)">${miss[i].toLocaleString()}</td></tr>`;
+    }
+  });
+  tb.innerHTML = html;
+})();
+
+/* =========================================================
+   3) PSRAM->SRAM table
+   ========================================================= */
+(function(){
+  const tb = document.getElementById("tbl-psram2sram");
+  let html="";
+  PSRAM2SRAM.forEach(g=>{
+    const [inw,outw,on,p,h,acc,hc,miss]=g;
+    for(let i=0;i<3;i++){
+      html+=`<tr>`;
+      if(i===0){ html+=`${inCellRow(inw,3)}${outCellRow(outw,3)}<td style="text-align:center" rowspan="3">${badge(on)}</td>`; }
+      html+=`<td class="grp">Scenario ${i+1}</td>
+        <td class="perf">${fmt(p[i])} M</td>
+        <td class="rate">${pct(h[i])}</td>
+        <td class="rate">${acc[i].toLocaleString()}</td>
+        <td class="rate">${hc[i].toLocaleString()}</td>
+        <td class="rate" style="color:var(--red)">${miss[i].toLocaleString()}</td></tr>`;
+    }
+  });
+  tb.innerHTML = html;
+})();
+
+/* =========================================================
+   4) FILL table
+   ========================================================= */
+(function(){
+  const tb = document.getElementById("tbl-fill");
+  let html="";
+  FILL.forEach(r=>{
+    const [w,s,p]=r;
+    html+=`<tr><td class="row-label" style="text-align:center">${esc(w)}</td>
+      <td class="perf">${fmt(s)} M</td>
+      <td class="perf">${fmt(p)} M</td></tr>`;
+  });
+  tb.innerHTML = html;
+})();
+
+/* =========================================================
+   Bar chart renderer (inline SVG, no external dependencies)
+   ========================================================= */
+function barChart(elId, series, opts){
+  const el = document.getElementById(elId);
+  const W = 880, H = opts.h || 300;
+  const plotL = 56, plotR = 16, plotT = 22, plotB = 84;
+  const innerW = W - plotL - plotR;
+  const innerH = H - plotT - plotB;
+  const groups = series[0].values.length;
+  const barsPer = series.length;
+  const gW = innerW / groups;
+  const bW = Math.min(26, (gW - 12) / barsPer);
+  const maxV = Math.max(...series.flatMap(s=>s.values)) * 1.12;
+  const ns = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(ns,"svg");
+  svg.setAttribute("viewBox",`0 0 ${W} ${H}`);
+  svg.style.width="100%"; svg.style.height="auto"; svg.style.display="block";
+
+  // gridlines + y labels
+  const ticks = 4;
+  for(let i=0;i<=ticks;i++){
+    const v = maxV/ticks*i;
+    const y = plotT + innerH - innerH*i/ticks;
+    const line = document.createElementNS(ns,"line");
+    line.setAttribute("x1",plotL); line.setAttribute("y1",y);
+    line.setAttribute("x2",W-plotR); line.setAttribute("y2",y);
+    line.setAttribute("stroke", i===0 ? "#2a3546":"#1d2634");
+    line.setAttribute("stroke-width","1");
+    svg.appendChild(line);
+    const t = document.createElementNS(ns,"text");
+    t.setAttribute("x",plotL-8); t.setAttribute("y",y+4);
+    t.setAttribute("text-anchor","end"); t.setAttribute("font-size","10");
+    t.setAttribute("fill","#6b7a8f"); t.setAttribute("font-family","Consolas,monospace");
+    t.textContent = Math.round(v);
+    svg.appendChild(t);
+  }
+  // bars
+  series.forEach((s,si)=>{
+    s.values.forEach((v,gi)=>{
+      const bh = innerH * v/maxV;
+      const x = plotL + gi*gW + (gW-bW*barsPer)/2 + si*bW;
+      const y = plotT + innerH - bh;
+      const rect = document.createElementNS(ns,"rect");
+      rect.setAttribute("x",x); rect.setAttribute("y",y);
+      rect.setAttribute("width",bW-3); rect.setAttribute("height",bh);
+      rect.setAttribute("rx","3");
+      rect.setAttribute("fill",s.color);
+      rect.setAttribute("opacity",opts.alpha||"0.92");
+      const title = document.createElementNS(ns,"title");
+      const lb = opts.xLabels[gi];
+      const lbTxt = (typeof lb === "string") ? lb : (lb.m + (lb.s ? " \u00b7 "+lb.s : ""));
+      title.textContent = `${s.name} \u00b7 ${lbTxt}\n${fmt(v)} M Pixel/s`;
+      rect.appendChild(title);
+      svg.appendChild(rect);
+      // value label on tallest
+      if(opts.showVal && (v===Math.max(...series.map(x=>x.values[gi])))){
+        const tv = document.createElementNS(ns,"text");
+        tv.setAttribute("x",x+(bW-3)/2); tv.setAttribute("y",y-6);
+        tv.setAttribute("text-anchor","middle"); tv.setAttribute("font-size","9.5");
+        tv.setAttribute("fill",s.color);
+        tv.setAttribute("font-family","Consolas,monospace");
+        tv.textContent = fmt(v);
+        svg.appendChild(tv);
+      }
+    });
+  });
+  // x labels (two lines: main label + sub label)
+  opts.xLabels.forEach((lb,gi)=>{
+    const x = plotL + gi*gW + gW/2;
+    const t = document.createElementNS(ns,"text");
+    t.setAttribute("x",x); t.setAttribute("y",H-plotB+56);
+    t.setAttribute("text-anchor","middle"); t.setAttribute("font-size","10.5");
+    t.setAttribute("fill","#9aa7ba");
+    t.setAttribute("font-family","Consolas,monospace");
+    if(typeof lb === "string"){
+      t.textContent = lb;
+      svg.appendChild(t);
+      return;
+    }
+    const m = document.createElementNS(ns,"tspan");
+    m.setAttribute("x",x); m.setAttribute("dy","0");
+    m.setAttribute("fill","#c3cfdf"); m.setAttribute("font-weight","600");
+    m.textContent = lb.m;
+    t.appendChild(m);
+    if(lb.s){
+      const s = document.createElementNS(ns,"tspan");
+      s.setAttribute("x",x); s.setAttribute("dy","13");
+      s.setAttribute("font-size","9"); s.setAttribute("fill","#7c8aa0");
+      s.textContent = lb.s;
+      t.appendChild(s);
+    }
+    svg.appendChild(t);
+  });
+  el.innerHTML="";
+  el.appendChild(svg);
+}
+
+/* --- 1.1 SRAM->SRAM chart --- */
+(function(){
+  const bit = w => w.replace("-bit","");
+  const xLabels = SRAM2SRAM.map(r=>({m:`${bit(r[0])}\u2192${bit(r[1])}`, s:r[2]?"Bilinear":"Nearest"}));
+  barChart("chart-sram2sram",[
+    {name:"One Bank", values:SRAM2SRAM.map(r=>r[3]), color:"#38bdf8"},
+    {name:"2 Bank",    values:SRAM2SRAM.map(r=>r[4]), color:"#34d399"}
+  ],{h:330,xLabels,showVal:false});
+})();
+
+/* --- 1.2 PSRAM->PSRAM chart (two banks, scenario 1) --- */
+(function(){
+  const bit = w => w.replace("-bit","");
+  const xLabels = PSRAM2PSRAM.map(r=>({m:`${bit(r[0])}\u2192${bit(r[1])}`, s:r[2]?"Bilinear":"Nearest"}));
+  barChart("chart-psram2psram",[
+    {name:"Enabled", values:PSRAM2PSRAM.map(r=>r[4][0]), color:"#38bdf8"},
+    {name:"Disabled", values:PSRAM2PSRAM.map(r=>r[4][1]), color:"#818cf8"}
+  ],{h:330,xLabels,showVal:true});
+})();
+
+/* --- 2. FILL chart --- */
+(function(){
+  barChart("chart-fill",[
+    {name:"SRAM", values:FILL.map(r=>r[1]), color:"#38bdf8"},
+    {name:"PSRAM", values:FILL.map(r=>r[2]), color:"#f472b6"}
+  ],{h:290,xLabels:FILL.map(r=>`${r[0].replace("-bit","")} bit`),showVal:true});
+})();
+</script>
+</body>
+</html>
