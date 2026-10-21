@@ -384,17 +384,193 @@ static vcdj_chroma_t vcdj_map_jpeg_chroma(u32 output_format)
     }
 }
 
-static u32 vcdj_out_rgb_format(vcdj_out_format_t out_format)
+/*============================================================================*
+ *                        Output format table
+ *============================================================================*/
+/** How a public format is requested from the vendor PpUnitConfig. */
+enum vcdj_fmt_kind
 {
-    return (out_format == VCDJ_OUT_ARGB8888) ? DEC_OUT_FRM_ARGB888
-           : DEC_OUT_FRM_RGB565;
+    VCDJ_KIND_NONE = 0,             /**< Hole in the table: not a public format */
+    VCDJ_KIND_RGB,                  /**< `rgb = 1`, `rgb_format` */
+    VCDJ_KIND_RGB_PLANAR,           /**< `rgb_planar = 1`, `rgb_format` */
+    VCDJ_KIND_YUV,                  /**< semi-planar or planar YUV */
+    VCDJ_KIND_LUMA,                 /**< `monochrome = 1` */
+    VCDJ_KIND_YUYV,                 /**< `out_yuyv = 1` */
+    VCDJ_KIND_UYVY,                 /**< `out_uyvy = 1` */
+};
+
+#define VCDJ_FMT_CR_FIRST   0x01U   /**< `cr_first = 1` */
+#define VCDJ_FMT_PLANAR     0x02U   /**< `planar = 1` */
+#define VCDJ_FMT_P010       0x04U   /**< `out_p010 = 1` */
+#define VCDJ_FMT_I010       0x08U   /**< `out_I010 = 1` */
+#define VCDJ_FMT_L010       0x10U   /**< `out_L010 = 1` */
+#define VCDJ_FMT_1010       0x20U   /**< `out_1010 = 1` */
+#define VCDJ_FMT_HBD        0x40U   /**< needs a JPEG deeper than 8 bits */
+#define VCDJ_FMT_PNG_ONLY   0x80U   /**< only a PNG can produce it */
+
+struct vcdj_fmt_desc
+{
+    uint8_t  kind;                  /**< \ref vcdj_fmt_kind */
+    uint8_t  chroma;                /**< PpUnitConfig.chroma_format (PP_YUV4xx) */
+    uint8_t  flags;                 /**< VCDJ_FMT_* */
+    uint16_t rgb_format;            /**< DEC_OUT_FRM_* request, RGB kinds only */
+    uint16_t vendor;                /**< DEC_OUT_FRM_* TransUnitConfig2Format() reports */
+};
+
+VCDJ_STATIC_ASSERT(DEC_OUT_FRM_HIST <= 0xFFFFU, picture_format_fits_u16);
+
+#define VCDJ_RGB(req, rep, fl)      { VCDJ_KIND_RGB, PP_YUV420, (fl), (req), (rep) }
+#define VCDJ_RGBP(req, rep, fl)     { VCDJ_KIND_RGB_PLANAR, PP_YUV420, (fl), (req), (rep) }
+#define VCDJ_YUV(ch, fl, rep)       { VCDJ_KIND_YUV, (ch), (fl), 0U, (rep) }
+#define VCDJ_LUMA(fl, rep)          { VCDJ_KIND_LUMA, PP_YUV420, (fl), 0U, (rep) }
+#define VCDJ_PACK(k, fl, rep)       { (k), PP_YUV422, (fl), 0U, (rep) }
+
+#define VCDJ_CRF                    VCDJ_FMT_CR_FIRST
+#define VCDJ_PL                     VCDJ_FMT_PLANAR
+#define VCDJ_HBD                    VCDJ_FMT_HBD
+
+/*
+ * Indexed by vcdj_out_format_t. The PpUnitConfig fields come from the vendor
+ * testbench options (command_line_parser.c); `vendor` is what ppu.c
+ * TransUnitConfig2Format() derives from them. Note the vendor naming swap:
+ * requesting DEC_OUT_FRM_BGR888 is reported back as DEC_OUT_FRM_BGR888, but
+ * travels through the core as PP_OUT_RGB888.
+ */
+static const struct vcdj_fmt_desc vcdj_fmt_table[] =
+{
+    [VCDJ_OUT_RGB565]       = VCDJ_RGB(DEC_OUT_FRM_RGB565, DEC_OUT_FRM_RGB565, 0U),
+    [VCDJ_OUT_ARGB8888]     = VCDJ_RGB(DEC_OUT_FRM_ARGB888, DEC_OUT_FRM_ARGB888, 0U),
+    [VCDJ_OUT_YUV420SP]     = VCDJ_YUV(PP_YUV420, 0U, DEC_OUT_FRM_YUV420SP),
+    [VCDJ_OUT_BGR888]       = VCDJ_RGB(DEC_OUT_FRM_BGR888, DEC_OUT_FRM_BGR888, 0U),
+    [VCDJ_OUT_ABGR8888]     = VCDJ_RGB(DEC_OUT_FRM_ABGR888, DEC_OUT_FRM_ABGR888, 0U),
+    [VCDJ_OUT_MONOCHROME]   = VCDJ_LUMA(0U, DEC_OUT_FRM_YUV400),
+    /* PngDecSetInfo() turns a plain YUV request into luma + alpha by itself. */
+    [VCDJ_OUT_YUV400_ALPHA] = VCDJ_YUV(PP_YUV420, VCDJ_FMT_PNG_ONLY,
+                                       DEC_OUT_FRM_YUV400_WITH_ALPHA),
+
+    [VCDJ_OUT_RGB888]       = VCDJ_RGB(DEC_OUT_FRM_RGB888, DEC_OUT_FRM_RGB888, 0U),
+    [VCDJ_OUT_BGR565]       = VCDJ_RGB(DEC_OUT_FRM_BGR565, DEC_OUT_FRM_BGR565, 0U),
+    [VCDJ_OUT_ARGB8565]     = VCDJ_RGB(DEC_OUT_FRM_ARGB8565, DEC_OUT_FRM_ARGB8565, 0U),
+    [VCDJ_OUT_XRGB8888]     = VCDJ_RGB(DEC_OUT_FRM_XRGB888, DEC_OUT_FRM_XRGB888, 0U),
+    [VCDJ_OUT_XBGR8888]     = VCDJ_RGB(DEC_OUT_FRM_XBGR888, DEC_OUT_FRM_XBGR888, 0U),
+    [VCDJ_OUT_RGBA8888]     = VCDJ_RGB(DEC_OUT_FRM_RGBA888, DEC_OUT_FRM_RGBA888, 0U),
+    [VCDJ_OUT_BGRA8888]     = VCDJ_RGB(DEC_OUT_FRM_BGRA888, DEC_OUT_FRM_BGRA888, 0U),
+    [VCDJ_OUT_A2R10G10B10]  = VCDJ_RGB(DEC_OUT_FRM_A2R10G10B10, DEC_OUT_FRM_A2R10G10B10, VCDJ_HBD),
+    [VCDJ_OUT_A2B10G10R10]  = VCDJ_RGB(DEC_OUT_FRM_A2B10G10R10, DEC_OUT_FRM_A2B10G10R10, VCDJ_HBD),
+    [VCDJ_OUT_X2R10G10B10]  = VCDJ_RGB(DEC_OUT_FRM_X2R10G10B10, DEC_OUT_FRM_X2R10G10B10, VCDJ_HBD),
+    [VCDJ_OUT_X2B10G10R10]  = VCDJ_RGB(DEC_OUT_FRM_X2B10G10R10, DEC_OUT_FRM_X2B10G10R10, VCDJ_HBD),
+    [VCDJ_OUT_R10G10B10A2]  = VCDJ_RGB(DEC_OUT_FRM_R10G10B10A2, DEC_OUT_FRM_R10G10B10A2, VCDJ_HBD),
+    [VCDJ_OUT_B10G10R10A2]  = VCDJ_RGB(DEC_OUT_FRM_B10G10R10A2, DEC_OUT_FRM_B10G10R10A2, VCDJ_HBD),
+    [VCDJ_OUT_R16G16B16]    = VCDJ_RGB(DEC_OUT_FRM_R16G16B16, DEC_OUT_FRM_R16G16B16, VCDJ_HBD),
+    [VCDJ_OUT_B16G16R16]    = VCDJ_RGB(DEC_OUT_FRM_B16G16R16, DEC_OUT_FRM_B16G16R16, VCDJ_HBD),
+
+    [VCDJ_OUT_RGB888_PLANAR]    = VCDJ_RGBP(DEC_OUT_FRM_RGB888, DEC_OUT_FRM_RGB888_P, 0U),
+    [VCDJ_OUT_BGR888_PLANAR]    = VCDJ_RGBP(DEC_OUT_FRM_BGR888, DEC_OUT_FRM_BGR888_P, 0U),
+    [VCDJ_OUT_R16G16B16_PLANAR] = VCDJ_RGBP(DEC_OUT_FRM_R16G16B16, DEC_OUT_FRM_R16G16B16_P, VCDJ_HBD),
+    [VCDJ_OUT_B16G16R16_PLANAR] = VCDJ_RGBP(DEC_OUT_FRM_B16G16R16, DEC_OUT_FRM_B16G16R16_P, VCDJ_HBD),
+
+    [VCDJ_OUT_YVU420SP]     = VCDJ_YUV(PP_YUV420, VCDJ_CRF, DEC_OUT_FRM_NV21SP),
+    [VCDJ_OUT_YUV420P]      = VCDJ_YUV(PP_YUV420, VCDJ_PL, DEC_OUT_FRM_YUV420P),
+    [VCDJ_OUT_YVU420P]      = VCDJ_YUV(PP_YUV420, VCDJ_PL | VCDJ_CRF, DEC_OUT_FRM_NV21P),
+    [VCDJ_OUT_YUV422SP]     = VCDJ_YUV(PP_YUV422, 0U, DEC_OUT_FRM_YUV422SP),
+    [VCDJ_OUT_YVU422SP]     = VCDJ_YUV(PP_YUV422, VCDJ_CRF, DEC_OUT_FRM_422_NV21SP),
+    [VCDJ_OUT_YUV422P]      = VCDJ_YUV(PP_YUV422, VCDJ_PL, DEC_OUT_FRM_YUV422P),
+    [VCDJ_OUT_YVU422P]      = VCDJ_YUV(PP_YUV422, VCDJ_PL | VCDJ_CRF, DEC_OUT_FRM_422_NV21P),
+    [VCDJ_OUT_YUV444P]      = VCDJ_YUV(PP_YUV444, VCDJ_PL, DEC_OUT_FRM_YUV444P),
+    [VCDJ_OUT_YVU444P]      = VCDJ_YUV(PP_YUV444, VCDJ_PL | VCDJ_CRF, DEC_OUT_FRM_444_NV21P),
+    /* The vendor reports the swapped packed orders under the unswapped name. */
+    [VCDJ_OUT_YUYV]         = VCDJ_PACK(VCDJ_KIND_YUYV, 0U, DEC_OUT_FRM_YUV422_YUYV),
+    [VCDJ_OUT_UYVY]         = VCDJ_PACK(VCDJ_KIND_UYVY, 0U, DEC_OUT_FRM_YUV422_UYVY),
+    [VCDJ_OUT_YVYU]         = VCDJ_PACK(VCDJ_KIND_YUYV, VCDJ_CRF, DEC_OUT_FRM_YUV422_YUYV),
+    [VCDJ_OUT_VYUY]         = VCDJ_PACK(VCDJ_KIND_UYVY, VCDJ_CRF, DEC_OUT_FRM_YUV422_UYVY),
+
+    [VCDJ_OUT_YUV400_PACK10]   = VCDJ_LUMA(VCDJ_HBD, DEC_OUT_FRM_YUV400_PACK10),
+    [VCDJ_OUT_YUV400_P010]     = VCDJ_LUMA(VCDJ_HBD | VCDJ_FMT_P010, DEC_OUT_FRM_YUV400_P010),
+    [VCDJ_OUT_YUV400_I010]     = VCDJ_LUMA(VCDJ_HBD | VCDJ_FMT_I010, DEC_OUT_FRM_YUV400_I010),
+    [VCDJ_OUT_YUV400_L010]     = VCDJ_LUMA(VCDJ_HBD | VCDJ_FMT_L010, DEC_OUT_FRM_YUV400_L010),
+    [VCDJ_OUT_YUV420SP_PACK10] = VCDJ_YUV(PP_YUV420, VCDJ_HBD, DEC_OUT_FRM_YUV420SP_PACK10),
+    [VCDJ_OUT_YUV420SP_P010]   = VCDJ_YUV(PP_YUV420, VCDJ_HBD | VCDJ_FMT_P010, DEC_OUT_FRM_YUV420SP_P010),
+    [VCDJ_OUT_YUV420SP_I010]   = VCDJ_YUV(PP_YUV420, VCDJ_HBD | VCDJ_FMT_I010, DEC_OUT_FRM_YUV420SP_I010),
+    [VCDJ_OUT_YUV420SP_L010]   = VCDJ_YUV(PP_YUV420, VCDJ_HBD | VCDJ_FMT_L010, DEC_OUT_FRM_YUV420SP_L010),
+    [VCDJ_OUT_YUV420SP_1010]   = VCDJ_YUV(PP_YUV420, VCDJ_HBD | VCDJ_FMT_1010, DEC_OUT_FRM_YUV420SP_1010),
+    [VCDJ_OUT_YVU420SP_PACK10] = VCDJ_YUV(PP_YUV420, VCDJ_HBD | VCDJ_CRF, DEC_OUT_FRM_NV21SP_PACK10),
+    [VCDJ_OUT_YVU420SP_P010]   = VCDJ_YUV(PP_YUV420, VCDJ_HBD | VCDJ_CRF | VCDJ_FMT_P010, DEC_OUT_FRM_NV21SP_P010),
+    [VCDJ_OUT_YVU420SP_I010]   = VCDJ_YUV(PP_YUV420, VCDJ_HBD | VCDJ_CRF | VCDJ_FMT_I010, DEC_OUT_FRM_NV21SP_I010),
+    [VCDJ_OUT_YVU420SP_L010]   = VCDJ_YUV(PP_YUV420, VCDJ_HBD | VCDJ_CRF | VCDJ_FMT_L010, DEC_OUT_FRM_NV21SP_L010),
+    [VCDJ_OUT_YVU420SP_1010]   = VCDJ_YUV(PP_YUV420, VCDJ_HBD | VCDJ_CRF | VCDJ_FMT_1010, DEC_OUT_FRM_NV21SP_1010),
+    [VCDJ_OUT_YUV420P_PACK10]  = VCDJ_YUV(PP_YUV420, VCDJ_HBD | VCDJ_PL, DEC_OUT_FRM_YUV420P_PACK10),
+    [VCDJ_OUT_YUV420P_P010]    = VCDJ_YUV(PP_YUV420, VCDJ_HBD | VCDJ_PL | VCDJ_FMT_P010, DEC_OUT_FRM_YUV420P_P010),
+    [VCDJ_OUT_YUV420P_I010]    = VCDJ_YUV(PP_YUV420, VCDJ_HBD | VCDJ_PL | VCDJ_FMT_I010, DEC_OUT_FRM_YUV420P_I010),
+    [VCDJ_OUT_YUV420P_L010]    = VCDJ_YUV(PP_YUV420, VCDJ_HBD | VCDJ_PL | VCDJ_FMT_L010, DEC_OUT_FRM_YUV420P_L010),
+    [VCDJ_OUT_YVU420P_PACK10]  = VCDJ_YUV(PP_YUV420, VCDJ_HBD | VCDJ_PL | VCDJ_CRF, DEC_OUT_FRM_NV21P_PACK10),
+    [VCDJ_OUT_YVU420P_P010]    = VCDJ_YUV(PP_YUV420, VCDJ_HBD | VCDJ_PL | VCDJ_CRF | VCDJ_FMT_P010, DEC_OUT_FRM_NV21P_P010),
+    [VCDJ_OUT_YVU420P_I010]    = VCDJ_YUV(PP_YUV420, VCDJ_HBD | VCDJ_PL | VCDJ_CRF | VCDJ_FMT_I010, DEC_OUT_FRM_NV21P_I010),
+    [VCDJ_OUT_YVU420P_L010]    = VCDJ_YUV(PP_YUV420, VCDJ_HBD | VCDJ_PL | VCDJ_CRF | VCDJ_FMT_L010, DEC_OUT_FRM_NV21P_L010),
+    [VCDJ_OUT_YUV422SP_P010]   = VCDJ_YUV(PP_YUV422, VCDJ_HBD | VCDJ_FMT_P010, DEC_OUT_FRM_YUV422SP_P010),
+    [VCDJ_OUT_YUV422SP_I010]   = VCDJ_YUV(PP_YUV422, VCDJ_HBD | VCDJ_FMT_I010, DEC_OUT_FRM_YUV422SP_I010),
+    [VCDJ_OUT_YUV422SP_L010]   = VCDJ_YUV(PP_YUV422, VCDJ_HBD | VCDJ_FMT_L010, DEC_OUT_FRM_YUV422SP_L010),
+    [VCDJ_OUT_YVU422SP_P010]   = VCDJ_YUV(PP_YUV422, VCDJ_HBD | VCDJ_CRF | VCDJ_FMT_P010, DEC_OUT_FRM_422_NV21SP_P010),
+    [VCDJ_OUT_YVU422SP_I010]   = VCDJ_YUV(PP_YUV422, VCDJ_HBD | VCDJ_CRF | VCDJ_FMT_I010, DEC_OUT_FRM_422_NV21SP_I010),
+    [VCDJ_OUT_YVU422SP_L010]   = VCDJ_YUV(PP_YUV422, VCDJ_HBD | VCDJ_CRF | VCDJ_FMT_L010, DEC_OUT_FRM_422_NV21SP_L010),
+    [VCDJ_OUT_YUV422P_P010]    = VCDJ_YUV(PP_YUV422, VCDJ_HBD | VCDJ_PL | VCDJ_FMT_P010, DEC_OUT_FRM_YUV422P_P010),
+    [VCDJ_OUT_YUV422P_I010]    = VCDJ_YUV(PP_YUV422, VCDJ_HBD | VCDJ_PL | VCDJ_FMT_I010, DEC_OUT_FRM_YUV422P_I010),
+    [VCDJ_OUT_YUV422P_L010]    = VCDJ_YUV(PP_YUV422, VCDJ_HBD | VCDJ_PL | VCDJ_FMT_L010, DEC_OUT_FRM_YUV422P_L010),
+    [VCDJ_OUT_YVU422P_P010]    = VCDJ_YUV(PP_YUV422, VCDJ_HBD | VCDJ_PL | VCDJ_CRF | VCDJ_FMT_P010, DEC_OUT_FRM_422_NV21P_P010),
+    [VCDJ_OUT_YVU422P_I010]    = VCDJ_YUV(PP_YUV422, VCDJ_HBD | VCDJ_PL | VCDJ_CRF | VCDJ_FMT_I010, DEC_OUT_FRM_422_NV21P_I010),
+    [VCDJ_OUT_YVU422P_L010]    = VCDJ_YUV(PP_YUV422, VCDJ_HBD | VCDJ_PL | VCDJ_CRF | VCDJ_FMT_L010, DEC_OUT_FRM_422_NV21P_L010),
+    [VCDJ_OUT_YUV444P_P010]    = VCDJ_YUV(PP_YUV444, VCDJ_HBD | VCDJ_PL | VCDJ_FMT_P010, DEC_OUT_FRM_YUV444P_P010),
+    [VCDJ_OUT_YUV444P_I010]    = VCDJ_YUV(PP_YUV444, VCDJ_HBD | VCDJ_PL | VCDJ_FMT_I010, DEC_OUT_FRM_YUV444P_I010),
+    [VCDJ_OUT_YUV444P_L010]    = VCDJ_YUV(PP_YUV444, VCDJ_HBD | VCDJ_PL | VCDJ_FMT_L010, DEC_OUT_FRM_YUV444P_L010),
+    [VCDJ_OUT_YVU444P_P010]    = VCDJ_YUV(PP_YUV444, VCDJ_HBD | VCDJ_PL | VCDJ_CRF | VCDJ_FMT_P010, DEC_OUT_FRM_444_NV21P_P010),
+    [VCDJ_OUT_YVU444P_I010]    = VCDJ_YUV(PP_YUV444, VCDJ_HBD | VCDJ_PL | VCDJ_CRF | VCDJ_FMT_I010, DEC_OUT_FRM_444_NV21P_I010),
+    [VCDJ_OUT_YVU444P_L010]    = VCDJ_YUV(PP_YUV444, VCDJ_HBD | VCDJ_PL | VCDJ_CRF | VCDJ_FMT_L010, DEC_OUT_FRM_444_NV21P_L010),
+};
+
+#define VCDJ_FMT_COUNT  (sizeof(vcdj_fmt_table) / sizeof(vcdj_fmt_table[0]))
+
+static const struct vcdj_fmt_desc *vcdj_fmt_lookup(vcdj_out_format_t fmt)
+{
+    if (((uint32_t)fmt >= VCDJ_FMT_COUNT) ||
+        (vcdj_fmt_table[fmt].kind == VCDJ_KIND_NONE))
+    {
+        return NULL;
+    }
+
+    return &vcdj_fmt_table[fmt];
 }
 
 static int vcdj_out_format_supported(vcdj_out_format_t out_format)
 {
-    return ((out_format == VCDJ_OUT_RGB565) ||
-            (out_format == VCDJ_OUT_ARGB8888) ||
-            (out_format == VCDJ_OUT_YUV420SP)) ? 1 : 0;
+    return (vcdj_fmt_lookup(out_format) != NULL) ? 1 : 0;
+}
+
+/**
+ * Reject a format the source can never produce, before the vendor sees it.
+ *
+ * Without this a 10/16-bit request on an 8-bit stream would not fail: ppu.c
+ * clears the 10-bit flags for 8-bit input and silently emits 8-bit pixels.
+ */
+static vcdj_error_t vcdj_format_fits_source(vcdj_out_format_t out_format,
+                                            vcdj_codec_t codec,
+                                            uint32_t bit_depth)
+{
+    const struct vcdj_fmt_desc *fmt = vcdj_fmt_lookup(out_format);
+
+    if (fmt == NULL)
+    {
+        return VCDJ_ERR_PARAM;
+    }
+    if (((fmt->flags & VCDJ_FMT_HBD) != 0U) &&
+        ((codec != VCDJ_CODEC_JPEG) || (bit_depth <= 8U)))
+    {
+        return VCDJ_ERR_UNSUPPORTED;
+    }
+    if (((fmt->flags & VCDJ_FMT_PNG_ONLY) != 0U) && (codec != VCDJ_CODEC_PNG))
+    {
+        return VCDJ_ERR_UNSUPPORTED;
+    }
+
+    return VCDJ_SUCCESS;
 }
 
 static int vcdj_pp_filter_supported(vcdj_pp_filter_t filter)
@@ -518,53 +694,52 @@ static u32 vcdj_pp_filter_to_vendor(vcdj_pp_filter_t filter)
     case VCDJ_PP_FILTER_NEAREST:
         return NEAREST;
     case VCDJ_PP_FILTER_BICUBIC:
-        return BICUBIC;
+        return FAST_BICUBIC;
     case VCDJ_PP_FILTER_AREA:
         return AREA;
     case VCDJ_PP_FILTER_DEFAULT:
     case VCDJ_PP_FILTER_BILINEAR:
-        return BI_LINEAR;
+        return FAST_LINEAR;
     default:
         return VSI_LINEAR;
     }
 }
 
 /*
- * Reverse direction of vcdj_out_rgb_format(): report what the post processing
- * unit actually produced.
+ * Report what the post processing unit actually produced, by looking the vendor
+ * format up in the same table the request side uses.
  *
- * This is not a mirror of the request. PngDecSetInfo() rewrites rgb_format from
- * the PNG colour type - truecolour and indexed become BGR888, or ABGR8888 when
- * tRNS is present - and forces greyscale onto the monochrome path with rgb
- * cleared. Echoing param->out_format back would therefore be a lie for most PNGs.
+ * This is not a mirror of the request. When YUV is requested for a PNG,
+ * PngDecSetInfo() picks RGB from the colour type instead (truecolour/indexed ->
+ * BGR888, RGBA or tRNS -> ABGR8888). Greyscale PNG is forced onto the luma-only
+ * path whatever was requested, and so is greyscale JPEG when YUV is requested.
+ *
+ * Two vendor formats are ambiguous and need the request to resolve: YUYV / YVYU
+ * (and UYVY / VYUY) share one vendor name and differ only in cr_first. Anything
+ * the table does not name - tiled, compressed, histogram - is reported as
+ * UNKNOWN rather than guessed.
  */
-static vcdj_out_format_t vcdj_out_format_from_vendor(enum DecPictureFormat fmt)
+static vcdj_out_format_t vcdj_out_format_from_vendor(enum DecPictureFormat fmt,
+                                                     vcdj_out_format_t requested)
 {
-    switch (fmt)
+    const struct vcdj_fmt_desc *req = vcdj_fmt_lookup(requested);
+    unsigned int i;
+
+    if ((req != NULL) && (req->vendor == (uint16_t)fmt))
     {
-    case DEC_OUT_FRM_RGB565:
-        return VCDJ_OUT_RGB565;
-    case DEC_OUT_FRM_ARGB888:
-        return VCDJ_OUT_ARGB8888;
-    case DEC_OUT_FRM_BGR888:
-        return VCDJ_OUT_BGR888;
-    case DEC_OUT_FRM_ABGR888:
-        return VCDJ_OUT_ABGR8888;
-    case DEC_OUT_FRM_MONOCHROME:
-    case DEC_OUT_FRM_YUV400:
-    case DEC_OUT_FRM_YUV400_WITH_ALPHA:
-        return VCDJ_OUT_MONOCHROME;
-    case DEC_OUT_FRM_RASTER_SCAN:
-    case DEC_OUT_FRM_PLANAR_420:
-    case DEC_OUT_FRM_YUV420SP:
-        return VCDJ_OUT_YUV420SP;
-    default:
-        /*
-         * Tiled, compressed and 10-bit formats are not reachable on 0x2070 and
-         * have no stable public name. Report the gap instead of guessing.
-         */
-        return VCDJ_OUT_UNKNOWN;
+        return requested;
     }
+
+    for (i = 0U; i < VCDJ_FMT_COUNT; i++)
+    {
+        if ((vcdj_fmt_table[i].kind != VCDJ_KIND_NONE) &&
+            (vcdj_fmt_table[i].vendor == (uint16_t)fmt))
+        {
+            return (vcdj_out_format_t)i;
+        }
+    }
+
+    return VCDJ_OUT_UNKNOWN;
 }
 
 /** Colour model of a JPEG, derived from the chroma format the parser reported. */
@@ -614,11 +789,16 @@ static int vcdj_codec_supported(vcdj_codec_t codec)
 
 static void vcdj_setup_ppu(PpUnitConfig *ppu, const vcdj_pp_config_t *config)
 {
+    const struct vcdj_fmt_desc *fmt;
+
     memset(ppu, 0, sizeof(PpUnitConfig) * DEC_MAX_OUT_COUNT);
 
     ppu[0].enabled = 1U;
     ppu[0].align = DEC_ALIGN_64B;
+    /* Mandatory: with the shaper off the core never ends the frame. */
     ppu[0].shaper_enabled = 1U;
+    /* Only takes effect when bit depth drops (e.g. RGB565); no-op otherwise. */
+    ppu[0].dither_enable = 1U;
     ppu[0].crop.enabled = config->crop_enabled;
     ppu[0].crop.set_by_user = config->crop_enabled;
     ppu[0].crop.x = config->crop.x;
@@ -635,15 +815,51 @@ static void vcdj_setup_ppu(PpUnitConfig *ppu, const vcdj_pp_config_t *config)
         ppu[0].antialias = (config->filter == VCDJ_PP_FILTER_AREA) ? 1U : 0U;
     }
 
-    ppu[0].chroma_format = PP_YUV420;
-
-    if (config->output_format != VCDJ_OUT_YUV420SP)
+    fmt = vcdj_fmt_lookup(config->output_format);
+    if (fmt == NULL)
     {
+        /* Callers validate first; keep the vendor default rather than guess. */
+        ppu[0].chroma_format = PP_YUV420;
+        return;
+    }
+
+    ppu[0].chroma_format = fmt->chroma;
+    ppu[0].cr_first = ((fmt->flags & VCDJ_FMT_CR_FIRST) != 0U) ? 1U : 0U;
+    ppu[0].planar = ((fmt->flags & VCDJ_FMT_PLANAR) != 0U) ? 1U : 0U;
+    ppu[0].out_p010 = ((fmt->flags & VCDJ_FMT_P010) != 0U) ? 1U : 0U;
+    ppu[0].out_I010 = ((fmt->flags & VCDJ_FMT_I010) != 0U) ? 1U : 0U;
+    ppu[0].out_L010 = ((fmt->flags & VCDJ_FMT_L010) != 0U) ? 1U : 0U;
+    ppu[0].out_1010 = ((fmt->flags & VCDJ_FMT_1010) != 0U) ? 1U : 0U;
+
+    switch (fmt->kind)
+    {
+    case VCDJ_KIND_RGB:
         /* The decoder core emits YUV; the RGB colour space conversion lives in
          * the vendor post processing unit (ppu.c), which is why ppu.c is not an
          * optional part of the compiled subset. */
         ppu[0].rgb = 1U;
-        ppu[0].rgb_format = vcdj_out_rgb_format(config->output_format);
+        ppu[0].rgb_format = fmt->rgb_format;
+        break;
+    case VCDJ_KIND_RGB_PLANAR:
+        ppu[0].rgb_planar = 1U;
+        ppu[0].rgb_format = fmt->rgb_format;
+        break;
+    case VCDJ_KIND_LUMA:
+        /*
+         * Explicit luma-only also drops PNG alpha: PngDecSetInfo() only picks
+         * the luma + alpha layout when monochrome was NOT requested, which is
+         * why VCDJ_OUT_YUV400_ALPHA is a plain YUV request in the table.
+         */
+        ppu[0].monochrome = 1U;
+        break;
+    case VCDJ_KIND_YUYV:
+        ppu[0].out_yuyv = 1U;
+        break;
+    case VCDJ_KIND_UYVY:
+        ppu[0].out_uyvy = 1U;
+        break;
+    default:
+        break;
     }
 }
 
@@ -868,6 +1084,54 @@ static int vcdj_add_external_buffers(const void *dwl, void *inst,
  *                        Picture delivery
  *============================================================================*/
 /**
+ * \brief Expose the planes the vendor does not hand out separately.
+ *
+ * With `use_separated_pp == 0` SwSetPpOutAddr() reports at most two addresses,
+ * while the core writes three planes back to back (ppu.c SetPpuRegs):
+ *  - planar YUV: the second chroma plane starts right after the first, and the
+ *    negotiation already reports its size in `plane_size[2]`;
+ *  - planar RGB: all three planes are counted as one, each a third of it.
+ */
+static void vcdj_split_planar(const struct vcdj_buffer_layout *layout,
+                              vcdj_picture_t *pic)
+{
+    const struct vcdj_fmt_desc *fmt = vcdj_fmt_lookup(pic->format);
+    vcdj_plane_t *p = pic->planes;
+    unsigned int i;
+
+    if (fmt == NULL)
+    {
+        return;
+    }
+
+    if ((fmt->kind == VCDJ_KIND_RGB_PLANAR) && (pic->plane_count == 1U))
+    {
+        uint32_t size = p[0].size / 3U;
+
+        for (i = 0U; i < 3U; i++)
+        {
+            p[i].cpu_addr = (uint8_t *)p[0].cpu_addr + (i * size);
+            p[i].bus_addr = p[0].bus_addr + (i * size);
+            p[i].size = size;
+            p[i].stride = p[0].stride;
+            p[i].offset = 0U;
+        }
+        pic->plane_count = 3U;
+    }
+    else if ((fmt->kind == VCDJ_KIND_YUV) &&
+             ((fmt->flags & VCDJ_FMT_PLANAR) != 0U) &&
+             (pic->plane_count == 2U) && (layout->plane_size[2] != 0U))
+    {
+        p[2].cpu_addr = (uint8_t *)p[1].cpu_addr + p[1].size;
+        p[2].bus_addr = p[1].bus_addr + p[1].size;
+        p[2].size = (uint32_t)layout->plane_size[2];
+        p[2].stride = layout->cstride;
+        p[2].offset = 0U;
+        pic->plane_count = 3U;
+    }
+}
+
+/**
  * \brief Fill \ref vcdj_picture_t.planes from what the vendor actually produced.
  *
  * Shared by the JPEG and the PNG path on purpose: the three vendor descriptors
@@ -924,6 +1188,8 @@ static void vcdj_fill_planes(const struct DWLLinearMem *luma,
 
         pic->plane_count++;
     }
+
+    vcdj_split_planar(layout, pic);
 
     /*
      * Make the pixels visible to the CPU before the caller reads them: the core
@@ -1164,6 +1430,9 @@ static vcdj_error_t vcdj_jpeg_decode(const vcdj_dec_param_t *param,
 
     work->dec_in.stream_length = param->size;
     work->dec_in.dec_image_type = JPEGDEC_IMAGE;
+    /* Only the main picture is decoded. With 0 the parser switches the HW
+     * geometry to the EXIF/JFXX thumbnail even though JPEGDEC_IMAGE is asked. */
+    work->dec_in.thumbnail_done = 1U;
     work->dec_in.stream = (u8 *)work->dec_in.stream_buffer.virtual_address;
 
     ret = JpegDecGetImageInfo(inst, &work->dec_in, &work->image_info);
@@ -1175,6 +1444,11 @@ static vcdj_error_t vcdj_jpeg_decode(const vcdj_dec_param_t *param,
 
     err = vcdj_validate_pp(pp, work->image_info.display_width,
                            work->image_info.display_height);
+    if (err == VCDJ_SUCCESS)
+    {
+        err = vcdj_format_fits_source(pp->output_format, VCDJ_CODEC_JPEG,
+                                      work->image_info.bit_depth);
+    }
     if (err != VCDJ_SUCCESS)
     {
         goto out_input;
@@ -1234,7 +1508,8 @@ static vcdj_error_t vcdj_jpeg_decode(const vcdj_dec_param_t *param,
      */
     pic->width = dec_out->pictures[0].display_width;
     pic->height = dec_out->pictures[0].display_height;
-    pic->format = vcdj_out_format_from_vendor(dec_out->pictures[0].output_format);
+    pic->format = vcdj_out_format_from_vendor(dec_out->pictures[0].output_format,
+                                              pp->output_format);
 
     if ((pic->width == 0U) || (pic->height == 0U))
     {
@@ -1421,11 +1696,21 @@ static vcdj_error_t vcdj_png_decode(const vcdj_dec_param_t *param,
 
     err = vcdj_validate_pp(pp, work->image_info.display_width,
                            work->image_info.display_height);
+    if (err == VCDJ_SUCCESS)
+    {
+        err = vcdj_format_fits_source(pp->output_format, VCDJ_CODEC_PNG,
+                                      work->image_info.bit_depth);
+    }
     if (err != VCDJ_SUCCESS)
     {
         goto out_input;
     }
 
+    /*
+     * Passed through unchanged, like JPEG: what PngDecSetInfo() and the checker
+     * make of a YUV request for a PNG is exactly what has to be verified, so it
+     * must not be normalised away here.
+     */
     vcdj_setup_ppu(work->cfg.ppu_config, pp);
     ret = PngDecSetInfo(inst, &work->cfg);
     if (ret != DEC_OK)
@@ -1484,13 +1769,12 @@ static vcdj_error_t vcdj_png_decode(const vcdj_dec_param_t *param,
     pic->height = dec_out->pictures[0].display_height;
 
     /*
-     * Now a real answer instead of VCDJ_OUT_UNKNOWN. Reading it back matters most
-     * for PNG: PngDecSetInfo() rewrites the requested format from the colour type
-     * - truecolour and indexed become BGR888, or ABGR8888 with tRNS, and
-     * greyscale is forced onto the monochrome path - so echoing the request would
-     * be wrong for most PNGs.
+     * Now a real answer instead of VCDJ_OUT_UNKNOWN. Reading it back matters for
+     * PNG: a YUV420SP request comes back as BGR888 / ABGR8888, and greyscale is
+     * forced onto the monochrome path whatever was requested.
      */
-    pic->format = vcdj_out_format_from_vendor(dec_out->pictures[0].output_format);
+    pic->format = vcdj_out_format_from_vendor(dec_out->pictures[0].output_format,
+                                              pp->output_format);
 
     if ((pic->width == 0U) || (pic->height == 0U))
     {

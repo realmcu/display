@@ -83,8 +83,8 @@ extern "C" {
  * \brief Upper bound on the planes one decoded picture can be split across.
  *
  * Matches the vendor per-output-channel plane count (luma, chroma, second
- * chroma). Packed RGB output uses exactly one plane; monochrome output uses one;
- * planar YUV uses two or three.
+ * chroma). Packed RGB, packed 4:2:2 and luma-only output use one plane,
+ * semi-planar YUV uses two, planar YUV and planar RGB use three.
  */
 #define VCDJ_MAX_PLANES                 3U
 
@@ -147,22 +147,117 @@ typedef enum
  *  - in \ref vcdj_dec_param_t and \ref vcdj_pp_config_t it is a REQUEST;
  *  - in \ref vcdj_picture_t it is the format that was ACTUALLY produced.
  *
- * The two are not always equal. `PngDecSetInfo()` overrides the request based on
- * the PNG colour type: an indexed or truecolour PNG is emitted as BGR888, or as
- * ABGR8888 when it carries transparency, and a greyscale PNG is forced onto the
- * monochrome path regardless of what was asked for. Always read the format back
- * from the picture; never assume the request was honoured.
+ * The two are not always equal:
+ *  - a colour PNG decoded with a YUV format requested is emitted as BGR888
+ *    (indexed / truecolour) or ABGR8888 (RGBA or tRNS); a greyscale PNG is
+ *    forced onto the luma-only path whatever was asked for. PNG requests are
+ *    passed through unchanged, so a YUV layout the vendor cannot fold into
+ *    that rewrite (planar, packed 4:2:2) is rejected rather than replaced;
+ *  - a greyscale JPEG is forced onto the luma-only path when a YUV format is
+ *    requested;
+ *  - a 12-bit JPEG with an 8-bit YUV format requested comes back as the matching
+ *    *_PACK10 format (4:2:2 / 4:4:4 are rejected instead).
+ * Always read the format back from the picture; never assume the request was
+ * honoured.
+ *
+ * Every value can be requested, but the hardware build decides what succeeds:
+ * the vendor checks the request against the feature table and rejects what the
+ * core cannot do. Formats with a 10/16-bit container need a 12-bit JPEG and
+ * YUV400_ALPHA needs a PNG; both return \ref VCDJ_ERR_UNSUPPORTED otherwise.
+ * Component order follows the vendor `DEC_OUT_FRM_*` names. YVU means Cr before
+ * Cb (YVU420SP is NV21). P010 / I010 / L010 / PACK10 / 1010 are the vendor 10-bit
+ * containers.
  */
 typedef enum
 {
     VCDJ_OUT_RGB565 = 0,           /**< 16 bpp RGB565, little endian */
     VCDJ_OUT_ARGB8888 = 1,         /**< 32 bpp ARGB8888 */
-    VCDJ_OUT_YUV420SP = 2,         /**< Linear YUV420 semi-planar output */
-    VCDJ_OUT_YUV_PLANAR = VCDJ_OUT_YUV420SP, /**< Compatibility alias for the old name */
-    /* --- values below are only ever REPORTED, never requested ------------- */
-    VCDJ_OUT_BGR888 = 3,           /**< 24 bpp BGR888; PNG truecolour / indexed */
-    VCDJ_OUT_ABGR8888 = 4,         /**< 32 bpp ABGR8888; PNG truecolour + alpha */
-    VCDJ_OUT_MONOCHROME = 5,       /**< 8 bpp luma only; PNG greyscale */
+    VCDJ_OUT_YUV420SP = 2,         /**< 8-bit YUV 4:2:0 semi-planar (NV12) */
+    VCDJ_OUT_BGR888 = 3,           /**< 24 bpp BGR888 */
+    VCDJ_OUT_ABGR8888 = 4,         /**< 32 bpp ABGR8888 */
+    VCDJ_OUT_MONOCHROME = 5,       /**< 8 bpp luma only (YUV 4:0:0) */
+    VCDJ_OUT_YUV400_ALPHA = 6,     /**< 16 bpp luma + alpha pairs; PNG only */
+
+    /* --- packed RGB ------------------------------------------------------- */
+    VCDJ_OUT_RGB888 = 7,
+    VCDJ_OUT_BGR565 = 8,
+    VCDJ_OUT_ARGB8565 = 9,         /**< 24 bpp: 8-bit alpha + RGB565 */
+    VCDJ_OUT_XRGB8888 = 10,
+    VCDJ_OUT_XBGR8888 = 11,
+    VCDJ_OUT_RGBA8888 = 12,
+    VCDJ_OUT_BGRA8888 = 13,
+    VCDJ_OUT_A2R10G10B10 = 14,     /**< 10-bit container; 12-bit JPEG only */
+    VCDJ_OUT_A2B10G10R10 = 15,     /**< 10-bit container; 12-bit JPEG only */
+    VCDJ_OUT_X2R10G10B10 = 16,     /**< 10-bit container; 12-bit JPEG only */
+    VCDJ_OUT_X2B10G10R10 = 17,     /**< 10-bit container; 12-bit JPEG only */
+    VCDJ_OUT_R10G10B10A2 = 18,     /**< 10-bit container; 12-bit JPEG only */
+    VCDJ_OUT_B10G10R10A2 = 19,     /**< 10-bit container; 12-bit JPEG only */
+    VCDJ_OUT_R16G16B16 = 20,       /**< 16-bit container; 12-bit JPEG only */
+    VCDJ_OUT_B16G16R16 = 21,       /**< 16-bit container; 12-bit JPEG only */
+
+    /* --- planar RGB: three planes in the order the name lists ------------- */
+    VCDJ_OUT_RGB888_PLANAR = 22,
+    VCDJ_OUT_BGR888_PLANAR = 23,
+    VCDJ_OUT_R16G16B16_PLANAR = 24, /**< 16-bit container; 12-bit JPEG only */
+    VCDJ_OUT_B16G16R16_PLANAR = 25, /**< 16-bit container; 12-bit JPEG only */
+
+    /* --- 8-bit YUV -------------------------------------------------------- */
+    VCDJ_OUT_YVU420SP = 26,        /**< NV21 */
+    VCDJ_OUT_YUV420P = 27,         /**< I420 */
+    VCDJ_OUT_YVU420P = 28,         /**< YV12 */
+    VCDJ_OUT_YUV422SP = 29,
+    VCDJ_OUT_YVU422SP = 30,
+    VCDJ_OUT_YUV422P = 31,
+    VCDJ_OUT_YVU422P = 32,
+    VCDJ_OUT_YUV444P = 33,         /**< 4:4:4 exists only as planar */
+    VCDJ_OUT_YVU444P = 34,
+    VCDJ_OUT_YUYV = 35,            /**< Packed 4:2:2 */
+    VCDJ_OUT_UYVY = 36,
+    VCDJ_OUT_YVYU = 37,
+    VCDJ_OUT_VYUY = 38,
+
+    /* --- 10-bit YUV containers; 12-bit JPEG only --------------------------- */
+    VCDJ_OUT_YUV400_PACK10 = 39,
+    VCDJ_OUT_YUV400_P010 = 40,
+    VCDJ_OUT_YUV400_I010 = 41,
+    VCDJ_OUT_YUV400_L010 = 42,
+    VCDJ_OUT_YUV420SP_PACK10 = 43,
+    VCDJ_OUT_YUV420SP_P010 = 44,
+    VCDJ_OUT_YUV420SP_I010 = 45,
+    VCDJ_OUT_YUV420SP_L010 = 46,
+    VCDJ_OUT_YUV420SP_1010 = 47,
+    VCDJ_OUT_YVU420SP_PACK10 = 48,
+    VCDJ_OUT_YVU420SP_P010 = 49,
+    VCDJ_OUT_YVU420SP_I010 = 50,
+    VCDJ_OUT_YVU420SP_L010 = 51,
+    VCDJ_OUT_YVU420SP_1010 = 52,
+    VCDJ_OUT_YUV420P_PACK10 = 53,
+    VCDJ_OUT_YUV420P_P010 = 54,
+    VCDJ_OUT_YUV420P_I010 = 55,
+    VCDJ_OUT_YUV420P_L010 = 56,
+    VCDJ_OUT_YVU420P_PACK10 = 57,
+    VCDJ_OUT_YVU420P_P010 = 58,
+    VCDJ_OUT_YVU420P_I010 = 59,
+    VCDJ_OUT_YVU420P_L010 = 60,
+    VCDJ_OUT_YUV422SP_P010 = 61,
+    VCDJ_OUT_YUV422SP_I010 = 62,
+    VCDJ_OUT_YUV422SP_L010 = 63,
+    VCDJ_OUT_YVU422SP_P010 = 64,
+    VCDJ_OUT_YVU422SP_I010 = 65,
+    VCDJ_OUT_YVU422SP_L010 = 66,
+    VCDJ_OUT_YUV422P_P010 = 67,
+    VCDJ_OUT_YUV422P_I010 = 68,
+    VCDJ_OUT_YUV422P_L010 = 69,
+    VCDJ_OUT_YVU422P_P010 = 70,
+    VCDJ_OUT_YVU422P_I010 = 71,
+    VCDJ_OUT_YVU422P_L010 = 72,
+    VCDJ_OUT_YUV444P_P010 = 73,
+    VCDJ_OUT_YUV444P_I010 = 74,
+    VCDJ_OUT_YUV444P_L010 = 75,
+    VCDJ_OUT_YVU444P_P010 = 76,
+    VCDJ_OUT_YVU444P_I010 = 77,
+    VCDJ_OUT_YVU444P_L010 = 78,
+
     VCDJ_OUT_UNKNOWN = 0xFF,       /**< Format could not be mapped; treat as an error */
 } vcdj_out_format_t;
 

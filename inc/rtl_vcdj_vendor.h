@@ -29,6 +29,10 @@
 #define USE_FAKE_RFC_TABLE
 #define FAKE_RFC_TBL_LITTLE_ENDIAN
 
+#define SUPPORT_FLEXIBLE_FILTER
+#define SUPPORT_TRNS
+
+
 /*
  * Bring-up self test: fixed ON.
  *
