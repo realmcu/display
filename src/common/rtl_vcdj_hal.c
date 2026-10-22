@@ -407,12 +407,13 @@ enum vcdj_fmt_kind
 #define VCDJ_FMT_1010       0x20U   /**< `out_1010 = 1` */
 #define VCDJ_FMT_HBD        0x40U   /**< needs a JPEG deeper than 8 bits */
 #define VCDJ_FMT_PNG_ONLY   0x80U   /**< only a PNG can produce it */
+#define VCDJ_FMT_ALPHA      0x100U  /**< has an alpha byte for rgb_alpha to fill */
 
 struct vcdj_fmt_desc
 {
     uint8_t  kind;                  /**< \ref vcdj_fmt_kind */
     uint8_t  chroma;                /**< PpUnitConfig.chroma_format (PP_YUV4xx) */
-    uint8_t  flags;                 /**< VCDJ_FMT_* */
+    uint16_t flags;                 /**< VCDJ_FMT_* */
     uint16_t rgb_format;            /**< DEC_OUT_FRM_* request, RGB kinds only */
     uint16_t vendor;                /**< DEC_OUT_FRM_* TransUnitConfig2Format() reports */
 };
@@ -428,6 +429,7 @@ VCDJ_STATIC_ASSERT(DEC_OUT_FRM_HIST <= 0xFFFFU, picture_format_fits_u16);
 #define VCDJ_CRF                    VCDJ_FMT_CR_FIRST
 #define VCDJ_PL                     VCDJ_FMT_PLANAR
 #define VCDJ_HBD                    VCDJ_FMT_HBD
+#define VCDJ_AL                     VCDJ_FMT_ALPHA
 
 /*
  * Indexed by vcdj_out_format_t. The PpUnitConfig fields come from the vendor
@@ -439,10 +441,10 @@ VCDJ_STATIC_ASSERT(DEC_OUT_FRM_HIST <= 0xFFFFU, picture_format_fits_u16);
 static const struct vcdj_fmt_desc vcdj_fmt_table[] =
 {
     [VCDJ_OUT_RGB565]       = VCDJ_RGB(DEC_OUT_FRM_RGB565, DEC_OUT_FRM_RGB565, 0U),
-    [VCDJ_OUT_ARGB8888]     = VCDJ_RGB(DEC_OUT_FRM_ARGB888, DEC_OUT_FRM_ARGB888, 0U),
+    [VCDJ_OUT_ARGB8888]     = VCDJ_RGB(DEC_OUT_FRM_ARGB888, DEC_OUT_FRM_ARGB888, VCDJ_AL),
     [VCDJ_OUT_YUV420SP]     = VCDJ_YUV(PP_YUV420, 0U, DEC_OUT_FRM_YUV420SP),
     [VCDJ_OUT_BGR888]       = VCDJ_RGB(DEC_OUT_FRM_BGR888, DEC_OUT_FRM_BGR888, 0U),
-    [VCDJ_OUT_ABGR8888]     = VCDJ_RGB(DEC_OUT_FRM_ABGR888, DEC_OUT_FRM_ABGR888, 0U),
+    [VCDJ_OUT_ABGR8888]     = VCDJ_RGB(DEC_OUT_FRM_ABGR888, DEC_OUT_FRM_ABGR888, VCDJ_AL),
     [VCDJ_OUT_MONOCHROME]   = VCDJ_LUMA(0U, DEC_OUT_FRM_YUV400),
     /* PngDecSetInfo() turns a plain YUV request into luma + alpha by itself. */
     [VCDJ_OUT_YUV400_ALPHA] = VCDJ_YUV(PP_YUV420, VCDJ_FMT_PNG_ONLY,
@@ -450,17 +452,17 @@ static const struct vcdj_fmt_desc vcdj_fmt_table[] =
 
     [VCDJ_OUT_RGB888]       = VCDJ_RGB(DEC_OUT_FRM_RGB888, DEC_OUT_FRM_RGB888, 0U),
     [VCDJ_OUT_BGR565]       = VCDJ_RGB(DEC_OUT_FRM_BGR565, DEC_OUT_FRM_BGR565, 0U),
-    [VCDJ_OUT_ARGB8565]     = VCDJ_RGB(DEC_OUT_FRM_ARGB8565, DEC_OUT_FRM_ARGB8565, 0U),
+    [VCDJ_OUT_ARGB8565]     = VCDJ_RGB(DEC_OUT_FRM_ARGB8565, DEC_OUT_FRM_ARGB8565, VCDJ_AL),
     [VCDJ_OUT_XRGB8888]     = VCDJ_RGB(DEC_OUT_FRM_XRGB888, DEC_OUT_FRM_XRGB888, 0U),
     [VCDJ_OUT_XBGR8888]     = VCDJ_RGB(DEC_OUT_FRM_XBGR888, DEC_OUT_FRM_XBGR888, 0U),
-    [VCDJ_OUT_RGBA8888]     = VCDJ_RGB(DEC_OUT_FRM_RGBA888, DEC_OUT_FRM_RGBA888, 0U),
-    [VCDJ_OUT_BGRA8888]     = VCDJ_RGB(DEC_OUT_FRM_BGRA888, DEC_OUT_FRM_BGRA888, 0U),
-    [VCDJ_OUT_A2R10G10B10]  = VCDJ_RGB(DEC_OUT_FRM_A2R10G10B10, DEC_OUT_FRM_A2R10G10B10, VCDJ_HBD),
-    [VCDJ_OUT_A2B10G10R10]  = VCDJ_RGB(DEC_OUT_FRM_A2B10G10R10, DEC_OUT_FRM_A2B10G10R10, VCDJ_HBD),
+    [VCDJ_OUT_RGBA8888]     = VCDJ_RGB(DEC_OUT_FRM_RGBA888, DEC_OUT_FRM_RGBA888, VCDJ_AL),
+    [VCDJ_OUT_BGRA8888]     = VCDJ_RGB(DEC_OUT_FRM_BGRA888, DEC_OUT_FRM_BGRA888, VCDJ_AL),
+    [VCDJ_OUT_A2R10G10B10]  = VCDJ_RGB(DEC_OUT_FRM_A2R10G10B10, DEC_OUT_FRM_A2R10G10B10, VCDJ_HBD | VCDJ_AL),
+    [VCDJ_OUT_A2B10G10R10]  = VCDJ_RGB(DEC_OUT_FRM_A2B10G10R10, DEC_OUT_FRM_A2B10G10R10, VCDJ_HBD | VCDJ_AL),
     [VCDJ_OUT_X2R10G10B10]  = VCDJ_RGB(DEC_OUT_FRM_X2R10G10B10, DEC_OUT_FRM_X2R10G10B10, VCDJ_HBD),
     [VCDJ_OUT_X2B10G10R10]  = VCDJ_RGB(DEC_OUT_FRM_X2B10G10R10, DEC_OUT_FRM_X2B10G10R10, VCDJ_HBD),
-    [VCDJ_OUT_R10G10B10A2]  = VCDJ_RGB(DEC_OUT_FRM_R10G10B10A2, DEC_OUT_FRM_R10G10B10A2, VCDJ_HBD),
-    [VCDJ_OUT_B10G10R10A2]  = VCDJ_RGB(DEC_OUT_FRM_B10G10R10A2, DEC_OUT_FRM_B10G10R10A2, VCDJ_HBD),
+    [VCDJ_OUT_R10G10B10A2]  = VCDJ_RGB(DEC_OUT_FRM_R10G10B10A2, DEC_OUT_FRM_R10G10B10A2, VCDJ_HBD | VCDJ_AL),
+    [VCDJ_OUT_B10G10R10A2]  = VCDJ_RGB(DEC_OUT_FRM_B10G10R10A2, DEC_OUT_FRM_B10G10R10A2, VCDJ_HBD | VCDJ_AL),
     [VCDJ_OUT_R16G16B16]    = VCDJ_RGB(DEC_OUT_FRM_R16G16B16, DEC_OUT_FRM_R16G16B16, VCDJ_HBD),
     [VCDJ_OUT_B16G16R16]    = VCDJ_RGB(DEC_OUT_FRM_B16G16R16, DEC_OUT_FRM_B16G16R16, VCDJ_HBD),
 
@@ -582,6 +584,49 @@ static int vcdj_pp_filter_supported(vcdj_pp_filter_t filter)
             (filter == VCDJ_PP_FILTER_AREA)) ? 1 : 0;
 }
 
+static int vcdj_csc_supported(vcdj_csc_t csc)
+{
+    return ((uint32_t)csc <= (uint32_t)VCDJ_CSC_BT2020_L) ? 1 : 0;
+}
+
+/**
+ * Whether the format carries an alpha byte for PpUnitConfig.rgb_alpha to fill.
+ *
+ * Not every 32 bpp RGB format does: XRGB8888 and XBGR8888 spend the fourth byte
+ * on padding. Those two are absent on purpose - nobody has looked at the
+ * hardware's fourth byte yet, and guessing would either reject a working format
+ * or accept a silent no-op.
+ */
+static int vcdj_out_format_has_alpha(vcdj_out_format_t out_format)
+{
+    const struct vcdj_fmt_desc *fmt = vcdj_fmt_lookup(out_format);
+
+    return ((fmt != NULL) && ((fmt->flags & VCDJ_FMT_ALPHA) != 0U)) ? 1 : 0;
+}
+
+/** RGB kinds are the only ones the vendor lets rgb_alpha and rgb_stan reach. */
+static int vcdj_out_format_is_rgb(vcdj_out_format_t out_format)
+{
+    const struct vcdj_fmt_desc *fmt = vcdj_fmt_lookup(out_format);
+
+    return ((fmt != NULL) &&
+            ((fmt->kind == VCDJ_KIND_RGB) ||
+             (fmt->kind == VCDJ_KIND_RGB_PLANAR))) ? 1 : 0;
+}
+
+/**
+ * Map the public CSC value onto the vendor pair.
+ *
+ * rgb_stan and video_range must agree: the vendor rewrites rgb_stan from
+ * video_range when the two disagree, so setting only rgb_stan would silently
+ * land on the _L variant. The low bit of rgb_stan selects limited range.
+ */
+static void vcdj_csc_to_vendor(vcdj_csc_t csc, u32 *rgb_stan, u32 *video_range)
+{
+    *rgb_stan = (u32)csc;
+    *video_range = (((u32)csc & 1U) != 0U) ? 0U : 1U;
+}
+
 static vcdj_error_t vcdj_validate_pp(const vcdj_pp_config_t *pp,
                                      uint32_t input_width,
                                      uint32_t input_height)
@@ -596,9 +641,16 @@ static vcdj_error_t vcdj_validate_pp(const vcdj_pp_config_t *pp,
 
     if ((pp == NULL) || (input_width == 0U) || (input_height == 0U) ||
         !vcdj_out_format_supported(pp->output_format) ||
-        !vcdj_pp_filter_supported(pp->filter) ||
-        (pp->crop_enabled > 1U) || (pp->scale_enabled > 1U) ||
-        (pp->reserved0 != 0U))
+        !vcdj_pp_filter_supported(pp->filter) || !vcdj_csc_supported(pp->csc) ||
+        (pp->crop_enabled > 1U) || (pp->scale_enabled > 1U))
+    {
+        return VCDJ_ERR_PARAM;
+    }
+
+    /* The vendor drops an alpha value it cannot use instead of failing, so the
+     * caller would get an opaque format and no diagnostic. */
+    if ((!vcdj_out_format_is_rgb(pp->output_format) ||
+         !vcdj_out_format_has_alpha(pp->output_format)) && (pp->alpha != 0U))
     {
         return VCDJ_ERR_PARAM;
     }
@@ -834,15 +886,25 @@ static void vcdj_setup_ppu(PpUnitConfig *ppu, const vcdj_pp_config_t *config)
     switch (fmt->kind)
     {
     case VCDJ_KIND_RGB:
+    case VCDJ_KIND_RGB_PLANAR:
         /* The decoder core emits YUV; the RGB colour space conversion lives in
          * the vendor post processing unit (ppu.c), which is why ppu.c is not an
-         * optional part of the compiled subset. */
-        ppu[0].rgb = 1U;
+         * optional part of the compiled subset.
+         *
+         * CSC and alpha belong here rather than above the switch: the vendor
+         * only carries them into the pipeline for an RGB output, so setting
+         * them on a YUV request would look applied without being applied. */
+        if (fmt->kind == VCDJ_KIND_RGB)
+        {
+            ppu[0].rgb = 1U;
+        }
+        else
+        {
+            ppu[0].rgb_planar = 1U;
+        }
         ppu[0].rgb_format = fmt->rgb_format;
-        break;
-    case VCDJ_KIND_RGB_PLANAR:
-        ppu[0].rgb_planar = 1U;
-        ppu[0].rgb_format = fmt->rgb_format;
+        ppu[0].rgb_alpha = config->alpha;
+        vcdj_csc_to_vendor(config->csc, &ppu[0].rgb_stan, &ppu[0].video_range);
         break;
     case VCDJ_KIND_LUMA:
         /*

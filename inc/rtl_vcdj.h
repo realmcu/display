@@ -281,6 +281,21 @@ typedef struct
 } vcdj_rect_t;
 
 /**
+ * \brief YUV to RGB conversion for an RGB output; a YUV output ignores it.
+ *
+ * The stream carries no reliable indication, so the caller states matrix and range together.
+ */
+typedef enum
+{
+    VCDJ_CSC_BT601 = 0,            /**< BT.601, full range both sides */
+    VCDJ_CSC_BT601_L,              /**< BT.601, limited range both sides */
+    VCDJ_CSC_BT709,                /**< BT.709, full range both sides */
+    VCDJ_CSC_BT709_L,              /**< BT.709, limited range both sides */
+    VCDJ_CSC_BT2020,               /**< BT.2020, full range both sides */
+    VCDJ_CSC_BT2020_L,             /**< BT.2020, limited range both sides */
+} vcdj_csc_t;
+
+/**
  * \brief Single-output PPU request.
  *
  * Cropping runs before scaling, and the scale target is relative to the cropped
@@ -289,16 +304,17 @@ typedef struct
  */
 typedef struct
 {
-    uint8_t crop_enabled;          /**< 1 uses \ref crop; 0 selects the whole picture */
-    uint8_t scale_enabled;         /**< 1 scales to output_width/height; 0 keeps 1:1 */
-    vcdj_pp_filter_t filter;       /**< Scaling filter; must be DEFAULT when scale is disabled */
-    uint8_t reserved0;             /**< Must be zero */
+    uint8_t crop_enabled;            /**< 1 uses \ref crop; 0 selects the whole picture */
+    uint8_t scale_enabled;           /**< 1 scales to output_width/height; 0 keeps 1:1 */
+    vcdj_pp_filter_t filter;         /**< Scaling filter; must be DEFAULT when scale is disabled */
+    vcdj_csc_t csc;                  /**< RGB output only; see \ref vcdj_csc_t */
 
-    vcdj_rect_t crop;              /**< Pre-scale crop; must be all zero when disabled */
-    uint32_t output_width;         /**< Scale target width; must be zero when disabled */
-    uint32_t output_height;        /**< Scale target height; must be zero when disabled */
+    vcdj_rect_t crop;                /**< Pre-scale crop; must be all zero when disabled */
+    uint32_t output_width;           /**< Scale target width; must be zero when disabled */
+    uint32_t output_height;          /**< Scale target height; must be zero when disabled */
     vcdj_out_format_t output_format; /**< Requested format; see picture for actual format */
-    uint8_t reserved[3];           /**< Must be zero */
+    uint8_t alpha;                   /**< Constant alpha: 0 transparent, 255 opaque */
+    uint8_t reserved[2];             /**< Must be zero */
 } vcdj_pp_config_t;
 
 /** \brief Colour model of the coded picture, independent of the output format. */
