@@ -441,22 +441,16 @@ VCDJ_STATIC_ASSERT(DEC_OUT_FRM_HIST <= 0xFFFFU, picture_format_fits_u16);
 static const struct vcdj_fmt_desc vcdj_fmt_table[] =
 {
     [VCDJ_OUT_RGB565]       = VCDJ_RGB(DEC_OUT_FRM_RGB565, DEC_OUT_FRM_RGB565, 0U),
-    [VCDJ_OUT_ARGB8888]     = VCDJ_RGB(DEC_OUT_FRM_ARGB888, DEC_OUT_FRM_ARGB888, VCDJ_AL),
-    [VCDJ_OUT_YUV420SP]     = VCDJ_YUV(PP_YUV420, 0U, DEC_OUT_FRM_YUV420SP),
-    [VCDJ_OUT_BGR888]       = VCDJ_RGB(DEC_OUT_FRM_BGR888, DEC_OUT_FRM_BGR888, 0U),
-    [VCDJ_OUT_ABGR8888]     = VCDJ_RGB(DEC_OUT_FRM_ABGR888, DEC_OUT_FRM_ABGR888, VCDJ_AL),
-    [VCDJ_OUT_MONOCHROME]   = VCDJ_LUMA(0U, DEC_OUT_FRM_YUV400),
-    /* PngDecSetInfo() turns a plain YUV request into luma + alpha by itself. */
-    [VCDJ_OUT_YUV400_ALPHA] = VCDJ_YUV(PP_YUV420, VCDJ_FMT_PNG_ONLY,
-                                       DEC_OUT_FRM_YUV400_WITH_ALPHA),
-
-    [VCDJ_OUT_RGB888]       = VCDJ_RGB(DEC_OUT_FRM_RGB888, DEC_OUT_FRM_RGB888, 0U),
     [VCDJ_OUT_BGR565]       = VCDJ_RGB(DEC_OUT_FRM_BGR565, DEC_OUT_FRM_BGR565, 0U),
-    [VCDJ_OUT_ARGB8565]     = VCDJ_RGB(DEC_OUT_FRM_ARGB8565, DEC_OUT_FRM_ARGB8565, VCDJ_AL),
-    [VCDJ_OUT_XRGB8888]     = VCDJ_RGB(DEC_OUT_FRM_XRGB888, DEC_OUT_FRM_XRGB888, 0U),
-    [VCDJ_OUT_XBGR8888]     = VCDJ_RGB(DEC_OUT_FRM_XBGR888, DEC_OUT_FRM_XBGR888, 0U),
+    [VCDJ_OUT_RGB888]       = VCDJ_RGB(DEC_OUT_FRM_RGB888, DEC_OUT_FRM_RGB888, 0U),
+    [VCDJ_OUT_BGR888]       = VCDJ_RGB(DEC_OUT_FRM_BGR888, DEC_OUT_FRM_BGR888, 0U),
+    [VCDJ_OUT_ARGB8888]     = VCDJ_RGB(DEC_OUT_FRM_ARGB888, DEC_OUT_FRM_ARGB888, VCDJ_AL),
+    [VCDJ_OUT_ABGR8888]     = VCDJ_RGB(DEC_OUT_FRM_ABGR888, DEC_OUT_FRM_ABGR888, VCDJ_AL),
     [VCDJ_OUT_RGBA8888]     = VCDJ_RGB(DEC_OUT_FRM_RGBA888, DEC_OUT_FRM_RGBA888, VCDJ_AL),
     [VCDJ_OUT_BGRA8888]     = VCDJ_RGB(DEC_OUT_FRM_BGRA888, DEC_OUT_FRM_BGRA888, VCDJ_AL),
+    [VCDJ_OUT_XRGB8888]     = VCDJ_RGB(DEC_OUT_FRM_XRGB888, DEC_OUT_FRM_XRGB888, 0U),
+    [VCDJ_OUT_XBGR8888]     = VCDJ_RGB(DEC_OUT_FRM_XBGR888, DEC_OUT_FRM_XBGR888, 0U),
+
     [VCDJ_OUT_A2R10G10B10]  = VCDJ_RGB(DEC_OUT_FRM_A2R10G10B10, DEC_OUT_FRM_A2R10G10B10, VCDJ_HBD | VCDJ_AL),
     [VCDJ_OUT_A2B10G10R10]  = VCDJ_RGB(DEC_OUT_FRM_A2B10G10R10, DEC_OUT_FRM_A2B10G10R10, VCDJ_HBD | VCDJ_AL),
     [VCDJ_OUT_X2R10G10B10]  = VCDJ_RGB(DEC_OUT_FRM_X2R10G10B10, DEC_OUT_FRM_X2R10G10B10, VCDJ_HBD),
@@ -471,6 +465,11 @@ static const struct vcdj_fmt_desc vcdj_fmt_table[] =
     [VCDJ_OUT_R16G16B16_PLANAR] = VCDJ_RGBP(DEC_OUT_FRM_R16G16B16, DEC_OUT_FRM_R16G16B16_P, VCDJ_HBD),
     [VCDJ_OUT_B16G16R16_PLANAR] = VCDJ_RGBP(DEC_OUT_FRM_B16G16R16, DEC_OUT_FRM_B16G16R16_P, VCDJ_HBD),
 
+    [VCDJ_OUT_MONOCHROME]   = VCDJ_LUMA(0U, DEC_OUT_FRM_YUV400),
+    /* PngDecSetInfo() turns a plain YUV request into luma + alpha by itself. */
+    [VCDJ_OUT_YUV400_ALPHA] = VCDJ_YUV(PP_YUV420, VCDJ_FMT_PNG_ONLY,
+                                       DEC_OUT_FRM_YUV400_WITH_ALPHA),
+    [VCDJ_OUT_YUV420SP]     = VCDJ_YUV(PP_YUV420, 0U, DEC_OUT_FRM_YUV420SP),
     [VCDJ_OUT_YVU420SP]     = VCDJ_YUV(PP_YUV420, VCDJ_CRF, DEC_OUT_FRM_NV21SP),
     [VCDJ_OUT_YUV420P]      = VCDJ_YUV(PP_YUV420, VCDJ_PL, DEC_OUT_FRM_YUV420P),
     [VCDJ_OUT_YVU420P]      = VCDJ_YUV(PP_YUV420, VCDJ_PL | VCDJ_CRF, DEC_OUT_FRM_NV21P),
@@ -480,6 +479,7 @@ static const struct vcdj_fmt_desc vcdj_fmt_table[] =
     [VCDJ_OUT_YVU422P]      = VCDJ_YUV(PP_YUV422, VCDJ_PL | VCDJ_CRF, DEC_OUT_FRM_422_NV21P),
     [VCDJ_OUT_YUV444P]      = VCDJ_YUV(PP_YUV444, VCDJ_PL, DEC_OUT_FRM_YUV444P),
     [VCDJ_OUT_YVU444P]      = VCDJ_YUV(PP_YUV444, VCDJ_PL | VCDJ_CRF, DEC_OUT_FRM_444_NV21P),
+
     /* The vendor reports the swapped packed orders under the unswapped name. */
     [VCDJ_OUT_YUYV]         = VCDJ_PACK(VCDJ_KIND_YUYV, 0U, DEC_OUT_FRM_YUV422_YUYV),
     [VCDJ_OUT_UYVY]         = VCDJ_PACK(VCDJ_KIND_UYVY, 0U, DEC_OUT_FRM_YUV422_UYVY),
@@ -1644,6 +1644,18 @@ static vcdj_error_t vcdj_png_image_info(const vcdj_dec_param_t *param,
     enum DecRet ret;
     vcdj_error_t err;
 
+    /* Ours to check: the vendor parser starts at byte 8 without reading the
+     * signature, and a shorter stream makes `size - 8U` underflow uint32 into a
+     * ~4 GB read length. */
+    if (param->size < 8U)
+    {
+        return VCDJ_ERR_PARAM;
+    }
+    if (memcmp(param->data, "\x89PNG\r\n\x1a\n", 8U) != 0)
+    {
+        return VCDJ_ERR_STREAM;
+    }
+
     work = vcdj_mem_alloc(sizeof(*work));
     if (work == NULL)
     {
@@ -1722,6 +1734,16 @@ static vcdj_error_t vcdj_png_decode(const vcdj_dec_param_t *param,
     struct vcdj_buffer_layout layout;
 
     memset(&layout, 0, sizeof(layout));
+
+    /* Same check as vcdj_png_image_info(): see there for why. */
+    if (param->size < 8U)
+    {
+        return VCDJ_ERR_PARAM;
+    }
+    if (memcmp(param->data, "\x89PNG\r\n\x1a\n", 8U) != 0)
+    {
+        return VCDJ_ERR_STREAM;
+    }
 
     work = vcdj_mem_alloc(sizeof(*work));
     if (work == NULL)

@@ -2641,13 +2641,12 @@ u32 CheckPpUnitConfig(const struct DecHwFeatures *hw_feature,
       APITRACEERR("CheckPpUnitConfig# Illegal param[PP %u]: When 10bit stream outputs in tile mode TILED8x8, must open P010, not support I010/L010.\n", i);
       return 1;
     }
-    //PP can support 420 to 422 upsample
-    #if 0
+    /* Realtek: enabled, the release ships it as #if 0. 0x2070 RTL has no
+     * 420 -> 422 up-conversion; unchecked, the core writes half the chroma. */
     if (in_chroma_format == PP_CHROMA_420 && ppu_cfg->chroma_format == PP_CHROMA_422 && hw_feature->pp_420to422_support[i] != 1) {
       APITRACEERR("CheckPpUnitConfig# Illegal param[PP %u]: PP don't support 420 to 422.\n", i);
       return 1;
     }
-    #endif
 
     if(ppu_cfg->tile_mode == TILED2x4 && !(ppu_cfg->out_yuyv || ppu_cfg->out_uyvy)) {
       APITRACEERR("CheckPpUnitConfig# Illegal param[PP %u]: only YUYV and UYVY support TILE2x4 output format.\n", i);
