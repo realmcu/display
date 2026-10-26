@@ -227,11 +227,6 @@ vcdj_error_t hal_vcdj_selftest(const void *jpeg, uint32_t jpeg_size)
                (unsigned long)plat->reg_base, (unsigned)plat->core_offset,
                (unsigned)plat->reg_window_size, (unsigned)plat->core_count,
                (unsigned)plat->hw_timeout_ms);
-    if (plat->reg_base == 0UL)
-    {
-        vcdj_plat_log("[vcdj]           NOTE: register base is a placeholder "
-                   "(hardware contract missing) - register access is inert\n");
-    }
 
     /* ---- step 2: DWL instance ---------------------------------------- */
     err = hal_vcdj_init();
@@ -244,12 +239,21 @@ vcdj_error_t hal_vcdj_selftest(const void *jpeg, uint32_t jpeg_size)
     vcdj_plat_log("[vcdj] step 2 OK  : DWLInit, instance=%p\n", dwl);
 
     /* ---- step 3: hardware identification ----------------------------- */
+    /* Reported only: a wrong ID still has to decode, and the vendor feature
+     * lookup already decides what this core can do. */
     {
         uint32_t build_id = 0U;
-        (void)hal_vcdj_get_hw_build_id(&build_id);
-        vcdj_plat_log("[vcdj] step 3 OK  : hw build id = 0x%04x (expected 0x%04x)%s\n",
-                   (unsigned)build_id, (unsigned)VCDJ_EXPECTED_HW_BUILD_ID,
-                   (plat->reg_base == 0UL) ? "  [assumed, not read from silicon]" : "");
+
+        err = hal_vcdj_get_hw_build_id(&build_id);
+        if (err != VCDJ_SUCCESS)
+        {
+            vcdj_plat_log("[vcdj] step 3 WARN: hw build id unavailable -> %d\n", (int)err);
+        }
+        else
+        {
+            vcdj_plat_log("[vcdj] step 3 OK  : hw build id = 0x%08x (expected low half 0x%04x)\n",
+                       (unsigned)build_id, (unsigned)VCDJ_EXPECTED_HW_BUILD_ID);
+        }
     }
 
     /* ---- step 4: JpegDecInit ----------------------------------------- */
@@ -367,17 +371,9 @@ vcdj_error_t hal_vcdj_selftest(const void *jpeg, uint32_t jpeg_size)
     }
     memset(dec_out, 0, sizeof(*dec_out));
 
-    /* ---- step 9: hardware decode, expected to time out --------------- */
-    if (plat->reg_base == 0UL)
-    {
-        vcdj_plat_log("[vcdj] step 9 ... : JpegDecDecode - hardware is not mapped; "
-                   "an immediate timeout is expected\n");
-    }
-    else
-    {
-        vcdj_plat_log("[vcdj] step 9 ... : JpegDecDecode - a %ums bounded wait is expected\n",
-                   (unsigned)plat->hw_timeout_ms);
-    }
+    /* ---- step 9: first hardware decode -------------------------------- */
+    vcdj_plat_log("[vcdj] step 9 ... : JpegDecDecode - a %ums bounded wait is expected\n",
+               (unsigned)plat->hw_timeout_ms);
 
     ret = (enum DecRet)vcdj_internal_jpeg_decode(inst, &work->dec_in, dec_out);
 

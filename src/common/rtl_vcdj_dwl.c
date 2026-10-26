@@ -712,23 +712,12 @@ u32 DWLReadCoreHwBuildID(const void *instance, u32 core_id)
 
     id = vcdj_core_read_reg((i32)core_id, VCDJ_REG_HW_BUILD_ID_OFFSET);
 
-    if ((id == 0U) || (id == 0xFFFFFFFFU))
-    {
         /*
-         * No core is mapped: VCDJ_SOC_REG_BASE (see
-         * src/device/<soc>/rtl_vcdj_soc_cfg.h) is still a placeholder because the
-         * hardware contract has not been delivered. Report the build ID this
-         * Control Software drop was released for so the software layers can still
-         * be exercised.
-         *
-         * This is a declared build-time assumption, not a hardware reading. It
-         * must be removed as soon as the real register base is known, and the
-         * M2 smoke test must then assert that the register really returns
-         * VCDJ_EXPECTED_HW_BUILD_ID.
+     * Never substitute a default here. The vendor feature lookup below masks
+     * this value, so a fabricated ID would silently select a feature profile
+     * the silicon was not measured against; an unmapped or dead core has to
+     * reach the caller as 0 / all ones instead.
          */
-        id = VCDJ_EXPECTED_HW_BUILD_ID;
-    }
-
     return id;
 }
 

@@ -75,7 +75,8 @@ extern "C" {
  * Taken from the vendor release name
  * (`Hantro_SW_DecoderJ_CtrlSW_Redistributable_0x2070_v4.1.84_CL1411136.tgz`) and
  * present in the vendor feature table `vpu_features_list.h` as `.id = 0x00002070`.
- * It is a software-side expectation, not a value read from silicon.
+ * Compare it against the low half of the value read at runtime; it is never
+ * substituted for a missing reading.
  */
 #define VCDJ_EXPECTED_HW_BUILD_ID       0x2070U
 
@@ -486,9 +487,8 @@ void hal_vcdj_deinit(void);
  *
  * @return     \ref VCDJ_SUCCESS on success, otherwise a \ref vcdj_error_t.
  *
- * @note       Expected to read `0x2070` on the target IP revision. Until the
- *             register base is known, this reads a placeholder address and
- *             the value is meaningless.
+ * @note       Returns the raw register value. `0x80002070` has been read on the
+ *             BBpro4 FPGA bench; only the low half carries the build ID.
  */
 vcdj_error_t hal_vcdj_get_hw_build_id(uint32_t *build_id);
 

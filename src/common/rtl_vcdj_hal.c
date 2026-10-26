@@ -1257,10 +1257,9 @@ static void vcdj_fill_planes(const struct DWLLinearMem *luma,
      * Make the pixels visible to the CPU before the caller reads them: the core
      * wrote them behind our back through its own bus master.
      *
-     * TODO(hardware-contract): vcdj_core_cache_invalidate() is still only a
-     * barrier because the memory attributes and the maintenance granularity are
-     * unknown (A4). The call is placed correctly, so when A4 lands the range
-     * operation drops in here without restructuring anything.
+     * TODO(hardware-contract): the platform cache_invalidate is only a barrier
+     * until the memory attributes and maintenance granularity are known. The
+     * call site stays, so the range operation drops in here without rework.
      */
     for (i = 0U; i < pic->plane_count; i++)
     {
