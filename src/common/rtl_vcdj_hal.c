@@ -958,12 +958,25 @@ static vcdj_error_t vcdj_prepare_input(const void *dwl, const vcdj_dec_param_t *
     return VCDJ_SUCCESS;
 }
 
+/*
+ * The PNG vendor path returns the core wait status as an IRQ mask, so a
+ * timeout (0xFF) carries DEC_HW_IRQ_RDY and looks like a finished picture.
+ * Do not reduce this to a plain passthrough.
+ */
 static enum DecRet vcdj_decode(
     void *inst,
     enum DecRet(*decode)(void *, void *, void *),
     void *input, void *output)
 {
-    return decode(inst, input, output);
+    uint32_t failures = vcdj_core_wait_failures();
+    enum DecRet ret = decode(inst, input, output);
+
+    if (vcdj_core_wait_failures() != failures)
+    {
+        return DEC_HW_TIMEOUT;
+    }
+
+    return ret;
 }
 
 static enum DecRet vcdj_get_buffer_info(

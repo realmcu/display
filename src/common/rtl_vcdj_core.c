@@ -80,6 +80,7 @@
 static const struct vcdj_platform_config *vcdj_cfg;
 static uint8_t vcdj_core_up;
 static uint8_t vcdj_core_busy;
+static uint32_t vcdj_wait_failures;
 
 /*
  * Allocator injection.
@@ -379,7 +380,7 @@ void vcdj_core_disable(int core_id, uint32_t offset, uint32_t value)
     vcdj_core_write_reg(core_id, offset, value);
 }
 
-int vcdj_core_wait_done(int core_id, uint32_t timeout_ms)
+static int vcdj_core_wait(int core_id, uint32_t timeout_ms)
 {
     uint32_t bound;
     uint32_t start;
@@ -449,6 +450,23 @@ int vcdj_core_wait_done(int core_id, uint32_t timeout_ms)
 
         vcdj_cfg->ops->delay_us(vcdj_cfg->ctx, VCDJ_POLL_INTERVAL_US);
     }
+}
+
+int vcdj_core_wait_done(int core_id, uint32_t timeout_ms)
+{
+    int ret = vcdj_core_wait(core_id, timeout_ms);
+
+    if (ret != VCDJ_CORE_WAIT_OK)
+    {
+        vcdj_wait_failures++;
+    }
+
+    return ret;
+}
+
+uint32_t vcdj_core_wait_failures(void)
+{
+    return vcdj_wait_failures;
 }
 
 /*============================================================================*

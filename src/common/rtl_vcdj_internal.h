@@ -257,6 +257,15 @@ void vcdj_core_disable(int core_id, uint32_t offset, uint32_t value);
  */
 int vcdj_core_wait_done(int core_id, uint32_t timeout_ms);
 
+/**
+ * \brief Number of \ref vcdj_core_wait_done calls that did not end in
+ *        completion since \ref vcdj_core_init; wraps.
+ *
+ * Lets the caller see a timeout the vendor code swallowed (see
+ * vcdj_decode() in rtl_vcdj_hal.c).
+ */
+uint32_t vcdj_core_wait_failures(void);
+
 /** \brief Flush CPU writes so the core sees the buffer contents. */
 void vcdj_core_cache_clean(void *addr, size_t size);
 
