@@ -392,7 +392,6 @@ enum vcdj_fmt_kind
 {
     VCDJ_KIND_NONE = 0,             /**< Hole in the table: not a public format */
     VCDJ_KIND_RGB,                  /**< `rgb = 1`, `rgb_format` */
-    VCDJ_KIND_RGB_PLANAR,           /**< `rgb_planar = 1`, `rgb_format` */
     VCDJ_KIND_YUV,                  /**< semi-planar or planar YUV */
     VCDJ_KIND_LUMA,                 /**< `monochrome = 1` */
     VCDJ_KIND_YUYV,                 /**< `out_yuyv = 1` */
@@ -421,7 +420,6 @@ struct vcdj_fmt_desc
 VCDJ_STATIC_ASSERT(DEC_OUT_FRM_HIST <= 0xFFFFU, picture_format_fits_u16);
 
 #define VCDJ_RGB(req, rep, fl)      { VCDJ_KIND_RGB, PP_YUV420, (fl), (req), (rep) }
-#define VCDJ_RGBP(req, rep, fl)     { VCDJ_KIND_RGB_PLANAR, PP_YUV420, (fl), (req), (rep) }
 #define VCDJ_YUV(ch, fl, rep)       { VCDJ_KIND_YUV, (ch), (fl), 0U, (rep) }
 #define VCDJ_LUMA(fl, rep)          { VCDJ_KIND_LUMA, PP_YUV420, (fl), 0U, (rep) }
 #define VCDJ_PACK(k, fl, rep)       { (k), PP_YUV422, (fl), 0U, (rep) }
@@ -459,11 +457,6 @@ static const struct vcdj_fmt_desc vcdj_fmt_table[] =
     [VCDJ_OUT_B10G10R10A2]  = VCDJ_RGB(DEC_OUT_FRM_B10G10R10A2, DEC_OUT_FRM_B10G10R10A2, VCDJ_HBD | VCDJ_AL),
     [VCDJ_OUT_R16G16B16]    = VCDJ_RGB(DEC_OUT_FRM_R16G16B16, DEC_OUT_FRM_R16G16B16, VCDJ_HBD),
     [VCDJ_OUT_B16G16R16]    = VCDJ_RGB(DEC_OUT_FRM_B16G16R16, DEC_OUT_FRM_B16G16R16, VCDJ_HBD),
-
-    [VCDJ_OUT_RGB888_PLANAR]    = VCDJ_RGBP(DEC_OUT_FRM_RGB888, DEC_OUT_FRM_RGB888_P, 0U),
-    [VCDJ_OUT_BGR888_PLANAR]    = VCDJ_RGBP(DEC_OUT_FRM_BGR888, DEC_OUT_FRM_BGR888_P, 0U),
-    [VCDJ_OUT_R16G16B16_PLANAR] = VCDJ_RGBP(DEC_OUT_FRM_R16G16B16, DEC_OUT_FRM_R16G16B16_P, VCDJ_HBD),
-    [VCDJ_OUT_B16G16R16_PLANAR] = VCDJ_RGBP(DEC_OUT_FRM_B16G16R16, DEC_OUT_FRM_B16G16R16_P, VCDJ_HBD),
 
     [VCDJ_OUT_MONOCHROME]   = VCDJ_LUMA(0U, DEC_OUT_FRM_YUV400),
     /* PngDecSetInfo() turns a plain YUV request into luma + alpha by itself. */
@@ -609,9 +602,7 @@ static int vcdj_out_format_is_rgb(vcdj_out_format_t out_format)
 {
     const struct vcdj_fmt_desc *fmt = vcdj_fmt_lookup(out_format);
 
-    return ((fmt != NULL) &&
-            ((fmt->kind == VCDJ_KIND_RGB) ||
-             (fmt->kind == VCDJ_KIND_RGB_PLANAR))) ? 1 : 0;
+    return ((fmt != NULL) && (fmt->kind == VCDJ_KIND_RGB)) ? 1 : 0;
 }
 
 /**
@@ -886,7 +877,6 @@ static void vcdj_setup_ppu(PpUnitConfig *ppu, const vcdj_pp_config_t *config)
     switch (fmt->kind)
     {
     case VCDJ_KIND_RGB:
-    case VCDJ_KIND_RGB_PLANAR:
         /* The decoder core emits YUV; the RGB colour space conversion lives in
          * the vendor post processing unit (ppu.c), which is why ppu.c is not an
          * optional part of the compiled subset.
@@ -894,14 +884,7 @@ static void vcdj_setup_ppu(PpUnitConfig *ppu, const vcdj_pp_config_t *config)
          * CSC and alpha belong here rather than above the switch: the vendor
          * only carries them into the pipeline for an RGB output, so setting
          * them on a YUV request would look applied without being applied. */
-        if (fmt->kind == VCDJ_KIND_RGB)
-        {
-            ppu[0].rgb = 1U;
-        }
-        else
-        {
-            ppu[0].rgb_planar = 1U;
-        }
+        ppu[0].rgb = 1U;
         ppu[0].rgb_format = fmt->rgb_format;
         ppu[0].rgb_alpha = config->alpha;
         vcdj_csc_to_vendor(config->csc, &ppu[0].rgb_stan, &ppu[0].video_range);
@@ -1162,40 +1145,24 @@ static int vcdj_add_external_buffers(const void *dwl, void *inst,
  * \brief Expose the planes the vendor does not hand out separately.
  *
  * With `use_separated_pp == 0` SwSetPpOutAddr() reports at most two addresses,
- * while the core writes three planes back to back (ppu.c SetPpuRegs):
- *  - planar YUV: the second chroma plane starts right after the first, and the
- *    negotiation already reports its size in `plane_size[2]`;
- *  - planar RGB: all three planes are counted as one, each a third of it.
+ * while the core writes three planes back to back (ppu.c SetPpuRegs): the
+ * second chroma plane starts right after the first, and the negotiation
+ * already reports its size in `plane_size[2]`.
  */
 static void vcdj_split_planar(const struct vcdj_buffer_layout *layout,
                               vcdj_picture_t *pic)
 {
     const struct vcdj_fmt_desc *fmt = vcdj_fmt_lookup(pic->format);
     vcdj_plane_t *p = pic->planes;
-    unsigned int i;
 
     if (fmt == NULL)
     {
         return;
     }
 
-    if ((fmt->kind == VCDJ_KIND_RGB_PLANAR) && (pic->plane_count == 1U))
-    {
-        uint32_t size = p[0].size / 3U;
-
-        for (i = 0U; i < 3U; i++)
-        {
-            p[i].cpu_addr = (uint8_t *)p[0].cpu_addr + (i * size);
-            p[i].bus_addr = p[0].bus_addr + (i * size);
-            p[i].size = size;
-            p[i].stride = p[0].stride;
-            p[i].offset = 0U;
-        }
-        pic->plane_count = 3U;
-    }
-    else if ((fmt->kind == VCDJ_KIND_YUV) &&
-             ((fmt->flags & VCDJ_FMT_PLANAR) != 0U) &&
-             (pic->plane_count == 2U) && (layout->plane_size[2] != 0U))
+    if ((fmt->kind == VCDJ_KIND_YUV) &&
+        ((fmt->flags & VCDJ_FMT_PLANAR) != 0U) &&
+        (pic->plane_count == 2U) && (layout->plane_size[2] != 0U))
     {
         p[2].cpu_addr = (uint8_t *)p[1].cpu_addr + p[1].size;
         p[2].bus_addr = p[1].bus_addr + p[1].size;
