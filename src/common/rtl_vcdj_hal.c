@@ -77,7 +77,7 @@ VCDJ_STATIC_ASSERT(sizeof(vcdj_picture_sel_t) == 1U, picture_sel_enum_is_one_byt
 
 /*
  * Measured layouts on the target ABI (Cortex-M55, 32-bit, -fshort-enums):
- * 12 / 32 / 28 / 20 / 76 bytes. These are not an ABI promise - the driver is compiled
+ * 12 / 32 / 28 / 20 / 76 / 8 bytes. These are not an ABI promise - the driver is compiled
  * from source with the rest of the SDK - they are a tripwire: an unintended
  * layout change, most likely from one of the two enum mistakes above, shows up
  * here instead of in a hard-to-read run-time symptom.
@@ -87,6 +87,7 @@ VCDJ_STATIC_ASSERT(sizeof(vcdj_pp_config_t)  == 32U, pp_config_layout);
 VCDJ_STATIC_ASSERT(sizeof(vcdj_image_info_t) == 28U, image_info_layout);
 VCDJ_STATIC_ASSERT(sizeof(vcdj_plane_t)      == 20U, plane_layout);
 VCDJ_STATIC_ASSERT(sizeof(vcdj_picture_t)    == 76U, picture_layout);
+VCDJ_STATIC_ASSERT(sizeof(vcdj_jpeg_frame_t)  == 8U, jpeg_frame_layout);
 VCDJ_STATIC_ASSERT(VCDJ_MAX_PLANES == MAX_OUTPUT_PLANE, plane_count_matches_vendor);
 
 /*============================================================================*
@@ -1918,6 +1919,130 @@ out_work:
 }
 
 /*============================================================================*
+ *                        JPEG Frame Scanner
+ *============================================================================*/
+/*
+ * Frames are found by walking the marker structure, not by searching for FF D9:
+ * an EXIF or JFXX thumbnail carries its own EOI inside an APPn payload, and only
+ * skipping that segment by its length keeps it from ending the frame early.
+ */
+#define VCDJ_JPEG_SOI   0xD8U
+#define VCDJ_JPEG_EOI   0xD9U
+#define VCDJ_JPEG_SOS   0xDAU
+#define VCDJ_JPEG_RST0  0xD0U
+#define VCDJ_JPEG_RST7  0xD7U
+#define VCDJ_JPEG_TEM   0x01U
+
+/* Offset of the next FF D8 at or after `pos`, or `size` when there is none. */
+static uint32_t vcdj_jpeg_find_soi(const uint8_t *buf, uint32_t size, uint32_t pos)
+{
+    while ((size - pos) >= 2U)
+    {
+        if ((buf[pos] == 0xFFU) && (buf[pos + 1U] == VCDJ_JPEG_SOI))
+        {
+            return pos;
+        }
+        pos++;
+    }
+
+    return size;
+}
+
+/*
+ * Offset of the first marker ending the entropy-coded data at `pos`, or `size`.
+ * Only C0..FE can end a scan; any other FF xx is corrupt data and is left for
+ * the decoder to report, so one bad byte does not hide the frame from the caller.
+ */
+static uint32_t vcdj_jpeg_skip_entropy(const uint8_t *buf, uint32_t size, uint32_t pos)
+{
+    while ((size - pos) >= 2U)
+    {
+        if (buf[pos] == 0xFFU)
+        {
+            uint8_t next = buf[pos + 1U];
+
+            if ((next >= 0xC0U) && (next != 0xFFU) &&
+                ((next < VCDJ_JPEG_RST0) || (next > VCDJ_JPEG_RST7)))
+            {
+                return pos;
+            }
+            if (next != 0xFFU)
+            {
+                pos += 2U;  /* FF 00 stuffing, RSTn, or corrupt FF xx */
+                continue;
+            }
+        }
+        pos++;
+    }
+
+    return size;
+}
+
+/*
+ * Walk the frame whose SOI is at `soi`. Returns 0 with `*end` just past its EOI,
+ * or -1 when the frame is truncated or malformed.
+ */
+static int vcdj_jpeg_frame_end(const uint8_t *buf, uint32_t size, uint32_t soi,
+                               uint32_t *end)
+{
+    uint32_t pos = soi + 2U;
+
+    for (;;)
+    {
+        uint8_t marker;
+        uint32_t len;
+
+        if (((size - pos) < 2U) || (buf[pos] != 0xFFU))
+        {
+            return -1;
+        }
+        /* Any number of FF fill bytes may precede a marker. */
+        while (((size - pos) >= 2U) && (buf[pos + 1U] == 0xFFU))
+        {
+            pos++;
+        }
+        if ((size - pos) < 2U)
+        {
+            return -1;
+        }
+
+        marker = buf[pos + 1U];
+        if (marker == VCDJ_JPEG_EOI)
+        {
+            *end = pos + 2U;
+            return 0;
+        }
+        if ((marker == VCDJ_JPEG_SOI) || (marker == 0x00U))
+        {
+            return -1;
+        }
+        if ((marker == VCDJ_JPEG_TEM) ||
+            ((marker >= VCDJ_JPEG_RST0) && (marker <= VCDJ_JPEG_RST7)))
+        {
+            pos += 2U;
+            continue;
+        }
+
+        if ((size - pos) < 4U)
+        {
+            return -1;
+        }
+        len = ((uint32_t)buf[pos + 2U] << 8) | buf[pos + 3U];
+        if ((len < 2U) || (len > (size - pos - 2U)))
+        {
+            return -1;
+        }
+        pos += 2U + len;
+
+        /* A progressive frame has several scans; each comes back here. */
+        if (marker == VCDJ_JPEG_SOS)
+        {
+            pos = vcdj_jpeg_skip_entropy(buf, size, pos);
+        }
+    }
+}
+
+/*============================================================================*
  *                        Public Functions
  *============================================================================*/
 void hal_vcdj_mem_init(void *(*vmalloc)(size_t), void (*vfree)(void *))
@@ -2045,6 +2170,65 @@ vcdj_error_t hal_vcdj_get_image_info(const vcdj_dec_param_t *param,
     }
 
     return vcdj_png_image_info(param, info);
+}
+
+vcdj_error_t hal_vcdj_jpeg_scan_frames(const void *data, uint32_t size,
+                                       vcdj_jpeg_frame_t *frames,
+                                       uint32_t max_frames,
+                                       uint32_t *frame_count)
+{
+    const uint8_t *buf = (const uint8_t *)data;
+    uint32_t found = 0U;
+    uint32_t pos = 0U;
+    uint32_t end = 0U;
+    int broken = 0;
+
+    if ((data == NULL) || (size == 0U) ||
+        ((frames == NULL) && (max_frames != 0U)) ||
+        ((frame_count == NULL) && (max_frames == 0U)))
+    {
+        return VCDJ_ERR_PARAM;
+    }
+
+    for (;;)
+    {
+        /* Without a count to report there is nothing to learn past a full array. */
+        if ((frame_count == NULL) && (found == max_frames))
+        {
+            break;
+        }
+
+        pos = vcdj_jpeg_find_soi(buf, size, pos);
+        if (pos == size)
+        {
+            break;
+        }
+        if (vcdj_jpeg_frame_end(buf, size, pos, &end) != 0)
+        {
+            broken = 1;
+            break;
+        }
+
+        if (found < max_frames)
+        {
+            frames[found].offset = pos;
+            frames[found].size = end - pos;
+        }
+        found++;
+        pos = end;
+    }
+
+    if (frame_count != NULL)
+    {
+        *frame_count = found;
+    }
+
+    if (broken || (found == 0U) || ((frame_count == NULL) && (found < max_frames)))
+    {
+        return VCDJ_ERR_STREAM;
+    }
+
+    return VCDJ_SUCCESS;
 }
 
 vcdj_error_t hal_vcdj_decode_pp(const vcdj_dec_param_t *param,

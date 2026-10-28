@@ -440,6 +440,10 @@ typedef struct
  *
  * \note Post processing stays in the separate \ref vcdj_pp_config_t passed to
  *       \ref hal_vcdj_decode_pp, so this structure only describes the input.
+ *
+ * \note `data` must hold exactly one JPEG frame. A buffer of concatenated frames
+ *       (MJPEG) is not a supported input: locate the frames with
+ *       \ref hal_vcdj_jpeg_scan_frames and pass them one at a time.
  */
 typedef struct
 {
@@ -450,6 +454,18 @@ typedef struct
     vcdj_picture_sel_t picture;    /**< Main picture or embedded thumbnail; see \ref vcdj_picture_sel_t */
     uint8_t     reserved[1];       /**< Must be zero */
 } vcdj_dec_param_t;
+
+/**
+ * \brief Location of one self-contained JPEG frame inside a scanned buffer.
+ *
+ * An offset rather than a pointer, so an index stays valid when the buffer is
+ * loaded at another address and can be generated offline.
+ */
+typedef struct
+{
+    uint32_t offset;               /**< Byte offset of the frame's SOI from the buffer start */
+    uint32_t size;                 /**< Bytes from SOI through EOI inclusive */
+} vcdj_jpeg_frame_t;
 
 /*============================================================================*
  *                         VCDJ Exported Functions
@@ -526,6 +542,46 @@ vcdj_error_t hal_vcdj_get_hw_build_id(uint32_t *build_id);
  */
 vcdj_error_t hal_vcdj_get_image_info(const vcdj_dec_param_t *param,
                                      vcdj_image_info_t *info);
+
+/**
+ * @brief      Locate the JPEG frames in a buffer of concatenated frames (MJPEG).
+ *
+ * @param[in]  data         Buffer to scan, CPU accessible; need not be DMA capable.
+ * @param[in]  size         Length of \p data in bytes.
+ * @param[out] frames       Receives up to \p max_frames locations in stream order;
+ *                          may be NULL when \p max_frames is 0.
+ * @param[in]  max_frames   Capacity of \p frames.
+ * @param[out] frame_count  Receives the number of complete frames found, which may
+ *                          exceed \p max_frames. May be NULL; the scan then stops
+ *                          as soon as \p max_frames entries are filled.
+ *
+ * @return     \ref VCDJ_SUCCESS when at least one frame was found and no broken
+ *             frame was met; with \p frame_count NULL, only when all \p max_frames
+ *             entries were filled.
+ * @return     \ref VCDJ_ERR_STREAM when no complete frame exists, a frame is
+ *             truncated or malformed, or (with \p frame_count NULL) fewer than
+ *             \p max_frames frames exist. Frames before the fault are still reported.
+ * @return     \ref VCDJ_ERR_PARAM for a NULL or empty buffer, or when the call
+ *             could return nothing.
+ *
+ * @note       Software only: needs neither \ref hal_vcdj_init nor the hardware,
+ *             and copies nothing. Each frame is then decoded by passing
+ *             `data + offset` and `size` to \ref hal_vcdj_decode_pp.
+ *
+ * @note       Bytes outside any frame (padding, garbage) are skipped, so offsets
+ *             need not be contiguous. The scan stops at the first broken frame
+ *             and does not resynchronise past it.
+ *
+ * @note       Checks structure only. A frame reported here can still fail to
+ *             decode, for example a progressive JPEG.
+ *
+ * @warning    Cost grows with \p size: entropy-coded data has no length field and
+ *             is read byte by byte. Scan once and keep the index.
+ */
+vcdj_error_t hal_vcdj_jpeg_scan_frames(const void *data, uint32_t size,
+                                       vcdj_jpeg_frame_t *frames,
+                                       uint32_t max_frames,
+                                       uint32_t *frame_count);
 
 /**
  * @brief      Decode one picture synchronously.
