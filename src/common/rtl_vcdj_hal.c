@@ -50,15 +50,6 @@
 #define VCDJ_PP_MAX_OUTPUT_DIMENSION    4096U
 #define VCDJ_PP_MAX_UPSCALE_RATIO       3U
 
-/*
- * Live picture slots: one decoded picture the caller has not released yet.
- *
- * One is enough because a single decode is in flight at a time (the DWL layer is
- * a single instance, see DWLInit() in rtl_vcdj_dwl.c) and because
- * hal_vcdj_decode() completes the whole vendor lifecycle before it returns.
- */
-#define VCDJ_MAX_LIVE_PICTURES          1U
-
 #define VCDJ_STATIC_ASSERT(cond, tag) \
     typedef char vcdj_static_assert_##tag[(cond) ? 1 : -1]
 
@@ -82,6 +73,7 @@ VCDJ_STATIC_ASSERT(sizeof(vcdj_out_format_t)  == 1U, out_format_enum_is_one_byte
 VCDJ_STATIC_ASSERT(sizeof(vcdj_pp_filter_t)   == 1U, pp_filter_enum_is_one_byte);
 VCDJ_STATIC_ASSERT(sizeof(vcdj_color_type_t)  == 1U, color_type_enum_is_one_byte);
 VCDJ_STATIC_ASSERT(sizeof(vcdj_chroma_t)      == 1U, chroma_enum_is_one_byte);
+VCDJ_STATIC_ASSERT(sizeof(vcdj_picture_sel_t) == 1U, picture_sel_enum_is_one_byte);
 
 /*
  * Measured layouts on the target ABI (Cortex-M55, 32-bit, -fshort-enums):
@@ -122,21 +114,19 @@ struct vcdj_png_work
 };
 
 /*
- * One live picture: the pixel memory a caller still owns.
+ * One live picture: the pixel memory a caller still owns, kept on a heap list so
+ * the number of pictures held at once is bounded by memory, not by a table.
  *
- * WHY THE WHOLE DWLDecBuffers AND NOT JUST AN ADDRESS. The vendor AddBuffer API
- * takes a `struct DWLLinearMem *` but casts it to `struct DWLDecBuffers` and
- * copies the entire output matrix into its InputQueue, so the descriptor we
- * registered has to stay byte-identical for as long as the memory is live. It is
- * also the object DWLFreeRefFrm() needs back, which is why the descriptor and the
- * pixels have separate lifetimes (see 5.1 item 3 of the interface plan): the
- * descriptor belongs to this slot, the pixels belong to the caller until release.
+ * Only `dec_buffer[0][0]` is kept, not the whole DWLDecBuffers shell: it is the
+ * one entry vcdj_add_external_buffers() ever allocates into, and the vendor
+ * InputQueue holds its own value copy of the shell, so the shell is freed once
+ * the codec instance is released (see vcdj_publish_picture()).
  */
 struct vcdj_live_picture
 {
-    struct DWLDecBuffers *buffer;   /**< Descriptor registered with the vendor */
-    uint32_t generation;            /**< Incremented on every release; see below */
-    uint8_t  in_use;
+    struct vcdj_live_picture *next;
+    struct DWLLinearMem mem;        /**< The allocation DWLFreeRefFrm() gets back */
+    uint32_t id;                    /**< Release token; never 0, unique while live */
 };
 
 /*============================================================================*
@@ -145,7 +135,10 @@ struct vcdj_live_picture
 static const void *vcdj_dwl_handle;
 static u32 vcdj_initialised;
 
-static struct vcdj_live_picture vcdj_live[VCDJ_MAX_LIVE_PICTURES];
+/* Guards the list and the id counter: release may run on another thread than decode. */
+static vcdj_os_handle_t vcdj_live_lock = VCDJ_OS_HANDLE_INVALID;
+static struct vcdj_live_picture *vcdj_live_head;
+static uint32_t vcdj_live_last_id;
 
 /*============================================================================*
  *                        Output buffer ownership
@@ -160,9 +153,9 @@ static struct vcdj_live_picture vcdj_live[VCDJ_MAX_LIVE_PICTURES];
  * only ever frees the first one would then leak silently.
  * DWLFreeRefFrm() ignores a NULL descriptor, so the unused entries cost nothing.
  *
- * This is the one place that knows how to undo vcdj_add_external_buffers(); all
- * three release paths (negotiation hand-back, decode cleanup, picture release)
- * go through it so they cannot drift apart.
+ * Undoes vcdj_add_external_buffers() on the negotiation hand-back and decode
+ * cleanup paths. A published picture keeps only `[0][0]` (vcdj_publish_picture()),
+ * so filling a second entry would require changing that function too.
  */
 static void vcdj_free_all_planes(struct DWLDecBuffers *buffer)
 {
@@ -187,101 +180,60 @@ static void vcdj_free_all_planes(struct DWLDecBuffers *buffer)
  *                        Release token
  *============================================================================*/
 /*
- * WHAT THE TOKEN ENCODES, AND WHY IT IS NOT A POINTER.
+ * The token is the picture's id, not its node address: rtl_vcdj.h promises a value
+ * that cannot be dereferenced. An id is never reused while its picture is live, so
+ * a double release or a fabricated token finds no node and is refused instead of
+ * freeing memory that now belongs to another picture. 0 stays "no pixels".
  *
- * rtl_vcdj.h promises the caller an opaque value that must not be dereferenced,
- * so handing out `&vcdj_live[i]` would make that promise a lie the moment someone
- * tried it. Instead the token carries a slot index plus a generation counter:
- *
- *     bits  7..0   slot index
- *     bits 31..8   generation of that slot
- *
- * The generation is what makes a stale token detectable rather than dangerous.
- * Without it, releasing a picture twice would look exactly like a valid release
- * of whatever picture landed in the same slot afterwards, and the second call
- * would free memory the new owner is still using. With it, the counter has moved
- * on and the mismatch is reported as VCDJ_ERR_PARAM.
- *
- * A zero token means "no pixels" and is always valid to release: the header
- * documents that a picture must be released even when plane_count is 0, so the
- * geometry-only result of a failed decode still round-trips cleanly. Encoding
- * therefore starts the generation at 1.
+ * vcdj_live_find() and vcdj_live_new_id() expect vcdj_live_lock to be held.
  */
-#define VCDJ_TOKEN_SLOT_BITS            8U
-#define VCDJ_TOKEN_SLOT_MASK            ((1U << VCDJ_TOKEN_SLOT_BITS) - 1U)
-
-VCDJ_STATIC_ASSERT(VCDJ_MAX_LIVE_PICTURES <= VCDJ_TOKEN_SLOT_MASK,
-                   live_pictures_fit_in_token);
-
-static uintptr_t vcdj_token_encode(unsigned int slot, uint32_t generation)
+static struct vcdj_live_picture *vcdj_live_find(uint32_t id,
+                                                struct vcdj_live_picture ***link_out)
 {
-    return (uintptr_t)(((generation + 1U) << VCDJ_TOKEN_SLOT_BITS) |
-                       ((uint32_t)slot & VCDJ_TOKEN_SLOT_MASK));
-}
+    struct vcdj_live_picture **link = &vcdj_live_head;
 
-/**
- * Resolve a token back to its slot, or NULL when it does not name a live picture.
- *
- * Rejects an out-of-range index, an unoccupied slot and a generation that has
- * moved on, so a double release and a fabricated token are both caught here
- * rather than turning into a free of someone else's memory.
- */
-static struct vcdj_live_picture *vcdj_token_lookup(uintptr_t token)
-{
-    unsigned int slot = (unsigned int)((uint32_t)token & VCDJ_TOKEN_SLOT_MASK);
-    uint32_t generation = (uint32_t)(token >> VCDJ_TOKEN_SLOT_BITS);
-
-    if ((token == 0U) || (slot >= VCDJ_MAX_LIVE_PICTURES))
+    while (*link != NULL)
     {
-        return NULL;
-    }
-
-    if ((vcdj_live[slot].in_use == 0U) ||
-        ((vcdj_live[slot].generation + 1U) != generation))
-    {
-        return NULL;
-    }
-
-    return &vcdj_live[slot];
-}
-
-/** Claim a free slot, or NULL when the caller is already holding its quota. */
-static struct vcdj_live_picture *vcdj_live_claim(unsigned int *slot_out)
-{
-    unsigned int i;
-
-    for (i = 0U; i < VCDJ_MAX_LIVE_PICTURES; i++)
-    {
-        if (vcdj_live[i].in_use == 0U)
+        if ((*link)->id == id)
         {
-            vcdj_live[i].in_use = 1U;
-            vcdj_live[i].buffer = NULL;
-            *slot_out = i;
-            return &vcdj_live[i];
+            if (link_out != NULL)
+            {
+                *link_out = link;
+            }
+            return *link;
         }
+        link = &(*link)->next;
     }
 
     return NULL;
 }
 
-/**
- * Free the pixel memory a slot owns and retire the slot.
- *
- * The generation advances here, which is what invalidates every token that named
- * this slot. It must therefore run on the error path too, otherwise a slot
- * claimed by a decode that later failed would stay occupied forever.
- */
+/** Next id that is neither 0 nor still live; the skip only matters after wrap-around. */
+static uint32_t vcdj_live_new_id(void)
+{
+    do
+    {
+        vcdj_live_last_id++;
+    }
+    while ((vcdj_live_last_id == 0U) || (vcdj_live_find(vcdj_live_last_id, NULL) != NULL));
+
+    return vcdj_live_last_id;
+}
+
 static void vcdj_live_free(struct vcdj_live_picture *live)
 {
-    if (live->buffer != NULL)
-    {
-        vcdj_free_all_planes(live->buffer);
-        vcdj_mem_free(live->buffer);
-        live->buffer = NULL;
-    }
+    DWLFreeRefFrm(vcdj_dwl_handle, &live->mem);
+    vcdj_mem_free(live);
+}
 
-    live->generation++;
-    live->in_use = 0U;
+static void vcdj_live_lock_take(void)
+{
+    (void)vcdj_os_mutex_lock(vcdj_live_lock, VCDJ_OS_WAIT_FOREVER);
+}
+
+static void vcdj_live_lock_give(void)
+{
+    (void)vcdj_os_mutex_unlock(vcdj_live_lock);
 }
 
 /*============================================================================*
@@ -830,6 +782,27 @@ static int vcdj_codec_supported(vcdj_codec_t codec)
     return ((codec == VCDJ_CODEC_JPEG) || (codec == VCDJ_CODEC_PNG)) ? 1 : 0;
 }
 
+/* Only a JPEG carries a thumbnail the vendor can decode. */
+static int vcdj_picture_sel_valid(const vcdj_dec_param_t *param)
+{
+    if ((param->reserved[0] != 0U) || (param->picture > VCDJ_PICTURE_THUMBNAIL))
+    {
+        return 0;
+    }
+    return ((param->picture == VCDJ_PICTURE_MAIN) || (param->codec == VCDJ_CODEC_JPEG)) ? 1 : 0;
+}
+
+/* Thumbnail requests only: whether the parse found a thumbnail the core can decode. */
+static vcdj_error_t vcdj_thumbnail_present(u32 thumbnail_type)
+{
+    if (thumbnail_type == JPEGDEC_THUMBNAIL_JPEG)
+    {
+        return VCDJ_SUCCESS;
+    }
+    return (thumbnail_type == JPEGDEC_THUMBNAIL_NOT_SUPPORTED_FORMAT) ? VCDJ_ERR_UNSUPPORTED
+                                                                     : VCDJ_ERR_PARAM;
+}
+
 static void vcdj_setup_ppu(PpUnitConfig *ppu, const vcdj_pp_config_t *config)
 {
     const struct vcdj_fmt_desc *fmt;
@@ -1250,19 +1223,21 @@ static void vcdj_fill_planes(const struct DWLLinearMem *luma,
 /**
  * \brief Hand the decoded pixels to the caller and take ownership of the memory.
  *
- * Claims a live slot, moves the registered descriptor into it and mints the
- * release token. On success the buffer is no longer owned by the decode path -
- * `*owned_count` is cleared for that entry - so the normal cleanup must not free
- * it; \ref hal_vcdj_picture_release does that later.
+ * Moves the pixel allocation onto the live list and mints the release token. On
+ * success `buffers[0]` is no longer owned by the decode path - `*count` drops to
+ * 0 - so the normal cleanup must not free it; \ref hal_vcdj_picture_release does.
  *
- * \return \ref VCDJ_SUCCESS, or \ref VCDJ_ERR_STATE when the caller has not
- *         released the previous picture yet.
+ * Freeing the DWLDecBuffers shell here, while the codec instance still lives, is
+ * safe: AddBuffer copied it by value into the InputQueue (input_queue.c).
+ *
+ * \return \ref VCDJ_SUCCESS, or \ref VCDJ_ERR_NO_MEM when the list node cannot be
+ *         allocated; the pixels then stay with the decode path and are freed there.
  */
 static vcdj_error_t vcdj_publish_picture(void **buffers, unsigned int *count,
                                          vcdj_picture_t *pic)
 {
     struct vcdj_live_picture *live;
-    unsigned int slot = 0U;
+    struct DWLDecBuffers *shell;
 
     if (*count == 0U)
     {
@@ -1271,26 +1246,30 @@ static vcdj_error_t vcdj_publish_picture(void **buffers, unsigned int *count,
         return VCDJ_SUCCESS;
     }
 
-    live = vcdj_live_claim(&slot);
+    live = vcdj_mem_alloc(sizeof(*live));
     if (live == NULL)
     {
-        /*
-         * Refuse rather than overwrite. The alternative - silently freeing the
-         * picture the caller is still holding - would corrupt whatever is being
-         * displayed from it.
-         */
-        return VCDJ_ERR_STATE;
+        return VCDJ_ERR_NO_MEM;
     }
 
     /*
      * Exactly one buffer is transferred: `buf_num` is hardcoded to 1 by both
-     * codecs, and the single descriptor covers every plane of the output.
+     * codecs, and with `use_separated_pp == 0` its `[0][0]` entry is the one
+     * allocation that holds every plane (see vcdj_add_external_buffers()).
      */
-    live->buffer = (struct DWLDecBuffers *)buffers[0];
+    shell = (struct DWLDecBuffers *)buffers[0];
+    live->mem = shell->dec_buffer[0][0];
+    vcdj_mem_free(shell);
     buffers[0] = NULL;
     *count = 0U;
 
-    pic->release_token = vcdj_token_encode(slot, live->generation);
+    vcdj_live_lock_take();
+    live->id = vcdj_live_new_id();
+    live->next = vcdj_live_head;
+    vcdj_live_head = live;
+    vcdj_live_lock_give();
+
+    pic->release_token = (uintptr_t)live->id;
 
     return VCDJ_SUCCESS;
 }
@@ -1396,28 +1375,54 @@ static vcdj_error_t vcdj_jpeg_image_info(const vcdj_dec_param_t *param,
     work->dec_in.dec_image_type = JPEGDEC_IMAGE;
     work->dec_in.stream = (u8 *)work->dec_in.stream_buffer.virtual_address;
 
+    /* thumbnail_done stays 0 for both pictures: with 1 the parser skips the APPn
+     * segment and thumbnail_type always reads "none". The price: with a thumbnail
+     * present, bit_depth is the thumbnail's even for the main picture. */
     ret = JpegDecGetImageInfo(inst, &work->dec_in, &work->image_info);
+    err = vcdj_map_dec_ret(ret);
 
-    if (ret == DEC_OK)
+    if ((err == VCDJ_SUCCESS) && (param->picture == VCDJ_PICTURE_THUMBNAIL))
     {
-        info->width = work->image_info.display_width;
-        info->height = work->image_info.display_height;
-        info->aligned_width = work->image_info.output_width;
-        info->aligned_height = work->image_info.output_height;
+        const JpegDecImageInfo *ii = &work->image_info;
+
+        err = vcdj_thumbnail_present(ii->thumbnail_type);
+        if (err == VCDJ_SUCCESS)
+        {
+            info->width = ii->display_width_thumb;
+            info->height = ii->display_height_thumb;
+            info->aligned_width = ii->output_width_thumb;
+            info->aligned_height = ii->output_height_thumb;
+            info->color_type = vcdj_jpeg_color_type(ii->output_format_thumb);
+            info->channels = vcdj_jpeg_channels(ii->output_format_thumb);
+            info->jpeg_progressive = (ii->coding_mode_thumb == JPEG_PROGRESSIVE) ? 1U : 0U;
+            info->jpeg_chroma = vcdj_map_jpeg_chroma(ii->output_format_thumb);
+        }
+    }
+    else if (err == VCDJ_SUCCESS)
+    {
+        const JpegDecImageInfo *ii = &work->image_info;
+
+        info->width = ii->display_width;
+        info->height = ii->display_height;
+        info->aligned_width = ii->output_width;
+        info->aligned_height = ii->output_height;
+        info->color_type = vcdj_jpeg_color_type(ii->output_format);
+        info->channels = vcdj_jpeg_channels(ii->output_format);
+        info->jpeg_progressive = (ii->coding_mode == JPEG_PROGRESSIVE) ? 1U : 0U;
+        info->jpeg_chroma = vcdj_map_jpeg_chroma(ii->output_format);
+    }
+
+    if (err == VCDJ_SUCCESS)
+    {
         info->bit_depth = work->image_info.bit_depth;
         info->codec = VCDJ_CODEC_JPEG;
-        info->color_type = vcdj_jpeg_color_type(work->image_info.output_format);
-        info->channels = vcdj_jpeg_channels(work->image_info.output_format);
         info->has_alpha = 0U;    /* JPEG has no alpha channel */
-
-        info->jpeg_progressive = (work->image_info.coding_mode == JPEG_PROGRESSIVE) ? 1U : 0U;
-        info->jpeg_has_thumbnail = (work->image_info.thumbnail_type != 0U) ? 1U : 0U;
-        info->jpeg_chroma = vcdj_map_jpeg_chroma(work->image_info.output_format);
-
+        /* No vendor thumbnail_type is 0: NO_THUMBNAIL is 0x12, so a non-zero test is always true. */
+        info->jpeg_has_thumbnail =
+            (work->image_info.thumbnail_type == JPEGDEC_THUMBNAIL_JPEG) ? 1U : 0U;
         info->png_interlaced = 0U;
     }
 
-    err = vcdj_map_dec_ret(ret);
     vcdj_release_input(vcdj_dwl_handle, &work->dec_in.stream_buffer);
 
 out_inst:
@@ -1441,6 +1446,9 @@ static vcdj_error_t vcdj_jpeg_decode(const vcdj_dec_param_t *param,
     unsigned int external_count = 0U;
     unsigned int negotiations = 0U;
     struct vcdj_buffer_layout layout;
+    const int thumb = (param->picture == VCDJ_PICTURE_THUMBNAIL) ? 1 : 0;
+    const u32 image_type = thumb ? JPEGDEC_THUMBNAIL : JPEGDEC_IMAGE;
+    u32 src_w, src_h;
 
     memset(&layout, 0, sizeof(layout));
 
@@ -1454,7 +1462,7 @@ static vcdj_error_t vcdj_jpeg_decode(const vcdj_dec_param_t *param,
     work->cfg.decoder_mode = DEC_NORMAL;
     work->cfg.align = DEC_ALIGN_64B;
     work->cfg.error_handling = DEC_EC_FRAME_NO_ERROR;
-    work->cfg.dec_image_type = JPEGDEC_IMAGE;
+    work->cfg.dec_image_type = image_type;
 
     ret = JpegDecInit(&inst, vcdj_dwl_handle, &work->cfg);
     if (ret != DEC_OK)
@@ -1470,10 +1478,11 @@ static vcdj_error_t vcdj_jpeg_decode(const vcdj_dec_param_t *param,
     }
 
     work->dec_in.stream_length = param->size;
-    work->dec_in.dec_image_type = JPEGDEC_IMAGE;
-    /* Only the main picture is decoded. With 0 the parser switches the HW
-     * geometry to the EXIF/JFXX thumbnail even though JPEGDEC_IMAGE is asked. */
-    work->dec_in.thumbnail_done = 1U;
+    work->dec_in.dec_image_type = image_type;
+    /* thumbnail_done selects which picture the parser leaves the HW geometry on:
+     * 0 switches it to the EXIF/JFXX thumbnail whatever dec_image_type says, so it
+     * must be 1 for the main picture and 0 for the thumbnail. */
+    work->dec_in.thumbnail_done = thumb ? 0U : 1U;
     work->dec_in.stream = (u8 *)work->dec_in.stream_buffer.virtual_address;
 
     ret = JpegDecGetImageInfo(inst, &work->dec_in, &work->image_info);
@@ -1483,8 +1492,23 @@ static vcdj_error_t vcdj_jpeg_decode(const vcdj_dec_param_t *param,
         goto out_input;
     }
 
-    err = vcdj_validate_pp(pp, work->image_info.display_width,
-                           work->image_info.display_height);
+    if (thumb)
+    {
+        err = vcdj_thumbnail_present(work->image_info.thumbnail_type);
+        if (err != VCDJ_SUCCESS)
+        {
+            goto out_input;
+        }
+        src_w = work->image_info.display_width_thumb;
+        src_h = work->image_info.display_height_thumb;
+    }
+    else
+    {
+        src_w = work->image_info.display_width;
+        src_h = work->image_info.display_height;
+    }
+
+    err = vcdj_validate_pp(pp, src_w, src_h);
     if (err == VCDJ_SUCCESS)
     {
         err = vcdj_format_fits_source(pp->output_format, VCDJ_CODEC_JPEG,
@@ -1496,7 +1520,8 @@ static vcdj_error_t vcdj_jpeg_decode(const vcdj_dec_param_t *param,
     }
 
     vcdj_setup_ppu(work->cfg.ppu_config, pp);
-    work->cfg.chroma_format = work->image_info.output_format;
+    work->cfg.chroma_format = thumb ? work->image_info.output_format_thumb
+                                    : work->image_info.output_format;
     ret = JpegDecSetInfo(inst, &work->cfg);
     if (ret != DEC_OK)
     {
@@ -1547,8 +1572,11 @@ static vcdj_error_t vcdj_jpeg_decode(const vcdj_dec_param_t *param,
      * taken from the picture the decoder produced rather than from what was
      * requested.
      */
-    pic->width = dec_out->pictures[0].display_width;
-    pic->height = dec_out->pictures[0].display_height;
+    /* A thumbnail lands in the *_thumb fields; display_width stays 0 for it. */
+    pic->width = thumb ? dec_out->pictures[0].display_width_thumb
+                       : dec_out->pictures[0].display_width;
+    pic->height = thumb ? dec_out->pictures[0].display_height_thumb
+                        : dec_out->pictures[0].display_height;
     pic->format = vcdj_out_format_from_vendor(dec_out->pictures[0].output_format,
                                               pp->output_format);
 
@@ -1556,8 +1584,8 @@ static vcdj_error_t vcdj_jpeg_decode(const vcdj_dec_param_t *param,
     {
         /* NextPicture() succeeded but reported nothing usable. Fall back to the
          * header geometry so the caller still gets a meaningful size. */
-        pic->width = work->image_info.display_width;
-        pic->height = work->image_info.display_height;
+        pic->width = src_w;
+        pic->height = src_h;
     }
 
     /*
@@ -1594,8 +1622,7 @@ static vcdj_error_t vcdj_jpeg_decode(const vcdj_dec_param_t *param,
     err = vcdj_publish_picture(external_buffers, &external_count, pic);
     if (err != VCDJ_SUCCESS)
     {
-        /* No slot free: the caller still owns the previous picture. Report the
-         * state error rather than the geometry, and drop these pixels. */
+        /* No list node: the pixels stay in external_buffers and are freed below. */
         pic->plane_count = 0U;
         memset(pic->planes, 0, sizeof(pic->planes));
     }
@@ -1917,9 +1944,17 @@ vcdj_error_t hal_vcdj_init(void)
     memset(&param, 0, sizeof(param));
     param.client_type = DWL_CLIENT_TYPE_JPEG_DEC;
 
+    if (vcdj_os_mutex_create(&vcdj_live_lock) != 0)
+    {
+        vcdj_live_lock = VCDJ_OS_HANDLE_INVALID;
+        return VCDJ_ERR_NO_MEM;
+    }
+
     vcdj_dwl_handle = DWLInit(&param);
     if (vcdj_dwl_handle == NULL)
     {
+        (void)vcdj_os_mutex_destroy(vcdj_live_lock);
+        vcdj_live_lock = VCDJ_OS_HANDLE_INVALID;
         return VCDJ_ERR_NO_HW;
     }
 
@@ -1930,7 +1965,7 @@ vcdj_error_t hal_vcdj_init(void)
 
 void hal_vcdj_deinit(void)
 {
-    unsigned int i;
+    struct vcdj_live_picture *live;
 
     if (!vcdj_initialised)
     {
@@ -1939,19 +1974,23 @@ void hal_vcdj_deinit(void)
 
     /*
      * Reclaim any picture the caller never released. Leaking it instead would be
-     * unrecoverable: the tokens naming these slots die with the caller's
-     * structures, so nothing could ever free the memory again.
+     * unrecoverable: the tokens naming them die with the caller's structures, so
+     * nothing could ever free the memory again.
      *
      * This runs BEFORE DWLRelease(), because DWLFreeRefFrm() goes through the DWL
      * instance that DWLRelease() tears down.
      */
-    for (i = 0U; i < VCDJ_MAX_LIVE_PICTURES; i++)
+    vcdj_live_lock_take();
+    while (vcdj_live_head != NULL)
     {
-        if (vcdj_live[i].in_use != 0U)
-        {
-            vcdj_live_free(&vcdj_live[i]);
-        }
+        live = vcdj_live_head;
+        vcdj_live_head = live->next;
+        vcdj_live_free(live);
     }
+    vcdj_live_lock_give();
+
+    (void)vcdj_os_mutex_destroy(vcdj_live_lock);
+    vcdj_live_lock = VCDJ_OS_HANDLE_INVALID;
 
     (void)DWLRelease(vcdj_dwl_handle);
     vcdj_dwl_handle = NULL;
@@ -1986,6 +2025,11 @@ vcdj_error_t hal_vcdj_get_image_info(const vcdj_dec_param_t *param,
     if (!vcdj_codec_supported(param->codec))
     {
         return VCDJ_ERR_UNSUPPORTED;
+    }
+
+    if (!vcdj_picture_sel_valid(param))
+    {
+        return VCDJ_ERR_PARAM;
     }
 
     if (!vcdj_initialised)
@@ -2026,7 +2070,8 @@ vcdj_error_t hal_vcdj_decode_pp(const vcdj_dec_param_t *param,
 
     if (!vcdj_out_format_supported(pp->output_format) ||
         !vcdj_pp_filter_supported(pp->filter) ||
-        (pp->crop_enabled > 1U) || (pp->scale_enabled > 1U))
+        (pp->crop_enabled > 1U) || (pp->scale_enabled > 1U) ||
+        !vcdj_picture_sel_valid(param))
     {
         return VCDJ_ERR_PARAM;
     }
@@ -2080,15 +2125,31 @@ vcdj_error_t hal_vcdj_picture_release(vcdj_picture_t *pic)
         return VCDJ_SUCCESS;
     }
 
-    live = vcdj_token_lookup(pic->release_token);
+    /* After deinit every picture has been reclaimed, so no token is live. */
+    if (!vcdj_initialised)
+    {
+        return VCDJ_ERR_PARAM;
+    }
+
+    {
+        struct vcdj_live_picture **link = NULL;
+
+        vcdj_live_lock_take();
+        live = vcdj_live_find((uint32_t)pic->release_token, &link);
+        if ((live != NULL) && ((uintptr_t)live->id != pic->release_token))
+        {
+            live = NULL;    /* high bits set: not a token this driver minted */
+        }
+        if (live != NULL)
+        {
+            *link = live->next;
+        }
+        vcdj_live_lock_give();
+    }
+
     if (live == NULL)
     {
-        /*
-         * The token does not name a live picture: either it was already released
-         * or it was never handed out by this driver. Refusing is the whole point
-         * of the generation counter - freeing on a stale token would release
-         * memory that now belongs to a different picture.
-         */
+        /* Already released, or never handed out by this driver. */
         return VCDJ_ERR_PARAM;
     }
 
@@ -2096,7 +2157,8 @@ vcdj_error_t hal_vcdj_picture_release(vcdj_picture_t *pic)
      * Only the pixel memory is released here. The queue slot and the codec
      * instance were already wound down inside hal_vcdj_decode(), so no vendor
      * call is needed - and none would be valid, because the instance that owned
-     * that bookkeeping no longer exists.
+     * that bookkeeping no longer exists. The node is off the list, so the free
+     * itself needs no lock.
      */
     vcdj_live_free(live);
 

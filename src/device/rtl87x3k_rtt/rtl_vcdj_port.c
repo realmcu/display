@@ -87,6 +87,7 @@
  *   mutexes    input_queue (cs, cnt_release, buf_release) = 3 per queue,
  *              jpeg/png fb_list (out_count, ref_count)    = 2,
  *              dec_log log_mutex                          = 1 (VCD_LOGMSG off)
+ *              HAL live-picture list lock                 = 1, held from init to deinit
  *   condvars   input_queue (cnt_release_cv, buf_release_cv) = 2 per queue,
  *              jpeg/png fb_list hw_rdy_cv                   = 1
  *   semaphores fifo (cs, read, write)                       = 3 per fifo,

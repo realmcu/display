@@ -269,6 +269,19 @@ typedef enum
     VCDJ_PP_FILTER_AREA,           /**< Area; both dimensions must downscale */
 } vcdj_pp_filter_t;
 
+/**
+ * \brief Which picture of the stream a call addresses.
+ *
+ * A JPEG may embed a JPEG-coded thumbnail (JFXX or EXIF) beside the main picture;
+ * each decode call produces one of them, so a caller that wants both calls twice.
+ * \ref vcdj_image_info_t.jpeg_has_thumbnail says whether the second one exists.
+ */
+typedef enum
+{
+    VCDJ_PICTURE_MAIN = 0,         /**< Main picture; what a zero-initialised request asks for */
+    VCDJ_PICTURE_THUMBNAIL = 1,    /**< Embedded JPEG thumbnail; JPEG only */
+} vcdj_picture_sel_t;
+
 /** \brief PPU pre-scale crop rectangle, in pixels. */
 typedef struct
 {
@@ -363,7 +376,7 @@ typedef struct
 
     /* --- JPEG only; zero for any other codec ------------------------------ */
     uint8_t  jpeg_progressive;     /**< 1 when the JPEG uses progressive coding */
-    uint8_t  jpeg_has_thumbnail;   /**< 1 when a JFIF thumbnail is present */
+    uint8_t  jpeg_has_thumbnail;   /**< 1 when a JPEG-coded thumbnail (JFXX or EXIF) is present */
     vcdj_chroma_t jpeg_chroma;     /**< Chroma sub-sampling */
 
     /* --- PNG only; zero for any other codec ------------------------------- */
@@ -434,7 +447,8 @@ typedef struct
     uint32_t    size;              /**< Input bitstream length in bytes */
     vcdj_codec_t      codec;       /**< Codec of \ref data */
     vcdj_out_format_t out_format;  /**< Format for hal_vcdj_decode; decode_pp uses its PPU request */
-    uint8_t     reserved[2];       /**< Must be zero */
+    vcdj_picture_sel_t picture;    /**< Main picture or embedded thumbnail; see \ref vcdj_picture_sel_t */
+    uint8_t     reserved[1];       /**< Must be zero */
 } vcdj_dec_param_t;
 
 /*============================================================================*
@@ -489,13 +503,21 @@ vcdj_error_t hal_vcdj_get_hw_build_id(uint32_t *build_id);
 /**
  * @brief      Parse the bitstream header in software only.
  *
- * @param[in]  param  Decode request; only `data`, `size` and `codec` are used.
- * @param[out] info   Receives geometry, bit depth and colour attributes.
+ * @param[in]  param  Decode request; only `data`, `size`, `codec` and `picture`
+ *                    are used.
+ * @param[out] info   Receives geometry, bit depth and colour attributes of the
+ *                    picture `param->picture` selects.
  *
- * @return     \ref VCDJ_SUCCESS on success, otherwise a \ref vcdj_error_t.
+ * @return     \ref VCDJ_SUCCESS on success, otherwise a \ref vcdj_error_t. A
+ *             `VCDJ_PICTURE_THUMBNAIL` request returns \ref VCDJ_ERR_PARAM when the
+ *             stream has no thumbnail or is not JPEG, and \ref VCDJ_ERR_UNSUPPORTED
+ *             when the thumbnail is not JPEG coded.
  *
  * @note       This path does not touch the hardware, so it is meaningful even
  *             before the register contract is known.
+ *
+ * @note       For a thumbnail every field describes the thumbnail, except
+ *             `jpeg_has_thumbnail`, which is 1.
  *
  * @warning    Not a cheap call. The vendor header parser validates the bus
  *             address of its input, so the bitstream is copied into a DMA capable
@@ -524,9 +546,10 @@ vcdj_error_t hal_vcdj_get_image_info(const vcdj_dec_param_t *param,
  *             Decode`. This function drives that negotiation itself and does not
  *             expose the intermediate states.
  *
- * @note       Only one picture may be held at a time. A second decode while the
- *             previous picture is unreleased returns \ref VCDJ_ERR_STATE rather
- *             than reusing the memory the caller is still reading from.
+ * @note       Any number of pictures may be held at once; each keeps its pixel
+ *             memory until released, so the limit is the injected allocator.
+ *             Decode calls themselves are NOT reentrant: the core is single
+ *             instance, so callers serialise decodes against each other.
  *
  * @warning    The register, IRQ and clock contract is not available yet, so on
  *             current hardware this call is expected to fail with
@@ -553,6 +576,12 @@ vcdj_error_t hal_vcdj_decode(const vcdj_dec_param_t *param, vcdj_picture_t *pic)
  *             `JpegDecSetInfo()` / `PngDecSetInfo()`. The legacy
  *             \ref hal_vcdj_decode is equivalent to this function with crop and
  *             scale disabled and `output_format = param->out_format`.
+ *
+ * @note       With `param->picture = VCDJ_PICTURE_THUMBNAIL`, crop and scale are
+ *             relative to the thumbnail, and the error codes for a missing or
+ *             non-JPEG thumbnail are those of \ref hal_vcdj_get_image_info. The
+ *             vendor cannot up-sample thumbnail chroma: a 4:2:0 thumbnail with a
+ *             4:2:2 / 4:4:4 output returns \ref VCDJ_ERR_PARAM.
  */
 vcdj_error_t hal_vcdj_decode_pp(const vcdj_dec_param_t *param,
                                 const vcdj_pp_config_t *pp,
@@ -574,8 +603,9 @@ vcdj_error_t hal_vcdj_decode_pp(const vcdj_dec_param_t *param,
  *             picture whose `plane_count` is 0 carries no memory and releasing it
  *             is a successful no-op.
  *
- * @note       Not thread safe against \ref hal_vcdj_decode: the driver holds one
- *             picture at a time and does not serialise the two calls itself.
+ * @note       May run on a different thread than, and concurrently with, a
+ *             decode call. Not valid after \ref hal_vcdj_deinit, which has
+ *             already reclaimed every picture; it returns \ref VCDJ_ERR_PARAM.
  */
 vcdj_error_t hal_vcdj_picture_release(vcdj_picture_t *pic);
 
