@@ -57,6 +57,7 @@ static FlagStatus DSI_WaitPhyStopState(DSI_TypeDef *DSIx)
 
         if ((status.b.phy_stopstateclklane != 0U) &&
             (status.b.phy_stopstate0lane != 0U) &&
+            (status.b.phy_lock != 0U) &&
             ((lane_count < 2U) || (status.b.phy_stopstate1lane != 0U)) &&
             ((lane_count < 3U) || (status.b.phy_stopstate2lane != 0U)) &&
             ((lane_count < 4U) || (status.b.phy_stopstate3lane != 0U)))
@@ -79,8 +80,87 @@ void DSI_DeInit(DSI_TypeDef *DSIx)
     DSIx->PWR_UP = reg_0x04.d32;
 }
 
+void DSI_StructInit(DSI_InitTypeDef *DSI_Init)
+{
+    /*-------------- Reset DSI init structure parameters values -----------------*/
+    DSI_Init->phy_mode                = DSI_DPHY;
+    DSI_Init->ColorCoding             = DSI_COLOR_RGB888;
+    DSI_Init->NumberOfLanes           = DSI_1_LANE;
+    DSI_Init->StopWaitTime            = 0;
+
+    /* Unmask every error report in INT_ST0/INT_ST1. */
+    DSI_Init->InterruptMask0          = 0x1FFFFF;
+    DSI_Init->InterruptMask1          = 0x1FFFFF;
+
+    /* Longest HS-TX / LP-RX timeout. */
+    DSI_Init->HS_TX_CNT               = 0xFFFF;
+    DSI_Init->LP_RX_CNT               = 0xFFFF;
+
+    /* Clock dividers depend on the lane byte clock, caller must configure. */
+    DSI_Init->TOCkdiv                 = 0;
+    DSI_Init->TXEscapeCkdiv           = 0;
+
+    /* Start in command mode so the panel init table can be sent first. */
+    DSI_Init->ModeCfg                 = DSI_MODE_CMD;
+
+    DSI_Init->PeripherCharacteristics = 0;
+    DSI_Init->GenericPacketVCID       = 0;
+    DSI_Init->GenericTearVCID         = 0;
+    DSI_Init->GenericReadBackVCID     = 0;
+
+    DSI_Init->AutoHS2LPEnable         = ENABLE;
+    DSI_Init->TxRequestCLKEnable      = ENABLE;
+
+    /* PHY timings depend on the D-PHY PLL, caller must configure. */
+    DSI_Init->ClockLaneHS2LPTime      = 0;
+    DSI_Init->ClockLaneLP2HSTime      = 0;
+    DSI_Init->DataLaneHS2LPTime       = 0;
+    DSI_Init->DataLaneLP2HSTime       = 0;
+    DSI_Init->DataLaneMaxReadTime     = 0;
+    DSI_Init->VirtualChannelID        = 0;
+
+    DSI_Init->phy_shutdownz           = 1;
+    DSI_Init->phy_enableclk           = 1;
+    DSI_Init->phy_forcepll            = 0;
+    DSI_Init->phy_rstz                = 1;
+
+    DSI_Init->ColorModePolarity       = 0;
+    DSI_Init->ShutDownPolarity        = 0;
+    DSI_Init->HSPolarity              = DSI_HSPOL_AH;
+    DSI_Init->VSPolarity              = DSI_VSPOL_AH;
+    DSI_Init->DEPolarity              = DSI_DEPOL_AH;
+
+    /* eDPI allowed command size depends on the line buffer, caller must configure. */
+    DSI_Init->CommandSize             = 0;
+
+    DSI_Init->LPMaxReadPacket         = DSI_LP_MRDP_DISABLE;
+    DSI_Init->LPGenReadTime           = 0;
+    DSI_Init->HSGenReadTime           = 0;
+    DSI_Init->LPGenWriteTime          = 0;
+    DSI_Init->HSGenWriteTime          = 0;
+    DSI_Init->BTATime                 = 0;
+    DSI_Init->AcknowledgeRequest      = DSI_ACKNOWLEDGE_DISABLE;
+
+    /* Every command packet type goes out in low-power mode. */
+    DSI_Init->LPGenShortWriteNoP      = DSI_LP_GSW0P_ENABLE;
+    DSI_Init->LPGenShortWriteOneP     = DSI_LP_GSW1P_ENABLE;
+    DSI_Init->LPGenShortWriteTwoP     = DSI_LP_GSW2P_ENABLE;
+    DSI_Init->LPGenShortReadNoP       = DSI_LP_GSR0P_ENABLE;
+    DSI_Init->LPGenShortReadOneP      = DSI_LP_GSR1P_ENABLE;
+    DSI_Init->LPGenShortReadTwoP      = DSI_LP_GSR2P_ENABLE;
+    DSI_Init->LPGenLongWrite          = DSI_LP_GLW_ENABLE;
+    DSI_Init->LPDcsShortWriteNoP      = DSI_LP_DSW0P_ENABLE;
+    DSI_Init->LPDcsShortWriteOneP     = DSI_LP_DSW1P_ENABLE;
+    DSI_Init->LPDcsShortReadNoP       = DSI_LP_DSR0P_ENABLE;
+    DSI_Init->LPDcsLongWrite          = DSI_LP_DLW_ENABLE;
+}
+
 FlagStatus DSI_Init(DSI_TypeDef *DSIx, const DSI_InitTypeDef *DSI_Init)
 {
+    assert_param(IS_DSI_MODE(DSI_Init->ModeCfg));
+    assert_param(IS_DSI_PHY_MODE(DSI_Init->phy_mode));
+    assert_param(IS_DSI_N_Lanes(DSI_Init->NumberOfLanes));
+
     if ((DSI_Init->NumberOfLanes == 0U) || (DSI_Init->NumberOfLanes > 4U) ||
         (DSI_Init->ColorCoding > 0xFU))
     {
@@ -211,6 +291,10 @@ FlagStatus DSI_Init(DSI_TypeDef *DSIx, const DSI_InitTypeDef *DSI_Init)
 
 FlagStatus DSI_ConfigVideoMode(DSI_TypeDef *DSIx, const DSI_VidCfgTypeDef *VidCfg)
 {
+    assert_param(IS_VIDEO_MODE_TYPE(VidCfg->Mode));
+    assert_param(IS_VIDEO_VPG_MODE(VidCfg->VPGMode));
+    assert_param(IS_VIDEO_VPG_ORIENTATION(VidCfg->VPGOrientation));
+
     DSI_VID_MODE_CFG_TypeDef vid = {.d32 = DSIx->VID_MODE_CFG};
     vid.b.vid_mode_type = VidCfg->Mode;                 // (13) burst / non-burst
     vid.b.lp_cmd_en = VidCfg->LPCommandEnable;          // (14)
@@ -275,6 +359,26 @@ FlagStatus DSI_ConfigVideoMode(DSI_TypeDef *DSIx, const DSI_VidCfgTypeDef *VidCf
     DSIx->VID_MODE_CFG = vid.d32;
 
     return DSI_STATUS_OK;
+}
+
+void DSI_StartVideoMode(DSI_TypeDef *DSIx)
+{
+    uint32_t timeout = DSI_POLL_TIMEOUT;
+    while (timeout-- != 0)
+    {
+        DSI_CMD_PKT_STATUS_TypeDef status = {.d32 = DSIx->CMD_PKT_STATUS};
+        if ((status.b.gen_cmd_empty != 0) && (status.b.gen_pld_w_empty != 0)
+            && (status.b.gen_rd_cmd_busy == 0))
+        {
+            break;
+        }
+    }
+
+    DSI_DeInit(DSIx);
+    DSI_MODE_CFG_TypeDef mode_cfg = {.d32 = DSIx->MODE_CFG};
+    mode_cfg.b.cmd_video_mode = DSI_MODE_VIDEO;
+    DSIx->MODE_CFG = mode_cfg.d32;
+    DSI_Start(DSIx);
 }
 
 FlagStatus DSI_ConfigAdaptedCommandMode(DSI_TypeDef *DSIx,
@@ -384,6 +488,8 @@ FlagStatus DSI_ShortWrite(DSI_TypeDef *DSIx,
                           uint32_t Param1,
                           uint32_t Param2)
 {
+    assert_param(IS_DSI_SHORT_WRITE_PKT(Mode));
+
     if ((Mode == DSI_DCS_SHORT_PKT_WRITE_P0) || (Mode == DSI_GEN_SHORT_PKT_WRITE_P0))
     {
         Param2 = 0U;
@@ -411,14 +517,15 @@ FlagStatus DSI_LongWrite(DSI_TypeDef *DSIx,
                          uint32_t Param1,
                          uint8_t *ParametersTable)
 {
-    uint32_t uicounter, nbBytes, count;
-    uint32_t fifoword;
-    uint8_t *pparams = ParametersTable;
-
+    assert_param(IS_DSI_LONG_WRITE_PKT(Mode));
     if (NbParams > (200U - 1U))
     {
         return DSI_STATUS_ERROR;
     }
+
+    uint32_t uicounter, nbBytes, count;
+    uint32_t fifoword;
+    uint8_t *pparams = ParametersTable;
 
     /* Set the DCS code on payload byte 1, and the other parameters on the write FIFO command*/
     fifoword = Param1;

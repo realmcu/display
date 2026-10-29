@@ -48,6 +48,8 @@ void LCDC_Clock_Cfg(FunctionalState state)
         *((uint32_t *) 0x40000218) |= (0x1 << 5);
         //clock enable
         *((uint32_t *) 0x40000238) |= ((0x1 << 18) | (0x1 << 19));
+#elif defined CONFIG_SOC_SERIES_RTL8773K
+//TODO
 #endif
     }
     else if (state == DISABLE)
@@ -58,6 +60,8 @@ void LCDC_Clock_Cfg(FunctionalState state)
         uint32_t reg_value = *(uint32_t *)0x40000214;
         reg_value &= ~(BIT11 | BIT12);
         *(uint32_t *)0x40000214 = reg_value;
+#elif defined CONFIG_SOC_SERIES_RTL8773K
+//TODO
 #endif
     }
 }

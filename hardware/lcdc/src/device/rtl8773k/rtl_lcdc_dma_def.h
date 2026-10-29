@@ -19,70 +19,70 @@ extern "C" {
 #define LCDC_DMA_REGISTER_DEFINE 1
 typedef struct
 {
-    __IO uint32_t LCDC_DMA_SARx;                /*!< 0x00 */
-    __I  uint32_t LCDC_DMA_CURR_SARx;           /*!< 0x04 */
-    __IO uint32_t LCDC_DMA_DARx;                /*!< 0x08 */
-    __I  uint32_t LCDC_DMA_CURR_DARx;           /*!< 0x0C */
-    __IO uint32_t LCDC_DMA_LLPx;                /*!< 0x10 */
-    __IO uint32_t LCDC_DMA_RSVD;                /*!< 0x14 */
-    __IO uint32_t LCDC_DMA_CTL_LOWx;            /*!< 0x18 */
-    __IO uint32_t LCDC_DMA_CTL_HIGHx;           /*!< 0x1C */
-    __IO uint32_t LCDC_DMA_RSVD1[8];            /*!< 0x20 ~ 0x3C */
-    __IO uint32_t LCDC_DMA_CFG_LOWx;            /*!< 0x40 */
-    __IO uint32_t LCDC_DMA_CFG_HIGHx;           /*!< 0x44 */
-    __IO uint32_t LCDC_DMA_SGR_LOW;             /*!< 0x48 */
-    __IO uint32_t LCDC_DMA_SGR_HIGH;            /*!< 0x4C */
-    __IO uint32_t LCDC_DMA_DSR_LOW;             /*!< 0x50 */
-    __IO uint32_t LCDC_DMA_DSR_HIGH;            /*!< 0x54 */
+    __IO uint32_t  LCDC_DMA_SARx;            /*!< 0x00 */
+    __I  uint32_t  LCDC_DMA_CURR_SARx;       /*!< 0x04 */
+    __IO uint32_t  LCDC_DMA_DARx;            /*!< 0x08 */
+    __I  uint32_t  LCDC_DMA_CURR_DARx;       /*!< 0x0C */
+    __IO uint32_t  LCDC_DMA_LLPx;            /*!< 0x10 */
+    __IO uint32_t  LCDC_DMA_RSVD;            /*!< 0x14 */
+    __IO uint32_t  LCDC_DMA_CTL_LOWx;        /*!< 0x18 */
+    __IO uint32_t  LCDC_DMA_CTL_HIGHx;       /*!< 0x1C */
+    __IO uint32_t  LCDC_DMA_RSVD1[8];        /*!< 0x20 ~ 0x3C */
+    __IO uint32_t  LCDC_DMA_CFG_LOWx;        /*!< 0x40 */
+    __IO uint32_t  LCDC_DMA_CFG_HIGHx;       /*!< 0x44 */
+    __IO uint32_t  LCDC_DMA_SGR_LOW;         /*!< 0x48 */
+    __IO uint32_t  LCDC_DMA_SGR_HIGH;        /*!< 0x4C */
+    __IO uint32_t  LCDC_DMA_DSR_LOW;         /*!< 0x50 */
+    __IO uint32_t  LCDC_DMA_DSR_HIGH;        /*!< 0x54 */
 } LCDC_DMA_ChannelTypeDef;
 
 typedef struct
 {
-    __IO uint32_t LCDC_DMA_RSVD[10];            /*!< 0x2C0 - 0x2E4 */
+    __IO uint32_t  LCDC_DMA_RSVD[10];        /*!< 0x2C0 - 0x2E4 */
 
-    __I uint32_t LCDC_DMA_StatusTfr;            /*!< 0x2E8 */
-    __IO uint32_t LCDC_DMA_RSVD1;
-    __I uint32_t LCDC_DMA_StatusBlock;          /*!< 0x2F0 */
-    __IO uint32_t LCDC_DMA_RSVD2;
-    __I uint32_t LCDC_DMA_StatusSrcTran;        /*!< 0x2F8 */
-    __IO uint32_t LCDC_DMA_RSVD3;
-    __I uint32_t LCDC_DMA_StatusDstTran;        /*!< 0x300 */
-    __IO uint32_t LCDC_DMA_RSVD4;
-    __I uint32_t LCDC_DMA_StatuErr;             /*!< 0x308 */
-    __I uint32_t LCDC_DMA_StatuErrNonSecure;
+    __I  uint32_t  LCDC_DMA_StatusTfr;       /*!< 0x2E8 */
+    __IO uint32_t  LCDC_DMA_RSVD1;
+    __I  uint32_t  LCDC_DMA_StatusBlock;     /*!< 0x2F0 */
+    __IO uint32_t  LCDC_DMA_RSVD2;
+    __I  uint32_t  LCDC_DMA_StatusSrcTran;   /*!< 0x2F8 */
+    __IO uint32_t  LCDC_DMA_RSVD3;
+    __I  uint32_t  LCDC_DMA_StatusDstTran;   /*!< 0x300 */
+    __IO uint32_t  LCDC_DMA_RSVD4;
+    __I  uint32_t  LCDC_DMA_StatuErr;        /*!< 0x308 */
+    __I  uint32_t  LCDC_DMA_StatuErrNonSecure;
 
-    __IO uint32_t LCDC_DMA_MaskTfr;             /*!< 0x310 */
-    __IO uint32_t LCDC_DMA_RSVD6;
-    __IO uint32_t LCDC_DMA_MaskBlock;           /*!< 0x318 */
-    __IO uint32_t LCDC_DMA_RSVD7;
-    __IO uint32_t LCDC_DMA_MaskSrcTran;         /*!< 0x320 */
-    __IO uint32_t LCDC_DMA_RSVD8;
-    __IO uint32_t LCDC_DMA_MaskDstTran;         /*!< 0x328 */
-    __IO uint32_t LCDC_DMA_RSVD9;
-    __IO uint32_t LCDC_DMA_MaskErr;             /*!< 0x330 */
-    __IO uint32_t LCDC_DMA_MaskErrNonSecure;
+    __IO uint32_t  LCDC_DMA_MaskTfr;         /*!< 0x310 */
+    __IO uint32_t  LCDC_DMA_RSVD6;
+    __IO uint32_t  LCDC_DMA_MaskBlock;       /*!< 0x318 */
+    __IO uint32_t  LCDC_DMA_RSVD7;
+    __IO uint32_t  LCDC_DMA_MaskSrcTran;     /*!< 0x320 */
+    __IO uint32_t  LCDC_DMA_RSVD8;
+    __IO uint32_t  LCDC_DMA_MaskDstTran;     /*!< 0x328 */
+    __IO uint32_t  LCDC_DMA_RSVD9;
+    __IO uint32_t  LCDC_DMA_MaskErr;         /*!< 0x330 */
+    __IO uint32_t  LCDC_DMA_MaskErrNonSecure;
 
-    __O uint32_t LCDC_DMA_ClearTfr;             /*!< 0x338 */
-    __IO uint32_t LCDC_DMA_RSVD11;
-    __O uint32_t LCDC_DMA_ClearBlock;           /*!< 0x340 */
-    __IO uint32_t LCDC_DMA_RSVD12;
-    __O uint32_t LCDC_DMA_ClearSrcTran;         /*!< 0x348 */
-    __IO uint32_t LCDC_DMA_RSVD13;
-    __O uint32_t LCDC_DMA_ClearDstTran;         /*!< 0x350 */
-    __IO uint32_t LCDC_DMA_RSVD14;
-    __O uint32_t LCDC_DMA_ClearErr;             /*!< 0x358 */
-    __O uint32_t LCDC_DMA_ClearErrNonSecure;
+    __O  uint32_t  LCDC_DMA_ClearTfr;        /*!< 0x338 */
+    __IO uint32_t  LCDC_DMA_RSVD11;
+    __O  uint32_t  LCDC_DMA_ClearBlock;      /*!< 0x340 */
+    __IO uint32_t  LCDC_DMA_RSVD12;
+    __O  uint32_t  LCDC_DMA_ClearSrcTran;    /*!< 0x348 */
+    __IO uint32_t  LCDC_DMA_RSVD13;
+    __O  uint32_t  LCDC_DMA_ClearDstTran;    /*!< 0x350 */
+    __IO uint32_t  LCDC_DMA_RSVD14;
+    __O  uint32_t  LCDC_DMA_ClearErr;        /*!< 0x358 */
+    __O  uint32_t  LCDC_DMA_ClearErrNonSecure;
 
-    __IO uint32_t LCDC_DMA_RSVD16[14];          /*!< 0x360 ~ 0x394 */
+    __IO uint32_t  LCDC_DMA_RSVD16[14];      /*!< 0x360 ~ 0x394 */
 
-    __IO uint32_t LCDC_DMA_DmaCfgReg;           /*!< 0x398 */
-    __IO uint32_t LCDC_DMA_RSVD17;
-    __IO uint32_t LCDC_DMA_ChEnReg;             /*!< 0x3A0 */
-    __IO uint32_t LCDC_DMA_RSVD18;
+    __IO uint32_t  LCDC_DMA_DmaCfgReg;       /*!< 0x398 */
+    __IO uint32_t  LCDC_DMA_RSVD17;
+    __IO uint32_t  LCDC_DMA_ChEnReg;         /*!< 0x3A0 */
+    __IO uint32_t  LCDC_DMA_RSVD18;
 
-    __IO uint32_t LCDC_DMA_RSVD19[4];           /*!< 0x3A8 ~ 0x3B4 */
-    __IO uint32_t LCDC_DMA_DmaOsNum;            /*!< 0x3B8 */
-    __IO uint32_t LCDC_DMA_RSVD20;
+    __IO uint32_t  LCDC_DMA_RSVD19[4];       /*!< 0x3A8 ~ 0x3B4 */
+    __IO uint32_t  LCDC_DMA_DmaOsNum;        /*!< 0x3B8 */
+    __IO uint32_t  LCDC_DMA_RSVD20;
 } LCDC_DMA_TypeDef;
 
 
@@ -91,7 +91,7 @@ typedef struct
  *                         LCDC DMA Registers and Field Descriptions
  *============================================================================*/
 /* 0x00
-   31:0    R/W    SAR                 undefined
+    31:0    R/W    SAR                 undefined
 */
 typedef union
 {
@@ -106,7 +106,7 @@ typedef union
 
 
 /* 0x04
-   31:0    R      CURR_SAR            0x0
+    31:0    R      CURR_SAR            0x0
 */
 typedef union
 {

@@ -90,17 +90,14 @@ void EDPI_Init(LCDC_eDPICfgTypeDef *eDPICfg)
     edpi_reg_0x30.b.color_map = eDPICfg->eDPI_ColorMap;
     EDPI->EDPI_COLOR_MAP = edpi_reg_0x30.d32;
 
-    if (eDPICfg->eDPI_OperateMode == EDPI_ADAPTED_COMMAND_MODE)
-    {
-        EDPI_CMD_CTL_TypeDef edpi_reg_0x3c = {.d32 = EDPI->EDPI_CMD_CTL};
-        edpi_reg_0x3c.b.tear_req = eDPICfg->eDPI_TearReq;
-        EDPI->EDPI_CMD_CTL = edpi_reg_0x3c.d32;
+    EDPI_CMD_CTL_TypeDef edpi_reg_0x3c = {.d32 = EDPI->EDPI_CMD_CTL};
+    edpi_reg_0x3c.b.tear_req = eDPICfg->eDPI_TearReq;
+    EDPI->EDPI_CMD_CTL = edpi_reg_0x3c.d32;
 
-        EDPI_CMD_MAX_LATENCY_TypeDef edpi_reg_0x40 = {.d32 = EDPI->EDPI_CMD_MAX_LATENCY};
-        edpi_reg_0x40.b.max_latency = eDPICfg->eDPI_CmdMaxLatency;
-        EDPI->EDPI_CMD_MAX_LATENCY = edpi_reg_0x40.d32;
-    }
-    else if (eDPICfg->eDPI_OperateMode == EDPI_STANDARD_VIDEO_MODE)
+    EDPI_CMD_MAX_LATENCY_TypeDef edpi_reg_0x40 = {.d32 = EDPI->EDPI_CMD_MAX_LATENCY};
+    edpi_reg_0x40.b.max_latency = eDPICfg->eDPI_CmdMaxLatency;
+    EDPI->EDPI_CMD_MAX_LATENCY = edpi_reg_0x40.d32;
+    if (eDPICfg->eDPI_OperateMode == EDPI_STANDARD_VIDEO_MODE)
     {
         EDPI_VIDEO_CTL_TypeDef edpi_reg_0x38 = {.d32 = EDPI->EDPI_VIDEO_CTL};
         edpi_reg_0x38.b.lcd_arc = eDPICfg->eDPI_LcdArc;

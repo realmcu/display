@@ -1399,7 +1399,7 @@ void LCDC_MaskINTConfig(uint32_t LCDC_INT_MSK, FunctionalState NewState);
  * | LCDC_RamlessEn         | DISABLE                            | Ramless function disabled.         |
  * | LCDC_GroupSel          | 1                                  | Pin Group 1 selected.              |
  * | LCDC_PixelInputFormat  | \ref LCDC_INPUT_RGB888             | Input format set to RGB888.        |
- * | LCDC_PixelOutputFormat  | \ref LCDC_OUTPUT_RGB888            | Output format set to RGB888.       |
+ * | LCDC_PixelOutputFormat | \ref LCDC_OUTPUT_RGB888            | Output format set to RGB888.       |
  * | LCDC_PixelBitSwap      | \ref LCDC_SWAP_BYPASS              | No bit swapping.                   |
  * | LCDC_TeEn              | DISABLE                            | Tear Effect function disabled.     |
  * | LCDC_TePolarity        | \ref LCDC_TE_EDGE_RISING           | Tear signal rising edge trigger.   |

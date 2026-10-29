@@ -941,7 +941,7 @@ typedef union
 
     /* 0x118
         11: 0   R/W    user_rd_dummy_length    0x0
-        13: 12  R/W    user_cmd_lenght         0x0
+        13: 12  R/W    user_cmd_length         0x0
         15: 14  R      reserved2               0x0
         19: 16  R/W    user_addr_length        0x3
         31: 20  R      reserved1               0x0

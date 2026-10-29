@@ -318,7 +318,8 @@ void rtk_lcd_hal_init(void)
 
     DSI_ConfigAdaptedCommandMode(DSI, &AdaptedCmd_InitStruct);
 
-    DPHY_Init(DSI_InitStruct.NumberOfLanes);
+    /* CKREF = 40MHz, HS bit clock = 400MHz */
+    DPHY_Init(DSI_InitStruct.NumberOfLanes, 40U, 400U);
 
     DSI_PhyCfgTypeDef dsi_phy = {0};
     dsi_phy.phy_forcepll  = PHY_FORCEPLL_DISABLE;

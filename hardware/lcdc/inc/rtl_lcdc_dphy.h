@@ -8,7 +8,7 @@
 
 typedef struct
 {
-    __IO uint32_t CLOCK_GEN;                                        /*0x00*/
+    __IO uint32_t CLOCK_GEN;                                /*0x00*/
     __IO uint32_t ESCAPE_TX_CLK_0;                          /*0x04*/
     __IO uint32_t ESCAPE_TX_DATA_0;                         /*0x08*/
     __IO uint32_t ESCAPE_TX_DATA_1;                         /*0x0C*/
@@ -18,33 +18,33 @@ typedef struct
     __IO uint32_t ESCAPE_TX_DATA_5;                         /*0x1c*/
     __IO uint32_t ESCAPE_TX_DATA_6;                         /*0x20*/
     __IO uint32_t ESCAPE_RX_DATA_0;                         /*0x24*/
-    __IO uint32_t LANE_SWAP_CTRL;                               /*0x28*/
-    __IO uint32_t LANE_LP_BIST_0;                               /*0x2C*/
-    __IO uint32_t LANE_HS_BIST;                                 /*0x30*/
-    __IO uint32_t CD_SPSDT;                                         /*0x34*/
-    __IO uint32_t DEBUG_0;                                          /*0x38*/
-    __IO uint32_t DEBUG_1;                                          /*0x3C*/
-    __IO uint32_t SSC0;                                                 /*0x40*/
-    __IO uint32_t SSC1;                                                 /*0x44*/
-    __IO uint32_t SSC2;                                                 /*0x48*/
-    __IO uint32_t SSC3;                                                 /*0x4C*/
-    __IO uint32_t WATCHDOG;                                         /*0x50*/
+    __IO uint32_t LANE_SWAP_CTRL;                           /*0x28*/
+    __IO uint32_t LANE_LP_BIST_0;                           /*0x2C*/
+    __IO uint32_t LANE_HS_BIST;                             /*0x30*/
+    __IO uint32_t CD_SPSDT;                                 /*0x34*/
+    __IO uint32_t DEBUG_0;                                  /*0x38*/
+    __IO uint32_t DEBUG_1;                                  /*0x3C*/
+    __IO uint32_t SSC0;                                     /*0x40*/
+    __IO uint32_t SSC1;                                     /*0x44*/
+    __IO uint32_t SSC2;                                     /*0x48*/
+    __IO uint32_t SSC3;                                     /*0x4C*/
+    __IO uint32_t WATCHDOG;                                 /*0x50*/
     __IO uint32_t RX_ESCAPE_READ_0;                         /*0x54*/
     __IO uint32_t RX_ESCAPE_READ_1;                         /*0x58*/
-    __IO uint32_t EGLITCH_LP;                                       /*0x5C*/
-    __IO uint32_t LP_BIST_1;                                        /*0x60*/
-    __IO uint32_t LP_BIST_2;                                        /*0x64*/
-    __IO uint32_t LANE_PN_SWAP_1;                               /*0x68*/
-    __IO uint32_t LANE_PN_SWAP_2;                               /*0x6C*/
-    __IO uint32_t RESV[20];                                         /*FROM 0x70-0xBC*/
-    __IO uint32_t MPLL;                                                 /*0xC0*/
-    __IO uint32_t LF;                                                       /*0xC4*/
-    __IO uint32_t TXF;                                                  /*0xC8*/
-    __IO uint32_t DF;                                                       /*0xCC*/
+    __IO uint32_t EGLITCH_LP;                               /*0x5C*/
+    __IO uint32_t LP_BIST_1;                                /*0x60*/
+    __IO uint32_t LP_BIST_2;                                /*0x64*/
+    __IO uint32_t LANE_PN_SWAP_1;                           /*0x68*/
+    __IO uint32_t LANE_PN_SWAP_2;                           /*0x6C*/
+    __IO uint32_t RESV[20];                                 /*FROM 0x70-0xBC*/
+    __IO uint32_t MPLL;                                     /*0xC0*/
+    __IO uint32_t LF;                                       /*0xC4*/
+    __IO uint32_t TXF;                                      /*0xC8*/
+    __IO uint32_t DF;                                       /*0xCC*/
 } DPHY_TypeDef;
 
-#define MIPI_DPHY_REG_BASE                          (MIPI_REG_BASE + 0x400)     // 0x4060_2400
-#define DPHY                            ((DPHY_TypeDef           *) MIPI_DPHY_REG_BASE)
+#define MIPI_DPHY_REG_BASE              (MIPI_REG_BASE + 0x400)     // 0x4060_2400
+#define DPHY                            ((DPHY_TypeDef *) MIPI_DPHY_REG_BASE)
 
 /*=========================================================*/
 /*REGISTER:CLOCK_GEN,Offset = 0x00*/
@@ -1247,20 +1247,913 @@ typedef struct
 
 
 /*============================================================================*
- *                         Functions
+ *                         D-PHY Registers and Field Descriptions
  *============================================================================*/
-/** \defgroup DPHY_Exported_Functions DPHY Exported Functions
- * \brief
- * \{
- */
-/**
-* \brief       Initialize the DPHY.
-*
-*              Clears PWR_UP.shutdownz to put the DPHY core into reset /
-*              power-down state, so registers can be safely reconfigured.
-*
-* \param[in]   NumberOfLanes : Number of lanes to be used.
-*
-* \ingroup     DPHY_Exported_Functions
+/* 0x00
+    1:0    R/W  txclkesc_sel        0x0
+    2      R/W  txclkesc_ckinv      0x0
+    3      R/W  txbyteclkhs_ckinv   0x0
+    4      R/W  lane0_en            0x0
+    5      R/W  lane1_en            0x0
+    6      R/W  lane2_en            0x0
+    7      R/W  lane3_en            0x0
+    8      R/W  clk_lane_en         0x0
+    9      R/W  rx_rst_n            0x0
+    10     R/W  tx_rst_n            0x0
+    11     R/W  tx_ulps_pll_enable  0x0
+    12     R/W  ck_escape_disable   0x0
+    13     R/W  lane_sync_disable   0x0
+    14     R/W  clk_deglitch_pll_en 0x0
+    15     R/W  bypass_clkrdy       0x0
+    16     R/W  pll_lane0_enable    0x1
+    17     R/W  pll_lane1_enable    0x1
+    18     R/W  pll_lane2_enable    0x1
+    19     R/W  pll_lane3_enable    0x1
+    20     R/W  pll_ck_lane_enable  0x1
+    21     R/W  mtx_en              0x1
+    22     R/W  disable_escape_mode 0x0
+    25:23  R/W  pll_en_sel          0x0
+    31:26  R    reserved_0          0x0
 */
-void DPHY_Init(uint32_t NumberOfLanes);
+typedef union
+{
+    uint32_t d32;
+    uint8_t d8[4];
+    struct
+    {
+        uint32_t txclkesc_sel: 2;
+        uint32_t txclkesc_ckinv: 1;
+        uint32_t txbyteclkhs_ckinv: 1;
+        uint32_t lane0_en: 1;
+        uint32_t lane1_en: 1;
+        uint32_t lane2_en: 1;
+        uint32_t lane3_en: 1;
+        uint32_t clk_lane_en: 1;
+        uint32_t rx_rst_n: 1;
+        uint32_t tx_rst_n: 1;
+        uint32_t tx_ulps_pll_enable: 1;
+        uint32_t ck_escape_disable: 1;
+        uint32_t lane_sync_disable: 1;
+        uint32_t clk_deglitch_pll_en: 1;
+        uint32_t bypass_clkrdy: 1;
+        uint32_t pll_lane0_enable: 1;
+        uint32_t pll_lane1_enable: 1;
+        uint32_t pll_lane2_enable: 1;
+        uint32_t pll_lane3_enable: 1;
+        uint32_t pll_ck_lane_enable: 1;
+        uint32_t mtx_en: 1;
+        uint32_t disable_escape_mode: 1;
+        uint32_t pll_en_sel: 3;
+        const uint32_t reserved_0: 6;
+        } b;
+    } DPHY_CLOCK_GEN_TypeDef;
+
+    /* 0x04
+        15:0   R/W  ck_ulps_exit_time    0x3A9
+        19:16  R/W  ck_tx_idle_exit_time 0xF
+        23:20  R/W  ck_tx_10_exit_time   0x0
+        25:24  R/W  ulps_entry_sel       0x3
+        26     R/W  lp_clk_cfg           0x0
+        27     R/W  rqst_lp_mask_enable  0x0
+        31:28  R    reserved_0           0x0
+    */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t ck_ulps_exit_time: 16;
+                uint32_t ck_tx_idle_exit_time: 4;
+                uint32_t ck_tx_10_exit_time: 4;
+                uint32_t ulps_entry_sel: 2;
+                uint32_t lp_clk_cfg: 1;
+                uint32_t rqst_lp_mask_enable: 1;
+                const uint32_t reserved_0: 4;
+            } b;
+        } DPHY_ESCAPE_TX_CLK_0_TypeDef;
+
+    /* 0x08
+        3:0    R/W  tx_idle_exit_time                0x4
+        7:4    R/W  time_tago                        0x3
+        11:8   R/W  time_taget                       0x2
+        16:12  R/W  time_taget_timeout               0x10
+        17     R/W  taget_timeout_disable            0x0
+        21:18  R/W  rqst_lp_one_quarter_mask_counter 0x0
+        22     R/W  rqst_lp_one_quarter_mask_enable  0x0
+        25:23  R/W  clk_prpr_mask_counter            0x3
+        26     R/W  clk_prpr_mask_enable             0x0
+        27     R    reserved_0                       0x0
+        30:28  R/W  data_prpr_mask_counter           0x3
+        31     R/W  data_prpr_mask_enable            0x0
+    */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t tx_idle_exit_time: 4;
+                uint32_t time_tago: 4;
+                uint32_t time_taget: 4;
+                uint32_t time_taget_timeout: 5;
+                uint32_t taget_timeout_disable: 1;
+                uint32_t rqst_lp_one_quarter_mask_counter: 4;
+                uint32_t rqst_lp_one_quarter_mask_enable: 1;
+                uint32_t clk_prpr_mask_counter: 3;
+                uint32_t clk_prpr_mask_enable: 1;
+                const uint32_t reserved_0: 1;
+                uint32_t data_prpr_mask_counter: 3;
+                uint32_t data_prpr_mask_enable: 1;
+            } b;
+        } DPHY_ESCAPE_TX_DATA_0_TypeDef;
+
+    /* 0x0C
+        15:0   R/W  tx_init_time 0x2A82
+        23:16  R/W  hs_exit_time 0x25
+        31:24  R/W  tx_lpx_time  0xF
+    */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t tx_init_time: 16;
+                uint32_t hs_exit_time: 8;
+                uint32_t tx_lpx_time: 8;
+            } b;
+        } DPHY_ESCAPE_TX_DATA_1_TypeDef;
+
+    /* 0x10
+        7:0    R/W  clk_post_time 0x19
+        15:8   R/W  clk_prpr_time 0x13
+        23:16  R/W  clk_zero_time 0x4F
+        31:24  R/W  clk_pre_time  0x4
+    */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t clk_post_time: 8;
+                uint32_t clk_prpr_time: 8;
+                uint32_t clk_zero_time: 8;
+                uint32_t clk_pre_time: 8;
+            } b;
+        } DPHY_ESCAPE_TX_DATA_2_TypeDef;
+
+    /* 0x14
+        7:0    R/W  hs_prpr_time 0xD
+        15:8   R/W  hs_zero_time 0x21
+        23:16  R/W  tx_tail_time 0x0
+        31:24  R/W  tx_vld_time  0x5
+    */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t hs_prpr_time: 8;
+                uint32_t hs_zero_time: 8;
+                uint32_t tx_tail_time: 8;
+                uint32_t tx_vld_time: 8;
+            } b;
+        } DPHY_ESCAPE_TX_DATA_3_TypeDef;
+
+    /* 0x18
+        7:0    R/W  hs_wkup_time    0x0
+        8      R/W  hsvld_dat_cfg_0 0x0
+        9      R/W  lp_dat_cfg_0    0x0
+        10     R/W  clkedge_cfg_0   0x0
+        11     R/W  hsvld_dat_cfg_1 0x0
+        12     R/W  lp_dat_cfg_1    0x0
+        13     R/W  clkedge_cfg_1   0x0
+        14     R/W  hsvld_dat_cfg_2 0x0
+        15     R/W  lp_dat_cfg_2    0x0
+        16     R/W  clkedge_cfg_2   0x0
+        17     R/W  hsvld_dat_cfg_3 0x0
+        18     R/W  lp_dat_cfg_3    0x0
+        19     R/W  clkedge_cfg_3   0x0
+        31:20  R    reserved_0      0x0
+    */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t hs_wkup_time: 8;
+                uint32_t hsvld_dat_cfg_0: 1;
+                uint32_t lp_dat_cfg_0: 1;
+                uint32_t clkedge_cfg_0: 1;
+                uint32_t hsvld_dat_cfg_1: 1;
+                uint32_t lp_dat_cfg_1: 1;
+                uint32_t clkedge_cfg_1: 1;
+                uint32_t hsvld_dat_cfg_2: 1;
+                uint32_t lp_dat_cfg_2: 1;
+                uint32_t clkedge_cfg_2: 1;
+                uint32_t hsvld_dat_cfg_3: 1;
+                uint32_t lp_dat_cfg_3: 1;
+                uint32_t clkedge_cfg_3: 1;
+                const uint32_t reserved_0: 12;
+            } b;
+        } DPHY_ESCAPE_TX_DATA_4_TypeDef;
+
+    /* 0x1C
+        7:0    R/W  dig_reserved_0 0x9
+        15:8   R/W  dig_reserved_1 0x0
+        23:16  R/W  dig_reserved_2 0x0
+        31:24  R/W  dig_reserved_3 0x0
+    */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t dig_reserved_0: 8;
+                uint32_t dig_reserved_1: 8;
+                uint32_t dig_reserved_2: 8;
+                uint32_t dig_reserved_3: 8;
+            } b;
+        } DPHY_ESCAPE_TX_DATA_5_TypeDef;
+
+    /* 0x20
+        15:0   R/W  ulps_exit_time 0x3A9F
+        31:16  R/W  skew_time      0x30
+    */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t ulps_exit_time: 16;
+                uint32_t skew_time: 16;
+            } b;
+        } DPHY_ESCAPE_TX_DATA_6_TypeDef;
+
+    /* 0x24
+        4:0    R/W  deglitch_cfg       0x0
+        12:5   R/W  rx_clock_phase     0x0
+        17:13  R/W  time_rx_ta_ack     0x7
+        22:18  R/W  time_rx2tx         0x10
+        23     R/W  rx_lp_deglitch     0x0
+        27:24  R/W  rx_lp_delay        0x0
+        28     R/W  disable_errcontrol 0x0
+        29     R/W  disable_errsyncesc 0x0
+        30     R/W  disable_erresc     0x0
+        31     R    reserved_0         0x0
+    */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t deglitch_cfg: 5;
+                uint32_t rx_clock_phase: 8;
+                uint32_t time_rx_ta_ack: 5;
+                uint32_t time_rx2tx: 5;
+                uint32_t rx_lp_deglitch: 1;
+                uint32_t rx_lp_delay: 4;
+                uint32_t disable_errcontrol: 1;
+                uint32_t disable_errsyncesc: 1;
+                uint32_t disable_erresc: 1;
+                const uint32_t reserved_0: 1;
+            } b;
+        } DPHY_ESCAPE_RX_DATA_0_TypeDef;
+
+    /* 0x28
+        0      R/W  wkup_clk_cfg  0x0
+        1      R/W  enhst_clk_cfg 0x0
+        2      R/W  hsvld_clk_cfg 0x0
+        3      R/W  wkup_dat_cfg  0x0
+        4      R/W  enhst_dat_cfg 0x0
+        5      R/W  bit_swp       0x0
+        6      R/W  clkedge_cfg   0x0
+        8:7    R/W  mux_delay_sel 0x0
+        10:9   R/W  lane0_sel     0x0
+        12:11  R/W  lane1_sel     0x1
+        14:13  R/W  lane2_sel     0x2
+        16:15  R/W  lane3_sel     0x3
+        31:17  R    reserved_0    0x0
+    */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t wkup_clk_cfg: 1;
+                uint32_t enhst_clk_cfg: 1;
+                uint32_t hsvld_clk_cfg: 1;
+                uint32_t wkup_dat_cfg: 1;
+                uint32_t enhst_dat_cfg: 1;
+                uint32_t bit_swp: 1;
+                uint32_t clkedge_cfg: 1;
+                uint32_t mux_delay_sel: 2;
+                uint32_t lane0_sel: 2;
+                uint32_t lane1_sel: 2;
+                uint32_t lane2_sel: 2;
+                uint32_t lane3_sel: 2;
+                const uint32_t reserved_0: 15;
+            } b;
+        } DPHY_LANE_SWAP_CTRL_TypeDef;
+
+    /* 0x2C
+        1:0    R/W  bist_pattern_sel   0x0
+        2      R/W  tx_lp_bist_enable  0x0
+        3      R/W  rx_lp_bist_enable  0x0
+        4      R/W  bist_path          0x0
+        12:5   R/W  tx_lp_bist_pattern 0x1
+        20:13  R/W  rx_lp_bist_pattern 0x0
+        31:21  R    reserved_0         0x0
+    */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t bist_pattern_sel: 2;
+                uint32_t tx_lp_bist_enable: 1;
+                uint32_t rx_lp_bist_enable: 1;
+                uint32_t bist_path: 1;
+                uint32_t tx_lp_bist_pattern: 8;
+                uint32_t rx_lp_bist_pattern: 8;
+                const uint32_t reserved_0: 11;
+            } b;
+        } DPHY_LANE_LP_BIST_0_TypeDef;
+
+    /* 0x30
+        7:0    R/W  lpx_tst         0x6
+        15:8   R/W  ndat_tst        0x35
+        23:16  R/W  pdat_tst        0x17
+        24     R/W  test_hsdat_only 0x0
+        25     R/W  test_dat_mode   0x0
+        26     R/W  test_hs_en      0x0
+        27     R/W  test_en         0x0
+        28     R/W  prbs_enable     0x0
+        29     R/W  prbs_invs       0x0
+        31:30  R/W  pattern_sel     0x0
+    */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t lpx_tst: 8;
+                uint32_t ndat_tst: 8;
+                uint32_t pdat_tst: 8;
+                uint32_t test_hsdat_only: 1;
+                uint32_t test_dat_mode: 1;
+                uint32_t test_hs_en: 1;
+                uint32_t test_en: 1;
+                uint32_t prbs_enable: 1;
+                uint32_t prbs_invs: 1;
+                uint32_t pattern_sel: 2;
+            } b;
+        } DPHY_LANE_HS_BIST_TypeDef;
+
+    /* 0x34
+        7:0    R/W  detect_idle_exit_time    0xF
+        11:8   R/W  detect_enable            0xF
+        13:12  R/W  rx_detect_delay_sel      0x0
+        16:14  R/W  tx_detect_delay_sel      0x1
+        19:17  R/W  stopstate_deglitch_sel   0x0
+        21:20  R/W  stopstate_detect_way_sel 0x0
+        25:22  R/W  contention_detect_way    0x2
+        31:26  R    reserved_0               0x0
+    */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t detect_idle_exit_time: 8;
+                uint32_t detect_enable: 4;
+                uint32_t rx_detect_delay_sel: 2;
+                uint32_t tx_detect_delay_sel: 3;
+                uint32_t stopstate_deglitch_sel: 3;
+                uint32_t stopstate_detect_way_sel: 2;
+                uint32_t contention_detect_way: 4;
+                const uint32_t reserved_0: 6;
+            } b;
+        } DPHY_CONTENTION_DETECTOR_AND_STOPSTATE_DT_TypeDef;
+
+    /* 0x38
+        7:0   R/W  dig_debug_sel 0x0
+        31:8  R    reserved_0    0x0
+    */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t dig_debug_sel: 8;
+                const uint32_t reserved_0: 24;
+            } b;
+        } DPHY_DEBUG_0_TypeDef;
+
+    /* 0x3C
+        29:0   R/W  debug_out  0x0
+        31:30  R    reserved_0 0x0
+    */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t debug_out: 30;
+                const uint32_t reserved_0: 2;
+            } b;
+        } DPHY_DEBUG_1_TypeDef;
+
+    /* 0x40
+        0      R/W  bypass_pi         0x0
+        1      R/W  en_ssc            0x0
+        2      R/W  sdm_order         0x0
+        3      R/W  dpi_ssc_flag_init 0x0
+        5:4    R/W  sel_oc_mode       0x0
+        7:6    R/W  hs_oc_stop_diff   0x1
+        13:8   R/W  oc_done_delay     0x3F
+        31:14  R    reserved_0        0x0
+    */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t bypass_pi: 1;
+                uint32_t en_ssc: 1;
+                uint32_t sdm_order: 1;
+                uint32_t dpi_ssc_flag_init: 1;
+                uint32_t sel_oc_mode: 2;
+                uint32_t hs_oc_stop_diff: 2;
+                uint32_t oc_done_delay: 6;
+                const uint32_t reserved_0: 18;
+            } b;
+        } DPHY_SSC0_TypeDef;
+
+    /* 0x44
+        18:0   R/W  gran_est      0x0
+        19     R    reserved_0    0x0
+        22:20  R/W  dot_gran      0x4
+        23     R/W  gran_auto_rst 0x1
+        31:24  R    reserved_1    0x0
+    */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t gran_est: 19;
+                const uint32_t reserved_0: 1;
+                uint32_t dot_gran: 3;
+                uint32_t gran_auto_rst: 1;
+                const uint32_t reserved_1: 8;
+            } b;
+        } DPHY_SSC1_TypeDef;
+
+    /* 0x48
+        10:0   R/W  fcode_ssc    0x0
+        15:11  R    reserved_0   0x0
+        26:16  R/W  fcode_t_scpu 0x0
+        31:27  R    reserved_1   0x0
+    */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t fcode_ssc: 11;
+                const uint32_t reserved_0: 5;
+                uint32_t fcode_t_scpu: 11;
+                const uint32_t reserved_1: 5;
+            } b;
+        } DPHY_SSC2_TypeDef;
+
+    /* 0x4C
+        7:0    R/W  ncode_ssc    0x61
+        15:8   R/W  ncode_t_scpu 0x61
+        25:16  R/W  oc_step_set  0x28
+        26     R/W  oc_en        0x0
+        31:27  R    reserved_0   0x0
+    */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t ncode_ssc: 8;
+                uint32_t ncode_t_scpu: 8;
+                uint32_t oc_step_set: 10;
+                uint32_t oc_en: 1;
+                const uint32_t reserved_0: 5;
+            } b;
+        } DPHY_SSC3_TypeDef;
+
+    /* 0x50
+        0      R/W  en_wdog            0x0
+        2:1    R/W  f390k              0x1
+        3      R/W  rstb               0x0
+        6:4    R/W  time0_ck           0x3
+        7      R    reserved_0         0x0
+        9:8    R/W  time_rdy_ckout     0x2
+        11:10  R/W  dfs_time_rdy_ckout 0x1
+        13:12  R/W  time2_rst_width    0x1
+        31:14  R    reserved_1         0x0
+    */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t en_wdog: 1;
+                uint32_t f390k: 2;
+                uint32_t rstb: 1;
+                uint32_t time0_ck: 3;
+                const uint32_t reserved_0: 1;
+                uint32_t time_rdy_ckout: 2;
+                uint32_t dfs_time_rdy_ckout: 2;
+                uint32_t time2_rst_width: 2;
+                const uint32_t reserved_1: 18;
+            } b;
+        } DPHY_WATCHDOG_TypeDef;
+
+    /* 0x54
+        7:0    R  lane0_esc_cmd 0x0
+        15:8   R  lane1_esc_cmd 0x0
+        16     R  lane0_esc_vld 0x0
+        17     R  lane1_esc_vld 0x0
+        31:18  R  reserved_0    0x0
+    */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                const uint32_t lane0_esc_cmd: 8;
+                const uint32_t lane1_esc_cmd: 8;
+                const uint32_t lane0_esc_vld: 1;
+                const uint32_t lane1_esc_vld: 1;
+                const uint32_t reserved_0: 14;
+            } b;
+        } DPHY_RX_ESCAPE_READ_0_TypeDef;
+
+    /* 0x58
+        7:0    R  lane2_esc_cmd 0x0
+        15:8   R  lane3_esc_cmd 0x0
+        16     R  lane2_esc_vld 0x0
+        17     R  lane3_esc_vld 0x0
+        31:18  R  reserved_0    0x0
+    */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                const uint32_t lane2_esc_cmd: 8;
+                const uint32_t lane3_esc_cmd: 8;
+                const uint32_t lane2_esc_vld: 1;
+                const uint32_t lane3_esc_vld: 1;
+                const uint32_t reserved_0: 14;
+            } b;
+        } DPHY_RX_ESCAPE_READ_1_TypeDef;
+
+    /* 0x5C
+        15:0   R/W  ph_sel             0x0
+        16     R/W  lp_switch_deglitch 0x0
+        31:17  R    reserved_0         0x0
+    */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t ph_sel: 16;
+                uint32_t lp_switch_deglitch: 1;
+                const uint32_t reserved_0: 15;
+            } b;
+        } DPHY_DEGLITCH_LP_TypeDef;
+
+    /* 0x60
+        7:0    R  err_cnt_lane0    0x0
+        15:8   R  packet_cnt_lane0 0x0
+        23:16  R  err_cnt_lane1    0x0
+        31:24  R  packet_cnt_lane1 0x0
+    */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                const uint32_t err_cnt_lane0: 8;
+                const uint32_t packet_cnt_lane0: 8;
+                const uint32_t err_cnt_lane1: 8;
+                const uint32_t packet_cnt_lane1: 8;
+            } b;
+        } DPHY_LP_BIST_1_TypeDef;
+
+    /* 0x64
+        7:0    R  err_cnt_lane2    0x0
+        15:8   R  packet_cnt_lane2 0x0
+        23:16  R  err_cnt_lane3    0x0
+        31:24  R  packet_cnt_lane3 0x0
+    */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                const uint32_t err_cnt_lane2: 8;
+                const uint32_t packet_cnt_lane2: 8;
+                const uint32_t err_cnt_lane3: 8;
+                const uint32_t packet_cnt_lane3: 8;
+            } b;
+        } DPHY_LP_BIST_2_TypeDef;
+
+    /* 0x68
+        2:0    R/W  tx_lane0_sel  0x0
+        3      R    reserved_0    0x0
+        6:4    R/W  tx_lane1_sel  0x1
+        7      R    reserved_1    0x0
+        10:8   R/W  tx_lane2_sel  0x2
+        11     R    reserved_2    0x0
+        14:12  R/W  tx_lane3_sel  0x3
+        15     R    reserved_3    0x0
+        18:16  R/W  tx_lane4_sel  0x4
+        19     R    reserved_4    0x0
+        20     R/W  lane0_pn_swap 0x0
+        21     R/W  lane1_pn_swap 0x0
+        22     R/W  lane2_pn_swap 0x0
+        23     R/W  lane3_pn_swap 0x0
+        24     R/W  lane4_pn_swap 0x0
+        25     R/W  enhs_inverse  0x0
+        26     R/W  wkup_inverse  0x0
+        31:27  R    reserved_5    0x0
+    */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t tx_lane0_sel: 3;
+                const uint32_t reserved_0: 1;
+                uint32_t tx_lane1_sel: 3;
+                const uint32_t reserved_1: 1;
+                uint32_t tx_lane2_sel: 3;
+                const uint32_t reserved_2: 1;
+                uint32_t tx_lane3_sel: 3;
+                const uint32_t reserved_3: 1;
+                uint32_t tx_lane4_sel: 3;
+                const uint32_t reserved_4: 1;
+                uint32_t lane0_pn_swap: 1;
+                uint32_t lane1_pn_swap: 1;
+                uint32_t lane2_pn_swap: 1;
+                uint32_t lane3_pn_swap: 1;
+                uint32_t lane4_pn_swap: 1;
+                uint32_t enhs_inverse: 1;
+                uint32_t wkup_inverse: 1;
+                const uint32_t reserved_5: 5;
+            } b;
+        } DPHY_LANE_PN_SWAP_1_TypeDef;
+
+    /* 0x6C
+        2:0    R/W  rx_lane0_sel 0x0
+        3      R    reserved_0   0x0
+        6:4    R/W  rx_lane1_sel 0x1
+        7      R    reserved_1   0x0
+        10:8   R/W  rx_lane2_sel 0x2
+        11     R    reserved_2   0x0
+        14:12  R/W  rx_lane3_sel 0x3
+        15     R    reserved_3   0x0
+        18:16  R/W  rx_lane4_sel 0x4
+        31:19  R    reserved_4   0x0
+    */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t rx_lane0_sel: 3;
+                const uint32_t reserved_0: 1;
+                uint32_t rx_lane1_sel: 3;
+                const uint32_t reserved_1: 1;
+                uint32_t rx_lane2_sel: 3;
+                const uint32_t reserved_2: 1;
+                uint32_t rx_lane3_sel: 3;
+                const uint32_t reserved_3: 1;
+                uint32_t rx_lane4_sel: 3;
+                const uint32_t reserved_4: 13;
+            } b;
+        } DPHY_LANE_PN_SWAP_2_TypeDef;
+
+    /* 0xC0
+        0      R/W  mpll_big_cco   0x1
+        1      R/W  mpll_div_cyc   0x1
+        3:2    R/W  mpll_icp       0x2
+        5:4    R/W  mpll_ldo_vref  0x0
+        8:6    R/W  mpll_lpf_sr    0x4
+        10:9   R/W  mpll_pdiv      0x1
+        11     R/W  mpll_pi_bypass 0x1
+        12     R/W  mpll_pi_c      0x1
+        14:13  R/W  mpll_pi_isel   0x0
+        15     R/W  mpll_testen    0x0
+        16     R/W  cmu_pow        0x1
+        17     R/W  en_tx_lp_ldo   0x0
+        18     R/W  mpll_cco_band  0x0
+        23:19  R    reserved_0     0x0
+        24     R/W  txtst_en       0x0
+        26:25  R/W  txtst_sel      0x0
+        27     R/W  bypass_8x      0x0
+        28     R/W  hsmode_ldo_en  0x0
+        31:29  R    reserved_1     0x0
+    */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t mpll_big_cco: 1;
+                uint32_t mpll_div_cyc: 1;
+                uint32_t mpll_icp: 2;
+                uint32_t mpll_ldo_vref: 2;
+                uint32_t mpll_lpf_sr: 3;
+                uint32_t mpll_pdiv: 2;
+                uint32_t mpll_pi_bypass: 1;
+                uint32_t mpll_pi_c: 1;
+                uint32_t mpll_pi_isel: 2;
+                uint32_t mpll_testen: 1;
+                uint32_t cmu_pow: 1;
+                uint32_t en_tx_lp_ldo: 1;
+                uint32_t mpll_cco_band: 1;
+                const uint32_t reserved_0: 5;
+                uint32_t txtst_en: 1;
+                uint32_t txtst_sel: 2;
+                uint32_t bypass_8x: 1;
+                uint32_t hsmode_ldo_en: 1;
+                const uint32_t reserved_1: 3;
+            } b;
+        } DPHY_MPLL_TypeDef;
+
+    /* 0xC4
+        4:0    R/W  data0_dly  0x10
+        9:5    R/W  data1_dly  0x10
+        14:10  R/W  data2_dly  0x10
+        24:15  R    reserved_0 0x0
+        25     R/W  ck1x_inv   0x0
+        26     R/W  ck8x_inv   0x0
+        29:27  R/W  ck8x_lag   0x10
+        31:30  R    reserved_1 0x0
+    */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t data0_dly: 5;
+                uint32_t data1_dly: 5;
+                uint32_t data2_dly: 5;
+                const uint32_t reserved_0: 10;
+                uint32_t ck1x_inv: 1;
+                uint32_t ck8x_inv: 1;
+                uint32_t ck8x_lag: 3;
+                const uint32_t reserved_1: 2;
+            } b;
+        } DPHY_LF_TypeDef;
+
+    /* 0xC8
+        2:0    R/W  amp           0x4
+        3      R/W  deemp_en      0x1
+        6:4    R/W  emp           0x4
+        7      R/W  en_lv_ldo     0x1
+        8      R/W  ib_en         0x1
+        11:9   R/W  lpldo_lvl     0x0
+        13:12  R/W  lp_drv        0x2
+        14     R/W  overshoot_bp  0x0
+        15     R/W  range_mode    0x0
+        17:16  R/W  sr_ctrl       0x2
+        19:18  R/W  tx_precur_sel 0x2
+        21:20  R/W  tx_preres_sel 0x0
+        25:22  R/W  z0_tx         0x8
+        27:26  R/W  ck8x_phs      0x2
+        31:28  R    reserved_0    0x0
+    */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t amp: 3;
+                uint32_t deemp_en: 1;
+                uint32_t emp: 3;
+                uint32_t en_lv_ldo: 1;
+                uint32_t ib_en: 1;
+                uint32_t lpldo_lvl: 3;
+                uint32_t lp_drv: 2;
+                uint32_t overshoot_bp: 1;
+                uint32_t range_mode: 1;
+                uint32_t sr_ctrl: 2;
+                uint32_t tx_precur_sel: 2;
+                uint32_t tx_preres_sel: 2;
+                uint32_t z0_tx: 4;
+                uint32_t ck8x_phs: 2;
+                const uint32_t reserved_0: 4;
+            } b;
+        } DPHY_TXF_TypeDef;
+
+    /* 0xCC
+        0      R/W  en_all_div2    0x0
+        1      R/W  en_all_div4    0x0
+        2      R/W  postdiv2       0x1
+        3      R/W  postdiv3       0x1
+        4      R/W  postdiv4       0x1
+        7:5    R/W  en_lpcd        0x1F
+        9:8    R    reserved_0     0x0
+        12:10  R/W  en_lprx        0x1F
+        14:13  R    reserved_1     0x0
+        17:15  R/W  lpcd_hevth_sel 0x0
+        20:18  R/W  lpcd_levth_sel 0x0
+        23:21  R/W  lprx_vth_sel   0x0
+        24     R/W  mbias_en       0x1
+        25     R/W  pwct           0x0
+        31:26  R    reserved_2     0x0
+    */
+    typedef union
+        {
+            uint32_t d32;
+            uint8_t d8[4];
+            struct
+            {
+                uint32_t en_all_div2: 1;
+                uint32_t en_all_div4: 1;
+                uint32_t postdiv2: 1;
+                uint32_t postdiv3: 1;
+                uint32_t postdiv4: 1;
+                uint32_t en_lpcd: 3;
+                const uint32_t reserved_0: 2;
+                uint32_t en_lprx: 3;
+                const uint32_t reserved_1: 2;
+                uint32_t lpcd_hevth_sel: 3;
+                uint32_t lpcd_levth_sel: 3;
+                uint32_t lprx_vth_sel: 3;
+                uint32_t mbias_en: 1;
+                uint32_t pwct: 1;
+                const uint32_t reserved_2: 6;
+            } b;
+        } DPHY_DF_TypeDef;
+
+
+    /*============================================================================*
+     *                         Functions
+     *============================================================================*/
+    /**
+     * \brief  Initialize the DPHY.
+     *
+     *         Clears PWR_UP.shutdownz to put the DPHY core into reset /
+     *         power-down state, so registers can be safely reconfigured.
+     *
+     *         The PLL dividers and all escape/HS timers are derived from the
+     *         two clock arguments, so the same driver serves any link rate.
+
+     * \param[in]   lane_number   : Number of lanes to be used, e.g. 0~3.
+     * \param[in]   src_clk_mhz   : PLL reference clock (CKREF) in MHz, e.g. 40.
+     * \param[in]   dphy_clk_mhz  : HS bit clock in MHz, e.g. 400.
+     *
+     * <b>Example usage</b>
+     * \code{.c}
+     *
+     * void driver_dphy_init(void)
+     * {
+     *      uint32_t lane_number = 0;
+     *      uint32_t src_clk_mhz = 40;
+     *      uint32_t dphy_clk_mhz = 400;
+     *      DPHY_Init(lane_number, src_clk_mhz, dphy_clk_mhz);
+     * }
+     * \endcode
+     */
+    void DPHY_Init(uint32_t lane_number, uint32_t src_clk_mhz, uint32_t dphy_clk_mhz);

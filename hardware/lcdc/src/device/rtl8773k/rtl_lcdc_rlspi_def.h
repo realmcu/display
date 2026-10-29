@@ -18,23 +18,23 @@ extern "C" {
  *============================================================================*/
 typedef struct
 {
-    __IO uint32_t RLSPI_VSYNC_CMD;
-    __IO uint32_t RLSPI_VSYNC_CMD_ADDR;
-    __IO uint32_t RLSPI_HSYNC_CMD_VBPORCH;
-    __IO uint32_t RLSPI_HSYNC_CMD_ADDR_VBPORCH;
-    __IO uint32_t RLSPI_HSYNC_CMD_VACTIVE;
-    __IO uint32_t RLSPI_HSYNC_CMD_ADDR_VACTIVE;
-    __IO uint32_t RLSPI_HSYNC_CMD_VFP;
-    __IO uint32_t RLSPI_HSYNC_CMD_ADDR_VFP;
-    __IO uint32_t RLSPI_LINE_DELAY_OUT_VACTIVE;
-    __IO uint32_t RLSPI_LINE_DELAY_IN_VACTIVE;
-    __IO uint32_t RLSPI_FRAME_DELAY_INFINITE;
-    __I  uint32_t RSVD1[2];
-    __IO uint32_t RLSPI_VERTICAL_SYNC_WIDTH;
-    __IO uint32_t RLSPI_VERTICAL_ABACK_PORCH;
-    __IO uint32_t RLSPI_VERTICAL_AACTIVE;
-    __IO uint32_t RLSPI_VERTICAL_TOTAL_HEIGHT;
-    __IO uint32_t RLSPI_HORIZONTAL_WIDTH;
+    __IO uint32_t  RLSPI_VSYNC_CMD;                /*!< 0x00 */
+    __IO uint32_t  RLSPI_VSYNC_CMD_ADDR;           /*!< 0x04 */
+    __IO uint32_t  RLSPI_HSYNC_CMD_VBPORCH;        /*!< 0x08 */
+    __IO uint32_t  RLSPI_HSYNC_CMD_ADDR_VBPORCH;   /*!< 0x0C */
+    __IO uint32_t  RLSPI_HSYNC_CMD_VACTIVE;        /*!< 0x10 */
+    __IO uint32_t  RLSPI_HSYNC_CMD_ADDR_VACTIVE;   /*!< 0x14 */
+    __IO uint32_t  RLSPI_HSYNC_CMD_VFP;            /*!< 0x18 */
+    __IO uint32_t  RLSPI_HSYNC_CMD_ADDR_VFP;       /*!< 0x1C */
+    __IO uint32_t  RLSPI_LINE_DELAY_OUT_VACTIVE;   /*!< 0x20 */
+    __IO uint32_t  RLSPI_LINE_DELAY_IN_VACTIVE;    /*!< 0x24 */
+    __IO uint32_t  RLSPI_FRAME_DELAY_INFINITE;     /*!< 0x28 */
+    __I  uint32_t  RSVD1[2];                       /*!< 0x2C-0x30 */
+    __IO uint32_t  RLSPI_VERTICAL_SYNC_WIDTH;      /*!< 0x34 */
+    __IO uint32_t  RLSPI_VERTICAL_ABACK_PORCH;     /*!< 0x38 */
+    __IO uint32_t  RLSPI_VERTICAL_AACTIVE;         /*!< 0x3C */
+    __IO uint32_t  RLSPI_VERTICAL_TOTAL_HEIGHT;    /*!< 0x40 */
+    __IO uint32_t  RLSPI_HORIZONTAL_WIDTH;         /*!< 0x44 */
 } LCDC_Ramless_QSPI_TypeDef;
 
 /*============================================================================*
@@ -124,13 +124,11 @@ typedef struct
 #define RLSPI_FRAME_DELAY_INFINITE_MSK              (0xFFFFFFFF << RLSPI_FRAME_DELAY_INFINITE_POS)
 #define RLSPI_FRAME_DELAY_INFINITE_CLR              (~RLSPI_FRAME_DELAY_INFINITE_MSK)
 
-/* Register: RSVD -------------------------------------------------------*/
-/* Description: Control register 0. Offset: 0x2C. Address: . */
-/* RSVD[31:0]: RSVD. */
+/* Register: RSVD1[0] -------------------------------------------------------*/
+/* Description: Reserved. Offset: 0x2C. Address: . */
 
-/* Register: RSVD -------------------------------------------------------*/
-/* Description: Control register 0. Offset: 0x30. Address: . */
-/* RSVD[31:0]: RSVD. */
+/* Register: RSVD1[1] -------------------------------------------------------*/
+/* Description: Reserved. Offset: 0x30. Address: . */
 
 /* Register: RLSPI_VERTICAL_SYNC_WIDTH -------------------------------------------------------*/
 /* Description: RLSPI_VERTICAL_SYNC_WIDTH. Offset: 0x34. Address: . */
@@ -168,13 +166,13 @@ typedef struct
 #define RLSPI_HORIZONTAL_WIDTH_CLR                  (~RLSPI_HORIZONTAL_WIDTH_MSK)
 
 
-#define RLSPI_TEAR_INPUT_FROM_DSI                   ((uint32_t)0x0 << LCDC_TEAR_INPUT_MUX_POS);
-#define RLSPI_TEAR_INPUT_FROM_LCD                   ((uint32_t)0x1 << LCDC_TEAR_INPUT_MUX_POS);
-#define IS_RLSPI_TEAR_INPUT(in)                     ((in == RLSPI_TEAR_INPUT_FROM_DSI) || (in == RLSPI_TEAR_INPUT_FROM_LCD)
+#define RLSPI_TEAR_INPUT_FROM_DSI                   ((uint32_t)0x0 << LCDC_TEAR_INPUT_MUX_POS)
+#define RLSPI_TEAR_INPUT_FROM_LCD                   ((uint32_t)0x1 << LCDC_TEAR_INPUT_MUX_POS)
+#define IS_RLSPI_TEAR_INPUT(in)                     (((in) == RLSPI_TEAR_INPUT_FROM_DSI) || ((in) == RLSPI_TEAR_INPUT_FROM_LCD))
 
 
 #ifdef  __cplusplus
 }
 #endif /* __cplusplus */
 
-#endif /* RTL_DBIB_DEF_H */
+#endif /* RTL_RLSPI_DEF_H */

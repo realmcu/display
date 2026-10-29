@@ -48,8 +48,7 @@ typedef struct
     __IO uint32_t  INFINITE_MODE_CTR;                              /*!< 0x64 */
     __IO uint32_t  SPIC_RX_FIFO_READ_SIZE;                         /*!< 0x68 */
     __IO uint32_t  SPIC_TX_DUMMY;                                  /*!< 0x6C */
-    __IO uint32_t
-    PIXEL_SOURCE_CTRL;                              /*!< 0x70 */ // pixel source control: DMA or const
+    __IO uint32_t  PIXEL_SOURCE_CTRL;                              /*!< 0x70 */
     __IO uint32_t  M1P1T2P3T_CTRL;                                 /*!< 0x74 */
     __IO uint32_t  RSVD4;                                          /*!< 0x78 */
     __IO uint32_t  RSVD5;                                          /*!< 0x7C */
@@ -720,8 +719,8 @@ typedef union
 
 
     /*============================================================================*
-    *                         DISPLAY CONTROLLER TYPE/API  WRAPPER
-    *============================================================================*/
+     *                         DISPLAY CONTROLLER TYPE/API  WRAPPER
+     *============================================================================*/
     /* Internal Type  */
 #define LCDC_HANDLER_DMA_FIFO_CTRL_t     LCDC_HANDLER_DMA_FIFO_CTRL_TypeDef
 #define LCDC_HANDLER_OPERATE_CTR_t       LCDC_HANDLER_OPERATE_CTR_TypeDef
