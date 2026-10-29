@@ -20,6 +20,8 @@ if GetDepend(['CONFIG_REALTEK_LCD_ST7265_800480_RGB']):
     src += ['lcd_st7265_800480_rgb.c']
 if GetDepend(['CONFIG_REALTEK_LCD_EK9716_800480_RGB']):
     src += ['EK9716_800480_rgb.c']
+if GetDepend(['CONFIG_REALTEK_LCD_JD9165BA_1024_600_RGB']):
+    src += ['JD9165BA_1024600_rgb.c']
 if GetDepend(['CONFIG_REALTEK_NV3041A_480_272_QSPI']):
     src += ['nv3041A_480_272_qspi.c']
 if GetDepend(['CONFIG_REALTEK_SH8601Z_454454_QSPI']):

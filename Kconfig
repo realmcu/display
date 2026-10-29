@@ -105,6 +105,12 @@ config REALTEK_LCD_EK9716_800_480_RGB
 	help
 		This config for realtek display lcd device driver EK9716
 
+config REALTEK_LCD_JD9165BA_1024_600_RGB
+	bool "Enable Realtek LCD Device Driver JD9165BA 1024 600 RGB"
+	default n
+	help
+		This config for realtek display lcd device driver JD9165BA
+
 config REALTEK_LCD_ST77916_360_360_8080
 	bool "Enable Realtek LCD Device Driver 360 360"
 	default n
