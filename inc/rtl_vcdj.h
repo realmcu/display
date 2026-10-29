@@ -41,9 +41,9 @@ extern "C" {
 /**
  * \brief Length of \ref vcdj_picture_t.planes: the most planes one picture uses.
  *
- * Packed and luma-only output use one plane, semi-planar YUV two, planar YUV
- * and planar RGB three. Fixed by the IP's output formats, not a configuration
- * option; a build-time check in the driver enforces it.
+ * Matches the vendor per-output plane count, which a build-time check in the
+ * driver enforces. Packed and luma-only output use one plane, semi-planar YUV
+ * two, planar YUV three (not available on every hardware build).
  */
 #define VCDJ_MAX_PLANES                 3U
 
@@ -67,9 +67,10 @@ typedef enum
 } vcdj_error_t;
 
 /*
- * The enumerations below are structure fields and must stay one byte wide
- * (short enums, the ARM EABI default). Never add a value above 0xFF: it would
- * widen the type and shift every later field. Build-time checks enforce both.
+ * The enumerations below are structure fields and must stay one byte wide, so
+ * the build needs short enums (GCC's arm-none-eabi default; pass -fshort-enums
+ * where the toolchain does not). Never add a value above 0xFF: it would widen
+ * the type and shift every later field. Build-time checks enforce both.
  */
 
 /** \brief Input bitstream codec. */
@@ -85,26 +86,33 @@ typedef enum
  * A REQUEST in \ref vcdj_dec_param_t / \ref vcdj_pp_config_t, the format ACTUALLY
  * produced in \ref vcdj_picture_t. Always read it back from the picture; the two
  * differ in these cases:
- *  - colour PNG with a YUV request: BGR888, or ABGR8888 with alpha; a YUV layout
- *    that cannot be rewritten this way (planar, packed 4:2:2) is rejected;
+ *  - colour PNG with a YUV request: BGR888, or ABGR8888 when the PNG has alpha
+ *    or a tRNS chunk; a YUV layout that cannot be rewritten this way (planar,
+ *    packed 4:2:2) is rejected;
  *  - greyscale PNG, or greyscale JPEG with a YUV request: luma only;
  *  - 12-bit JPEG with an 8-bit YUV request: the matching *_PACK10 format
  *    (4:2:2 / 4:4:4 are rejected).
  *
+ * RGB names give the channels from the most to the least significant bits of
+ * one pixel word, stored little endian, so memory order is reversed: RGB888 is
+ * B,G,R in memory, BGR888 is R,G,B, ARGB8888 is B,G,R,A, RGBA8888 is A,B,G,R.
+ *
  * The hardware build decides what succeeds. 10/16-bit containers need a 12-bit
- * JPEG and YUV400_ALPHA needs a PNG; otherwise \ref VCDJ_ERR_UNSUPPORTED.
+ * JPEG and YUV400_ALPHA needs a PNG; otherwise \ref VCDJ_ERR_UNSUPPORTED. On the
+ * current build every planar, P010/I010/L010 and 1010 format is rejected, and
+ * 4:2:2 output (semi-planar or packed) needs a 4:2:2 source.
  * YVU means Cr before Cb.
  */
 typedef enum
 {
     /* --- 8-bit packed RGB ------------------------------------------------- */
     /* 0 is what a zero-initialised request asks for; keep RGB565 there. */
-    VCDJ_OUT_RGB565 = 0,           /**< 16 bpp RGB565, little endian */
+    VCDJ_OUT_RGB565 = 0,           /**< 16 bpp; R in bits 15:11 */
     VCDJ_OUT_BGR565 = 1,
-    VCDJ_OUT_RGB888 = 2,
-    VCDJ_OUT_BGR888 = 3,           /**< 24 bpp BGR888 */
-    VCDJ_OUT_ARGB8888 = 4,         /**< 32 bpp ARGB8888 */
-    VCDJ_OUT_ABGR8888 = 5,         /**< 32 bpp ABGR8888 */
+    VCDJ_OUT_RGB888 = 2,           /**< 24 bpp; memory B,G,R */
+    VCDJ_OUT_BGR888 = 3,           /**< 24 bpp; memory R,G,B */
+    VCDJ_OUT_ARGB8888 = 4,         /**< 32 bpp; memory B,G,R,A */
+    VCDJ_OUT_ABGR8888 = 5,         /**< 32 bpp; memory R,G,B,A */
     VCDJ_OUT_RGBA8888 = 6,
     VCDJ_OUT_BGRA8888 = 7,
     VCDJ_OUT_XRGB8888 = 8,
@@ -188,11 +196,11 @@ typedef enum
 /** \brief PPU scaling filter quality. */
 typedef enum
 {
-    VCDJ_PP_FILTER_DEFAULT = 0,    /**< Default to bilinear when scaling is enabled */
+    VCDJ_PP_FILTER_DEFAULT = 0,    /**< Same as BILINEAR when scaling is enabled */
     VCDJ_PP_FILTER_NEAREST,        /**< Nearest-neighbour, favouring speed */
-    VCDJ_PP_FILTER_BILINEAR,       /**< Bilinear */
-    VCDJ_PP_FILTER_BICUBIC,        /**< Bicubic, favouring quality */
-    VCDJ_PP_FILTER_AREA,           /**< Area; both dimensions must downscale */
+    VCDJ_PP_FILTER_BILINEAR,       /**< Fast linear interpolation */
+    VCDJ_PP_FILTER_BICUBIC,        /**< Fast bicubic interpolation, favouring quality */
+    VCDJ_PP_FILTER_AREA,           /**< Area; no upscale, at least one dimension downscales */
 } vcdj_pp_filter_t;
 
 /**
@@ -223,12 +231,12 @@ typedef struct
  */
 typedef enum
 {
-    VCDJ_CSC_BT601 = 0,            /**< BT.601, full range both sides */
-    VCDJ_CSC_BT601_L,              /**< BT.601, limited range both sides */
-    VCDJ_CSC_BT709,                /**< BT.709, full range both sides */
-    VCDJ_CSC_BT709_L,              /**< BT.709, limited range both sides */
-    VCDJ_CSC_BT2020,               /**< BT.2020, full range both sides */
-    VCDJ_CSC_BT2020_L,             /**< BT.2020, limited range both sides */
+    VCDJ_CSC_BT601 = 0,            /**< BT.601, full-range YCbCr in, full-range RGB out */
+    VCDJ_CSC_BT601_L,              /**< BT.601, limited-range YCbCr in, full-range RGB out */
+    VCDJ_CSC_BT709,                /**< BT.709, full-range YCbCr in, full-range RGB out */
+    VCDJ_CSC_BT709_L,              /**< BT.709, limited-range YCbCr in, full-range RGB out */
+    VCDJ_CSC_BT2020,               /**< BT.2020, full-range YCbCr in, full-range RGB out */
+    VCDJ_CSC_BT2020_L,             /**< BT.2020, limited-range YCbCr in, full-range RGB out */
 } vcdj_csc_t;
 
 /**
@@ -237,6 +245,16 @@ typedef enum
  * Cropping runs before scaling, and the scale target is relative to the cropped
  * region. A disabled crop selects the whole visible picture; disabled scaling is
  * 1:1. The driver owns alignment, stride, plane offsets and buffer negotiation.
+ *
+ * Geometry limits on the current hardware build, each returning
+ * \ref VCDJ_ERR_PARAM when violated:
+ *  - every output dimension is at least 48, scaled or not;
+ *  - a scaled dimension is at most min(4096, 3 x the cropped or visible size)
+ *    and at least 1/32 of it;
+ *  - a crop dimension is at least 48 unless it equals the picture's; the crop
+ *    lies inside the picture, and starts on an even x and y for sub-sampled
+ *    sources or any YUV 4:2:0 / 4:2:2 output;
+ *  - packed 4:2:2 output has an even width.
  */
 typedef struct
 {
@@ -291,13 +309,16 @@ typedef struct
     /* --- codec neutral ---------------------------------------------------- */
     uint32_t width;                /**< Visible picture width in pixels */
     uint32_t height;               /**< Visible picture height in pixels */
-    uint32_t aligned_width;        /**< Width padded to the hardware alignment */
-    uint32_t aligned_height;       /**< Height padded to the hardware alignment */
-    uint32_t bit_depth;            /**< 8 or 12 for JPEG, 8 or 16 for PNG */
+    uint32_t aligned_width;        /**< JPEG: width rounded up to 64; PNG: width. Not a stride */
+    uint32_t aligned_height;       /**< JPEG: height rounded up to 8; PNG: height */
+    uint32_t bit_depth;            /**< JPEG: 8 or 12. PNG: 8, or 1/2/4 index bits for a
+                                        palette picture (samples still output as 8-bit) */
     vcdj_codec_t      codec;       /**< Codec of the parsed stream */
     vcdj_color_type_t color_type;  /**< Colour model of the coded picture */
-    uint8_t  channels;             /**< Component count: 1, 2, 3 or 4 */
-    uint8_t  has_alpha;            /**< 1 when an alpha channel is present */
+    uint8_t  channels;             /**< Coded components, 1 to 4; a palette PNG counts 3,
+                                        or 4 with tRNS */
+    uint8_t  has_alpha;            /**< 1 for a GRAY_ALPHA or RGB_ALPHA picture only; tRNS
+                                        transparency is not reported here */
 
     /* --- JPEG only -------------------------------------------------------- */
     uint8_t  jpeg_progressive;     /**< 1 when the JPEG uses progressive coding */
