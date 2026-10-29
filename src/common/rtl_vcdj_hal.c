@@ -2126,23 +2126,6 @@ void vcdj_deinit(void)
     vcdj_initialised = 0U;
 }
 
-vcdj_error_t vcdj_get_hw_build_id(uint32_t *build_id)
-{
-    if (build_id == NULL)
-    {
-        return VCDJ_ERR_PARAM;
-    }
-
-    if (!vcdj_initialised)
-    {
-        return VCDJ_ERR_STATE;
-    }
-
-    *build_id = DWLReadCoreHwBuildID(vcdj_dwl_handle, 0U);
-
-    return VCDJ_SUCCESS;
-}
-
 vcdj_error_t vcdj_get_image_info(const vcdj_dec_param_t *param,
                                  vcdj_image_info_t *info)
 {

@@ -240,20 +240,14 @@ vcdj_error_t vcdj_selftest(const void *jpeg, uint32_t jpeg_size)
 
     /* ---- step 3: hardware identification ----------------------------- */
     /* Reported only: a wrong ID still has to decode, and the vendor feature
-     * lookup already decides what this core can do. */
+     * lookup already decides what this core can do. Reads the vendor DWL entry
+     * point directly - this raw single-core register value is a bring-up
+     * diagnostic, not part of the driver API. */
     {
-        uint32_t build_id = 0U;
+        uint32_t build_id = DWLReadCoreHwBuildID(dwl, 0U);
 
-        err = vcdj_get_hw_build_id(&build_id);
-        if (err != VCDJ_SUCCESS)
-        {
-            vcdj_plat_log("[vcdj] step 3 WARN: hw build id unavailable -> %d\n", (int)err);
-        }
-        else
-        {
-            vcdj_plat_log("[vcdj] step 3 OK  : hw build id = 0x%08x (expected low half 0x%04x)\n",
-                       (unsigned)build_id, (unsigned)VCDJ_EXPECTED_HW_BUILD_ID);
-        }
+        vcdj_plat_log("[vcdj] step 3 OK  : hw build id = 0x%08x (expected low half 0x%04x)\n",
+                      (unsigned)build_id, (unsigned)VCDJ_EXPECTED_HW_BUILD_ID);
     }
 
     /* ---- step 4: JpegDecInit ----------------------------------------- */

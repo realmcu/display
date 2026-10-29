@@ -77,8 +77,9 @@ extern "C" {
  * Taken from the vendor release name
  * (`Hantro_SW_DecoderJ_CtrlSW_Redistributable_0x2070_v4.1.84_CL1411136.tgz`) and
  * present in the vendor feature table `vpu_features_list.h` as `.id = 0x00002070`.
- * Compare it against the low half of the value read at runtime; it is never
- * substituted for a missing reading.
+ * It is the written record of which IP this Control Software drop was released
+ * for, and the value the bring-up self test compares the register reading
+ * against. It is never substituted for a missing reading.
  */
 #define VCDJ_EXPECTED_HW_BUILD_ID       0x2070U
 
@@ -505,18 +506,6 @@ vcdj_error_t vcdj_init(void);
  * @brief      Release everything \ref vcdj_init acquired.
  */
 void vcdj_deinit(void);
-
-/**
- * @brief      Read the hardware build ID of core 0.
- *
- * @param[out] build_id  Receives the raw build ID register value.
- *
- * @return     \ref VCDJ_SUCCESS on success, otherwise a \ref vcdj_error_t.
- *
- * @note       Returns the raw register value. `0x80002070` has been read on the
- *             BBpro4 FPGA bench; only the low half carries the build ID.
- */
-vcdj_error_t vcdj_get_hw_build_id(uint32_t *build_id);
 
 /**
  * @brief      Parse the bitstream header in software only.
