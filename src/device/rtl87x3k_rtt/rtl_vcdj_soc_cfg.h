@@ -50,7 +50,7 @@ extern "C" {
  *
  * Confirmed on the BBpro4 FPGA bench: reading swreg0 through this base returns
  * the ASIC ID 0x90211010, and swreg309 the build ID 0x80002070 whose low half
- * matches \ref VCDJ_EXPECTED_HW_BUILD_ID.
+ * is Build ID 0x2070, the release the vendored control software targets.
  *
  * The region is 0x40644000-0x40644FFF, i.e. 4 KB.
  */

@@ -39,6 +39,20 @@
 #if defined(VCDJ_ENABLE_SELFTEST)
 
 /*============================================================================*
+ *                        Local Defines
+ *============================================================================*/
+/*
+ * Hardware build ID the vendored Control Software was released for.
+ *
+ * Taken from the release name and from `vpu_features_list.h` (`.id = 0x00002070`),
+ * never read from silicon. Bring-up diagnostic only: it is what step 3 prints
+ * next to the live register reading so a bitfile or vendor drop change is
+ * visible. Kept out of the public header deliberately - which IP the driver was
+ * built against is build provenance, not something an integrator acts on.
+ */
+#define VCDJ_SELFTEST_EXPECTED_HW_BUILD_ID  0x2070U
+
+/*============================================================================*
  *                        Local Types
  *============================================================================*/
 /*
@@ -247,7 +261,7 @@ vcdj_error_t vcdj_selftest(const void *jpeg, uint32_t jpeg_size)
         uint32_t build_id = DWLReadCoreHwBuildID(dwl, 0U);
 
         vcdj_plat_log("[vcdj] step 3 OK  : hw build id = 0x%08x (expected low half 0x%04x)\n",
-                      (unsigned)build_id, (unsigned)VCDJ_EXPECTED_HW_BUILD_ID);
+                      (unsigned)build_id, (unsigned)VCDJ_SELFTEST_EXPECTED_HW_BUILD_ID);
     }
 
     /* ---- step 4: JpegDecInit ----------------------------------------- */

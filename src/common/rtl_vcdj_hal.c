@@ -54,19 +54,9 @@
     typedef char vcdj_static_assert_##tag[(cond) ? 1 : -1]
 
 /*
- * The public enumerations are used as structure fields, which is what makes the
- * legal values discoverable from the field declaration. With -fshort-enums (set
- * SDK wide, see cmake/tool_chain/{gcc,armclang}.cmake) the width of an
- * enumeration follows its value range, so these five checks guard two things a
- * reviewer would not notice:
- *
- *   1. adding an enumerator above 0xFF widens the type to two bytes and silently
- *      moves every field after it. `VCDJ_OUT_UNKNOWN` sits at 0xFF for exactly
- *      that reason;
- *   2. compiling this driver WITHOUT -fshort-enums makes them four bytes.
- *
- * Both are layout changes disguised as harmless edits, so fail the build with a
- * name that says which contract broke.
+ * Public enumerations are structure fields and rely on short enums (the ARM EABI
+ * default). An enumerator above 0xFF, or a build with -fno-short-enums, would
+ * silently shift every later field.
  */
 VCDJ_STATIC_ASSERT(sizeof(vcdj_codec_t)       == 1U, codec_enum_is_one_byte);
 VCDJ_STATIC_ASSERT(sizeof(vcdj_out_format_t)  == 1U, out_format_enum_is_one_byte);
@@ -75,13 +65,7 @@ VCDJ_STATIC_ASSERT(sizeof(vcdj_color_type_t)  == 1U, color_type_enum_is_one_byte
 VCDJ_STATIC_ASSERT(sizeof(vcdj_chroma_t)      == 1U, chroma_enum_is_one_byte);
 VCDJ_STATIC_ASSERT(sizeof(vcdj_picture_sel_t) == 1U, picture_sel_enum_is_one_byte);
 
-/*
- * Measured layouts on the target ABI (Cortex-M55, 32-bit, -fshort-enums):
- * 12 / 32 / 28 / 20 / 76 / 8 bytes. These are not an ABI promise - the driver is compiled
- * from source with the rest of the SDK - they are a tripwire: an unintended
- * layout change, most likely from one of the two enum mistakes above, shows up
- * here instead of in a hard-to-read run-time symptom.
- */
+/* Layout tripwires for the 32-bit target, not an ABI promise. */
 VCDJ_STATIC_ASSERT(sizeof(vcdj_dec_param_t)  == 12U, dec_param_layout);
 VCDJ_STATIC_ASSERT(sizeof(vcdj_pp_config_t)  == 32U, pp_config_layout);
 VCDJ_STATIC_ASSERT(sizeof(vcdj_image_info_t) == 28U, image_info_layout);
@@ -916,6 +900,19 @@ static vcdj_error_t vcdj_prepare_input(const void *dwl, const vcdj_dec_param_t *
 }
 
 /*
+ * Header parsing is CPU only and never writes the stream, so it reads the
+ * caller's buffer in place. Never pass the result to vcdj_release_input().
+ */
+static void vcdj_borrow_input(const vcdj_dec_param_t *param, struct DWLLinearMem *mem)
+{
+    memset(mem, 0, sizeof(*mem));
+    mem->virtual_address = (u32 *)(uintptr_t)param->data;
+    mem->bus_address = (addr_t)(uintptr_t)param->data;
+    mem->size = param->size;
+    mem->logical_size = param->size;
+}
+
+/*
  * The PNG vendor path returns the core wait status as an IRQ mask, so a
  * timeout (0xFF) carries DEC_HW_IRQ_RDY and looks like a finished picture.
  * Do not reduce this to a plain passthrough.
@@ -1365,11 +1362,7 @@ static vcdj_error_t vcdj_jpeg_image_info(const vcdj_dec_param_t *param,
         goto out_work;
     }
 
-    err = vcdj_prepare_input(vcdj_dwl_handle, param, &work->dec_in.stream_buffer);
-    if (err != VCDJ_SUCCESS)
-    {
-        goto out_inst;
-    }
+    vcdj_borrow_input(param, &work->dec_in.stream_buffer);
 
     work->dec_in.stream_length = param->size;
     work->dec_in.buffer_size = 0U;
@@ -1424,9 +1417,6 @@ static vcdj_error_t vcdj_jpeg_image_info(const vcdj_dec_param_t *param,
         info->png_interlaced = 0U;
     }
 
-    vcdj_release_input(vcdj_dwl_handle, &work->dec_in.stream_buffer);
-
-out_inst:
     JpegDecRelease(inst);
 out_work:
     vcdj_mem_free(work);
@@ -1683,11 +1673,7 @@ static vcdj_error_t vcdj_png_image_info(const vcdj_dec_param_t *param,
         goto out_work;
     }
 
-    err = vcdj_prepare_input(vcdj_dwl_handle, param, &work->dec_in.stream_buffer);
-    if (err != VCDJ_SUCCESS)
-    {
-        goto out_inst;
-    }
+    vcdj_borrow_input(param, &work->dec_in.stream_buffer);
 
     work->dec_in.stream_length = param->size - 8U;
     work->dec_in.stream = (u8 *)work->dec_in.stream_buffer.virtual_address + 8U;
@@ -1718,9 +1704,7 @@ static vcdj_error_t vcdj_png_image_info(const vcdj_dec_param_t *param,
     }
 
     err = vcdj_map_dec_ret(ret);
-    vcdj_release_input(vcdj_dwl_handle, &work->dec_in.stream_buffer);
 
-out_inst:
     PngDecRelease(inst);
 out_work:
     vcdj_mem_free(work);
