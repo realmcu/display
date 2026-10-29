@@ -1855,7 +1855,7 @@ static bool mve_arm2d_scaled_blur(uint8_t *buffer, uint16_t buffer_stride,
                              + factor - 1U) / factor;
     uint16_t scaled_height = (uint16_t)(scaled_y_end - scaled_y);
     if ((scaled_height == 0U) || (scaled_y + scaled_height > scaled_target_height)
-        || !mve_arm2d_scaled_buffer_ensure(scratch_mem, scaled_target_width,
+        || !mve_arm2d_scaled_buffer_ensure(scratch_mem, scaled_target_width + 1U,
                                            scaled_height + 1U, bytes_per_pixel))
     {
         return false;
@@ -1882,13 +1882,22 @@ static bool mve_arm2d_scaled_blur(uint8_t *buffer, uint16_t buffer_stride,
     };
     mve_arm2d_run_blur(scaled_start, scratch_mem->hwScaledStride,
                        &scaled_valid, &scaled_target, bit_depth, blur_degree, scratch_mem);
+    for (uint32_t y = 0; y < scaled_height; y++)
+    {
+        uint8_t *row = scaled_start
+                       + (size_t)y * scratch_mem->hwScaledStride * bytes_per_pixel;
+        memcpy(row + (size_t)scaled_target_width * bytes_per_pixel,
+               row + (size_t)(scaled_target_width - 1U) * bytes_per_pixel,
+               bytes_per_pixel);
+    }
+    /* Copy the bottom edge after padding columns to include the guard corner. */
     memcpy(scaled_start + (size_t)scaled_height * scratch_mem->hwScaledStride * bytes_per_pixel,
            scaled_start + (size_t)(scaled_height - 1U) * scratch_mem->hwScaledStride
            * bytes_per_pixel,
            (size_t)scratch_mem->hwScaledStride * bytes_per_pixel);
 
     mve_arm2d_nearest_scale(source_start, scaled_start,
-                            scaled_target_width, scaled_height + 1U,
+                            scaled_target_width + 1U, scaled_height + 1U,
                             scratch_mem->hwScaledStride, buffer_stride, factor,
                             source_width, source_height, bytes_per_pixel, true);
     return true;
