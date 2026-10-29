@@ -502,7 +502,7 @@ int vcdj_core_dma_alloc(size_t size, size_t align, void **cpu_addr, uintptr_t *b
 
     if (cfg == NULL)
     {
-        /* Buffers may be requested before hal_vcdj_init(); fall back to the
+        /* Buffers may be requested before vcdj_init(); fall back to the
          * statically known configuration so allocation still works. */
         cfg = vcdj_platform_get_config();
         if ((cfg == NULL) || (cfg->ops == NULL) || (cfg->ops->dma_alloc == NULL))

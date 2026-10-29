@@ -128,7 +128,7 @@ struct vcdj_platform_ops
 /**
  * \brief Static description of one decoder instance on a given SoC.
  *
- * Populated by `src/device/<soc>/` and bound in `hal_vcdj_init()`
+ * Populated by `src/device/<soc>/` and bound in `vcdj_init()`
  * (compile time static ops, no DTS device model in the first version).
  */
 struct vcdj_platform_config
@@ -262,7 +262,7 @@ int vcdj_core_wait_done(int core_id, uint32_t timeout_ms);
  *        completion since \ref vcdj_core_init; wraps.
  *
  * Lets the caller see a timeout the vendor code swallowed (see
- * vcdj_decode() in rtl_vcdj_hal.c).
+ * vcdj_vendor_decode_checked() in rtl_vcdj_hal.c).
  */
 uint32_t vcdj_core_wait_failures(void);
 
@@ -370,7 +370,7 @@ void vcdj_os_delay_us(uint32_t us);
  */
 #define VCDJ_MAX_BUFFER_NEGOTIATIONS    3U
 
-/** \brief Active DWL instance, or NULL before hal_vcdj_init(). */
+/** \brief Active DWL instance, or NULL before vcdj_init(). */
 const void *vcdj_internal_dwl(void);
 
 /**

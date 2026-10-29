@@ -191,7 +191,7 @@ static int vcdj_scan_jpeg_sof(const u8 *p, u32 len, u32 *width, u32 *height,
 /*============================================================================*
  *                        Public Functions
  *============================================================================*/
-vcdj_error_t hal_vcdj_selftest(const void *jpeg, uint32_t jpeg_size)
+vcdj_error_t vcdj_selftest(const void *jpeg, uint32_t jpeg_size)
 {
     struct vcdj_selftest_work *work = NULL;
     JpegDecOutput *dec_out = NULL;
@@ -229,10 +229,10 @@ vcdj_error_t hal_vcdj_selftest(const void *jpeg, uint32_t jpeg_size)
                (unsigned)plat->hw_timeout_ms);
 
     /* ---- step 2: DWL instance ---------------------------------------- */
-    err = hal_vcdj_init();
+    err = vcdj_init();
     if (err != VCDJ_SUCCESS)
     {
-        vcdj_plat_log("[vcdj] step 2 FAIL: hal_vcdj_init -> %d\n", (int)err);
+        vcdj_plat_log("[vcdj] step 2 FAIL: vcdj_init -> %d\n", (int)err);
         return err;
     }
     dwl = vcdj_internal_dwl();
@@ -244,7 +244,7 @@ vcdj_error_t hal_vcdj_selftest(const void *jpeg, uint32_t jpeg_size)
     {
         uint32_t build_id = 0U;
 
-        err = hal_vcdj_get_hw_build_id(&build_id);
+        err = vcdj_get_hw_build_id(&build_id);
         if (err != VCDJ_SUCCESS)
         {
             vcdj_plat_log("[vcdj] step 3 WARN: hw build id unavailable -> %d\n", (int)err);
@@ -262,7 +262,7 @@ vcdj_error_t hal_vcdj_selftest(const void *jpeg, uint32_t jpeg_size)
     {
         vcdj_plat_log("[vcdj] step 4 FAIL: cannot allocate %u-byte self-test workspace\n",
                    (unsigned)sizeof(*work));
-        hal_vcdj_deinit();
+        vcdj_deinit();
         return VCDJ_ERR_NO_MEM;
     }
     memset(work, 0, sizeof(*work));
@@ -282,7 +282,7 @@ vcdj_error_t hal_vcdj_selftest(const void *jpeg, uint32_t jpeg_size)
     {
         vcdj_plat_log("[vcdj] step 4 FAIL: JpegDecInit -> %s (%d)\n", vcdj_dec_ret_str(ret), (int)ret);
         vcdj_mem_free(work);
-        hal_vcdj_deinit();
+        vcdj_deinit();
         return VCDJ_ERR_STATE;
     }
     vcdj_plat_log("[vcdj] step 4 OK  : JpegDecInit, inst=%p\n", inst);
@@ -290,11 +290,11 @@ vcdj_error_t hal_vcdj_selftest(const void *jpeg, uint32_t jpeg_size)
     /* ---- step 5: input buffer ---------------------------------------- */
     if (DWLMallocLinear(dwl, jpeg_size, &work->dec_in.stream_buffer) != DWL_OK)
     {
-        vcdj_plat_log("[vcdj] step 5 FAIL: DWLMallocLinear(%u) - is hal_vcdj_mem_init() done?\n",
+        vcdj_plat_log("[vcdj] step 5 FAIL: DWLMallocLinear(%u) - is vcdj_mem_init() done?\n",
                    (unsigned)jpeg_size);
         JpegDecRelease(inst);
         vcdj_mem_free(work);
-        hal_vcdj_deinit();
+        vcdj_deinit();
         return VCDJ_ERR_NO_MEM;
     }
     (void)memcpy(work->dec_in.stream_buffer.virtual_address, jpeg, jpeg_size);
@@ -439,7 +439,7 @@ out:
     vcdj_internal_free_external_buffers(external_buffers, external_count);
     vcdj_mem_free(dec_out);
     vcdj_mem_free(work);
-    hal_vcdj_deinit();
+    vcdj_deinit();
 
     vcdj_plat_log("[vcdj] ---- self test done: header parse %s, result %d ----\n",
                info_ok ? "PASS" : "not verified", (int)err);

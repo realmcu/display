@@ -45,6 +45,8 @@ extern "C" {
  *    so a layout change is a recompile rather than a binary compatibility problem.
  *    Should this header ever ship ahead of its implementation, a versioning scheme
  *    has to be added at that point.
+ *    Symbol names may change until the SDK API is frozen; callers must rebuild
+ *    together with the driver.
  *
  *  - THE BEHAVIOUR IS NOT SETTLED. Several fields are specified here but not yet
  *    produced by the implementation, because the hardware contract (register
@@ -403,7 +405,7 @@ typedef struct
 /**
  * \brief A decoded picture and the ownership token needed to give it back.
  *
- * Filled by \ref hal_vcdj_decode, released by \ref hal_vcdj_picture_release.
+ * Filled by \ref vcdj_decode, released by \ref vcdj_picture_release.
  * Every field describes what was ACTUALLY produced, never what was requested.
  *
  * \note Every plane size and stride below comes from the decoder's own buffer
@@ -429,7 +431,7 @@ typedef struct
     /**
      * \brief Opaque token identifying the picture inside the driver.
      *
-     * Must be handed back unmodified to \ref hal_vcdj_picture_release. It is not
+     * Must be handed back unmodified to \ref vcdj_picture_release. It is not
      * a pointer and must not be dereferenced or compared for ordering.
      */
     uintptr_t release_token;
@@ -439,18 +441,18 @@ typedef struct
  * \brief Decode request.
  *
  * \note Post processing stays in the separate \ref vcdj_pp_config_t passed to
- *       \ref hal_vcdj_decode_pp, so this structure only describes the input.
+ *       \ref vcdj_decode_pp, so this structure only describes the input.
  *
  * \note `data` must hold exactly one JPEG frame. A buffer of concatenated frames
  *       (MJPEG) is not a supported input: locate the frames with
- *       \ref hal_vcdj_jpeg_scan_frames and pass them one at a time.
+ *       \ref vcdj_jpeg_scan_frames and pass them one at a time.
  */
 typedef struct
 {
     const void *data;              /**< Input bitstream, CPU accessible */
     uint32_t    size;              /**< Input bitstream length in bytes */
     vcdj_codec_t      codec;       /**< Codec of \ref data */
-    vcdj_out_format_t out_format;  /**< Format for hal_vcdj_decode; decode_pp uses its PPU request */
+    vcdj_out_format_t out_format;  /**< Format for vcdj_decode; decode_pp uses its PPU request */
     vcdj_picture_sel_t picture;    /**< Main picture or embedded thumbnail; see \ref vcdj_picture_sel_t */
     uint8_t     reserved[1];       /**< Must be zero */
 } vcdj_dec_param_t;
@@ -477,7 +479,7 @@ typedef struct
  * @param[in]  vmalloc  Allocation function with malloc() semantics.
  * @param[in]  vfree    Release function with free() semantics.
  *
- * @note       Must be called before \ref hal_vcdj_init. The caller may pass
+ * @note       Must be called before \ref vcdj_init. The caller may pass
  *             `gui_malloc`/`gui_free`, `os_mem_alloc` wrappers, or plain
  *             `malloc`/`free`. The driver never falls back to libc on its own.
  *
@@ -486,7 +488,7 @@ typedef struct
  *             contract that is still open. Do not treat the current
  *             behaviour as final.
  */
-void hal_vcdj_mem_init(void *(*vmalloc)(size_t), void (*vfree)(void *));
+void vcdj_mem_init(void *(*vmalloc)(size_t), void (*vfree)(void *));
 
 /**
  * @brief      Bind the static platform operations and bring the core up.
@@ -497,12 +499,12 @@ void hal_vcdj_mem_init(void *(*vmalloc)(size_t), void (*vfree)(void *));
  *             Safe to call twice; the second call is a no-op returning
  *             \ref VCDJ_SUCCESS.
  */
-vcdj_error_t hal_vcdj_init(void);
+vcdj_error_t vcdj_init(void);
 
 /**
- * @brief      Release everything \ref hal_vcdj_init acquired.
+ * @brief      Release everything \ref vcdj_init acquired.
  */
-void hal_vcdj_deinit(void);
+void vcdj_deinit(void);
 
 /**
  * @brief      Read the hardware build ID of core 0.
@@ -514,7 +516,7 @@ void hal_vcdj_deinit(void);
  * @note       Returns the raw register value. `0x80002070` has been read on the
  *             BBpro4 FPGA bench; only the low half carries the build ID.
  */
-vcdj_error_t hal_vcdj_get_hw_build_id(uint32_t *build_id);
+vcdj_error_t vcdj_get_hw_build_id(uint32_t *build_id);
 
 /**
  * @brief      Parse the bitstream header in software only.
@@ -540,8 +542,8 @@ vcdj_error_t hal_vcdj_get_hw_build_id(uint32_t *build_id);
  *             buffer first even though nothing but the CPU reads it. Querying a
  *             large picture therefore costs one full copy of the input.
  */
-vcdj_error_t hal_vcdj_get_image_info(const vcdj_dec_param_t *param,
-                                     vcdj_image_info_t *info);
+vcdj_error_t vcdj_get_image_info(const vcdj_dec_param_t *param,
+                                 vcdj_image_info_t *info);
 
 /**
  * @brief      Locate the JPEG frames in a buffer of concatenated frames (MJPEG).
@@ -564,9 +566,9 @@ vcdj_error_t hal_vcdj_get_image_info(const vcdj_dec_param_t *param,
  * @return     \ref VCDJ_ERR_PARAM for a NULL or empty buffer, or when the call
  *             could return nothing.
  *
- * @note       Software only: needs neither \ref hal_vcdj_init nor the hardware,
+ * @note       Software only: needs neither \ref vcdj_init nor the hardware,
  *             and copies nothing. Each frame is then decoded by passing
- *             `data + offset` and `size` to \ref hal_vcdj_decode_pp.
+ *             `data + offset` and `size` to \ref vcdj_decode_pp.
  *
  * @note       Bytes outside any frame (padding, garbage) are skipped, so offsets
  *             need not be contiguous. The scan stops at the first broken frame
@@ -578,23 +580,23 @@ vcdj_error_t hal_vcdj_get_image_info(const vcdj_dec_param_t *param,
  * @warning    Cost grows with \p size: entropy-coded data has no length field and
  *             is read byte by byte. Scan once and keep the index.
  */
-vcdj_error_t hal_vcdj_jpeg_scan_frames(const void *data, uint32_t size,
-                                       vcdj_jpeg_frame_t *frames,
-                                       uint32_t max_frames,
-                                       uint32_t *frame_count);
+vcdj_error_t vcdj_jpeg_scan_frames(const void *data, uint32_t size,
+                                   vcdj_jpeg_frame_t *frames,
+                                   uint32_t max_frames,
+                                   uint32_t *frame_count);
 
 /**
  * @brief      Decode one picture synchronously.
  *
  * @param[in]  param  Decode request.
  * @param[out] pic    Receives the decoded picture. On success it must be handed
- *                    to \ref hal_vcdj_picture_release, even when `plane_count`
+ *                    to \ref vcdj_picture_release, even when `plane_count`
  *                    is 0.
  *
  * @return     \ref VCDJ_SUCCESS on success, otherwise a \ref vcdj_error_t.
  *
  * @note       This compatibility entry point performs no crop or scale and uses
- *             `param->out_format`. Use \ref hal_vcdj_decode_pp for PPU control.
+ *             `param->out_format`. Use \ref vcdj_decode_pp for PPU control.
  *
  * @note       Internally this is not a single vendor call: when no output buffer
  *             has been supplied the normal path is
@@ -612,7 +614,7 @@ vcdj_error_t hal_vcdj_jpeg_scan_frames(const void *data, uint32_t size,
  *             \ref VCDJ_ERR_TIMEOUT after the bounded hardware wait expires.
  *             That is the intended M1 outcome, not a defect.
  */
-vcdj_error_t hal_vcdj_decode(const vcdj_dec_param_t *param, vcdj_picture_t *pic);
+vcdj_error_t vcdj_decode(const vcdj_dec_param_t *param, vcdj_picture_t *pic);
 
 /**
  * @brief      Decode one picture synchronously with crop/scale/format configuration.
@@ -630,18 +632,18 @@ vcdj_error_t hal_vcdj_decode(const vcdj_dec_param_t *param, vcdj_picture_t *pic)
  *
  * @note       Configuration is validated and translated before
  *             `JpegDecSetInfo()` / `PngDecSetInfo()`. The legacy
- *             \ref hal_vcdj_decode is equivalent to this function with crop and
+ *             \ref vcdj_decode is equivalent to this function with crop and
  *             scale disabled and `output_format = param->out_format`.
  *
  * @note       With `param->picture = VCDJ_PICTURE_THUMBNAIL`, crop and scale are
  *             relative to the thumbnail, and the error codes for a missing or
- *             non-JPEG thumbnail are those of \ref hal_vcdj_get_image_info. The
+ *             non-JPEG thumbnail are those of \ref vcdj_get_image_info. The
  *             vendor cannot up-sample thumbnail chroma: a 4:2:0 thumbnail with a
  *             4:2:2 / 4:4:4 output returns \ref VCDJ_ERR_PARAM.
  */
-vcdj_error_t hal_vcdj_decode_pp(const vcdj_dec_param_t *param,
-                                const vcdj_pp_config_t *pp,
-                                vcdj_picture_t *pic);
+vcdj_error_t vcdj_decode_pp(const vcdj_dec_param_t *param,
+                            const vcdj_pp_config_t *pp,
+                            vcdj_picture_t *pic);
 
 /**
  * @brief      Give a picture obtained from a VCDJ decode call back to the driver.
@@ -660,10 +662,10 @@ vcdj_error_t hal_vcdj_decode_pp(const vcdj_dec_param_t *param,
  *             is a successful no-op.
  *
  * @note       May run on a different thread than, and concurrently with, a
- *             decode call. Not valid after \ref hal_vcdj_deinit, which has
+ *             decode call. Not valid after \ref vcdj_deinit, which has
  *             already reclaimed every picture; it returns \ref VCDJ_ERR_PARAM.
  */
-vcdj_error_t hal_vcdj_picture_release(vcdj_picture_t *pic);
+vcdj_error_t vcdj_picture_release(vcdj_picture_t *pic);
 
 /*
  * The bring-up self test is NOT declared here. It is test code, not a driver

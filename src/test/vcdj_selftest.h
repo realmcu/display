@@ -57,7 +57,7 @@ extern "C" {
  *             unconditionally in rtl_vcdj_vendor.h during bring-up; remove it
  *             there (and from the Keil project <Define>) for a production image.
  */
-vcdj_error_t hal_vcdj_selftest(const void *jpeg, uint32_t jpeg_size);
+vcdj_error_t vcdj_selftest(const void *jpeg, uint32_t jpeg_size);
 #endif
 
 /** End of VCDJ_SELFTEST

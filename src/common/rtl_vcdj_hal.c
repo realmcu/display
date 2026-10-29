@@ -243,7 +243,7 @@ static void vcdj_live_lock_give(void)
 /*
  * Collapse the vendor return space into errors that are stable for this
  * synchronous one-picture API. Control-flow states are deliberately not exposed:
- * buffer negotiation is consumed by hal_vcdj_decode(), and streaming, flush and
+ * buffer negotiation is consumed by vcdj_decode(), and streaming, flush and
  * abort have no public operation that a caller could continue.
  *
  * Keep this switch explicit rather than relying on value ranges: enum DecRet is a
@@ -920,7 +920,7 @@ static vcdj_error_t vcdj_prepare_input(const void *dwl, const vcdj_dec_param_t *
  * timeout (0xFF) carries DEC_HW_IRQ_RDY and looks like a finished picture.
  * Do not reduce this to a plain passthrough.
  */
-static enum DecRet vcdj_decode(
+static enum DecRet vcdj_vendor_decode_checked(
     void *inst,
     enum DecRet(*decode)(void *, void *, void *),
     void *input, void *output)
@@ -1226,7 +1226,7 @@ static void vcdj_fill_planes(const struct DWLLinearMem *luma,
  *
  * Moves the pixel allocation onto the live list and mints the release token. On
  * success `buffers[0]` is no longer owned by the decode path - `*count` drops to
- * 0 - so the normal cleanup must not free it; \ref hal_vcdj_picture_release does.
+ * 0 - so the normal cleanup must not free it; \ref vcdj_picture_release does.
  *
  * Freeing the DWLDecBuffers shell here, while the codec instance still lives, is
  * safe: AddBuffer copied it by value into the InputQueue (input_queue.c).
@@ -1280,7 +1280,7 @@ static vcdj_error_t vcdj_publish_picture(void **buffers, unsigned int *count,
  *============================================================================*/
 int vcdj_internal_jpeg_decode(void *inst, void *input, void *output)
 {
-    return (int)vcdj_decode(
+    return (int)vcdj_vendor_decode_checked(
                inst, (enum DecRet(*)(void *, void *, void *))JpegDecDecode,
                input, output);
 }
@@ -1538,8 +1538,9 @@ static vcdj_error_t vcdj_jpeg_decode(const vcdj_dec_param_t *param,
     }
     memset(dec_out, 0, sizeof(*dec_out));
 
-    ret = vcdj_decode(inst, (enum DecRet(*)(void *, void *, void *))JpegDecDecode,
-                      &work->dec_in, dec_out);
+    ret = vcdj_vendor_decode_checked(
+              inst, (enum DecRet(*)(void *, void *, void *))JpegDecDecode,
+              &work->dec_in, dec_out);
     while ((ret == DEC_WAITING_FOR_BUFFER) &&
            (negotiations < VCDJ_MAX_BUFFER_NEGOTIATIONS))
     {
@@ -1552,8 +1553,9 @@ static vcdj_error_t vcdj_jpeg_decode(const vcdj_dec_param_t *param,
             goto out_input;
         }
         negotiations++;
-        ret = vcdj_decode(inst, (enum DecRet(*)(void *, void *, void *))JpegDecDecode,
-                          &work->dec_in, dec_out);
+        ret = vcdj_vendor_decode_checked(
+                  inst, (enum DecRet(*)(void *, void *, void *))JpegDecDecode,
+                  &work->dec_in, dec_out);
     }
     if ((ret != DEC_PIC_RDY) && (ret != DEC_PIC_DECODED) && (ret != DEC_OK))
     {
@@ -1818,8 +1820,9 @@ static vcdj_error_t vcdj_png_decode(const vcdj_dec_param_t *param,
     }
     memset(dec_out, 0, sizeof(*dec_out));
 
-    ret = vcdj_decode(inst, (enum DecRet(*)(void *, void *, void *))PngDecDecode,
-                      &work->dec_in, dec_out);
+    ret = vcdj_vendor_decode_checked(
+              inst, (enum DecRet(*)(void *, void *, void *))PngDecDecode,
+              &work->dec_in, dec_out);
     while ((ret == DEC_WAITING_FOR_BUFFER) &&
            (negotiations < VCDJ_MAX_BUFFER_NEGOTIATIONS))
     {
@@ -1832,8 +1835,9 @@ static vcdj_error_t vcdj_png_decode(const vcdj_dec_param_t *param,
             goto out_input;
         }
         negotiations++;
-        ret = vcdj_decode(inst, (enum DecRet(*)(void *, void *, void *))PngDecDecode,
-                          &work->dec_in, dec_out);
+        ret = vcdj_vendor_decode_checked(
+                  inst, (enum DecRet(*)(void *, void *, void *))PngDecDecode,
+                  &work->dec_in, dec_out);
     }
     if ((ret != DEC_PIC_RDY) && (ret != DEC_PIC_DECODED) && (ret != DEC_OK))
     {
@@ -2045,12 +2049,12 @@ static int vcdj_jpeg_frame_end(const uint8_t *buf, uint32_t size, uint32_t soi,
 /*============================================================================*
  *                        Public Functions
  *============================================================================*/
-void hal_vcdj_mem_init(void *(*vmalloc)(size_t), void (*vfree)(void *))
+void vcdj_mem_init(void *(*vmalloc)(size_t), void (*vfree)(void *))
 {
     vcdj_mem_set_allocator(vmalloc, vfree);
 }
 
-vcdj_error_t hal_vcdj_init(void)
+vcdj_error_t vcdj_init(void)
 {
     struct DWLInitParam param;
 
@@ -2061,7 +2065,7 @@ vcdj_error_t hal_vcdj_init(void)
 
     if (!vcdj_mem_allocator_ready())
     {
-        /* hal_vcdj_mem_init() has not been called; refuse instead of quietly
+        /* vcdj_mem_init() has not been called; refuse instead of quietly
          * pulling in libc malloc. */
         return VCDJ_ERR_NO_MEM;
     }
@@ -2088,7 +2092,7 @@ vcdj_error_t hal_vcdj_init(void)
     return VCDJ_SUCCESS;
 }
 
-void hal_vcdj_deinit(void)
+void vcdj_deinit(void)
 {
     struct vcdj_live_picture *live;
 
@@ -2122,7 +2126,7 @@ void hal_vcdj_deinit(void)
     vcdj_initialised = 0U;
 }
 
-vcdj_error_t hal_vcdj_get_hw_build_id(uint32_t *build_id)
+vcdj_error_t vcdj_get_hw_build_id(uint32_t *build_id)
 {
     if (build_id == NULL)
     {
@@ -2139,8 +2143,8 @@ vcdj_error_t hal_vcdj_get_hw_build_id(uint32_t *build_id)
     return VCDJ_SUCCESS;
 }
 
-vcdj_error_t hal_vcdj_get_image_info(const vcdj_dec_param_t *param,
-                                     vcdj_image_info_t *info)
+vcdj_error_t vcdj_get_image_info(const vcdj_dec_param_t *param,
+                                 vcdj_image_info_t *info)
 {
     if ((param == NULL) || (info == NULL) || (param->data == NULL) || (param->size == 0U))
     {
@@ -2172,10 +2176,10 @@ vcdj_error_t hal_vcdj_get_image_info(const vcdj_dec_param_t *param,
     return vcdj_png_image_info(param, info);
 }
 
-vcdj_error_t hal_vcdj_jpeg_scan_frames(const void *data, uint32_t size,
-                                       vcdj_jpeg_frame_t *frames,
-                                       uint32_t max_frames,
-                                       uint32_t *frame_count)
+vcdj_error_t vcdj_jpeg_scan_frames(const void *data, uint32_t size,
+                                   vcdj_jpeg_frame_t *frames,
+                                   uint32_t max_frames,
+                                   uint32_t *frame_count)
 {
     const uint8_t *buf = (const uint8_t *)data;
     uint32_t found = 0U;
@@ -2231,9 +2235,9 @@ vcdj_error_t hal_vcdj_jpeg_scan_frames(const void *data, uint32_t size,
     return VCDJ_SUCCESS;
 }
 
-vcdj_error_t hal_vcdj_decode_pp(const vcdj_dec_param_t *param,
-                                const vcdj_pp_config_t *pp,
-                                vcdj_picture_t *pic)
+vcdj_error_t vcdj_decode_pp(const vcdj_dec_param_t *param,
+                            const vcdj_pp_config_t *pp,
+                            vcdj_picture_t *pic)
 {
     if (pic != NULL)
     {
@@ -2273,7 +2277,7 @@ vcdj_error_t hal_vcdj_decode_pp(const vcdj_dec_param_t *param,
     return vcdj_png_decode(param, pp, pic);
 }
 
-vcdj_error_t hal_vcdj_decode(const vcdj_dec_param_t *param, vcdj_picture_t *pic)
+vcdj_error_t vcdj_decode(const vcdj_dec_param_t *param, vcdj_picture_t *pic)
 {
     vcdj_pp_config_t pp;
 
@@ -2286,10 +2290,10 @@ vcdj_error_t hal_vcdj_decode(const vcdj_dec_param_t *param, vcdj_picture_t *pic)
     pp.output_format = param->out_format;
     pp.filter = VCDJ_PP_FILTER_DEFAULT;
 
-    return hal_vcdj_decode_pp(param, &pp, pic);
+    return vcdj_decode_pp(param, &pp, pic);
 }
 
-vcdj_error_t hal_vcdj_picture_release(vcdj_picture_t *pic)
+vcdj_error_t vcdj_picture_release(vcdj_picture_t *pic)
 {
     struct vcdj_live_picture *live;
 
@@ -2339,7 +2343,7 @@ vcdj_error_t hal_vcdj_picture_release(vcdj_picture_t *pic)
 
     /*
      * Only the pixel memory is released here. The queue slot and the codec
-     * instance were already wound down inside hal_vcdj_decode(), so no vendor
+     * instance were already wound down inside vcdj_decode(), so no vendor
      * call is needed - and none would be valid, because the instance that owned
      * that bookkeeping no longer exists. The node is off the list, so the free
      * itself needs no lock.
