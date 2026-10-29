@@ -285,6 +285,51 @@ static void vcdj_plat_reg_write32(void *ctx, uint32_t offset, uint32_t value)
 /*============================================================================*
  *                        Platform ops: DMA capable memory
  *============================================================================*/
+/*
+ * Optional bump arena for DMA buffers, selected by vcdj_plat_dma_region_set()
+ * (0 = heap). Used by the firmware test suite for outputs too big for the heap.
+ * It never reclaims: reset it before each job; exhaustion returns ERR_NO_MEM.
+ */
+extern unsigned char __gpu_ram_start;    /* SYS_RAM reserved for the GPU */
+
+static int vcdj_dma_probe_region;        /* 0 = heap, 1 = sysram2 */
+static uintptr_t vcdj_dma_probe_base;
+static size_t vcdj_dma_probe_size;
+static size_t vcdj_dma_probe_used;
+
+void vcdj_plat_dma_region_set(int region)
+{
+    vcdj_dma_probe_region = region;
+    vcdj_dma_probe_used = 0U;
+
+    switch (region)
+    {
+    case 1:
+        /* GPU RAM is 1.125 MB (link.lds) from 0x20640000. The arena takes
+         * 896 KB and leaves the top 256 KB from 0x20720000 for the stream
+         * window. Keep the two apart: the arena never reclaims, so an overlap
+         * would be silently overwritten mid-decode.
+         *
+         * The 896 KB is sized by the largest case that fits at all - JPEG@201
+         * needs 786,625 B (input + four PPU lanczos tables + the 540x380 RGB
+         * output); no case between it and PNG@23 (1.88 MB) exists. */
+        vcdj_dma_probe_base = (uintptr_t)&__gpu_ram_start;
+        vcdj_dma_probe_size = 896U * 1024U;
+        break;
+    default:
+        vcdj_dma_probe_base = 0U;
+        vcdj_dma_probe_size = 0U;
+        break;
+    }
+}
+
+void vcdj_plat_dma_region_info(int *region, uintptr_t *base, size_t *size)
+{
+    *region = vcdj_dma_probe_region;
+    *base = vcdj_dma_probe_base;
+    *size = vcdj_dma_probe_size;
+}
+
 static int vcdj_plat_dma_alloc(void *ctx, size_t size, size_t align,
                                void **cpu_addr, uintptr_t *bus_addr)
 {
@@ -314,7 +359,27 @@ static int vcdj_plat_dma_alloc(void *ctx, size_t size, size_t align,
         return -1;
     }
 
-    raw = vcdj_mem_alloc(size + align + sizeof(struct vcdj_alloc_hdr));
+    if (vcdj_dma_probe_region != 0)
+    {
+        size_t need = size + align + sizeof(struct vcdj_alloc_hdr);
+
+        if ((need > vcdj_dma_probe_size) ||
+            (vcdj_dma_probe_used > (vcdj_dma_probe_size - need)))
+        {
+            vcdj_plat_log("[vcdj] dma probe arena exhausted: need %u, used %u of %u\n",
+                          (unsigned)need, (unsigned)vcdj_dma_probe_used,
+                          (unsigned)vcdj_dma_probe_size);
+            return -1;
+        }
+
+        raw = (void *)(vcdj_dma_probe_base + vcdj_dma_probe_used);
+        vcdj_dma_probe_used += need;
+    }
+    else
+    {
+        raw = vcdj_mem_alloc(size + align + sizeof(struct vcdj_alloc_hdr));
+    }
+
     if (raw == NULL)
     {
         return -1;
@@ -359,6 +424,13 @@ static void vcdj_plat_dma_free(void *ctx, void *cpu_addr,
     }
 
     hdr->magic = 0U;
+
+    /* BRING-UP: arena blocks are not heap pointers, see vcdj_plat_dma_alloc(). */
+    if (vcdj_dma_probe_region != 0)
+    {
+        return;
+    }
+
     vcdj_mem_free(hdr->raw);
 }
 
