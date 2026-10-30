@@ -66,8 +66,8 @@ extern void sw_acc_blit(draw_img_t *image, struct gui_dispdev *dc, struct gui_re
 #endif
 
 /* Default blur strength for IMG_A8_BLUR (matches gui_win / gui_view blur). */
-#ifndef GUI_A8_BLUR_DEGREE
-#define GUI_A8_BLUR_DEGREE 237
+#ifndef GUI_MVE_MAX_BLUR_DEGREE
+#define GUI_MVE_MAX_BLUR_DEGREE 225
 #endif
 
 static uint8_t *cache_buf1 = NULL;
@@ -1892,9 +1892,12 @@ void hw_acc_blit_a8_blur(draw_img_t *image, struct gui_dispdev *dc, struct gui_r
     {
         return;
     }
+    uint8_t blur_degree = (uint8_t)(((uint32_t)image->opacity_value * GUI_MVE_MAX_BLUR_DEGREE
+                                     + 127U) / 255U);
+
     struct acc_engine *acc = gui_get_acc();
-    if ((image->acc_user == NULL) && (acc != NULL) && (acc->blur != NULL)
-        && (acc->blur->prepare != NULL))
+    if ((blur_degree != 0U) && (image->acc_user == NULL) && (acc != NULL)
+        && (acc->blur != NULL) && (acc->blur->prepare != NULL))
     {
         acc->blur->prepare(&image->acc_user);
     }
@@ -1906,7 +1909,7 @@ void hw_acc_blit_a8_blur(draw_img_t *image, struct gui_dispdev *dc, struct gui_r
     uint32_t ppe_abgr = (c_a | (c_r >> 16) | c_g | (c_b << 16));
 
     const uint8_t *a8_base = (const uint8_t *)image->data + sizeof(gui_rgb_data_head_t);
-    hw_acc_blur_a8(dc, &draw_rect, GUI_A8_BLUR_DEGREE, image->acc_user,
+    hw_acc_blur_a8(dc, &draw_rect, blur_degree, image->acc_user,
                    a8_base, (int16_t)image->img_w,
                    image->img_target_x, image->img_target_y, ppe_abgr);
 
@@ -2528,6 +2531,44 @@ bool hw_acc_mix_a_rgb_vertical(uint8_t *a, uint8_t *rgb, uint16_t rgb_stride,
                                      argb, w, h, true);
 }
 
+static void ppe_a8_recolor(uint8_t *buffer, int16_t width, int16_t height,
+                           uint16_t fb_stride, PPE_PIXEL_FORMAT fb_format,
+                           const uint8_t *a8_row, int16_t a8_stride, uint32_t recolor)
+{
+    ppe_matrix_t inverse;
+    ppe_get_identity(&inverse);
+    ppe_buffer_t target, source;
+    memset(&source, 0, sizeof(ppe_buffer_t));
+    memset(&target, 0, sizeof(ppe_buffer_t));
+
+    target.width = width;
+    target.height = height;
+    target.stride = fb_stride;
+    target.format = fb_format;
+    target.opacity = 0xFF;
+    target.const_color = 0xFFFFFFFF;
+    target.address = (uint32_t)buffer;
+    target.win_x_min = 0;
+    target.win_x_max = width - 1;
+    target.win_y_min = 0;
+    target.win_y_max = height - 1;
+
+    source.width = width;
+    source.height = height;
+    source.stride = a8_stride;
+    source.format = PPE_A8;
+    source.address = (uint32_t)a8_row;
+    source.opacity = 0xFF;
+    source.const_color = recolor;
+    source.win_x_min = 0;
+    source.win_x_max = width - 1;
+    source.win_y_min = 0;
+    source.win_y_max = height - 1;
+
+    PPE_Blit_Inverse(&target, &source, NULL, &inverse, NULL, PPE_BLEND_PREMULTIPLY);
+    ppe_wait_finish_blocking();
+}
+
 void hw_acc_blur_a8(struct gui_dispdev *dc, gui_rect_t *rect, uint8_t blur_degree, void *cache_mem,
                     const uint8_t *a8_base, int16_t a8_stride,
                     int16_t a8_origin_x, int16_t a8_origin_y, uint32_t recolor)
@@ -2541,15 +2582,45 @@ void hw_acc_blur_a8(struct gui_dispdev *dc, gui_rect_t *rect, uint8_t blur_degre
     int16_t blur_h = blur_rect.y2 - blur_rect.y1 + 1;
     uint8_t  bpp   = dc->bit_depth / 8;
 
-    uint8_t *blur_copy = (uint8_t *)gui_malloc((uint32_t)blur_w * (uint32_t)blur_h * bpp);
-    if (blur_copy == NULL)
+    PPE_PIXEL_FORMAT fb_format;
+    switch (dc->bit_depth)
     {
+    case 16:
+        fb_format = PPE_RGB565;
+        break;
+    case 24:
+        fb_format = PPE_RGB888;
+        break;
+    case 32:
+        fb_format = PPE_ARGB8888;
+        break;
+    default:
         return;
     }
 
     uint8_t *buffer = dc->frame_buf +
                       ((blur_rect.y1 - dc->section.y1) * dc->fb_width +
                        (blur_rect.x1 - dc->section.x1)) * bpp;
+    const uint8_t *a8_row = a8_base +
+                            (blur_rect.y1 - a8_origin_y) * a8_stride +
+                            (blur_rect.x1 - a8_origin_x);
+
+    if (blur_degree == 0U)
+    {
+        if (recolor & 0xFF000000)
+        {
+            ppe_a8_recolor(buffer, blur_w, blur_h, dc->fb_width, fb_format,
+                           a8_row, a8_stride, recolor);
+        }
+        return;
+    }
+
+    uint8_t *blur_copy = (uint8_t *)gui_malloc((uint32_t)blur_w * (uint32_t)blur_h * bpp);
+    if (blur_copy == NULL)
+    {
+        return;
+    }
+
     for (int16_t row = 0; row < blur_h; row++)
     {
         memcpy(blur_copy + (uint32_t)row * blur_w * bpp,
@@ -2588,30 +2659,14 @@ void hw_acc_blur_a8(struct gui_dispdev *dc, gui_rect_t *rect, uint8_t blur_degre
         gui_free(blur_copy);
         return;
     }
-    const uint8_t *a8_row  = a8_base +
-                             (blur_rect.y1 - a8_origin_y) * a8_stride +
-                             (blur_rect.x1 - a8_origin_x);
-    uint8_t       *p_out   = buffer;
-    uint8_t       *p_blur  = blur_copy;
-    PPE_PIXEL_FORMAT blur_format;
-    switch (dc->bit_depth)
+    uint8_t *p_blur = blur_copy;
+    if (!hw_acc_mix_a_rgb((uint8_t *)a8_row, (uint16_t)a8_stride, p_blur, blur_w, fb_format,
+                          argb_combine, blur_w, blur_h))
     {
-    case 16:
-        blur_format = PPE_RGB565;
-        break;
-    case 24:
-        blur_format = PPE_RGB888;
-        break;
-    case 32:
-        blur_format = PPE_ARGB8888;
-        break;
-    default:
         gui_free(argb_combine);
         gui_free(blur_copy);
         return;
     }
-    hw_acc_mix_a_rgb((uint8_t *)a8_row, (uint16_t)a8_stride, p_blur, blur_w, blur_format,
-                     argb_combine, blur_w, blur_h);
 
     ppe_matrix_t inverse;
     ppe_get_identity(&inverse);
@@ -2621,22 +2676,7 @@ void hw_acc_blur_a8(struct gui_dispdev *dc, gui_rect_t *rect, uint8_t blur_degre
     target.width = blur_w;
     target.height = blur_h;
     target.stride = dc->fb_width;
-    switch (dc->bit_depth)
-    {
-    case 16:
-        target.format = PPE_RGB565;
-        break;
-    case 24:
-        target.format = PPE_RGB888;
-        break;
-    case 32:
-        target.format = PPE_ARGB8888;
-        break;
-    default:
-        gui_free(argb_combine);
-        gui_free(blur_copy);
-        return;
-    }
+    target.format = fb_format;
     target.opacity = 0xFF;
     target.const_color = 0xFFFFFFFF;
     target.address = (uint32_t)buffer;
@@ -2657,19 +2697,15 @@ void hw_acc_blur_a8(struct gui_dispdev *dc, gui_rect_t *rect, uint8_t blur_degre
     source.win_y_min = 0;
     source.win_y_max = target.height - 1;
 
-    PPE_Blit_Inverse(&target, &source, NULL, &inverse, NULL, PPE_BLEND_PREMULTIPLY);
+    PPE_Blit_Inverse(&target, &source, NULL, &inverse, NULL, PPE_BLEND_SRC_OVER);
     ppe_wait_finish_blocking();
     gui_free(argb_combine);
     gui_free(blur_copy);
 
     if (recolor & 0xFF000000)
     {
-        source.address = (uint32_t)a8_row;
-        source.stride = a8_stride;
-        source.const_color = recolor;
-        source.format = PPE_A8;
-        PPE_Blit_Inverse(&target, &source, NULL, &inverse, NULL, PPE_BLEND_PREMULTIPLY);
-        ppe_wait_finish_blocking();
+        ppe_a8_recolor(buffer, blur_w, blur_h, dc->fb_width, fb_format,
+                       a8_row, a8_stride, recolor);
     }
 }
 

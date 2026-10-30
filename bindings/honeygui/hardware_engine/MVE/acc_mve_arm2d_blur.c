@@ -1854,7 +1854,11 @@ static bool mve_arm2d_scaled_blur(uint8_t *buffer, uint16_t buffer_stride,
     uint32_t scaled_y_end = ((uint32_t)(valid_rect->y2 - target_rect->y1 + 1)
                              + factor - 1U) / factor;
     uint16_t scaled_height = (uint16_t)(scaled_y_end - scaled_y);
-    if ((scaled_height == 0U) || (scaled_y + scaled_height > scaled_target_height)
+    if (scaled_height == 0U)
+    {
+        return true;
+    }
+    if ((scaled_y + scaled_height > scaled_target_height)
         || !mve_arm2d_scaled_buffer_ensure(scratch_mem, scaled_target_width + 1U,
                                            scaled_height + 1U, bytes_per_pixel))
     {
