@@ -40,13 +40,14 @@ static void lcd_spi_write(uint8_t *buf, uint32_t len)
 
     DBIC_CmdLength(0);
     DBIC_AddrLength(0);
-    DBIC_TX_NDF(len - 0);
+    DBIC_TX_NDF(len);
 
-    DBIC_Cmd(ENABLE);
+    DBIC->FLUSH_FIFO = 0x01;
     for (uint32_t i = 0; i < len; i++)
     {
         DBIC->DR[0].byte = buf[i];
     }
+    DBIC_Cmd(ENABLE);
     while (DBIC->SR & BIT0); // wait bus busy
     DBIC_Cmd(DISABLE);//disable DBIC
 }

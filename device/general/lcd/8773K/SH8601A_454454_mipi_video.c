@@ -78,7 +78,7 @@ __weak void DSI_IO_WriteCmd(uint32_t NbrParams, uint8_t *pParams)
     DSI_TypeDef *DSIx = DSI;
     if (NbrParams == 0)
     {
-        DSI_ShortWrite(DSIx, 0, DSI_DCS_SHORT_PKT_WRITE_P1, pParams[0], pParams[1]);
+        DSI_ShortWrite(DSIx, 0, DSI_DCS_SHORT_PKT_WRITE_P0, pParams[0], 0);
     }
     else if (NbrParams == 1)
     {
@@ -294,7 +294,7 @@ void rtk_lcd_hal_init(void)
     NVIC_InitStruct.NVIC_IRQChannelCmd = ENABLE;
     NVIC_Init(&NVIC_InitStruct);
 
-    LCDC_eDPICfgTypeDef eDPICfg;//836 * 550, 42FPS == 19311600
+    LCDC_eDPICfgTypeDef eDPICfg = {0};//836 * 550, 42FPS == 19311600
     eDPICfg.eDPI_ClockDiv = SH8601A_EDPI_CLOCK_DIV;
     eDPICfg.eDPI_HoriSyncWidth = SH8601A_LCD_HSYNC;
     eDPICfg.eDPI_VeriSyncHeight = SH8601A_LCD_VSYNC;
@@ -566,7 +566,7 @@ void lcd_sh8601a_mipi_video_init_framebuffer(uint8_t *buf, uint32_t len)
 
 void Display_Handler(void)
 {
-    if (LCDC_GetINTStatus(LCDC_INT_TX_AUTO_DONE) == SET)
+    if (LCDC_GetINTStatus(LCDC_STATUS_TX_AUTO_DONE_INT) == SET)
     {
         LCDC_ClearINTPendingBit(LCDC_CLR_TX_AUTO_DONE);
 

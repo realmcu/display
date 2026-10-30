@@ -34,7 +34,7 @@ __weak void DSI_IO_WriteCmd(uint32_t NbrParams, uint8_t *pParams)
     DSI_TypeDef *DSIx = DSI;
     if (NbrParams == 0)
     {
-        DSI_ShortWrite(DSIx, 0, DSI_DCS_SHORT_PKT_WRITE_P1, pParams[0], pParams[1]);
+        DSI_ShortWrite(DSIx, 0, DSI_DCS_SHORT_PKT_WRITE_P0, pParams[0], 0);
     }
     else if (NbrParams == 1)
     {
@@ -92,7 +92,7 @@ void rtk_lcd_hal_rect_fill(uint16_t xStart, uint16_t yStart, uint16_t w, uint16_
     LCDC_DMAChannelCmd(LCDC_DMA_CHANNEL_NUM, ENABLE);
     LCDC_DmaCmd(ENABLE);
 
-    TEAR_CTR_t handler_reg_0x10 = {.d32 = LCDC_HANDLER->TEAR_CTR};
+    LCDC_HANDLER_TEAR_CTR_TypeDef handler_reg_0x10 = {.d32 = LCDC_HANDLER->TEAR_CTR};
     handler_reg_0x10.b.bypass_t2w_delay = 0;
     handler_reg_0x10.b.t2w_delay = 0xfff;
     LCDC_HANDLER->TEAR_CTR = handler_reg_0x10.d32;
@@ -212,7 +212,7 @@ void rtk_lcd_hal_init(void)
         8;    // MSize + threshold should be no larger than 128
     LCDC_Init(&lcdc_init);
 
-    LCDC_eDPICfgTypeDef eDPICfg;//836 * 550, 42FPS == 19311600
+    LCDC_eDPICfgTypeDef eDPICfg = {0};//836 * 550, 42FPS == 19311600
     eDPICfg.eDPI_ClockDiv = 4;
     eDPICfg.eDPI_HoriSyncWidth = SH8601A_LCD_HSYNC;
     eDPICfg.eDPI_VeriSyncHeight = SH8601A_LCD_VSYNC;
@@ -453,7 +453,7 @@ void rtk_lcd_hal_update_framebuffer(uint8_t *buf, uint32_t len)
     LCDC_DMAChannelCmd(LCDC_DMA_CHANNEL_NUM, ENABLE);
     LCDC_DmaCmd(ENABLE);
 
-    TEAR_CTR_t handler_reg_0x10 = {.d32 = LCDC_HANDLER->TEAR_CTR};
+    LCDC_HANDLER_TEAR_CTR_TypeDef handler_reg_0x10 = {.d32 = LCDC_HANDLER->TEAR_CTR};
     handler_reg_0x10.b.bypass_t2w_delay = 0;
     handler_reg_0x10.b.t2w_delay = 0xfff;
     LCDC_HANDLER->TEAR_CTR = handler_reg_0x10.d32;
@@ -519,7 +519,7 @@ void rtk_lcd_hal_start_transfer(uint8_t *buf, uint32_t len)
     LCDC_DMAChannelCmd(LCDC_DMA_CHANNEL_NUM, ENABLE);
     LCDC_DmaCmd(ENABLE);
 
-    TEAR_CTR_t handler_reg_0x10 = {.d32 = LCDC_HANDLER->TEAR_CTR};
+    LCDC_HANDLER_TEAR_CTR_TypeDef handler_reg_0x10 = {.d32 = LCDC_HANDLER->TEAR_CTR};
     handler_reg_0x10.b.bypass_t2w_delay = 0;
     handler_reg_0x10.b.t2w_delay = 0xfff;
     LCDC_HANDLER->TEAR_CTR = handler_reg_0x10.d32;

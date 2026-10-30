@@ -20,6 +20,17 @@
 #include "rtl_lcdc_dbib.h"
 #include "platform_utils.h"
 
+
+void rtk_lcd_hal_set_TE_type(T_LCDC_TE_TYPE state)
+{
+    use_TE = state;
+}
+
+T_LCDC_TE_TYPE rtk_lcd_hal_get_TE_type(void)
+{
+    return use_TE;
+}
+
 void st77916_write_cmd(uint8_t command)
 {
     LCDC_Cmd(DISABLE);
@@ -429,7 +440,7 @@ void lcd_pad_init(void)
     /*TE Pad Config, P4_5 -> Software TE*/
     else if (rtk_lcd_hal_get_TE_type() == LCDC_TE_TYPE_SW_TE)
     {
-        lcd_te_device_init();
+        Pad_Config(LCD_TE_SYNC, PAD_SW_MODE, PAD_IS_PWRON, PAD_PULL_DOWN, PAD_OUT_DISABLE, PAD_OUT_HIGH);
     }
 #endif
 }

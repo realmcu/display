@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 #include "board.h"
-#include "sh8601z_368448_qspi.h"
+#include "SH8601Z_368448_qspi.h"
 #include "rtl_lcdc_dbic.h"
 #include "utils.h"
 #include "trace.h"
@@ -31,7 +31,11 @@ static void spic3_spi_write(uint8_t *buf, uint32_t len)
     DBIC->CTRLR0 &= ~(BIT_CMD_CH(3) | BIT_ADDR_CH(3) | BIT_DATA_CH(3));//SET CHANNEL NUM
     DBIC->CTRLR0 &= ~(BIT_TMOD(3)); //tx mode
 
-    DBIC_TX_NDF(len);
+    DBIC_CmdLength(1);
+    DBIC_AddrLength(3);
+    DBIC_TX_NDF(len - 4);
+
+    DBIC->FLUSH_FIFO = 0x01;
     for (uint32_t i = 0; i < len; i++)
     {
         DBIC->DR[0].byte = buf[i];
@@ -274,7 +278,7 @@ void rtk_lcd_hal_update_framebuffer(uint8_t *buf, uint32_t len)
     LCDC_DMAChannelCmd(LCDC_DMA_CHANNEL_NUM, ENABLE);
     LCDC_DmaCmd(ENABLE);
 #if (TE_VALID == 1)
-    TEAR_CTR_t handler_reg_0x10 = {.d32 = LCDC_HANDLER->TEAR_CTR};
+    LCDC_HANDLER_TEAR_CTR_TypeDef handler_reg_0x10 = {.d32 = LCDC_HANDLER->TEAR_CTR};
     handler_reg_0x10.b.bypass_t2w_delay = 1;
     handler_reg_0x10.b.t2w_delay = 0xfff;
     LCDC_HANDLER->TEAR_CTR = handler_reg_0x10.d32;
@@ -325,7 +329,7 @@ void rtk_lcd_hal_start_transfer(uint8_t *buf, uint32_t len)
     LCDC_DMAChannelCmd(LCDC_DMA_CHANNEL_NUM, ENABLE);
     LCDC_DmaCmd(ENABLE);
 #if (TE_VALID == 1)
-    TEAR_CTR_t handler_reg_0x10 = {.d32 = LCDC_HANDLER->TEAR_CTR};
+    LCDC_HANDLER_TEAR_CTR_TypeDef handler_reg_0x10 = {.d32 = LCDC_HANDLER->TEAR_CTR};
     handler_reg_0x10.b.bypass_t2w_delay = 0;
     handler_reg_0x10.b.t2w_delay = 0xfff;
     LCDC_HANDLER->TEAR_CTR = handler_reg_0x10.d32;

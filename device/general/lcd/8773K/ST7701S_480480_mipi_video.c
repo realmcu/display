@@ -42,7 +42,11 @@ __weak void DSI_IO_WriteCmd(uint32_t NbrParams, uint8_t *pParams)
               the DSI_IO_WriteCmd could be implemented in the user file
      */
     DSI_TypeDef *DSIx = DSI;
-    if (NbrParams <= 1)
+    if (NbrParams == 0)
+    {
+        DSI_ShortWrite(DSIx, 0, DSI_DCS_SHORT_PKT_WRITE_P0, pParams[0], 0);
+    }
+    else if (NbrParams == 1)
     {
         DSI_ShortWrite(DSIx, 0, DSI_DCS_SHORT_PKT_WRITE_P1, pParams[0], pParams[1]);
         //rt_kprintf("cmd[SHORT] = 0x%x \n", pParams[0]);
@@ -86,8 +90,8 @@ uint8_t ST7701S_Init(uint32_t ColorCoding, uint32_t orientation)
         64;    // MSize + threshold should be no larger than 128
     LCDC_Init(&lcdc_init);
 
-    LCDC_MaskINTConfig(LCDC_MASK_TX_AUTO_DONE_INT_MSK, DISABLE);
-    LCDC_ClearINTPendingBit(LCDC_TX_AUTO_DONE_INT_CLR);
+    LCDC_MaskINTConfig(LCDC_INT_MASK_TX_AUTO_DONE, DISABLE);
+    LCDC_ClearINTPendingBit(LCDC_CLR_TX_AUTO_DONE);
 
     NVIC_InitTypeDef NVIC_InitStruct;
 //    NVIC_InitStruct.NVIC_IRQChannel = Display_IRQn;
@@ -103,7 +107,7 @@ uint8_t ST7701S_Init(uint32_t ColorCoding, uint32_t orientation)
     //extern void NVIC_Init_rom(NVIC_InitTypeDef * NVIC_InitStruct);
     //NVIC_Init_rom(&NVIC_InitStruct);
 
-    LCDC_eDPICfgTypeDef eDPICfg;//836 * 550, 42FPS == 19311600
+    LCDC_eDPICfgTypeDef eDPICfg = {0};//836 * 550, 42FPS == 19311600
     eDPICfg.eDPI_ClockDiv = 10;
     uint32_t laneByteClk_kHz = 50000;
     uint32_t LcdClock_kHz  = (80000 / eDPICfg.eDPI_ClockDiv);
@@ -167,7 +171,7 @@ uint8_t ST7701S_Init(uint32_t ColorCoding, uint32_t orientation)
     /***********for irq setting***********/
 
     DSI_DeInit(DSI);
-    DSI_InitTypeDef   DSI_InitStruct;
+    DSI_InitTypeDef   DSI_InitStruct = {0};
     DSI_InitStruct.VirtualChannelID             = 0;
 
     DSI_InitStruct.ColorCoding                  = 5;
@@ -209,6 +213,7 @@ uint8_t ST7701S_Init(uint32_t ColorCoding, uint32_t orientation)
 //    DSI_InitStruct.DataLaneLP2HSTime = 0x37;
 
     DSI_InitStruct.DataLaneMaxReadTime = 0;
+    DSI_InitStruct.LPMaxReadPacket = DSI_LP_MRDP_DISABLE;
     DSI_InitStruct.phy_shutdownz = 1;
 //    DSI_InitStruct.phy_testclr = 0;
 //    DSI_InitStruct.phy_testen = 0;
@@ -283,8 +288,8 @@ uint8_t ST7701S_Init(uint32_t ColorCoding, uint32_t orientation)
     DSI_ConfigVideoMode(DSI, &VideoCmd_InitStruct);
 
 
-    DSI_PhyCfgTypeDef dsi_phy;
-    dsi_phy.phy_forepll  = PHY_FORCEPLL_DISABLE;
+    DSI_PhyCfgTypeDef dsi_phy = {0};
+    dsi_phy.phy_forcepll  = PHY_FORCEPLL_DISABLE;
     dsi_phy.phy_enableclk  = PHY_CLK_ENABLE;
     dsi_phy.phy_rstz   = PHY_RST_ENABLE;
     dsi_phy.phy_shutdownz   = PHY_SHUTDOWN_ENABLE;
@@ -549,9 +554,9 @@ void MIPI_Handler(void)
 
 void LCDC_IRQHandler(void)
 {
-    if (LCDC_GetINTStatus(LCDC_TX_AUTO_DONE_INT_MSK) == SET)
+    if (LCDC_GetINTStatus(LCDC_STATUS_TX_AUTO_DONE_INT) == SET)
     {
-//        LCDC_ClearINTPendingBit(LCDC_TX_AUTO_DONE_INT_MSK);
+//        LCDC_ClearINTPendingBit(LCDC_CLR_TX_AUTO_DONE);
 #ifdef __RTTHREAD__
         rt_kprintf("LCDC_IRQHandler line = %d\n", __LINE__);
 #else

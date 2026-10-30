@@ -160,6 +160,33 @@ typedef enum
 
 /**
  * \cond    private
+ * \brief   Parameter check macros used by LCDC_DMA_Init() and LCDC_DMAChannelCmd().
+ * \defgroup LCDC_DMA_Private_Macros LCDC DMA Private Macros
+ * \{
+ */
+#define IS_DMA_ALL_PERIPH(PERIPH)     ((PERIPH) == LCDC_DMA_Channel0)
+
+#define IS_DMA_ChannelNum(NUM)        ((NUM) == 0)
+
+#define IS_DMA_DIR(DIR)               (((DIR) == LCDC_DMA_DIR_PeripheralToMemory) || \
+                                       ((DIR) == LCDC_DMA_DIR_PeripheralToPeripheral))
+
+#define IS_DMA_SourceInc(STATE)       (((STATE) == LCDC_DMA_SourceInc_Inc) || \
+                                       ((STATE) == LCDC_DMA_SourceInc_Dec) || \
+                                       ((STATE) == LCDC_DMA_SourceInc_Fix))
+
+#define IS_DMA_DestinationInc(STATE)  ((STATE) == LCDC_DMA_DestinationInc_Fix)
+
+#define IS_DMA_DATA_SIZE(SIZE)        (((SIZE) == LCDC_DMA_DataSize_Byte) || \
+                                       ((SIZE) == LCDC_DMA_DataSize_HalfWord) || \
+                                       ((SIZE) == LCDC_DMA_DataSize_Word))
+/**
+ * \}
+ * \endcond
+ */
+
+/**
+ * \cond    private
  * \brief   DMA mode description
  * \defgroup DMA_MODE_BIT_FIELD LCDC DMA Mode Bit Field
  * \{

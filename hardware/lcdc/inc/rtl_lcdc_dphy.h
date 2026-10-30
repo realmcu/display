@@ -4,8 +4,25 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+/*============================================================================*
+*               Define to prevent recursive inclusion
+*============================================================================*/
+#ifndef __RTL_LCDC_DPHY_DEF_H
+#define __RTL_LCDC_DPHY_DEF_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/*============================================================================*
+ *                        Header Files
+ *============================================================================*/
 #include "utils/rtl_utils.h"
 
+
+/*============================================================================*
+ *                          Private Macros
+ *============================================================================*/
 typedef struct
 {
     __IO uint32_t CLOCK_GEN;                                /*0x00*/
@@ -43,6 +60,8 @@ typedef struct
     __IO uint32_t DF;                                       /*0xCC*/
 } DPHY_TypeDef;
 
+
+#define LCDC_DMA_CHANNEL_REG_BASE           (DISPLAY_CTRL_REG_BASE + 0)
 #define MIPI_DPHY_REG_BASE              (MIPI_REG_BASE + 0x400)     // 0x4060_2400
 #define DPHY                            ((DPHY_TypeDef *) MIPI_DPHY_REG_BASE)
 
@@ -2157,3 +2176,12 @@ typedef union
      * \endcode
      */
     void DPHY_Init(uint32_t lane_number, uint32_t src_clk_mhz, uint32_t dphy_clk_mhz);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /*__RTL_LCDC_DPHY_DEF_H*/
+
+
+    /******************* (C) COPYRIGHT 2023 Realtek Semiconductor Corporation *****END OF FILE****/

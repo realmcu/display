@@ -233,8 +233,9 @@ static void st7701s_dma_init(uint8_t *init_buffer)
 
 static void lcd_pad_and_clk_init(void)
 {
-    LCDC_Clock_Cfg(ENABLE);
+    // LCDC_Clock_Cfg(ENABLE);
     RCC_PeriphClockCmd(APBPeriph_DISP, APBPeriph_DISP_CLOCK, ENABLE);
+    RCC_DisplayClockConfig(DISPLAY_CLOCK_SOURCE_PLL1, DISPLAY_CLOCK_DIV_1);
 
     // //from XTAL SOURCE = 40M
     // PERIBLKCTRL_PERI_CLK->u_324.BITS_324.disp_ck_en = 1;
@@ -395,12 +396,11 @@ void rtk_lcd_hal_init(void)
     lcdc_init.LCDC_InfiniteModeEn = 1;
     LCDC_Init(&lcdc_init);
     LCDC_ClearINTPendingBit(LCDC_CLR_WAVEFORM_FINISH);
-    RCC_DisplayClockConfig(DISPLAY_CLOCK_DIV_1, ENABLE);//PLL1:200M
 
     uint32_t HSA = 10, HFP = 50, HBP = 50, HACT = ST7701S_480480_LCD_WIDTH;
     uint32_t VSA = 10, VFP = 20, VBP = 20, VACT = ST7701S_480480_LCD_HEIGHT;
 
-    LCDC_eDPICfgTypeDef eDPICfg;//480*640  ---->   500 * 660
+    LCDC_eDPICfgTypeDef eDPICfg = {0};//480*640  ---->   500 * 660
     eDPICfg.eDPI_ClockDiv = 0x8;
 
     eDPICfg.eDPI_HoriSyncWidth = HSA;

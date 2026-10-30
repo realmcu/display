@@ -51,6 +51,16 @@ extern "C" {
 void lcd_st77916_set_window(uint16_t xStart, uint16_t yStart, uint16_t w, uint16_t h);
 void lcd_st77916_seq_init(void);
 
+typedef enum
+{
+    LCDC_TE_TYPE_NO_TE = 0x00,
+    LCDC_TE_TYPE_HW_TE = 0x01,
+    LCDC_TE_TYPE_SW_TE = 0x02,
+} T_LCDC_TE_TYPE;
+
+void rtk_lcd_hal_set_TE_type(T_LCDC_TE_TYPE state);
+T_LCDC_TE_TYPE rtk_lcd_hal_get_TE_type(void);
+
 void rtk_lcd_hal_start_transfer(uint8_t *buf, uint32_t len);
 void rtk_lcd_hal_rect_fill(uint16_t xStart, uint16_t yStart, uint16_t w, uint16_t h,
                            uint32_t color);
