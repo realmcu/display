@@ -570,7 +570,8 @@ static vcdj_error_t vcdj_validate_pp(const vcdj_pp_config_t *pp,
     if ((pp == NULL) || (input_width == 0U) || (input_height == 0U) ||
         !vcdj_out_format_supported(pp->output_format) ||
         !vcdj_pp_filter_supported(pp->filter) || !vcdj_csc_supported(pp->csc) ||
-        (pp->crop_enabled > 1U) || (pp->scale_enabled > 1U))
+        (pp->crop_enable > 1U) || (pp->scale_enable > 1U) ||
+        (pp->dither_disable > 1U))
     {
         return VCDJ_ERR_PARAM;
     }
@@ -591,7 +592,7 @@ static vcdj_error_t vcdj_validate_pp(const vcdj_pp_config_t *pp,
         }
     }
 
-    if (pp->crop_enabled != 0U)
+    if (pp->crop_enable != 0U)
     {
         if ((pp->crop.width == 0U) || (pp->crop.height == 0U) ||
             ((pp->crop.width < VCDJ_PP_MIN_DIMENSION) &&
@@ -626,7 +627,7 @@ static vcdj_error_t vcdj_validate_pp(const vcdj_pp_config_t *pp,
         source_height = input_height;
     }
 
-    if (pp->scale_enabled != 0U)
+    if (pp->scale_enable != 0U)
     {
         max_output_width = (source_width >
                             (VCDJ_PP_MAX_OUTPUT_DIMENSION /
@@ -799,18 +800,18 @@ static void vcdj_setup_ppu(PpUnitConfig *ppu, const vcdj_pp_config_t *config)
     /* Mandatory: with the shaper off the core never ends the frame. */
     ppu[0].shaper_enabled = 1U;
     /* Only takes effect when bit depth drops (e.g. RGB565); no-op otherwise. */
-    ppu[0].dither_enable = 1U;
-    ppu[0].crop.enabled = config->crop_enabled;
-    ppu[0].crop.set_by_user = config->crop_enabled;
+    ppu[0].dither_enable = (config->dither_disable != 0U) ? 0U : 1U;
+    ppu[0].crop.enabled = config->crop_enable;
+    ppu[0].crop.set_by_user = config->crop_enable;
     ppu[0].crop.x = config->crop.x;
     ppu[0].crop.y = config->crop.y;
     ppu[0].crop.width = config->crop.width;
     ppu[0].crop.height = config->crop.height;
-    ppu[0].scale.enabled = config->scale_enabled;
+    ppu[0].scale.enabled = config->scale_enable;
     ppu[0].scale.scale_by_ratio = 0U;
     ppu[0].scale.width = config->output_width;
     ppu[0].scale.height = config->output_height;
-    if (config->scale_enabled != 0U)
+    if (config->scale_enable != 0U)
     {
         ppu[0].pp_filter = vcdj_pp_filter_to_vendor(config->filter);
         ppu[0].antialias = (config->filter == VCDJ_PP_FILTER_AREA) ? 1U : 0U;
@@ -2225,8 +2226,8 @@ vcdj_error_t vcdj_decode_pp(const vcdj_dec_param_t *param,
 
     if (!vcdj_out_format_supported(pp->output_format) ||
         !vcdj_pp_filter_supported(pp->filter) ||
-        (pp->crop_enabled > 1U) || (pp->scale_enabled > 1U) ||
-        !vcdj_picture_sel_valid(param))
+        (pp->crop_enable > 1U) || (pp->scale_enable > 1U) ||
+        (pp->dither_disable > 1U) || !vcdj_picture_sel_valid(param))
     {
         return VCDJ_ERR_PARAM;
     }

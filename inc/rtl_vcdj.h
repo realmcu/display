@@ -258,17 +258,19 @@ typedef enum
  */
 typedef struct
 {
-    uint8_t crop_enabled;            /**< 1 uses \ref crop; 0 selects the whole picture */
-    uint8_t scale_enabled;           /**< 1 scales to output_width/height; 0 keeps 1:1 */
-    vcdj_pp_filter_t filter;         /**< Scaling filter; must be DEFAULT when scale is disabled */
+    vcdj_out_format_t output_format; /**< Requested format; see picture for actual format */
     vcdj_csc_t csc;                  /**< RGB output only; see \ref vcdj_csc_t */
+    uint8_t alpha;                   /**< Constant alpha: 0 transparent, 255 opaque */
+    uint8_t dither_disable;          /**< 0 dithers reduced-depth output (e.g. RGB565); 1 truncates */
+
+    uint8_t crop_enable;             /**< 1 uses \ref crop; 0 selects the whole picture */
+    uint8_t scale_enable;            /**< 1 scales to output_width/height; 0 keeps 1:1 */
+    vcdj_pp_filter_t filter;         /**< Scaling filter; must be DEFAULT when scale is disabled */
+    uint8_t reserved[1];             /**< Must be zero */
 
     vcdj_rect_t crop;                /**< Pre-scale crop; must be all zero when disabled */
     uint32_t output_width;           /**< Scale target width; must be zero when disabled */
     uint32_t output_height;          /**< Scale target height; must be zero when disabled */
-    vcdj_out_format_t output_format; /**< Requested format; see picture for actual format */
-    uint8_t alpha;                   /**< Constant alpha: 0 transparent, 255 opaque */
-    uint8_t reserved[2];             /**< Must be zero */
 } vcdj_pp_config_t;
 
 /** \brief Colour model of the coded picture, independent of the output format. */
