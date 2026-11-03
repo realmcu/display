@@ -797,7 +797,7 @@ void hw_acc_blit_direct(draw_img_t *image, struct gui_dispdev *dc, struct gui_re
     {
         source.high_quality = false;
         if ((source.format == PPE_RGB565 || source.format == PPE_RGB888 || head->type == PALETTE) \
-            && image->blend_mode != IMG_FILTER_BLACK)
+            && image->blend_mode != IMG_FILTER_BLACK && image->opacity_value == 0xFF)
         {
             method = PPE_BLEND_BYPASS;
         }
