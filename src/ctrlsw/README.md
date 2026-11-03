@@ -1,7 +1,8 @@
 # VeriSilicon VC9000DJ (DecoderJ) Control Software — vendor drop (partial import)
 
-Every file below this directory is a **byte-for-byte copy of a third-party vendor release**. It is
-not Realtek code. Do not edit, reformat, refactor, re-indent or re-license anything here.
+Every file under `software/` comes from a **third-party vendor release**. It is not Realtek code.
+Do not reformat, refactor, re-indent or re-license anything there. The files were imported byte for
+byte in commit `9e3fcb7`; the few local fixes made since are tracked by git only (section 3).
 
 This is a **selective import**, not a copy of the whole release archive: only the files the firmware
 build actually reads are imported. See section 2.
@@ -62,32 +63,43 @@ enabling that macro:
 | `software/source/inc/error.h` | `error.c` | `ERROR_BUILD_SUPPORT` |
 | `software/source/inc/vsi_string.h` | `input_queue.c` | `_USE_VSI_STRING_` |
 
-Three Realtek-owned files live at the root of this directory and are **not** part of the vendor
-release:
+These files at the root of this directory are **not** part of the vendor release:
 
 - `README.md` (this file)
-- `SHA256SUMS` — per-file digests of the imported vendor files
+- `SHA256SUMS` — per-file digests of the vendor files as imported
 - `CMakeLists.txt` — Zephyr/CMake build glue that selects the sources to compile
+- `vcdj_ctrlsw_unity.c` — single-TU wrapper that `#include`s the 24 vendor `.c` files
+  (SCons `VCDJ_CTRLSW = 'unity'`)
+- `vcdj_ctrlsw_gen.py`, and the `vcdj_ctrlsw.c` / `vcdj_ctrlsw.h` it generates from the vendor
+  files (SCons `VCDJ_CTRLSW = 'merged'`, section 8). The generated files are vendor code under the
+  vendor licenses, not Realtek code.
 
-## 3. Verifying the copy has not been modified
+## 3. Local changes to the vendor files
 
-`SHA256SUMS` lists all 67 imported vendor files. Verify with:
+`SHA256SUMS` lists the digests of all 67 vendor files as imported in `9e3fcb7`. The three files
+with local fixes since (`ppu.c`, `jpegdecinternal.c`, `pnghwd_asic.c`) are expected to FAIL:
 
 ```sh
-cd hardware/vcdj/src/ctrlsw
+cd src/ctrlsw
 sha256sum -c SHA256SUMS
 ```
 
-This proves every imported file is byte-identical to the release. It does **not** prove the import
-is complete — completeness is section 2's table plus the build itself, which fails to compile or
-link if anything needed is missing.
+The full set of local changes is the git diff against the import, and there is no separate patch
+file:
 
-`SHA256SUMS` intentionally does not cover itself, `README.md` or `CMakeLists.txt`.
+```sh
+git diff 9e3fcb7:hardware/vcdj/src/ctrlsw/software HEAD:src/ctrlsw/software
+```
+
+Neither check proves the import is complete — completeness is section 2's table plus the build
+itself, which fails to compile or link if anything needed is missing.
+
+`SHA256SUMS` intentionally does not cover the Realtek-owned files listed in section 2.
 
 ## 4. Upgrade procedure
 
 1. Obtain a new official VeriSilicon release archive; record its file name and SHA256.
-2. Delete the vendor tree (`software/`) — keep `README.md`, `SHA256SUMS`, `CMakeLists.txt`.
+2. Delete the vendor tree (`software/`) — keep the Realtek-owned files listed in section 2.
 3. Extract the **whole** new archive with `--strip-components=1` into a scratch directory, not here.
 4. Re-check the explicit source list in `CMakeLists.txt` against the new vendor
    `software/source/{common,jpeg,png}/Makefile`; added or renamed files will not be picked up
@@ -98,9 +110,10 @@ link if anything needed is missing.
    `ninja -C <build> -t deps | grep -oE '<scratch>/software/[^ ]*\.(c|h)$' | sort -u`,
    then add back any macro-guarded headers per section 2.
 7. Copy that file set here, regenerate `SHA256SUMS`:
-   `find . -type f | LC_ALL=C sort | sed 's|^\./||' | grep -v -e '^README\.md$' -e '^SHA256SUMS$' -e '^CMakeLists\.txt$' | xargs sha256sum > SHA256SUMS`
-8. Rebuild from scratch. Zero warnings and zero undefined references is the acceptance bar.
-9. Update sections 1 and 2 of this file.
+   `find software -type f | LC_ALL=C sort | xargs sha256sum > SHA256SUMS`
+8. Replay the local changes of section 3 with git, then rerun `vcdj_ctrlsw_gen.py` (section 8).
+9. Rebuild from scratch. Zero warnings and zero undefined references is the acceptance bar.
+10. Update sections 1 and 2 of this file.
 
 Never cherry-pick individual files from a different release. Replace the imported set as a whole.
 
@@ -144,7 +157,23 @@ Consequences:
 
 ## 7. CI
 
-The whole `hardware/vcdj/src/ctrlsw/` path is excluded from astyle and cppcheck/static analysis in
+The whole `src/ctrlsw/` path is excluded from astyle and cppcheck/static analysis in
 `.jenkins/ci-check-config.py`; the vendor code does not follow Realtek coding style and must not be
 reformatted to fit it. `License-Scan` is left enabled — if it cannot classify the VeriSilicon
 license, the fix belongs in the Jenkins-side configuration, not in these files.
+
+## 8. The merged build
+
+`VCDJ_CTRLSW = 'merged'` in the SCons script compiles `vcdj_ctrlsw.c` and gives the driver's own
+files `vcdj_ctrlsw.h` (through `src/common/rtl_vcdj_ctrlsw.h`), with no vendor include path. Both
+files are generated; never edit them by hand, edit the vendor file and regenerate:
+
+```sh
+python src/ctrlsw/vcdj_ctrlsw_gen.py            # rewrite both files
+python src/ctrlsw/vcdj_ctrlsw_gen.py --check    # exit 1 if they are stale
+```
+
+Run `--check` after any change under `software/`, to `vcdj_ctrlsw_unity.c`, to the vendor header
+list in `src/common/rtl_vcdj_ctrlsw.h`, or to the fixed macros in `inc/rtl_vcdj_vendor.h`; the
+build does not run it. The generator mirrors `vcdj_ctrlsw_unity.c` and stops with an error on
+anything it cannot reproduce exactly.

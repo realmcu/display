@@ -29,12 +29,7 @@
 
 #include "rtl_vcdj_internal.h"
 #include "vcdj_selftest.h"
-
-#include "basetype.h"
-#include "dwl.h"
-#include "dectypes.h"
-#include "decapicommon.h"
-#include "jpegdecapi.h"
+#include "rtl_vcdj_ctrlsw.h"
 
 #if defined(VCDJ_ENABLE_SELFTEST)
 

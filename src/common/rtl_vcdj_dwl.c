@@ -34,12 +34,7 @@
 #include <string.h>
 
 #include "rtl_vcdj_internal.h"
-
-#include "basetype.h"
-#include "dwl.h"
-#include "dwlthread.h"
-#include "sw_util.h"
-#include "vpufeature.h"
+#include "rtl_vcdj_ctrlsw.h"
 
 /*============================================================================*
  *                        Local Definitions

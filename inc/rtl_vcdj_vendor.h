@@ -16,9 +16,11 @@
  *   CMake / GCC / armclang : -include  inc/rtl_vcdj_vendor.h
  *   Keil MDK (armcc / AC5) : --preinclude rtl_vcdj_vendor.h
  *
- * It is force-included rather than patched into the vendor sources because the
- * tree under src/ctrlsw/ must stay byte identical to the release archive
- * (SHA256SUMS is verified). Keep it to macros and prototypes only.
+ * It is force-included rather than patched into the vendor sources so that
+ * they stay as released, apart from the local fixes git tracks (see
+ * src/ctrlsw/README.md). Keep it to macros and prototypes only.
+ * src/ctrlsw/vcdj_ctrlsw_gen.py resolves the macros it defines unconditionally;
+ * rerun it after changing them.
  *
  * NDEBUG must be set before the libc block below includes <assert.h>.
  */
@@ -76,24 +78,15 @@ int vcdj_vendor_trace_check(const char *fmt, ...) __attribute__((format(printf, 
 #endif
 
 /*
- * Include before overriding, or the #undefs hit macros that do not exist yet.
  * Because this header is force-included ahead of every vendor source, pulling
  * dec_log.h in here trips its `_DEC_LOG_H` guard first, which turns the later
- * in-source include into a no-op and leaves the overrides below in force.
+ * in-source include into a no-op and leaves the overrides in force. The merged
+ * build has no dec_log.h; vcdj_ctrlsw.h carries its text and the overrides.
  */
+#if !defined(VCDJ_CTRLSW_MERGED)
 #include "dec_log.h"
-
-#undef  APITRACEERR
-#undef  APITRACEWARN
-#undef  CONFIGTRACE_W
-#undef  DPB_TRACE_E
-#undef  DTRACE_E
-
-#define APITRACEERR(...)            VCDJ_VENDOR_TRACE(__VA_ARGS__)
-#define APITRACEWARN(...)           VCDJ_VENDOR_TRACE(__VA_ARGS__)
-#define CONFIGTRACE_W(...)          VCDJ_VENDOR_TRACE(__VA_ARGS__)
-#define DPB_TRACE_E(...)            VCDJ_VENDOR_TRACE(__VA_ARGS__)
-#define DTRACE_E(...)               VCDJ_VENDOR_TRACE(__VA_ARGS__)
+#include "rtl_vcdj_vendor_log.h"
+#endif
 
 /*============================================================================*
  *                        Header Files

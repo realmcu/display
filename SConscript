@@ -6,6 +6,7 @@
 # SCons build for the VCDJ (VeriSilicon VC9000DJ DecoderJ) driver.
 #
 import os
+import re
 from building import *
 
 cwd = GetCurrentDir()
@@ -17,17 +18,30 @@ CTRLSW = 'src/ctrlsw/software/source'
 #   rtl87x3k_rtt  RT-Thread, built here (also supplies a trace.h stand-in)
 PLATFORM = 'src/device/rtl87x3k_rtt'
 
+# How the vendor Control Software is compiled:
+#   split   the 24 vendor .c files one by one
+#   unity   one TU, src/ctrlsw/vcdj_ctrlsw_unity.c, that #includes all 24
+#   merged  src/ctrlsw/vcdj_ctrlsw.c/.h from vcdj_ctrlsw_gen.py; no vendor
+#           include path
+VCDJ_CTRLSW = 'merged'
+
 include_path = [
     cwd + '/inc',
     cwd + '/src/common',
     cwd + '/src/test',
     cwd + '/' + PLATFORM,
-    cwd + '/' + CTRLSW + '/inc',
-    cwd + '/' + CTRLSW + '/config',
-    cwd + '/' + CTRLSW + '/common',
-    cwd + '/' + CTRLSW + '/jpeg',
-    cwd + '/' + CTRLSW + '/png',
 ]
+if VCDJ_CTRLSW != 'merged':
+    include_path += [
+        cwd + '/' + CTRLSW + '/inc',
+        cwd + '/' + CTRLSW + '/config',
+        cwd + '/' + CTRLSW + '/common',
+        cwd + '/' + CTRLSW + '/jpeg',
+        cwd + '/' + CTRLSW + '/png',
+    ]
+
+# Selects vcdj_ctrlsw.h in rtl_vcdj_vendor.h and src/common/rtl_vcdj_ctrlsw.h.
+ctrlsw_defines = ['VCDJ_CTRLSW_MERGED'] if VCDJ_CTRLSW == 'merged' else []
 
 # Vendor compile contract. Must stay in step with CMake's
 # target_compile_options(-include ...) and Keil's --preinclude.
@@ -46,8 +60,9 @@ src = [
 # need their own warning suppressions.
 group = DefineGroup(
     'vcdj', src, depend = ['REALTEK_DISPLAY_ENABLE_VCDJ'],
-    CPPPATH       = include_path,
-    LOCAL_CCFLAGS = VENDOR_PREINCLUDE,
+    CPPPATH          = include_path,
+    LOCAL_CCFLAGS    = VENDOR_PREINCLUDE,
+    LOCAL_CPPDEFINES = ctrlsw_defines,
 )
 
 # Explicit, not globbed, and mirrors src/ctrlsw/CMakeLists.txt one for one, so a
@@ -90,19 +105,37 @@ ctrlsw_src = ctrlsw_common_src + ctrlsw_jpeg_src + ctrlsw_png_src
 for vcdj_src in ctrlsw_src:
     if not os.path.isfile(os.path.join(cwd, vcdj_src)):
         raise RuntimeError(
-            '[VCDJ] vendor source %s is missing. The tree under src/ctrlsw/ must '
-            'be an unmodified extraction of the release archive; see '
-            'src/ctrlsw/README.md.' % vcdj_src)
+            '[VCDJ] vendor source %s is missing. The tree under src/ctrlsw/software/ '
+            'must hold the release archive files; see src/ctrlsw/README.md.' % vcdj_src)
 
-# Vendor files only. The tree under src/ctrlsw/ is byte identical to the release
-# archive, so these cannot be fixed by patching a source.
+# Checked in every mode so the unity list cannot drift while split is in use.
+CTRLSW_UNITY = 'src/ctrlsw/vcdj_ctrlsw_unity.c'
+with open(os.path.join(cwd, CTRLSW_UNITY)) as f:
+    unity_src = ['src/ctrlsw/' + m.group(1) for m in
+                 re.finditer(r'^#include "(software/source/[^"]+\.c)"', f.read(), re.M)]
+if unity_src != ctrlsw_src:
+    raise RuntimeError(
+        '[VCDJ] the #include list in %s differs from ctrlsw_src (content or '
+        'order).' % CTRLSW_UNITY)
+
+if VCDJ_CTRLSW == 'split':
+    ctrlsw_build_src = ctrlsw_src
+elif VCDJ_CTRLSW == 'unity':
+    ctrlsw_build_src = [CTRLSW_UNITY]
+elif VCDJ_CTRLSW == 'merged':
+    ctrlsw_build_src = ['src/ctrlsw/vcdj_ctrlsw.c']
+else:
+    raise RuntimeError('[VCDJ] unknown VCDJ_CTRLSW %r' % VCDJ_CTRLSW)
+
+# Vendor code only; the warnings come from the vendor sources.
 CTRLSW_CCFLAGS = (' -Wno-format -Wno-format-security'
                   ' -Wno-unused-variable -Wno-unused-function')
 
 group = group + DefineGroup(
-    'vcdj_ctrlsw', ctrlsw_src, depend = ['REALTEK_DISPLAY_ENABLE_VCDJ'],
-    CPPPATH       = include_path,
-    LOCAL_CCFLAGS = VENDOR_PREINCLUDE + CTRLSW_CCFLAGS,
+    'vcdj_ctrlsw', ctrlsw_build_src, depend = ['REALTEK_DISPLAY_ENABLE_VCDJ'],
+    CPPPATH          = include_path,
+    LOCAL_CCFLAGS    = VENDOR_PREINCLUDE + CTRLSW_CCFLAGS,
+    LOCAL_CPPDEFINES = ctrlsw_defines,
 )
 
 Return('group')
