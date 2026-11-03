@@ -1878,6 +1878,56 @@ void hw_acc_end_cb(draw_img_t *image)
     return;
 }
 
+static bool ppe_transform_a8_mask(draw_img_t *image, const gui_rect_t *mask_rect,
+                                  uint8_t *mask)
+{
+    ppe_buffer_t target, source;
+    memset(&target, 0, sizeof(ppe_buffer_t));
+    memset(&source, 0, sizeof(ppe_buffer_t));
+
+    target.address = (uint32_t)mask;
+    target.width = mask_rect->x2 - mask_rect->x1 + 1;
+    target.height = mask_rect->y2 - mask_rect->y1 + 1;
+    target.stride = target.width;
+    target.format = PPE_A8;
+    target.opacity = 0xFF;
+    target.const_color = 0xFFFFFFFF;
+    target.win_x_max = target.width - 1;
+    target.win_y_max = target.height - 1;
+
+    source.address = (uint32_t)image->data + sizeof(gui_rgb_data_head_t);
+    source.width = image->img_w;
+    source.height = image->img_h;
+    source.stride = image->img_w;
+    source.format = PPE_A8;
+    source.opacity = 0xFF;
+    source.const_color = 0xFFFFFFFF;
+    source.win_x_max = target.width - 1;
+    source.win_y_max = target.height - 1;
+    source.high_quality = true;
+
+    ppe_matrix_t inverse;
+    memcpy(&inverse, &image->inverse, sizeof(inverse));
+    ppe_translate(mask_rect->x1, mask_rect->y1, &inverse);
+
+    PPE_ERR err = PPE_Clear(&target, 0, NULL);
+    if (err != PPE_SUCCESS)
+    {
+        DBG_DIRECT("PPE A8 mask clear err %d", err);
+        return false;
+    }
+    ppe_wait_finish_blocking();
+
+    err = PPE_Blit_Inverse(&target, &source, NULL, &inverse, NULL, PPE_BLEND_SRC);
+    if (err != PPE_SUCCESS)
+    {
+        DBG_DIRECT("PPE A8 mask transform err %d", err);
+        return false;
+    }
+    ppe_wait_finish_blocking();
+    return true;
+}
+
 void hw_acc_blit_a8_blur(draw_img_t *image, struct gui_dispdev *dc, struct gui_rect *rect)
 {
     gui_rect_t img_rect =
@@ -1888,19 +1938,11 @@ void hw_acc_blit_a8_blur(draw_img_t *image, struct gui_dispdev *dc, struct gui_r
         .y2 = image->img_target_y + (int16_t)image->img_target_h - 1,
     };
     gui_rect_t draw_rect = img_rect;
-    if (rect != NULL && !rect_intersect(&draw_rect, &draw_rect, rect))
-    {
-        return;
-    }
+    gui_rect_t screen_rect = {0, 0, dc->screen_width - 1, dc->screen_height - 1};
+    gui_rect_t mask_rect = {0};
+    bool visible = rect == NULL || rect_intersect(&draw_rect, &draw_rect, rect);
     uint8_t blur_degree = (uint8_t)(((uint32_t)image->opacity_value * GUI_MVE_MAX_BLUR_DEGREE
                                      + 127U) / 255U);
-
-    struct acc_engine *acc = gui_get_acc();
-    if ((blur_degree != 0U) && (image->acc_user == NULL) && (acc != NULL)
-        && (acc->blur != NULL) && (acc->blur->prepare != NULL))
-    {
-        acc->blur->prepare(&image->acc_user);
-    }
 
     uint32_t c_a = (image->fg_color_set & 0xFF000000);
     uint32_t c_r = (image->fg_color_set & 0x00FF0000);
@@ -1908,12 +1950,55 @@ void hw_acc_blit_a8_blur(draw_img_t *image, struct gui_dispdev *dc, struct gui_r
     uint32_t c_b = (image->fg_color_set & 0x000000FF);
     uint32_t ppe_abgr = (c_a | (c_r >> 16) | c_g | (c_b << 16));
 
-    const uint8_t *a8_base = (const uint8_t *)image->data + sizeof(gui_rgb_data_head_t);
-    hw_acc_blur_a8(dc, &draw_rect, blur_degree, image->acc_user,
-                   a8_base, (int16_t)image->img_w,
-                   image->img_target_x, image->img_target_y, ppe_abgr);
+    struct acc_engine *acc = gui_get_acc();
+    if (visible && image->img_w > 0 && image->img_h > 0 &&
+        (blur_degree != 0U || c_a != 0U) &&
+        rect_intersect(&draw_rect, &draw_rect, &screen_rect) &&
+        rect_intersect(&mask_rect, &draw_rect, &dc->section))
+    {
+        if ((blur_degree != 0U) && (image->acc_user == NULL) && (acc != NULL)
+            && (acc->blur != NULL) && (acc->blur->prepare != NULL))
+        {
+            acc->blur->prepare(&image->acc_user);
+        }
 
-    /* Free scratch memory after the last section. */
+        if (image->matrix.m[0][0] == 1.0f && image->matrix.m[1][1] == 1.0f &&
+            image->matrix.m[0][1] == 0.0f && image->matrix.m[1][0] == 0.0f &&
+            image->matrix.m[2][0] == 0.0f && image->matrix.m[2][1] == 0.0f &&
+            image->matrix.m[2][2] == 1.0f)
+        {
+            gui_rect_t a8_rect =
+            {
+                .x1 = image->img_target_x,
+                .y1 = image->img_target_y,
+                .x2 = image->img_target_x + image->img_w - 1,
+                .y2 = image->img_target_y + image->img_h - 1,
+            };
+            if (rect_intersect(&draw_rect, &draw_rect, &a8_rect))
+            {
+                const uint8_t *a8_base = (const uint8_t *)image->data + sizeof(gui_rgb_data_head_t);
+                hw_acc_blur_a8(dc, &draw_rect, blur_degree, image->acc_user,
+                               a8_base, (int16_t)image->img_w,
+                               image->img_target_x, image->img_target_y, ppe_abgr);
+            }
+        }
+        else
+        {
+            uint16_t mask_w = mask_rect.x2 - mask_rect.x1 + 1;
+            uint16_t mask_h = mask_rect.y2 - mask_rect.y1 + 1;
+            uint8_t *mask = gui_malloc((uint32_t)mask_w * mask_h + 8U);
+            if (mask != NULL)
+            {
+                if (ppe_transform_a8_mask(image, &mask_rect, mask))
+                {
+                    hw_acc_blur_a8(dc, &draw_rect, blur_degree, image->acc_user,
+                                   mask, (int16_t)mask_w, mask_rect.x1, mask_rect.y1, ppe_abgr);
+                }
+                gui_free(mask);
+            }
+        }
+    }
+
     if ((dc->section_count == dc->section_total - 1) && (image->acc_user != NULL)
         && (acc != NULL) && (acc->blur != NULL) && (acc->blur->release != NULL))
     {
