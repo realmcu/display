@@ -223,6 +223,18 @@ uint32_t vcdj_core_read_reg(int core_id, uint32_t offset);
 void vcdj_core_write_reg(int core_id, uint32_t offset, uint32_t value);
 
 /**
+ * \brief Start folding every \ref vcdj_core_write_reg into a CRC-32.
+ *
+ * Covers (window offset, value) of each write in order, so two builds that
+ * program the core differently disagree even when their pixels match.
+ * Test instrumentation: not thread safe, not part of rtl_vcdj.h.
+ */
+void vcdj_core_trace_start(void);
+
+/** \brief Stop the trace; \p crc and \p count receive the CRC and write count. */
+void vcdj_core_trace_stop(uint32_t *crc, uint32_t *count);
+
+/**
  * \brief Take exclusive ownership of a decoder core.
  *
  * \param[out] core_id      Receives the reserved core index.

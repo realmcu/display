@@ -93,6 +93,20 @@ static uint32_t vcdj_wait_failures;
 static void *(*vcdj_alloc_fn)(size_t);
 static void (*vcdj_free_fn)(void *);
 
+/* Register write trace, see vcdj_core_trace_start(). */
+static uint8_t vcdj_trace_on;
+static uint32_t vcdj_trace_crc;
+static uint32_t vcdj_trace_count;
+
+/* CRC-32 (IEEE, reflected 0xEDB88320), one entry per nibble. */
+static const uint32_t vcdj_crc32_nibble[16] =
+{
+    0x00000000U, 0x1DB71064U, 0x3B6E20C8U, 0x26D930ACU,
+    0x76DC4190U, 0x6B6B51F4U, 0x4DB26158U, 0x5005713CU,
+    0xEDB88320U, 0xF00F9344U, 0xD6D6A3E8U, 0xCB61B38CU,
+    0x9B64C2B0U, 0x86D3D2D4U, 0xA00AE278U, 0xBDBDF21CU,
+};
+
 /*============================================================================*
  *                        Local Functions
  *============================================================================*/
@@ -127,6 +141,33 @@ static uint32_t vcdj_core_reg_offset(int core_id, uint32_t offset)
     }
 
     return core_base + offset;
+}
+
+/*
+ * Fields that differ between two runs of the same decode, cleared before the CRC.
+ * swreg327[15:0] is HWIF_UNIQUE_ID, which CtrlSW fills with rand() per picture.
+ */
+static uint32_t vcdj_trace_mask(uint32_t offset, uint32_t value)
+{
+    if (offset == 327U * 4U)
+    {
+        value &= 0xFFFF0000U;
+    }
+
+    return value;
+}
+
+static uint32_t vcdj_crc32_word(uint32_t crc, uint32_t word)
+{
+    uint32_t i;
+
+    for (i = 0U; i < 8U; i++)
+    {
+        crc = (crc >> 4) ^ vcdj_crc32_nibble[(crc ^ word) & 0xFU];
+        word >>= 4;
+    }
+
+    return crc;
 }
 
 /*
@@ -299,7 +340,29 @@ void vcdj_core_write_reg(int core_id, uint32_t offset, uint32_t value)
         return;
     }
 
-    vcdj_cfg->ops->reg_write32(vcdj_cfg->ctx, vcdj_core_reg_offset(core_id, offset), value);
+    offset = vcdj_core_reg_offset(core_id, offset);
+    if (vcdj_trace_on)
+    {
+        vcdj_trace_crc = vcdj_crc32_word(vcdj_crc32_word(vcdj_trace_crc, offset),
+                                         vcdj_trace_mask(offset, value));
+        vcdj_trace_count++;
+    }
+
+    vcdj_cfg->ops->reg_write32(vcdj_cfg->ctx, offset, value);
+}
+
+void vcdj_core_trace_start(void)
+{
+    vcdj_trace_crc = 0xFFFFFFFFU;
+    vcdj_trace_count = 0U;
+    vcdj_trace_on = 1U;
+}
+
+void vcdj_core_trace_stop(uint32_t *crc, uint32_t *count)
+{
+    vcdj_trace_on = 0U;
+    *crc = vcdj_trace_crc ^ 0xFFFFFFFFU;
+    *count = vcdj_trace_count;
 }
 
 /*============================================================================*
