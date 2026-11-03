@@ -8079,7 +8079,6 @@ void PpFillDec400TblInfo(PpUnitIntConfig *ppu_cfg,
                          struct DWLLinearMem *luma_tbl,
                          struct DWLLinearMem *chroma_tbl);
 
-void UpdatePpUnitStride(PpUnitIntConfig *ppu_cfg);
 u32 CheckPpUnitConfig(const struct DecHwFeatures *hw_feature,
                       u32 in_width,
                       u32 in_height,
@@ -8105,17 +8104,12 @@ void PpUnitSetIntConfig(PpUnitIntConfig *ppu_int_cfg,
                         u32 mono_chrome);
 void PPSetRegs(u32 *pp_regs, const struct PpParams *pp_args);
 void PPSetOneChannelRegs(u32 *pp_regs, const struct PpParams *pp_args, u32 channel_id);
-u32 PPGetLancozsColumnBufferSize(PpUnitIntConfig *ppu_cfg, u32 pic_height, u32 pixel_width, u32 num_tile_cols);
 void PPSetLancozsScaleRegs(u32 *pp_regs,
                            const struct DecHwFeatures *hw_feature,
                            PpUnitIntConfig *ppu_cfg,
                            u32 core_id);
 
-void PPSetLancozsMutiCoreScaleRegs(u32 *pp_regs,
-                                   const struct DecHwFeatures *hw_feature,
-                                   PpUnitIntConfig *ppu_cfg, u32 tile_id);
 
-u32 PPCheckMutiCoreSupport(PpUnitIntConfig *ppu_cfg, u32 filter_bypass, u32 sb_size, u32 tile_cols, u8* tile_col_mem);
 
 enum DecPictureFormat TransUnitConfig2Format(PpUnitIntConfig *ppu_int_cfg);
 
@@ -8123,7 +8117,6 @@ void InitPpUnitBoundCoeff(const struct DecHwFeatures *hw_feature,
                                   u32 field_pic,
                                   PpUnitIntConfig *ppu_cfg);
 
-void PPSetFbcRegs(u32 *pp_regs, const struct PpParams *pp_args);
 void PPSetSBIRegs(u32 *pp_regs, u32 i, PpUnitIntConfig *ppu_cfg, u32 sbi_pic_start);
 u32 CheckPpStride(PpUnitIntConfig *ppu_cfg);
 
@@ -8508,10 +8501,6 @@ struct Reg_Info {
 };
 void SwSaveBuf(struct DWLLinearMem *info, struct DWLLinearMem **buffer_infos, u32 *slots);
 void SwRecycleBuf(struct DWLLinearMem *info, struct DWLLinearMem *buffer_infos, u32 slots);
-u32 SwGetBufByAddr(struct DWLLinearMem *buffer_infos, u32 slots, addr_t addr);
-addr_t GetRegsBufAddr(u32 *regs, u32 reg_lsb_idx, u32 reg_msb_idx, int flag);
-void SwLogRegInfo(const struct DecHwFeatures *hw_feature, u32 *regs, int stage, struct Reg_Info *reg_info, u32 pic_id);
-void SwLogBufInfo(u8 *buf, u32 buf_len, u32 reg_lsb_idx, u32 reg_msb_idx, int stage, u32 pic_id);
 
 #define DEC_DYNAMIC_PIC_LIMIT 10
 #define CONSUMED_IN_BIT_MASK  (28)
@@ -9143,9 +9132,6 @@ void DecPerfInfoCount(const void *instance, u32 core_id, DecPerfInfo* perf_info,
 void AveragePerfInfoPrint(DecPerfInfo *perf_info);
 #endif
 
-#ifdef OPEN_HWCFG_TO_CLIENT
-void GetHwConfig(const void *hw_feature, struct DecHwConfig *hw_cfg);
-#endif
 
 #define VCMD_HW_ID_1_0_C                0x43421001
 #define VCMD_HW_ID_1_1_1                0x43421101
@@ -9158,7 +9144,6 @@ void CommonSetM2MPComands(PpUnitIntConfig *ppu_cfg, struct M2MP_INFO vcmd_m2mp_d
                           u32 pp_enabled, u32 use_rfc, u32 crop_step_rshift, u32 width, u32 height,
                           u32 bd, u32 mono_chrome, u32 align);
 
-void SetRfcTablePrefetch(u32 *regs, u32 max_tile_width, u32 max_tile_height, u32 dpb_size);
 
 enum DecRet DecLinkAndRunCmds(const void *instance, struct DecCmdInfo *info_m, u32 cmdbuf_id);
 
