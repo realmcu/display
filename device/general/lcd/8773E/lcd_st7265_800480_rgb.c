@@ -50,38 +50,19 @@
 #define LCDC_CSN_DE         P2_3
 #define LCDC_VSYNC          P2_2
 
-
-//#define GPD0                P2_5
-//#define GPD1                P2_7
-//#define GPD2                P9_0
-//#define GPD3                P2_6
-
 #define LCDC_RESET          P9_0
+
+#define LCD_BL              ADC_3
+#define LCD_VDD             P3_3
+#define LCD_CTRL            ADC_1
 
 #define LCDC_DMA_CHANNEL_NUM              0
 #define LCDC_DMA_CHANNEL_INDEX            LCDC_DMA_Channel0
 
-#define TRANSFER_DMA_CHANNEL_NUM              0
-#define TRANSFER_DMA_CHANNEL_INDEX            GDMA_Channel0
-
-//#define PSRAM_FRAME_BUF1_ADDR 0x4000000
-
-static void st7265_reset_high(void)
-{
-//    GPIO_WriteBit(GPIO_GetPin(LCDC_RESET), GPIO_GetPin(LCDC_RESET), 1);
-    Pad_Config(LCDC_RESET, PAD_SW_MODE, PAD_IS_PWRON, PAD_PULL_NONE, PAD_OUT_ENABLE, PAD_OUT_HIGH);
-}
-
-static void st7265_reset_low(void)
-{
-//    GPIO_WriteBit(GPIO_GetPin(LCDC_RESET), GPIO_GetPin(LCDC_RESET), 0);
-    Pad_Config(LCDC_RESET, PAD_SW_MODE, PAD_IS_PWRON, PAD_PULL_NONE, PAD_OUT_ENABLE, PAD_OUT_LOW);
-}
 
 //--------------------initial code-----------------------------------------//
 static void st7265_gpio_init(void)
 {
-
     Pad_Config(LCDC_RESET, PAD_PINMUX_MODE, PAD_IS_PWRON, PAD_PULL_UP, PAD_OUT_ENABLE, PAD_OUT_HIGH);
     Pinmux_Config(LCDC_RESET, DWGPIO);
     RCC_PeriphClockCmd(APBPeriph_GPIOA, APBPeriph_GPIOA_CLOCK, ENABLE);
@@ -91,9 +72,6 @@ static void st7265_gpio_init(void)
     GPIO_InitStruct.GPIO_PinBit    = GPIO_GetPin(LCDC_RESET);
     GPIO_InitStruct.GPIO_Mode   = GPIO_Mode_OUT;
     GPIO_InitStruct.GPIO_ITCmd  = DISABLE;
-//    GPIOx_Init(GPIO_GetPin(LCDC_RESET), &GPIO_InitStruct);//error xuyaochayan
-    st7265_reset_high();
-
 }
 
 static void st7265_dma_init(uint8_t *init_buffer)
@@ -158,19 +136,8 @@ static void st7265_dma_init(uint8_t *init_buffer)
 
 static void lcd_pad_and_clk_init(void)
 {
-    LCDC_Clock_Cfg(ENABLE);
     RCC_PeriphClockCmd(APBPeriph_DISP, APBPeriph_DISP_CLOCK, ENABLE);
-    //from XTAL SOURCE = 40M
-//    PERIBLKCTRL_PERI_CLK->u_324.BITS_324.disp_ck_en = 1;
-//    PERIBLKCTRL_PERI_CLK->u_324.BITS_324.disp_func_en = 1;
-//    PERIBLKCTRL_PERI_CLK->u_324.BITS_324.r_disp_mux_clk_cg_en = 1;
-
-//    //From PLL1, SOURCE = 100M
-//    PERIBLKCTRL_PERI_CLK->u_324.BITS_324.r_disp_div_en = 1;
-//    PERIBLKCTRL_PERI_CLK->u_324.BITS_324.r_disp_clk_src_sel0 = 0; //pll1_peri(0) or pll2(1, pll2 = 160M)
-//    PERIBLKCTRL_PERI_CLK->u_324.BITS_324.r_disp_clk_src_sel1 = 1; //pll(1) or xtal(0)
-//    PERIBLKCTRL_PERI_CLK->u_324.BITS_324.r_disp_div_sel = 0; //div
-
+    RCC_DisplayClockConfig(DISPLAY_CLOCK_SOURCE_PLL1, DISPLAY_CLOCK_DIV_1);
     Pad_Config(LCDC_DATA0, PAD_PINMUX_MODE, PAD_IS_PWRON, PAD_PULL_UP, PAD_OUT_DISABLE, PAD_OUT_HIGH);
     Pad_Config(LCDC_DATA1, PAD_PINMUX_MODE, PAD_IS_PWRON, PAD_PULL_UP, PAD_OUT_DISABLE, PAD_OUT_HIGH);
     Pad_Config(LCDC_DATA2, PAD_PINMUX_MODE, PAD_IS_PWRON, PAD_PULL_UP, PAD_OUT_DISABLE, PAD_OUT_HIGH);
@@ -234,38 +201,36 @@ static void lcd_pad_and_clk_init(void)
     Pad_HighSpeedFuncSel(LCDC_VSYNC, HS_Func0);
     Pad_HighSpeedFuncSel(LCDC_CSN_DE, HS_Func0);
 
-#define FROM_CORE_DOMAIN FROM_HS_MUX
+    Pad_HighSpeedMuxSel(LCDC_DATA0, FROM_CORE_DOMAIN);
+    Pad_HighSpeedMuxSel(LCDC_DATA1, FROM_CORE_DOMAIN);
+    Pad_HighSpeedMuxSel(LCDC_DATA2, FROM_CORE_DOMAIN);
+    Pad_HighSpeedMuxSel(LCDC_DATA3, FROM_CORE_DOMAIN);
+    Pad_HighSpeedMuxSel(LCDC_DATA4, FROM_CORE_DOMAIN);
+    Pad_HighSpeedMuxSel(LCDC_DATA5, FROM_CORE_DOMAIN);
+    Pad_HighSpeedMuxSel(LCDC_DATA6, FROM_CORE_DOMAIN);
+    Pad_HighSpeedMuxSel(LCDC_DATA7, FROM_CORE_DOMAIN);
+    Pad_HighSpeedMuxSel(LCDC_DATA8, FROM_CORE_DOMAIN);
+    Pad_HighSpeedMuxSel(LCDC_DATA9, FROM_CORE_DOMAIN);
+    Pad_HighSpeedMuxSel(LCDC_DATA10, FROM_CORE_DOMAIN);
+    Pad_HighSpeedMuxSel(LCDC_DATA11, FROM_CORE_DOMAIN);
+    Pad_HighSpeedMuxSel(LCDC_DATA12, FROM_CORE_DOMAIN);
+    Pad_HighSpeedMuxSel(LCDC_DATA13, FROM_CORE_DOMAIN);
+    Pad_HighSpeedMuxSel(LCDC_DATA14, FROM_CORE_DOMAIN);
+    Pad_HighSpeedMuxSel(LCDC_DATA15, FROM_CORE_DOMAIN);
+    Pad_HighSpeedMuxSel(LCDC_DATA16, FROM_CORE_DOMAIN);
+    Pad_HighSpeedMuxSel(LCDC_DATA17, FROM_CORE_DOMAIN);
+    Pad_HighSpeedMuxSel(LCDC_DATA18, FROM_CORE_DOMAIN);
+    Pad_HighSpeedMuxSel(LCDC_DATA19, FROM_CORE_DOMAIN);
+    Pad_HighSpeedMuxSel(LCDC_DATA20, FROM_CORE_DOMAIN);
+    Pad_HighSpeedMuxSel(LCDC_DATA21, FROM_CORE_DOMAIN);
+    Pad_HighSpeedMuxSel(LCDC_DATA22, FROM_CORE_DOMAIN);
+    Pad_HighSpeedMuxSel(LCDC_DATA23, FROM_CORE_DOMAIN);
+    Pad_HighSpeedMuxSel(LCDC_RGB_WRCLK, FROM_CORE_DOMAIN);
+    Pad_HighSpeedMuxSel(LCDC_HSYNC, FROM_CORE_DOMAIN);
+    Pad_HighSpeedMuxSel(LCDC_VSYNC, FROM_CORE_DOMAIN);
+    Pad_HighSpeedMuxSel(LCDC_CSN_DE, FROM_CORE_DOMAIN);
 
-    Pad_HighSpeedMuxSel(LCDC_DATA0, 1); //FROM_CORE_DOMAIN=1
-    Pad_HighSpeedMuxSel(LCDC_DATA1, 1);
-    Pad_HighSpeedMuxSel(LCDC_DATA2, 1);
-    Pad_HighSpeedMuxSel(LCDC_DATA3, 1);
-    Pad_HighSpeedMuxSel(LCDC_DATA4, 1);
-    Pad_HighSpeedMuxSel(LCDC_DATA5, 1);
-    Pad_HighSpeedMuxSel(LCDC_DATA6, 1);
-    Pad_HighSpeedMuxSel(LCDC_DATA7, 1);
-    Pad_HighSpeedMuxSel(LCDC_DATA8, 1);
-    Pad_HighSpeedMuxSel(LCDC_DATA9, 1);
-    Pad_HighSpeedMuxSel(LCDC_DATA10, 1);
-    Pad_HighSpeedMuxSel(LCDC_DATA11, 1);
-    Pad_HighSpeedMuxSel(LCDC_DATA12, 1);
-    Pad_HighSpeedMuxSel(LCDC_DATA13, 1);
-    Pad_HighSpeedMuxSel(LCDC_DATA14, 1);
-    Pad_HighSpeedMuxSel(LCDC_DATA15, 1);
-    Pad_HighSpeedMuxSel(LCDC_DATA16, 1);
-    Pad_HighSpeedMuxSel(LCDC_DATA17, 1);
-    Pad_HighSpeedMuxSel(LCDC_DATA18, 1);
-    Pad_HighSpeedMuxSel(LCDC_DATA19, 1);
-    Pad_HighSpeedMuxSel(LCDC_DATA20, 1);
-    Pad_HighSpeedMuxSel(LCDC_DATA21, 1);
-    Pad_HighSpeedMuxSel(LCDC_DATA22, 1);
-    Pad_HighSpeedMuxSel(LCDC_DATA23, 1);
-    Pad_HighSpeedMuxSel(LCDC_RGB_WRCLK, 1);
-    Pad_HighSpeedMuxSel(LCDC_HSYNC, 1);
-    Pad_HighSpeedMuxSel(LCDC_VSYNC, 1);
-    Pad_HighSpeedMuxSel(LCDC_CSN_DE, 1);
-
-    st7265_gpio_init();
+    //st7265_gpio_init();
     platform_delay_ms(1);
 }
 
@@ -276,25 +241,18 @@ void rtk_lcd_hal_init(void)
     lcdc_init.LCDC_Interface = LCDC_IF_DPI;
     lcdc_init.LCDC_PixelInputFormat = LCDC_INPUT_RGB565;
     lcdc_init.LCDC_PixelOutputFormat = LCDC_OUTPUT_RGB888;
-    lcdc_init.LCDC_PixelBitSwap = LCDC_SWAP_BYPASS; //lcdc_handler_cfg->LCDC_TeEn = LCDC_TE_DISABLE;
+    lcdc_init.LCDC_PixelBitSwap = LCDC_SWAP_BYPASS;
     lcdc_init.LCDC_GroupSel = 0;
 
-    lcdc_init.LCDC_DmaThreshold =
-        64;  // MSize + threshold should be no larger than 128
+    lcdc_init.LCDC_DmaThreshold = 64;
     lcdc_init.LCDC_InfiniteModeEn = 1;
     LCDC_Init(&lcdc_init);
-    LCDC_ClearINTPendingBit(LCDC_CLR_WAVEFORM_FINISH);
     RCC_DisplayClockConfig(DISPLAY_CLOCK_SOURCE_PLL1, DISPLAY_CLOCK_DIV_1);//PLL1:200M
 
-//    uint32_t HSA = 20, HFP = 60, HBP = 60, HACT = ST7265_800480_LCD_WIDTH;
-//    uint32_t VSA = 12, VFP = 20, VBP = 30, VACT = ST7265_800480_LCD_HEIGHT;
-//    uint32_t HSA = 48, HFP = 40, HBP = 40, HACT = ST7265_800480_LCD_WIDTH;
-//    uint32_t VSA = 1, VFP = 13, VBP = 31, VACT = ST7265_800480_LCD_HEIGHT;
     uint32_t HSA = 4, HFP = 8, HBP = 8, HACT = ST7265_800480_LCD_WIDTH;
     uint32_t VSA = 4, VFP = 16, VBP = 16, VACT = ST7265_800480_LCD_HEIGHT;
 
-    LCDC_eDPICfgTypeDef eDPICfg = {0};//480*640  ---->   500 * 660
-//    eDPICfg.eDPI_ClockDiv = 6;
+    LCDC_eDPICfgTypeDef eDPICfg = {0};
     eDPICfg.eDPI_ClockDiv = 8;
 
     eDPICfg.eDPI_HoriSyncWidth = HSA;
@@ -323,45 +281,9 @@ void rtk_lcd_hal_init(void)
     eDPICfg.eDPI_LineBufferPixelThreshold = eDPICfg.eDPI_TotalWidth / 2;
 
     EDPI_Init(&eDPICfg);
-//    EDPI_RGB_COMPATIBLE_t edpi_reg_0x58 = {.d32 = EDPI->EDPI_RGB_COMPATIBLE};
-//    edpi_reg_0x58.b.hsync_constant = EDPI_HSYNC_CONSTANT_HIGH;
-//    edpi_reg_0x58.b.vsync_constant = EDPI_VSYNC_CONSTANT_HIGH;
-//    edpi_reg_0x58.b.de_constant = EDPI_DE_CONSTANT_NONE;
-//    EDPI->EDPI_RGB_COMPATIBLE = edpi_reg_0x58.d32;
-
-//    EDPI_RGB_COMPATIBLE_t edpi_reg_0x58 = {.d32 = EDPI->EDPI_RGB_COMPATIBLE};
-//    edpi_reg_0x58.b.hsync_constant = EDPI_HSYNC_CONSTANT_NONE;
-//    edpi_reg_0x58.b.vsync_constant = EDPI_VSYNC_CONSTANT_NONE;
-//    edpi_reg_0x58.b.de_constant = EDPI_DE_CONSTANT_LOW;
-//    EDPI->EDPI_RGB_COMPATIBLE = edpi_reg_0x58.d32;
-
-    st7265_reset_high();
-    platform_delay_ms(200);
-    st7265_reset_low();
-    platform_delay_ms(200);
-    st7265_reset_high();
-    platform_delay_ms(200);
-    Pad_Config(P2_1, PAD_SW_MODE, PAD_IS_PWRON, PAD_PULL_NONE, PAD_OUT_ENABLE, PAD_OUT_HIGH);
-    //*******************************/
-    uint8_t *pixel = (uint8_t *)PSRAM_FRAME_BUF1_ADDR;
-#if ST7265_DRV_PIXEL_BITS == 24
-    for (uint32_t i = 0; i < ST7265_800480_LCD_WIDTH * ST7265_800480_LCD_HEIGHT * 3; i = i + 3)
-    {
-        pixel[i] = 0xFF;
-        pixel[i + 1] = 0;
-        pixel[i + 2] = 0;
-    }
-#endif
-#if ST7265_DRV_PIXEL_BITS == 16
-    for (uint32_t i = 0; i < ST7265_800480_LCD_WIDTH * ST7265_800480_LCD_HEIGHT * 2; i = i + 2)
-    {
-        pixel[i] = 0x1f;
-        pixel[i + 1] = 0x00;
-    }
-#endif
-    rtk_lcd_hal_update_framebuffer((uint8_t *)PSRAM_FRAME_BUF1_ADDR,
-                                   ST7265_800480_LCD_WIDTH * ST7265_800480_LCD_HEIGHT);
+    rtk_lcd_hal_power_on();
 }
+
 static bool flush_first = true;
 
 void rtk_lcd_hal_update_framebuffer(uint8_t *buf, uint32_t len)
@@ -386,7 +308,6 @@ void rtk_lcd_hal_start_transfer(uint8_t *buf, uint32_t len)
 void rtk_lcd_hal_transfer_done(void)
 {
     return;//todo by howie
-    LCDC_ClearINTPendingBit(LCDC_CLR_WAVEFORM_FINISH);
 }
 
 void rtk_lcd_hal_set_window(uint16_t xStart, uint16_t yStart, uint16_t w, uint16_t h)
@@ -411,13 +332,22 @@ uint32_t rtk_lcd_hal_get_pixel_bits(void)
 
 bool rtk_lcd_hal_power_off(void)
 {
-//    flush_first = true;
+    flush_first = false;
+    Pad_Config(LCD_BL, PAD_SW_MODE, PAD_IS_PWRON, PAD_PULL_NONE, PAD_OUT_ENABLE, PAD_OUT_LOW);
+    platform_delay_ms(1);
+    Pad_Config(LCD_CTRL, PAD_SW_MODE, PAD_IS_PWRON, PAD_PULL_NONE, PAD_OUT_ENABLE, PAD_OUT_LOW);
+    platform_delay_ms(100);
+    Pad_Config(LCD_VDD, PAD_SW_MODE, PAD_IS_PWRON, PAD_PULL_NONE, PAD_OUT_ENABLE, PAD_OUT_LOW);
     return 0;
 }
 
 bool rtk_lcd_hal_power_on(void)
 {
-//    rtk_lcd_hal_init();
+    Pad_Config(LCD_VDD, PAD_SW_MODE, PAD_IS_PWRON, PAD_PULL_NONE, PAD_OUT_ENABLE, PAD_OUT_HIGH);
+    platform_delay_ms(11);
+    Pad_Config(LCD_CTRL, PAD_SW_MODE, PAD_IS_PWRON, PAD_PULL_NONE, PAD_OUT_ENABLE, PAD_OUT_HIGH);
+    platform_delay_ms(85);
+    Pad_Config(LCD_BL, PAD_SW_MODE, PAD_IS_PWRON, PAD_PULL_NONE, PAD_OUT_ENABLE, PAD_OUT_HIGH);
     return 0;
 }
 

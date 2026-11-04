@@ -23,6 +23,8 @@ void rtk_lcd_hal_update_framebuffer(uint8_t *p_buf, uint32_t size);
 void rtk_lcd_hal_set_window(uint16_t xStart, uint16_t yStart, uint16_t w, uint16_t h);
 void rtk_lcd_hal_start_transfer(uint8_t *buf, uint32_t len);
 void rtk_lcd_hal_transfer_done(void);
+bool rtk_lcd_hal_power_on(void);
+bool rtk_lcd_hal_power_off(void);
 
 
 
