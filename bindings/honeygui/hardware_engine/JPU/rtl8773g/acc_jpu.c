@@ -138,6 +138,79 @@ void hw_jpeg_free(void *ptr)
     hal_jpu_free_cache(ptr);
 }
 
+void *hw_jpeg_compress(void *input, int w, int h, int bpp,
+                       int quality, int buf_len, int *out_len)
+{
+    const int JPEG_HEAD_SIZE = (int)sizeof(gui_jpeg_file_head_t) -
+                               (int)sizeof(((gui_jpeg_file_head_t *)0)->jpeg);
+
+    JPU_RGB_TYPE rgb_type = 0;
+    switch (bpp)
+    {
+    case 16:
+        // RGB565
+        rgb_type = JPU_RGB565;
+        break;
+    case 24:
+        // RGB888
+        rgb_type = JPU_RGB888;
+        break;
+    case 32:
+        // ARGB8888
+        rgb_type = JPU_ARGB8888;
+        break;
+    default:
+        bpp = 0;
+        break;
+    }
+    if (input == NULL || w <= 0 || h <= 0 || bpp == 0 || out_len == NULL)
+    {
+        DBG_DIRECT("hw_jpeg_compress: bad arguments (bpp=%d w=%d h=%d out_len=%d)\n",
+                   (int)bpp, w, h, out_len);
+        return NULL;
+    }
+
+    if (buf_len < 0 || (buf_len > 0 && buf_len <= JPEG_HEAD_SIZE))
+    {
+        DBG_DIRECT("hw_jpeg_compress: buf_len %d cannot hold the %d-byte resource head\n",
+                   buf_len, JPEG_HEAD_SIZE);
+        return NULL;
+    }
+
+
+    quality = (quality < 1) ? 1 : ((quality > 100) ? 100 : quality);
+    *out_len = 0;
+
+    JPU_ENC_PARAM enc_param;
+    uint8_t *jpg_data = NULL;
+    uint32_t out_w = 0;
+    uint32_t out_h = 0;
+    JPU_ERROR err;
+
+    memset((void *)&enc_param, 0, sizeof(JPU_ENC_PARAM));
+    enc_param.data = (uint8_t *)input;
+    enc_param.size = (w * h * bpp / 8);
+    enc_param.picWidth = w ;
+    enc_param.picHeight = h;
+    enc_param.jpgFormat = JPU_FORMAT_420;
+    enc_param.frameFormat = PACKED_FORMAT_422_YUYV;
+    enc_param.quality = quality;
+    enc_param.useWrapper = 1;
+    enc_param.rgbType = rgb_type;
+    enc_param.jpg_buff_sz = buf_len ? buf_len : enc_param.size * 1.2f;
+
+    err = hal_jpu_encode(&enc_param, &jpg_data, out_len, &out_w, &out_h);
+    if (err != JPU_SUCCESS)
+    {
+        DBG_DIRECT("enc jpeg file failed, err: %d", err);
+        jpg_data = NULL;
+    }
+
+    return (void *)jpg_data;
+}
+
+
+
 void hw_jpeg_init(void)
 {
     NVIC_InitTypeDef nvic_init = {0};
@@ -203,5 +276,7 @@ gui_jpeg_ops_t hw_jpeg_ops =
     .init = hw_jpeg_init,
     .load = hw_jpeg_load,
     .release = hw_jpeg_free,
+    .compress = hw_jpeg_compress,
+    .free = hw_jpeg_free,
     .deinit = hw_jpeg_deinit,
 };
