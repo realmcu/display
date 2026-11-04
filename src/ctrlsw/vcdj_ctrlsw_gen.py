@@ -26,6 +26,7 @@ Anything this cannot reproduce exactly stops the generator with an error.
 import argparse
 import os
 import re
+import subprocess
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -584,6 +585,11 @@ def main():
                     if o:
                         f.write('%s\t%d\t%s\t%d\n' % (os.path.basename(p), n, rel(o[0]), o[1]))
     if a.check:
+        # The files on disk also carry the prune list, so compare against the
+        # pruned output; vcdj_ctrlsw_prune.py owns that and reports precisely.
+        prune = os.path.join(HERE, 'vcdj_ctrlsw_prune.py')
+        if os.path.isfile(prune):
+            sys.exit(subprocess.call([sys.executable, prune, '--check']))
         stale = [p for p, t in files if not os.path.isfile(p) or read(p) != render(t)]
         for p in stale:
             print('vcdj_ctrlsw_gen: %s is stale; rerun the generator' % os.path.basename(p))

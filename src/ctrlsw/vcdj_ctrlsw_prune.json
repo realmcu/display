@@ -1,0 +1,66 @@
+{
+  "_comment": "Prune list for vcdj_ctrlsw.c/.h, applied by vcdj_ctrlsw_prune.py after vcdj_ctrlsw_gen.py. Rules locate code by name and structure, never by line number, so regenerating or regrouping the output does not invalidate them. Class letters refer to the list in ip-validation-notes/vcdj/plans/ctrlsw-merge.md 3.4.1.",
+  "rules": [
+    {
+      "action": "delete_function",
+      "name": "SetRfcTablePrefetch",
+      "why": "A: zero call sites, linker already discarded it"
+    },
+    {
+      "action": "delete_function",
+      "name": "GetHwConfig",
+      "why": "A: only defined under #ifdef OPEN_HWCFG_TO_CLIENT"
+    },
+    {
+      "action": "delete_function",
+      "name": "InitFbcParams",
+      "why": "A: only defined under #if 0",
+      "header": false
+    },
+    {
+      "action": "delete_function",
+      "name": "UpdatePpUnitStride",
+      "why": "A: zero call sites"
+    },
+    {
+      "action": "delete_function",
+      "name": "PPSetFbcRegs",
+      "why": "A: zero call sites, not an RFC feature check"
+    },
+    {
+      "action": "delete_function",
+      "name": "PPGetLancozsColumnBufferSize",
+      "why": "A: zero call sites"
+    },
+    {
+      "action": "delete_function",
+      "name": "PPSetLancozsMutiCoreScaleRegs",
+      "why": "A: zero call sites"
+    },
+    {
+      "action": "delete_function",
+      "name": "PPCheckMutiCoreSupport",
+      "why": "A: zero call sites"
+    },
+    {
+      "action": "delete_function",
+      "name": "SwGetBufByAddr",
+      "why": "A: zero call sites"
+    },
+    {
+      "action": "delete_function",
+      "name": "GetRegsBufAddr",
+      "why": "A: zero call sites"
+    },
+    {
+      "action": "delete_function",
+      "name": "SwLogRegInfo",
+      "why": "A: zero call sites"
+    },
+    {
+      "action": "delete_function",
+      "name": "SwLogBufInfo",
+      "why": "A: zero call sites"
+    }
+  ]
+}

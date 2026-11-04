@@ -169,11 +169,24 @@ files `vcdj_ctrlsw.h` (through `src/common/rtl_vcdj_ctrlsw.h`), with no vendor i
 files are generated; never edit them by hand, edit the vendor file and regenerate:
 
 ```sh
-python src/ctrlsw/vcdj_ctrlsw_gen.py            # rewrite both files
-python src/ctrlsw/vcdj_ctrlsw_gen.py --check    # exit 1 if they are stale
+python src/ctrlsw/vcdj_ctrlsw_prune.py            # rewrite both files
+python src/ctrlsw/vcdj_ctrlsw_prune.py --check    # exit 1 if they are stale
 ```
 
 Run `--check` after any change under `software/`, to `vcdj_ctrlsw_unity.c`, to the vendor header
-list in `src/common/rtl_vcdj_ctrlsw.h`, or to the fixed macros in `inc/rtl_vcdj_vendor.h`; the
-build does not run it. The generator mirrors `vcdj_ctrlsw_unity.c` and stops with an error on
-anything it cannot reproduce exactly.
+list in `src/common/rtl_vcdj_ctrlsw.h`, to the fixed macros in `inc/rtl_vcdj_vendor.h`, or to
+`vcdj_ctrlsw_prune.json`; the build does not run it.
+
+Two stages, both idempotent:
+
+| Stage | Script | Input | Role |
+|---|---|---|---|
+| 1 | `vcdj_ctrlsw_gen.py` | `software/`, `vcdj_ctrlsw_unity.c`, `rtl_vcdj_ctrlsw.h` | Reproduce the vendor build. Mirrors the unity wrapper and stops with an error on anything it cannot reproduce exactly. |
+| 2 | `vcdj_ctrlsw_prune.py` | `vcdj_ctrlsw_prune.json` | Delete code from stage 1's output. |
+
+Stage 2 exists so deletions stay as data instead of as hand edits to a generated file. Each rule
+names a construct and the script finds it by name and brace structure, so regrouping the output or
+adding a source does not invalidate it. A rule that matches zero or more than one place is an
+error, and so is a deletion that would leave a live reference behind; a reference inside an
+`#if 0` block with no `#else` does not count. `vcdj_ctrlsw_gen.py --check` forwards to stage 2,
+because the files on disk carry the pruned result.
