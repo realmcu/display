@@ -239,8 +239,6 @@ static JPU_ERROR JPU_Dec_Prepare(JPU_DEC_PARAM *usr_param, JPU_DEC_PARAM_INT *pa
 
     // default param: not exported to user for now
     {
-        // Chroma format type [0](SEPARATED CHROMA) [1](CBCR INTERLEAVED) [2](CRCB INTERLEAVED)
-        param->chromaInterleave = JPU_SEPARATED_CHROMA;
         param->StreamEndian = JPU_BBC_64_BIT_LITTLE_ENDIAN;
         param->FrameEndian = JPU_DPB_64_BIT_BIG_ENDIAN;
 
@@ -261,7 +259,17 @@ static JPU_ERROR JPU_Dec_Prepare(JPU_DEC_PARAM *usr_param, JPU_DEC_PARAM_INT *pa
 
     // Packed stream format output [0](PLANAR) [1](YUYV) [2](UYVY) [3](YVYU) [4](VYUY) [5](YUV_444 PACKED)
     param->packedFormat = usr_param->frameFormat;
-//return JPU_SUCCESS;
+
+    // Chroma layout [0](SEPARATED) [1](CBCR INTERLEAVED, NV12) [2](CRCB INTERLEAVED, NV21)
+    if (usr_param->chromaInterleave > JPU_CRCB_INTERLEAVED)
+    {
+        return JPU_ERR_INVALID_PARAM;
+    }
+    param->chromaInterleave = usr_param->chromaInterleave;
+    if (param->chromaInterleave != JPU_SEPARATED_CHROMA && param->packedFormat != PACKED_FORMAT_NONE)
+    {
+        return JPU_ERR_INVALID_PARAM;
+    }
     // Wrapper enable: 0-OFF, 1-ON
     param->useWrapper = usr_param->useWrapper;
     //  0-JPG_ARGB8888, 1-JPG_RGB888, 2-JPG_RGB565
@@ -1249,8 +1257,17 @@ static JPU_ERROR JPU_Enc_Prepare(JPU_ENC_PARAM *usr_param, JPU_ENC_PARAM_INT *pa
     param->StreamEndian = JPU_BBC_64_BIT_LITTLE_ENDIAN;
     param->FrameEndian = JPU_DPB_64_BIT_BIG_ENDIAN;
 
-    // packed format and interleace is mutually exclusive
-    param->chromaInterleave = JPU_SEPARATED_CHROMA;
+    // Chroma layout [0](SEPARATED) [1](CBCR INTERLEAVED, NV12) [2](CRCB INTERLEAVED, NV21)
+    if (usr_param->chromaInterleave < JPU_SEPARATED_CHROMA || usr_param->chromaInterleave > JPU_CRCB_INTERLEAVED)
+    {
+        return JPU_ERR_INVALID_PARAM;
+    }
+    param->chromaInterleave = usr_param->chromaInterleave;
+    // packed format and interleave is mutually exclusive
+    if (param->chromaInterleave != JPU_SEPARATED_CHROMA && param->frameFormat != PACKED_FORMAT_NONE)
+    {
+        return JPU_ERR_INVALID_PARAM;
+    }
 
     param->bEnStuffByte = JPU_STUFFING_BYTE_FF;
 
@@ -1955,7 +1972,7 @@ JPU_ERROR hal_jpu_decode(JPU_DEC_PARAM *dec_param, uint8_t **frame_buff, uint32_
     if (param->packedFormat == PACKED_FORMAT_NONE)
     {
         config->bufCb = (uint32_t)fb + lum_size;
-        config->bufCr = (uint32_t)fb + lum_size + chr_size;
+        config->bufCr = param->chromaInterleave ? 0 : (uint32_t)fb + lum_size + chr_size;
     }
 
     // wrapper
@@ -2236,7 +2253,7 @@ JPU_ERROR hal_jpu_encode(JPU_ENC_PARAM *enc_param, uint8_t **jpg_buff, uint32_t 
         if (param->frameFormat == PACKED_FORMAT_NONE)
         {
             info->bufCb = (uint32_t)param->data + lum_size;
-            info->bufCr = (uint32_t)param->data + lum_size + chr_size;
+            info->bufCr = param->chromaInterleave ? 0 : (uint32_t)param->data + lum_size + chr_size;
         }
     }
     else
@@ -2301,16 +2318,28 @@ JPU_ERROR hal_jpu_encode(JPU_ENC_PARAM *enc_param, uint8_t **jpg_buff, uint32_t 
 
             uint32_t puc = (uint32_t)(param->data + param->picWidth * param->picHeight);
             uint32_t addr = (uint32_t)(enc_fb_buf + lum_size);
-            for (i = 0; i < nCb; ++i)
+            if (param->chromaInterleave)
             {
-                memcpy((void *)(addr + chromaStride * i), (uint8_t *)(puc + i * chromaWidth), chromaWidth);
+                // one CbCr plane: each row carries chromaWidth Cb/Cr pairs
+                for (i = 0; i < nCb; ++i)
+                {
+                    memcpy((void *)(addr + chromaStride * 2 * i), (uint8_t *)(puc + i * chromaWidth * 2),
+                           chromaWidth * 2);
+                }
             }
-
-            puc = puc + chromaSize;
-            addr = (uint32_t)(enc_fb_buf + lum_size + chr_size);
-            for (i = 0; i < nCr; ++i)
+            else
             {
-                memcpy((void *)(addr + chromaStride * i), (uint8_t *)(puc + i * chromaWidth), chromaWidth);
+                for (i = 0; i < nCb; ++i)
+                {
+                    memcpy((void *)(addr + chromaStride * i), (uint8_t *)(puc + i * chromaWidth), chromaWidth);
+                }
+
+                puc = puc + chromaSize;
+                addr = (uint32_t)(enc_fb_buf + lum_size + chr_size);
+                for (i = 0; i < nCr; ++i)
+                {
+                    memcpy((void *)(addr + chromaStride * i), (uint8_t *)(puc + i * chromaWidth), chromaWidth);
+                }
             }
         }
 
@@ -2318,7 +2347,7 @@ JPU_ERROR hal_jpu_encode(JPU_ENC_PARAM *enc_param, uint8_t **jpg_buff, uint32_t 
         if (param->frameFormat == PACKED_FORMAT_NONE)
         {
             info->bufCb = (uint32_t)enc_fb_buf + lum_size;
-            info->bufCr = (uint32_t)enc_fb_buf + lum_size + chr_size;
+            info->bufCr = param->chromaInterleave ? 0 : (uint32_t)enc_fb_buf + lum_size + chr_size;
         }
     }
 

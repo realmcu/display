@@ -182,6 +182,7 @@ typedef struct
 
     //packed
     uint32_t frameFormat;     /**< Output YUV format, see `JPU_PACKED_FORMAT`*/
+    uint32_t chromaInterleave;/**< Planar output chroma layout, see `JPU_CHROMA_INTERLEAVE`: NV12/NV21 when not 0; must be 0 if frameFormat is packed*/
 
     //ROI
     uint32_t roiEnable;       /**< Enable ROI decode*/
@@ -316,6 +317,7 @@ typedef struct
     // format
     int jpgFormat;        /**< Output JPEG image sample rate, see `JPU_JPG_FORMAT`*/
     int frameFormat;      /**< YUV format to be encoded, see `JPU_PACKED_FORMAT`*/
+    int chromaInterleave; /**< Planar input chroma layout, see `JPU_CHROMA_INTERLEAVE`: Y plane + one CbCr/CrCb plane when not 0; must be 0 if frameFormat is packed*/
     uint8_t quality;      /**< JPEG image quality: 1 ~ 100*/
 
     // wrapper
