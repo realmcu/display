@@ -2,6 +2,21 @@
   "_comment": "Prune list for vcdj_ctrlsw.c/.h, applied by vcdj_ctrlsw_prune.py after vcdj_ctrlsw_gen.py. Rules locate code by name and structure, never by line number, so regenerating or regrouping the output does not invalidate them. Class letters refer to the list in ip-validation-notes/vcdj/plans/ctrlsw-merge.md 3.4.1.",
   "rules": [
     {
+      "action": "merge_license",
+      "files": ["vcdj_ctrlsw.c", "vcdj_ctrlsw.h"],
+      "header": ["Copyright and license notices for the VeriSilicon code this file",
+                 "was generated from. The sources under src/ctrlsw/software/source/",
+                 "keep their own blocks; this one carries them all.",
+                 "",
+                 "The copyright lines below are the union of the per-file ones. Each",
+                 "clause that follows is one of the licence texts the sources used,",
+                 "reproduced verbatim once."],
+      "blocks": {"vcdj_ctrlsw.c": 46, "vcdj_ctrlsw.h": 19},
+      "clauses": {"vcdj_ctrlsw.c": ["bsd3", "bsd3-proprietary", "verisilicon-restricted"], "vcdj_ctrlsw.h": ["bsd3", "verisilicon-restricted"]},
+      "holders": {"vcdj_ctrlsw.c": ["Copyright (c) 2015, VeriSilicon Inc. All rights reserved", "Copyright (c) 2023, VeriSilicon Inc. All rights reserved", "Copyright (c) 2011-2014, Google Inc. All rights reserved.", "Copyright (c) 2007-2010, Hantro OY. All rights reserved.", "Copyright 2014-2025 Verisilicon Inc."], "vcdj_ctrlsw.h": ["Copyright 2014-2025 Verisilicon Inc.", "Copyright (c) 2015, VeriSilicon Inc. All rights reserved", "Copyright (c) 2011-2014, Google Inc. All rights reserved.", "Copyright (c) 2007-2010, Hantro OY. All rights reserved."]},
+      "why": "H: one merged block per generated file; the vendor files keep theirs"
+    },
+    {
       "action": "delete_function",
       "name": "SetRfcTablePrefetch",
       "why": "A: zero call sites, linker already discarded it"

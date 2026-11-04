@@ -1,7 +1,94 @@
 /*
+ * Copyright and license notices for the VeriSilicon code this file
+ * was generated from. The sources under src/ctrlsw/software/source/
+ * keep their own blocks; this one carries them all.
+ *
+ * The copyright lines below are the union of the per-file ones. Each
+ * clause that follows is one of the licence texts the sources used,
+ * reproduced verbatim once.
+ *
+ * Copyright (c) 2015, VeriSilicon Inc. All rights reserved
+ * Copyright (c) 2023, VeriSilicon Inc. All rights reserved
+ * Copyright (c) 2011-2014, Google Inc. All rights reserved.
+ * Copyright (c) 2007-2010, Hantro OY. All rights reserved.
+ * Copyright 2014-2025 Verisilicon Inc.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ * * Redistributions of source code must retain the above copyright notice,
+ * this list of conditions and the following disclaimer.
+ * * Redistributions in binary form must reproduce the above copyright
+ * notice, this list of conditions and the following disclaimer in the
+ * documentation and/or other materials provided with the distribution.
+ * * Neither the names of the copyright holder nor the names of its
+ * contributors may be used to endorse or promote products derived from
+ * this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ *
+ * This software is confidential and proprietary and may be used only as
+ * expressly authorized by VeriSilicon in a written licensing agreement.
+ *
+ * This entire notice must be reproduced on all copies
+ * and may not be removed.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ * * Redistributions of source code must retain the above copyright notice,
+ * this list of conditions and the following disclaimer.
+ * * Redistributions in binary form must reproduce the above copyright
+ * notice, this list of conditions and the following disclaimer in the
+ * documentation and/or other materials provided with the distribution.
+ * * Neither the names of Google nor the names of its contributors may be
+ * used to endorse or promote products derived from this software
+ * without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ *
+ * The software contained herein may be directly re-distributed or may be adapted for redistribution
+ * by SoC vendors who have licensed the related VeriSilicon/Hantro core IP, with the understanding
+ * that the re-distribution is limited to the users who have purchased the SoC product which contains
+ * the related VeriSilicon/Hantro IP. Otherwise, the information contained herein is not to be used by
+ * or disclosed to the third parties without the express written permission of an officer of VeriSilicon Holdings Co., Ltd.
+ *
+ * The above copyright notice and this permission notice (including the
+ * next paragraph) shall be included in all copies or substantial
+ * portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT.
+ * IN NO EVENT SHALL VERISILICON AND/OR ITS SUPPLIERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+
+/*
  * GENERATED by src/ctrlsw/vcdj_ctrlsw_gen.py from the VeriSilicon sources in
- * src/ctrlsw/software/source/; do not edit by hand. Each vendor file keeps its
- * own copyright and license block at the start of its segment.
+ * src/ctrlsw/software/source/; do not edit by hand. The merged copyright and
+ * license block at the top of this file stands for the per-file blocks of the
+ * vendor sources, which keep their own.
  */
 
 #include "vcdj_ctrlsw.h"
@@ -9,98 +96,12 @@
 /*============================================================================*
  * software/source/common/case_info.c
  *============================================================================*/
-/*------------------------------------------------------------------------------
---       Copyright (c) 2015, VeriSilicon Inc. All rights reserved             --
---------------------------------------------------------------------------------
--- Redistribution and use in source and binary forms, with or without         --
--- modification, are permitted provided that the following conditions are met:--
--- * Redistributions of source code must retain the above copyright notice,   --
---       this list of conditions and the following disclaimer.                --
--- * Redistributions in binary form must reproduce the above copyright        --
---       notice, this list of conditions and the following disclaimer in the  --
---       documentation and/or other materials provided with the distribution. --
--- * Neither the names of the copyright holder nor the names of its           --
---       contributors may be used to endorse or promote products derived from --
---       this software without specific prior written permission.             --
---------------------------------------------------------------------------------
--- THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"--
--- AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE  --
--- IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE --
--- ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE  --
--- LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR        --
--- CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF       --
--- SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS   --
--- INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN    --
--- CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)    --
--- ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE --
--- POSSIBILITY OF SUCH DAMAGE.                                                --
---------------------------------------------------------------------------------
-------------------------------------------------------------------------------*/
-
 #include <string.h>
 #include <stdio.h>
-/*------------------------------------------------------------------------------
---       Copyright (c) 2023, VeriSilicon Inc. All rights reserved             --
---------------------------------------------------------------------------------
--- Redistribution and use in source and binary forms, with or without         --
--- modification, are permitted provided that the following conditions are met:--
--- * Redistributions of source code must retain the above copyright notice,   --
---       this list of conditions and the following disclaimer.                --
--- * Redistributions in binary form must reproduce the above copyright        --
---       notice, this list of conditions and the following disclaimer in the  --
---       documentation and/or other materials provided with the distribution. --
--- * Neither the names of the copyright holder nor the names of its           --
---       contributors may be used to endorse or promote products derived from --
---       this software without specific prior written permission.             --
---------------------------------------------------------------------------------
--- THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"--
--- AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE  --
--- IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE --
--- ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE  --
--- LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR        --
--- CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF       --
--- SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS   --
--- INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN    --
--- CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)    --
--- ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE --
--- POSSIBILITY OF SUCH DAMAGE.                                                --
---------------------------------------------------------------------------------
-------------------------------------------------------------------------------*/
-
 /* This file declares case_info structures/functions etc used in decoder internals,
    other than APIs. */
 
 #define CASE_INFO_H
-
-/*------------------------------------------------------------------------------
---       Copyright (c) 2015, VeriSilicon Inc. All rights reserved             --
---         Copyright (c) 2011-2014, Google Inc. All rights reserved.          --
---         Copyright (c) 2007-2010, Hantro OY. All rights reserved.           --
---------------------------------------------------------------------------------
--- Redistribution and use in source and binary forms, with or without         --
--- modification, are permitted provided that the following conditions are met:--
--- * Redistributions of source code must retain the above copyright notice,   --
---       this list of conditions and the following disclaimer.                --
--- * Redistributions in binary form must reproduce the above copyright        --
---       notice, this list of conditions and the following disclaimer in the  --
---       documentation and/or other materials provided with the distribution. --
--- * Neither the names of the copyright holder nor the names of its           --
---       contributors may be used to endorse or promote products derived from --
---       this software without specific prior written permission.             --
---------------------------------------------------------------------------------
--- THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"--
--- AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE  --
--- IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE --
--- ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE  --
--- LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR        --
--- CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF       --
--- SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS   --
--- INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN    --
--- CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)    --
--- ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE --
--- POSSIBILITY OF SUCH DAMAGE.                                                --
---------------------------------------------------------------------------------
-------------------------------------------------------------------------------*/
 
 #define REGDRV_H
 
@@ -148,42 +149,6 @@
 
 enum HwIfName { //cppcheck-suppress syntaxError
   /* include script-generated part */
-/*------------------------------------------------------------------------------
---       Copyright (c) 2015, VeriSilicon Inc. All rights reserved             --
---         Copyright (c) 2011-2014, Google Inc. All rights reserved.          --
---         Copyright (c) 2007-2010, Hantro OY. All rights reserved.           --
---                                                                            --
--- This software is confidential and proprietary and may be used only as      --
---   expressly authorized by VeriSilicon in a written licensing agreement.    --
---                                                                            --
---         This entire notice must be reproduced on all copies                --
---                       and may not be removed.                              --
---                                                                            --
---------------------------------------------------------------------------------
--- Redistribution and use in source and binary forms, with or without         --
--- modification, are permitted provided that the following conditions are met:--
---   * Redistributions of source code must retain the above copyright notice, --
---       this list of conditions and the following disclaimer.                --
---   * Redistributions in binary form must reproduce the above copyright      --
---       notice, this list of conditions and the following disclaimer in the  --
---       documentation and/or other materials provided with the distribution. --
---   * Neither the names of Google nor the names of its contributors may be   --
---       used to endorse or promote products derived from this software       --
---       without specific prior written permission.                           --
---------------------------------------------------------------------------------
--- THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"--
--- AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE  --
--- IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE --
--- ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE  --
--- LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR        --
--- CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF       --
--- SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS   --
--- INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN    --
--- CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)    --
--- ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE --
--- POSSIBILITY OF SUCH DAMAGE.                                                --
---------------------------------------------------------------------------------
-------------------------------------------------------------------------------*/  
   HWIF_DEC_TILE_EDGE_TIMEOUT_INF,
   HWIF_DEC_PIC_INF,
   HWIF_DEC_EXT_TIMEOUT_INT,
@@ -3010,99 +2975,11 @@ void VCDecInfoCollect(CaseInfo* case_info){
 /*============================================================================*
  * software/source/common/commonconfig.c
  *============================================================================*/
-/*------------------------------------------------------------------------------
---       Copyright (c) 2015, VeriSilicon Inc. All rights reserved             --
---         Copyright (c) 2011-2014, Google Inc. All rights reserved.          --
---         Copyright (c) 2007-2010, Hantro OY. All rights reserved.           --
---------------------------------------------------------------------------------
--- Redistribution and use in source and binary forms, with or without         --
--- modification, are permitted provided that the following conditions are met:--
--- * Redistributions of source code must retain the above copyright notice,   --
---       this list of conditions and the following disclaimer.                --
--- * Redistributions in binary form must reproduce the above copyright        --
---       notice, this list of conditions and the following disclaimer in the  --
---       documentation and/or other materials provided with the distribution. --
--- * Neither the names of the copyright holder nor the names of its           --
---       contributors may be used to endorse or promote products derived from --
---       this software without specific prior written permission.             --
---------------------------------------------------------------------------------
--- THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"--
--- AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE  --
--- IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE --
--- ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE  --
--- LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR        --
--- CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF       --
--- SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS   --
--- INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN    --
--- CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)    --
--- ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE --
--- POSSIBILITY OF SUCH DAMAGE.                                                --
---------------------------------------------------------------------------------
-------------------------------------------------------------------------------*/
-
-/*------------------------------------------------------------------------------
---       Copyright (c) 2015, VeriSilicon Inc. All rights reserved             --
---         Copyright (c) 2011-2014, Google Inc. All rights reserved.          --
---         Copyright (c) 2007-2010, Hantro OY. All rights reserved.           --
---------------------------------------------------------------------------------
--- Redistribution and use in source and binary forms, with or without         --
--- modification, are permitted provided that the following conditions are met:--
--- * Redistributions of source code must retain the above copyright notice,   --
---       this list of conditions and the following disclaimer.                --
--- * Redistributions in binary form must reproduce the above copyright        --
---       notice, this list of conditions and the following disclaimer in the  --
---       documentation and/or other materials provided with the distribution. --
--- * Neither the names of the copyright holder nor the names of its           --
---       contributors may be used to endorse or promote products derived from --
---       this software without specific prior written permission.             --
---------------------------------------------------------------------------------
--- THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"--
--- AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE  --
--- IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE --
--- ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE  --
--- LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR        --
--- CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF       --
--- SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS   --
--- INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN    --
--- CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)    --
--- ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE --
--- POSSIBILITY OF SUCH DAMAGE.                                                --
---------------------------------------------------------------------------------
-------------------------------------------------------------------------------*/
-
 #define CONFIG_H_DEFINED
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-/*------------------------------------------------------------------------------
---       Copyright (c) 2015, VeriSilicon Inc. All rights reserved             --
---------------------------------------------------------------------------------
--- Redistribution and use in source and binary forms, with or without         --
--- modification, are permitted provided that the following conditions are met:--
--- * Redistributions of source code must retain the above copyright notice,   --
---       this list of conditions and the following disclaimer.                --
--- * Redistributions in binary form must reproduce the above copyright        --
---       notice, this list of conditions and the following disclaimer in the  --
---       documentation and/or other materials provided with the distribution. --
--- * Neither the names of the copyright holder nor the names of its           --
---       contributors may be used to endorse or promote products derived from --
---       this software without specific prior written permission.             --
---------------------------------------------------------------------------------
--- THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"--
--- AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE  --
--- IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE --
--- ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE  --
--- LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR        --
--- CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF       --
--- SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS   --
--- INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN    --
--- CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)    --
--- ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE --
--- POSSIBILITY OF SUCH DAMAGE.                                                --
---------------------------------------------------------------------------------
-------------------------------------------------------------------------------*/
 
 #define INCLUDE_SW_REGISTERS0_H_
 
@@ -5522,36 +5399,6 @@ void SetSwCtrl(u32 *regs, struct SwRegisters *sw_ctrl);
 #ifdef __cplusplus
 }
 #endif
-/*------------------------------------------------------------------------------
---       Copyright (c) 2015, VeriSilicon Inc. All rights reserved             --
---         Copyright (c) 2011-2014, Google Inc. All rights reserved.          --
---         Copyright (c) 2007-2010, Hantro OY. All rights reserved.           --
---------------------------------------------------------------------------------
--- Redistribution and use in source and binary forms, with or without         --
--- modification, are permitted provided that the following conditions are met:--
--- * Redistributions of source code must retain the above copyright notice,   --
---       this list of conditions and the following disclaimer.                --
--- * Redistributions in binary form must reproduce the above copyright        --
---       notice, this list of conditions and the following disclaimer in the  --
---       documentation and/or other materials provided with the distribution. --
--- * Neither the names of the copyright holder nor the names of its           --
---       contributors may be used to endorse or promote products derived from --
---       this software without specific prior written permission.             --
---------------------------------------------------------------------------------
--- THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"--
--- AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE  --
--- IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE --
--- ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE  --
--- LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR        --
--- CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF       --
--- SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS   --
--- INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN    --
--- CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)    --
--- ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE --
--- POSSIBILITY OF SUCH DAMAGE.                                                --
---------------------------------------------------------------------------------
-------------------------------------------------------------------------------*/
-
 #define __DEC_X170_CFG_H__
 
 /* predefined values of HW system parameters. DO NOT ALTER! */
@@ -6440,36 +6287,6 @@ void SetSwCtrl(u32 *regs, struct SwRegisters *sw_ctrl) {
 /*============================================================================*
  * software/source/common/commonfunction.c
  *============================================================================*/
-/*------------------------------------------------------------------------------
---       Copyright (c) 2015, VeriSilicon Inc. All rights reserved             --
---         Copyright (c) 2011-2014, Google Inc. All rights reserved.          --
---         Copyright (c) 2007-2010, Hantro OY. All rights reserved.           --
---------------------------------------------------------------------------------
--- Redistribution and use in source and binary forms, with or without         --
--- modification, are permitted provided that the following conditions are met:--
--- * Redistributions of source code must retain the above copyright notice,   --
---       this list of conditions and the following disclaimer.                --
--- * Redistributions in binary form must reproduce the above copyright        --
---       notice, this list of conditions and the following disclaimer in the  --
---       documentation and/or other materials provided with the distribution. --
--- * Neither the names of the copyright holder nor the names of its           --
---       contributors may be used to endorse or promote products derived from --
---       this software without specific prior written permission.             --
---------------------------------------------------------------------------------
--- THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"--
--- AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE  --
--- IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE --
--- ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE  --
--- LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR        --
--- CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF       --
--- SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS   --
--- INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN    --
--- CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)    --
--- ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE --
--- POSSIBILITY OF SUCH DAMAGE.                                                --
---------------------------------------------------------------------------------
-------------------------------------------------------------------------------*/
-
 void CommonSetM2MPComands(PpUnitIntConfig *ppu_cfg, struct M2MP_INFO vcmd_m2mp_data[MAX_VCMD_M2MP_NUM], addr_t base_bus_addr,
                           u32 pp_enabled, u32 use_rfc, u32 crop_step_rshift, u32 width, u32 height,
                           u32 bd, u32 mono_chrome, u32 align) {
@@ -7135,37 +6952,6 @@ enum DecRet SwAllocFilmGrainMem(const void *dwl_inst, u32 subsampling_x, u32 sub
 /*============================================================================*
  * software/source/common/dec_log.c
  *============================================================================*/
-/*------------------------------------------------------------------------------
---       Copyright (c) 2015, VeriSilicon Inc. All rights reserved             --
---         Copyright (c) 2011-2014, Google Inc. All rights reserved.          --
---         Copyright (c) 2007-2010, Hantro OY. All rights reserved.           --
---------------------------------------------------------------------------------
--- Redistribution and use in source and binary forms, with or without         --
--- modification, are permitted provided that the following conditions are met:--
--- * Redistributions of source code must retain the above copyright notice,   --
---       this list of conditions and the following disclaimer.                --
--- * Redistributions in binary form must reproduce the above copyright        --
---       notice, this list of conditions and the following disclaimer in the  --
---       documentation and/or other materials provided with the distribution. --
--- * Neither the names of the copyright holder nor the names of its           --
---       contributors may be used to endorse or promote products derived from --
---       this software without specific prior written permission.             --
---------------------------------------------------------------------------------
--- THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"--
--- AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE  --
--- IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE --
--- ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE  --
--- LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR        --
--- CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF       --
--- SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS   --
--- INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN    --
--- CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)    --
--- ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE --
--- POSSIBILITY OF SUCH DAMAGE.                                                --
---------------------------------------------------------------------------------
---                Description : printf log info to ***.log                    --
-------------------------------------------------------------------------------*/
-
 /**********************************************************
 * INCLUDES
 **********************************************************/
@@ -7174,62 +6960,6 @@ enum DecRet SwAllocFilmGrainMem(const void *dwl_inst, u32 subsampling_x, u32 sub
 /*============================================================================*
  * software/source/common/delogo.c
  *============================================================================*/
-/*------------------------------------------------------------------------------
---       Copyright (c) 2015, VeriSilicon Inc. All rights reserved             --
---------------------------------------------------------------------------------
--- Redistribution and use in source and binary forms, with or without         --
--- modification, are permitted provided that the following conditions are met:--
--- * Redistributions of source code must retain the above copyright notice,   --
---       this list of conditions and the following disclaimer.                --
--- * Redistributions in binary form must reproduce the above copyright        --
---       notice, this list of conditions and the following disclaimer in the  --
---       documentation and/or other materials provided with the distribution. --
--- * Neither the names of the copyright holder nor the names of its           --
---       contributors may be used to endorse or promote products derived from --
---       this software without specific prior written permission.             --
---------------------------------------------------------------------------------
--- THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"--
--- AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE  --
--- IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE --
--- ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE  --
--- LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR        --
--- CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF       --
--- SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS   --
--- INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN    --
--- CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)    --
--- ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE --
--- POSSIBILITY OF SUCH DAMAGE.                                                --
---------------------------------------------------------------------------------
-------------------------------------------------------------------------------*/
-
-/*------------------------------------------------------------------------------
---       Copyright (c) 2015, VeriSilicon Inc. All rights reserved             --
---------------------------------------------------------------------------------
--- Redistribution and use in source and binary forms, with or without         --
--- modification, are permitted provided that the following conditions are met:--
--- * Redistributions of source code must retain the above copyright notice,   --
---       this list of conditions and the following disclaimer.                --
--- * Redistributions in binary form must reproduce the above copyright        --
---       notice, this list of conditions and the following disclaimer in the  --
---       documentation and/or other materials provided with the distribution. --
--- * Neither the names of the copyright holder nor the names of its           --
---       contributors may be used to endorse or promote products derived from --
---       this software without specific prior written permission.             --
---------------------------------------------------------------------------------
--- THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"--
--- AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE  --
--- IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE --
--- ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE  --
--- LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR        --
--- CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF       --
--- SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS   --
--- INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN    --
--- CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)    --
--- ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE --
--- POSSIBILITY OF SUCH DAMAGE.                                                --
---------------------------------------------------------------------------------
-------------------------------------------------------------------------------*/
-
 #define __DELOGO_U__
 
 u32 CheckDelogo(DelogoConfig *delogo_cfg, u32 luma_bit_depth, u32 chroma_bit_depth);
@@ -7291,97 +7021,9 @@ void DelogoSetRegs(u32 *pp_regs,
 /*============================================================================*
  * software/source/common/error.c
  *============================================================================*/
-/*------------------------------------------------------------------------------
---       Copyright (c) 2015, VeriSilicon Inc. All rights reserved             --
---------------------------------------------------------------------------------
--- Redistribution and use in source and binary forms, with or without         --
--- modification, are permitted provided that the following conditions are met:--
--- * Redistributions of source code must retain the above copyright notice,   --
---       this list of conditions and the following disclaimer.                --
--- * Redistributions in binary form must reproduce the above copyright        --
---       notice, this list of conditions and the following disclaimer in the  --
---       documentation and/or other materials provided with the distribution. --
--- * Neither the names of the copyright holder nor the names of its           --
---       contributors may be used to endorse or promote products derived from --
---       this software without specific prior written permission.             --
---------------------------------------------------------------------------------
--- THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"--
--- AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE  --
--- IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE --
--- ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE  --
--- LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR        --
--- CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF       --
--- SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS   --
--- INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN    --
--- CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)    --
--- ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE --
--- POSSIBILITY OF SUCH DAMAGE.                                                --
---------------------------------------------------------------------------------
-------------------------------------------------------------------------------*/
-
 /*============================================================================*
  * software/source/common/errorhandling.c
  *============================================================================*/
-/*------------------------------------------------------------------------------
---       Copyright (c) 2015, VeriSilicon Inc. All rights reserved             --
---         Copyright (c) 2011-2014, Google Inc. All rights reserved.          --
---         Copyright (c) 2007-2010, Hantro OY. All rights reserved.           --
---------------------------------------------------------------------------------
--- Redistribution and use in source and binary forms, with or without         --
--- modification, are permitted provided that the following conditions are met:--
--- * Redistributions of source code must retain the above copyright notice,   --
---       this list of conditions and the following disclaimer.                --
--- * Redistributions in binary form must reproduce the above copyright        --
---       notice, this list of conditions and the following disclaimer in the  --
---       documentation and/or other materials provided with the distribution. --
--- * Neither the names of the copyright holder nor the names of its           --
---       contributors may be used to endorse or promote products derived from --
---       this software without specific prior written permission.             --
---------------------------------------------------------------------------------
--- THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"--
--- AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE  --
--- IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE --
--- ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE  --
--- LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR        --
--- CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF       --
--- SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS   --
--- INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN    --
--- CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)    --
--- ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE --
--- POSSIBILITY OF SUCH DAMAGE.                                                --
---------------------------------------------------------------------------------
-------------------------------------------------------------------------------*/
-
-/*------------------------------------------------------------------------------
---       Copyright (c) 2015, VeriSilicon Inc. All rights reserved             --
---         Copyright (c) 2011-2014, Google Inc. All rights reserved.          --
---         Copyright (c) 2007-2010, Hantro OY. All rights reserved.           --
---------------------------------------------------------------------------------
--- Redistribution and use in source and binary forms, with or without         --
--- modification, are permitted provided that the following conditions are met:--
--- * Redistributions of source code must retain the above copyright notice,   --
---       this list of conditions and the following disclaimer.                --
--- * Redistributions in binary form must reproduce the above copyright        --
---       notice, this list of conditions and the following disclaimer in the  --
---       documentation and/or other materials provided with the distribution. --
--- * Neither the names of the copyright holder nor the names of its           --
---       contributors may be used to endorse or promote products derived from --
---       this software without specific prior written permission.             --
---------------------------------------------------------------------------------
--- THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"--
--- AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE  --
--- IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE --
--- ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE  --
--- LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR        --
--- CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF       --
--- SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS   --
--- INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN    --
--- CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)    --
--- ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE --
--- POSSIBILITY OF SUCH DAMAGE.                                                --
---------------------------------------------------------------------------------
-------------------------------------------------------------------------------*/
-
 #define ERRORHANDLING_H_DEFINED
 
 //#include "decapicommon.h"
@@ -7840,36 +7482,6 @@ u32 getG1OutDataErrorRatio(u32 width, u32 height, u32 error_x, u32 error_y) {
 /*============================================================================*
  * software/source/common/fifo.c
  *============================================================================*/
-/*------------------------------------------------------------------------------
---       Copyright (c) 2015, VeriSilicon Inc. All rights reserved             --
---         Copyright (c) 2011-2014, Google Inc. All rights reserved.          --
---         Copyright (c) 2007-2010, Hantro OY. All rights reserved.           --
---------------------------------------------------------------------------------
--- Redistribution and use in source and binary forms, with or without         --
--- modification, are permitted provided that the following conditions are met:--
--- * Redistributions of source code must retain the above copyright notice,   --
---       this list of conditions and the following disclaimer.                --
--- * Redistributions in binary form must reproduce the above copyright        --
---       notice, this list of conditions and the following disclaimer in the  --
---       documentation and/or other materials provided with the distribution. --
--- * Neither the names of the copyright holder nor the names of its           --
---       contributors may be used to endorse or promote products derived from --
---       this software without specific prior written permission.             --
---------------------------------------------------------------------------------
--- THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"--
--- AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE  --
--- IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE --
--- ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE  --
--- LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR        --
--- CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF       --
--- SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS   --
--- INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN    --
--- CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)    --
--- ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE --
--- POSSIBILITY OF SUCH DAMAGE.                                                --
---------------------------------------------------------------------------------
-------------------------------------------------------------------------------*/
-
 /* Container for instance. */
 struct Fifo {
   sem_t cs_semaphore;    /* Semaphore for critical section. */
@@ -8002,35 +7614,6 @@ void FifoClearAbort(FifoInst inst) {
 /*============================================================================*
  * software/source/common/input_queue.c
  *============================================================================*/
-/*------------------------------------------------------------------------------
---       Copyright (c) 2015, VeriSilicon Inc. All rights reserved             --
---         Copyright (c) 2011-2014, Google Inc. All rights reserved.          --
---         Copyright (c) 2007-2010, Hantro OY. All rights reserved.           --
---------------------------------------------------------------------------------
--- Redistribution and use in source and binary forms, with or without         --
--- modification, are permitted provided that the following conditions are met:--
--- * Redistributions of source code must retain the above copyright notice,   --
---       this list of conditions and the following disclaimer.                --
--- * Redistributions in binary form must reproduce the above copyright        --
---       notice, this list of conditions and the following disclaimer in the  --
---       documentation and/or other materials provided with the distribution. --
--- * Neither the names of the copyright holder nor the names of its           --
---       contributors may be used to endorse or promote products derived from --
---       this software without specific prior written permission.             --
---------------------------------------------------------------------------------
--- THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"--
--- AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE  --
--- IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE --
--- ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE  --
--- LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR        --
--- CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF       --
--- SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS   --
--- INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN    --
--- CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)    --
--- ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE --
--- POSSIBILITY OF SUCH DAMAGE.                                                --
---------------------------------------------------------------------------------
-------------------------------------------------------------------------------*/
 #include <string.h>
 
 //#define BUFFER_QUEUE_PRINT_STATUS
@@ -8721,35 +8304,6 @@ void InputQueueBufferClear(const void *dwl, InputQueue queue) {
 /*============================================================================*
  * software/source/common/low_latency.c
  *============================================================================*/
-/*------------------------------------------------------------------------------
---       Copyright (c) 2015, VeriSilicon Inc. All rights reserved             --
---         Copyright (c) 2011-2014, Google Inc. All rights reserved.          --
---------------------------------------------------------------------------------
--- Redistribution and use in source and binary forms, with or without         --
--- modification, are permitted provided that the following conditions are met:--
--- * Redistributions of source code must retain the above copyright notice,   --
---       this list of conditions and the following disclaimer.                --
--- * Redistributions in binary form must reproduce the above copyright        --
---       notice, this list of conditions and the following disclaimer in the  --
---       documentation and/or other materials provided with the distribution. --
--- * Neither the names of the copyright holder nor the names of its           --
---       contributors may be used to endorse or promote products derived from --
---       this software without specific prior written permission.             --
---------------------------------------------------------------------------------
--- THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"--
--- AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE  --
--- IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE --
--- ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE  --
--- LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR        --
--- CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF       --
--- SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS   --
--- INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN    --
--- CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)    --
--- ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE --
--- POSSIBILITY OF SUCH DAMAGE.                                                --
---------------------------------------------------------------------------------
-------------------------------------------------------------------------------*/
-
 /** \brief A function that transfers 32 bits between LSB and MSB.
  *  \ingroup common_group */
 #define TRANSE32(x) ((((u32)(x) & 0xff000000) >> 24 ) |\
@@ -8840,56 +8394,6 @@ void SwUpdateTileInfoCtrl(struct LLTileInfo *lltileinfo) {
 /*============================================================================*
  * software/source/common/ppu.c
  *============================================================================*/
-/*------------------------------------------------------------------------------
---       Copyright (c) 2015, VeriSilicon Inc. All rights reserved             --
---------------------------------------------------------------------------------
--- Redistribution and use in source and binary forms, with or without         --
--- modification, are permitted provided that the following conditions are met:--
--- * Redistributions of source code must retain the above copyright notice,   --
---       this list of conditions and the following disclaimer.                --
--- * Redistributions in binary form must reproduce the above copyright        --
---       notice, this list of conditions and the following disclaimer in the  --
---       documentation and/or other materials provided with the distribution. --
--- * Neither the names of the copyright holder nor the names of its           --
---       contributors may be used to endorse or promote products derived from --
---       this software without specific prior written permission.             --
---------------------------------------------------------------------------------
--- THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"--
--- AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE  --
--- IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE --
--- ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE  --
--- LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR        --
--- CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF       --
--- SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS   --
--- INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN    --
--- CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)    --
--- ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE --
--- POSSIBILITY OF SUCH DAMAGE.                                                --
---------------------------------------------------------------------------------
-------------------------------------------------------------------------------*/
-
-/*
-  * Copyright 2014-2025 Verisilicon Inc.
-  *
-  * The software contained herein may be directly re-distributed or may be adapted for redistribution
-  * by SoC vendors who have licensed the related VeriSilicon/Hantro core IP, with the understanding
-  * that the re-distribution is limited to the users who have purchased the SoC product which contains
-  * the related VeriSilicon/Hantro IP. Otherwise, the information contained herein is not to be used by
-  * or disclosed to the third parties without the express written permission of an officer of VeriSilicon Holdings Co., Ltd.
-  *
-  * The above copyright notice and this permission notice (including the
-  * next paragraph) shall be included in all copies or substantial
-  * portions of the Software.
-  *
-  * THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND,
-  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-  * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT.
-  * IN NO EVENT SHALL VERISILICON AND/OR ITS SUPPLIERS BE LIABLE FOR ANY
-  * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
-  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
-  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- */
-
 #define ParseDecPictureFormat(output_format) (NULL)
 #define ParseDecRet(rv) (NULL)
 #define ParseDWLMemType(i) (NULL)
@@ -14562,36 +14066,6 @@ u32 CheckPpStride(PpUnitIntConfig *ppu_cfg) {
 /*============================================================================*
  * software/source/common/regdrv.c
  *============================================================================*/
-/*------------------------------------------------------------------------------
---       Copyright (c) 2015, VeriSilicon Inc. All rights reserved             --
---         Copyright (c) 2011-2014, Google Inc. All rights reserved.          --
---         Copyright (c) 2007-2010, Hantro OY. All rights reserved.           --
---------------------------------------------------------------------------------
--- Redistribution and use in source and binary forms, with or without         --
--- modification, are permitted provided that the following conditions are met:--
--- * Redistributions of source code must retain the above copyright notice,   --
---       this list of conditions and the following disclaimer.                --
--- * Redistributions in binary form must reproduce the above copyright        --
---       notice, this list of conditions and the following disclaimer in the  --
---       documentation and/or other materials provided with the distribution. --
--- * Neither the names of the copyright holder nor the names of its           --
---       contributors may be used to endorse or promote products derived from --
---       this software without specific prior written permission.             --
---------------------------------------------------------------------------------
--- THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"--
--- AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE  --
--- IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE --
--- ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE  --
--- LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR        --
--- CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF       --
--- SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS   --
--- INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN    --
--- CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)    --
--- ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE --
--- POSSIBILITY OF SUCH DAMAGE.                                                --
---------------------------------------------------------------------------------
-------------------------------------------------------------------------------*/
-
 #include "string.h"
 
 static const u32 reg_mask[33] = {
@@ -14606,42 +14080,6 @@ static const u32 reg_mask[33] = {
 /* { SWREG, BITS, POSITION, WRITABLE } */
 const HwRegDesc hw_dec_reg_spec[HWIF_LAST_REG + 1] = {
   /* include script-generated part */
-/*------------------------------------------------------------------------------
---       Copyright (c) 2015, VeriSilicon Inc. All rights reserved             --
---         Copyright (c) 2011-2014, Google Inc. All rights reserved.          --
---         Copyright (c) 2007-2010, Hantro OY. All rights reserved.           --
---                                                                            --
--- This software is confidential and proprietary and may be used only as      --
---   expressly authorized by VeriSilicon in a written licensing agreement.    --
---                                                                            --
---         This entire notice must be reproduced on all copies                --
---                       and may not be removed.                              --
---                                                                            --
---------------------------------------------------------------------------------
--- Redistribution and use in source and binary forms, with or without         --
--- modification, are permitted provided that the following conditions are met:--
---   * Redistributions of source code must retain the above copyright notice, --
---       this list of conditions and the following disclaimer.                --
---   * Redistributions in binary form must reproduce the above copyright      --
---       notice, this list of conditions and the following disclaimer in the  --
---       documentation and/or other materials provided with the distribution. --
---   * Neither the names of Google nor the names of its contributors may be   --
---       used to endorse or promote products derived from this software       --
---       without specific prior written permission.                           --
---------------------------------------------------------------------------------
--- THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"--
--- AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE  --
--- IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE --
--- ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE  --
--- LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR        --
--- CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF       --
--- SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS   --
--- INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN    --
--- CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)    --
--- ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE --
--- POSSIBILITY OF SUCH DAMAGE.                                                --
---------------------------------------------------------------------------------
-------------------------------------------------------------------------------*/
 /* HWIF_DEC_TILE_EDGE_TIMEOUT_INF                                       */ G2REG(/*swreg*/  1,  1, 31,  1),
 /* HWIF_DEC_PIC_INF                                                     */ G2REG(/*swreg*/  1,  1, 24,  1),
 /* HWIF_DEC_EXT_TIMEOUT_INT                                             */ G2REG(/*swreg*/  1,  1, 21,  1),
@@ -17106,36 +16544,6 @@ void RefreshDecRegisters(const void* dwl, i32 core_id, u32* regs, u32 max_regs) 
  * software/source/common/sw_buf_protect.c
  *============================================================================*/
 /*------------------------------------------------------------------------------
---       Copyright (c) 2015, VeriSilicon Inc. All rights reserved             --
---         Copyright (c) 2011-2014, Google Inc. All rights reserved.          --
---         Copyright (c) 2007-2010, Hantro OY. All rights reserved.           --
---------------------------------------------------------------------------------
--- Redistribution and use in source and binary forms, with or without         --
--- modification, are permitted provided that the following conditions are met:--
--- * Redistributions of source code must retain the above copyright notice,   --
---       this list of conditions and the following disclaimer.                --
--- * Redistributions in binary form must reproduce the above copyright        --
---       notice, this list of conditions and the following disclaimer in the  --
---       documentation and/or other materials provided with the distribution. --
--- * Neither the names of the copyright holder nor the names of its           --
---       contributors may be used to endorse or promote products derived from --
---       this software without specific prior written permission.             --
---------------------------------------------------------------------------------
--- THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"--
--- AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE  --
--- IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE --
--- ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE  --
--- LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR        --
--- CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF       --
--- SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS   --
--- INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN    --
--- CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)    --
--- ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE --
--- POSSIBILITY OF SUCH DAMAGE.                                                --
---------------------------------------------------------------------------------
-------------------------------------------------------------------------------*/
-
-/*------------------------------------------------------------------------------
     Function name   : DWLPrivateAeraReadByte
     Description     : Read one byte from a given pointer, which points to a virtual
                       address in a private buffer.
@@ -17221,67 +16629,7 @@ void *SwPrivateAreaMemset(void *d, i32 c, u32 n) {
 /*============================================================================*
  * software/source/common/sw_stream.c
  *============================================================================*/
-/*------------------------------------------------------------------------------
---       Copyright (c) 2015, VeriSilicon Inc. All rights reserved             --
---         Copyright (c) 2011-2014, Google Inc. All rights reserved.          --
---         Copyright (c) 2007-2010, Hantro OY. All rights reserved.           --
---------------------------------------------------------------------------------
--- Redistribution and use in source and binary forms, with or without         --
--- modification, are permitted provided that the following conditions are met:--
--- * Redistributions of source code must retain the above copyright notice,   --
---       this list of conditions and the following disclaimer.                --
--- * Redistributions in binary form must reproduce the above copyright        --
---       notice, this list of conditions and the following disclaimer in the  --
---       documentation and/or other materials provided with the distribution. --
--- * Neither the names of the copyright holder nor the names of its           --
---       contributors may be used to endorse or promote products derived from --
---       this software without specific prior written permission.             --
---------------------------------------------------------------------------------
--- THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"--
--- AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE  --
--- IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE --
--- ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE  --
--- LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR        --
--- CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF       --
--- SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS   --
--- INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN    --
--- CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)    --
--- ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE --
--- POSSIBILITY OF SUCH DAMAGE.                                                --
---------------------------------------------------------------------------------
-------------------------------------------------------------------------------*/
-
 #include <stdarg.h>
-/*------------------------------------------------------------------------------
---       Copyright (c) 2015, VeriSilicon Inc. All rights reserved             --
---         Copyright (c) 2011-2014, Google Inc. All rights reserved.          --
---         Copyright (c) 2007-2010, Hantro OY. All rights reserved.           --
---------------------------------------------------------------------------------
--- Redistribution and use in source and binary forms, with or without         --
--- modification, are permitted provided that the following conditions are met:--
--- * Redistributions of source code must retain the above copyright notice,   --
---       this list of conditions and the following disclaimer.                --
--- * Redistributions in binary form must reproduce the above copyright        --
---       notice, this list of conditions and the following disclaimer in the  --
---       documentation and/or other materials provided with the distribution. --
--- * Neither the names of the copyright holder nor the names of its           --
---       contributors may be used to endorse or promote products derived from --
---       this software without specific prior written permission.             --
---------------------------------------------------------------------------------
--- THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"--
--- AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE  --
--- IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE --
--- ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE  --
--- LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR        --
--- CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF       --
--- SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS   --
--- INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN    --
--- CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)    --
--- ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE --
--- POSSIBILITY OF SUCH DAMAGE.                                                --
---------------------------------------------------------------------------------
-------------------------------------------------------------------------------*/
-
 #define SW_STREAM_H_
 
 struct StrmData {
@@ -18165,36 +17513,6 @@ u8* SwTurnAround(const u8 * strm, const u8* buf, u8* tmp_buf, u32 buf_size, u32 
 /*============================================================================*
  * software/source/common/sw_util.c
  *============================================================================*/
-/*------------------------------------------------------------------------------
---       Copyright (c) 2015, VeriSilicon Inc. All rights reserved             --
---         Copyright (c) 2011-2014, Google Inc. All rights reserved.          --
---         Copyright (c) 2007-2010, Hantro OY. All rights reserved.           --
---------------------------------------------------------------------------------
--- Redistribution and use in source and binary forms, with or without         --
--- modification, are permitted provided that the following conditions are met:--
--- * Redistributions of source code must retain the above copyright notice,   --
---       this list of conditions and the following disclaimer.                --
--- * Redistributions in binary form must reproduce the above copyright        --
---       notice, this list of conditions and the following disclaimer in the  --
---       documentation and/or other materials provided with the distribution. --
--- * Neither the names of the copyright holder nor the names of its           --
---       contributors may be used to endorse or promote products derived from --
---       this software without specific prior written permission.             --
---------------------------------------------------------------------------------
--- THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"--
--- AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE  --
--- IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE --
--- ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE  --
--- LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR        --
--- CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF       --
--- SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS   --
--- INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN    --
--- CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)    --
--- ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE --
--- POSSIBILITY OF SUCH DAMAGE.                                                --
---------------------------------------------------------------------------------
-------------------------------------------------------------------------------*/
-
 #if defined(_WIN32) || defined(WIN32)
 #include <malloc.h>
 #else
@@ -19174,34 +18492,6 @@ void SwRecycleBuf(struct DWLLinearMem *info, struct DWLLinearMem *mem_infos, u32
 /*============================================================================*
  * software/source/common/vpufeature.c
  *============================================================================*/
-/*------------------------------------------------------------------------------
---       Copyright (c) 2015, VeriSilicon Inc. All rights reserved             --
---------------------------------------------------------------------------------
--- Redistribution and use in source and binary forms, with or without         --
--- modification, are permitted provided that the following conditions are met:--
--- * Redistributions of source code must retain the above copyright notice,   --
---       this list of conditions and the following disclaimer.                --
--- * Redistributions in binary form must reproduce the above copyright        --
---       notice, this list of conditions and the following disclaimer in the  --
---       documentation and/or other materials provided with the distribution. --
--- * Neither the names of the copyright holder nor the names of its           --
---       contributors may be used to endorse or promote products derived from --
---       this software without specific prior written permission.             --
---------------------------------------------------------------------------------
--- THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"--
--- AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE  --
--- IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE --
--- ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE  --
--- LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR        --
--- CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF       --
--- SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS   --
--- INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN    --
--- CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)    --
--- ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE --
--- POSSIBILITY OF SUCH DAMAGE.                                                --
---------------------------------------------------------------------------------
-------------------------------------------------------------------------------*/
-
 /* inc/parselogmsg.h again: it has no include guard */
 #define ParseDecPictureFormat(output_format) (NULL)
 #define ParseDecRet(rv) (NULL)
@@ -19226,33 +18516,6 @@ void SwRecycleBuf(struct DWLLinearMem *info, struct DWLLinearMem *mem_infos, u32
 #define RETURN_LOG_1()
 #endif
 struct DecHwFeatures feature_list[] = {
-/*------------------------------------------------------------------------------
---       Copyright (c) 2015, VeriSilicon Inc. All rights reserved             --
---------------------------------------------------------------------------------
--- Redistribution and use in source and binary forms, with or without         --
--- modification, are permitted provided that the following conditions are met:--
--- * Redistributions of source code must retain the above copyright notice,   --
---       this list of conditions and the following disclaimer.                --
--- * Redistributions in binary form must reproduce the above copyright        --
---       notice, this list of conditions and the following disclaimer in the  --
---       documentation and/or other materials provided with the distribution. --
--- * Neither the names of the copyright holder nor the names of its           --
---       contributors may be used to endorse or promote products derived from --
---       this software without specific prior written permission.             --
---------------------------------------------------------------------------------
--- THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"--
--- AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE  --
--- IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE --
--- ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE  --
--- LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR        --
--- CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF       --
--- SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS   --
--- INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN    --
--- CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)    --
--- ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE --
--- POSSIBILITY OF SUCH DAMAGE.                                                --
---------------------------------------------------------------------------------
-------------------------------------------------------------------------------*/
 { /* 0x902 */
   .id = 0x00002070,
   .id_mask = 0xFFFF,
@@ -19408,58 +18671,6 @@ void GetReleaseHwFeaturesByID(u32 hw_build_id, const struct DecHwFeatures **hw_f
 /*============================================================================*
  * software/source/jpeg/jpegdecapi.c
  *============================================================================*/
-/*------------------------------------------------------------------------------
---       Copyright (c) 2015, VeriSilicon Inc. All rights reserved             --
---         Copyright (c) 2011-2014, Google Inc. All rights reserved.          --
---         Copyright (c) 2007-2010, Hantro OY. All rights reserved.           --
---------------------------------------------------------------------------------
--- Redistribution and use in source and binary forms, with or without         --
--- modification, are permitted provided that the following conditions are met:--
--- * Redistributions of source code must retain the above copyright notice,   --
---       this list of conditions and the following disclaimer.                --
--- * Redistributions in binary form must reproduce the above copyright        --
---       notice, this list of conditions and the following disclaimer in the  --
---       documentation and/or other materials provided with the distribution. --
--- * Neither the names of the copyright holder nor the names of its           --
---       contributors may be used to endorse or promote products derived from --
---       this software without specific prior written permission.             --
---------------------------------------------------------------------------------
--- THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"--
--- AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE  --
--- IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE --
--- ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE  --
--- LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR        --
--- CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF       --
--- SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS   --
--- INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN    --
--- CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)    --
--- ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE --
--- POSSIBILITY OF SUCH DAMAGE.                                                --
---------------------------------------------------------------------------------
-------------------------------------------------------------------------------*/
-
-/*
-  * Copyright 2014-2025 Verisilicon Inc.
-  *
-  * The software contained herein may be directly re-distributed or may be adapted for redistribution
-  * by SoC vendors who have licensed the related VeriSilicon/Hantro core IP, with the understanding
-  * that the re-distribution is limited to the users who have purchased the SoC product which contains
-  * the related VeriSilicon/Hantro IP. Otherwise, the information contained herein is not to be used by
-  * or disclosed to the third parties without the express written permission of an officer of VeriSilicon Holdings Co., Ltd.
-  *
-  * The above copyright notice and this permission notice (including the
-  * next paragraph) shall be included in all copies or substantial
-  * portions of the Software.
-  *
-  * THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND,
-  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-  * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT.
-  * IN NO EVENT SHALL VERISILICON AND/OR ITS SUPPLIERS BE LIABLE FOR ANY
-  * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
-  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
-  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- */
-
 /* This file is generated. Please don't edit, don't change. */
 #define VCDSW_VERSION_MAJOR 4
 #define VCDSW_VERSION_MINOR 1
@@ -19481,36 +18692,6 @@ void GetReleaseHwFeaturesByID(u32 hw_build_id, const struct DecHwFeatures **hw_f
 
 /** Set P4CL# Directly */
 #define VCDEC_BUILD_CLNUM 1411136
-
-/*------------------------------------------------------------------------------
---       Copyright (c) 2015, VeriSilicon Inc. All rights reserved             --
---         Copyright (c) 2011-2014, Google Inc. All rights reserved.          --
---         Copyright (c) 2007-2010, Hantro OY. All rights reserved.           --
---------------------------------------------------------------------------------
--- Redistribution and use in source and binary forms, with or without         --
--- modification, are permitted provided that the following conditions are met:--
--- * Redistributions of source code must retain the above copyright notice,   --
---       this list of conditions and the following disclaimer.                --
--- * Redistributions in binary form must reproduce the above copyright        --
---       notice, this list of conditions and the following disclaimer in the  --
---       documentation and/or other materials provided with the distribution. --
--- * Neither the names of the copyright holder nor the names of its           --
---       contributors may be used to endorse or promote products derived from --
---       this software without specific prior written permission.             --
---------------------------------------------------------------------------------
--- THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"--
--- AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE  --
--- IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE --
--- ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE  --
--- LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR        --
--- CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF       --
--- SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS   --
--- INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN    --
--- CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)    --
--- ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE --
--- POSSIBILITY OF SUCH DAMAGE.                                                --
---------------------------------------------------------------------------------
-------------------------------------------------------------------------------*/
 
 #define JPEGDECCONT_H
 
@@ -19919,36 +19100,6 @@ typedef struct {
                             (ri) == RI_MC_DISABLED_BY_PP)
 #define RI_MC_ENABLED(ri) ((ri) == RI_MC_ENA)
 
-/*------------------------------------------------------------------------------
---       Copyright (c) 2015, VeriSilicon Inc. All rights reserved             --
---         Copyright (c) 2011-2014, Google Inc. All rights reserved.          --
---         Copyright (c) 2007-2010, Hantro OY. All rights reserved.           --
---------------------------------------------------------------------------------
--- Redistribution and use in source and binary forms, with or without         --
--- modification, are permitted provided that the following conditions are met:--
--- * Redistributions of source code must retain the above copyright notice,   --
---       this list of conditions and the following disclaimer.                --
--- * Redistributions in binary form must reproduce the above copyright        --
---       notice, this list of conditions and the following disclaimer in the  --
---       documentation and/or other materials provided with the distribution. --
--- * Neither the names of the copyright holder nor the names of its           --
---       contributors may be used to endorse or promote products derived from --
---       this software without specific prior written permission.             --
---------------------------------------------------------------------------------
--- THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"--
--- AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE  --
--- IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE --
--- ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE  --
--- LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR        --
--- CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF       --
--- SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS   --
--- INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN    --
--- CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)    --
--- ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE --
--- POSSIBILITY OF SUCH DAMAGE.                                                --
---------------------------------------------------------------------------------
-------------------------------------------------------------------------------*/
-
 #define JPEGDECMARKERS_H
 
 /*------------------------------------------------------------------------------
@@ -20075,36 +19226,6 @@ enum {
     4. Function prototypes
 ------------------------------------------------------------------------------*/
 
-/*------------------------------------------------------------------------------
---       Copyright (c) 2015, VeriSilicon Inc. All rights reserved             --
---         Copyright (c) 2011-2014, Google Inc. All rights reserved.          --
---         Copyright (c) 2007-2010, Hantro OY. All rights reserved.           --
---------------------------------------------------------------------------------
--- Redistribution and use in source and binary forms, with or without         --
--- modification, are permitted provided that the following conditions are met:--
--- * Redistributions of source code must retain the above copyright notice,   --
---       this list of conditions and the following disclaimer.                --
--- * Redistributions in binary form must reproduce the above copyright        --
---       notice, this list of conditions and the following disclaimer in the  --
---       documentation and/or other materials provided with the distribution. --
--- * Neither the names of the copyright holder nor the names of its           --
---       contributors may be used to endorse or promote products derived from --
---       this software without specific prior written permission.             --
---------------------------------------------------------------------------------
--- THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"--
--- AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE  --
--- IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE --
--- ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE  --
--- LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR        --
--- CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF       --
--- SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS   --
--- INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN    --
--- CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)    --
--- ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE --
--- POSSIBILITY OF SUCH DAMAGE.                                                --
---------------------------------------------------------------------------------
-------------------------------------------------------------------------------*/
-
 #define JPEGDECINTERNAL_H
 
 /*------------------------------------------------------------------------------
@@ -20135,36 +19256,6 @@ void JpegFlushRegs(JpegDecContainer * dec_cont);
 u32 JpegCheckHwStatus(JpegDecContainer *dec_cont);
 struct DWLDecBuffers JpegPrepareCurDecBuffers(const JpegDecContainer *dec_cont, const struct DWLLinearMem *luma,
                                               const struct DWLLinearMem *chroma, const struct DWLLinearMem *chroma2);
-
-/*------------------------------------------------------------------------------
---       Copyright (c) 2015, VeriSilicon Inc. All rights reserved             --
---         Copyright (c) 2011-2014, Google Inc. All rights reserved.          --
---         Copyright (c) 2007-2010, Hantro OY. All rights reserved.           --
---------------------------------------------------------------------------------
--- Redistribution and use in source and binary forms, with or without         --
--- modification, are permitted provided that the following conditions are met:--
--- * Redistributions of source code must retain the above copyright notice,   --
---       this list of conditions and the following disclaimer.                --
--- * Redistributions in binary form must reproduce the above copyright        --
---       notice, this list of conditions and the following disclaimer in the  --
---       documentation and/or other materials provided with the distribution. --
--- * Neither the names of the copyright holder nor the names of its           --
---       contributors may be used to endorse or promote products derived from --
---       this software without specific prior written permission.             --
---------------------------------------------------------------------------------
--- THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"--
--- AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE  --
--- IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE --
--- ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE  --
--- LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR        --
--- CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF       --
--- SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS   --
--- INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN    --
--- CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)    --
--- ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE --
--- POSSIBILITY OF SUCH DAMAGE.                                                --
---------------------------------------------------------------------------------
-------------------------------------------------------------------------------*/
 
 #define JPEGDECUTILS_H
 
@@ -20209,36 +19300,6 @@ Fraction JpegGetSepRationalValue(StreamStorage* strm, u32 is_big_endian);
 u32 JpegJumpBytes(StreamStorage* strm, u32 bytes);
 void JpegGet16uToString(char *str, u32 tag, StreamStorage* strm, bool is_big_endian);
 void JpegGetStringToVersion(char *str, char* curr_pos, u32 tot_bytes);
-/*------------------------------------------------------------------------------
---       Copyright (c) 2015, VeriSilicon Inc. All rights reserved             --
---         Copyright (c) 2011-2014, Google Inc. All rights reserved.          --
---         Copyright (c) 2007-2010, Hantro OY. All rights reserved.           --
---------------------------------------------------------------------------------
--- Redistribution and use in source and binary forms, with or without         --
--- modification, are permitted provided that the following conditions are met:--
--- * Redistributions of source code must retain the above copyright notice,   --
---       this list of conditions and the following disclaimer.                --
--- * Redistributions in binary form must reproduce the above copyright        --
---       notice, this list of conditions and the following disclaimer in the  --
---       documentation and/or other materials provided with the distribution. --
--- * Neither the names of the copyright holder nor the names of its           --
---       contributors may be used to endorse or promote products derived from --
---       this software without specific prior written permission.             --
---------------------------------------------------------------------------------
--- THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"--
--- AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE  --
--- IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE --
--- ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE  --
--- LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR        --
--- CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF       --
--- SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS   --
--- INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN    --
--- CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)    --
--- ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE --
--- POSSIBILITY OF SUCH DAMAGE.                                                --
---------------------------------------------------------------------------------
-------------------------------------------------------------------------------*/
-
 #define JPEGDECHDRS_H
 
 /*------------------------------------------------------------------------------
@@ -24673,36 +23734,6 @@ void JpegCaseInfoCollect(JpegDecContainer *dec_cont, CaseInfo *case_info) {
 /*============================================================================*
  * software/source/jpeg/jpegdechdrs.c
  *============================================================================*/
-/*------------------------------------------------------------------------------
---       Copyright (c) 2015, VeriSilicon Inc. All rights reserved             --
---         Copyright (c) 2011-2014, Google Inc. All rights reserved.          --
---         Copyright (c) 2007-2010, Hantro OY. All rights reserved.           --
---------------------------------------------------------------------------------
--- Redistribution and use in source and binary forms, with or without         --
--- modification, are permitted provided that the following conditions are met:--
--- * Redistributions of source code must retain the above copyright notice,   --
---       this list of conditions and the following disclaimer.                --
--- * Redistributions in binary form must reproduce the above copyright        --
---       notice, this list of conditions and the following disclaimer in the  --
---       documentation and/or other materials provided with the distribution. --
--- * Neither the names of the copyright holder nor the names of its           --
---       contributors may be used to endorse or promote products derived from --
---       this software without specific prior written permission.             --
---------------------------------------------------------------------------------
--- THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"--
--- AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE  --
--- IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE --
--- ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE  --
--- LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR        --
--- CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF       --
--- SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS   --
--- INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN    --
--- CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)    --
--- ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE --
--- POSSIBILITY OF SUCH DAMAGE.                                                --
---------------------------------------------------------------------------------
-------------------------------------------------------------------------------*/
-
 #if 0
 /*------------------------------------------------------------------------------
     2. External compiler flags
@@ -25460,36 +24491,6 @@ enum DecRet JpegDecMode(JpegDecContainer * p_dec_data) {
 /*============================================================================*
  * software/source/jpeg/jpegdecinternal.c
  *============================================================================*/
-/*------------------------------------------------------------------------------
---       Copyright (c) 2015, VeriSilicon Inc. All rights reserved             --
---         Copyright (c) 2011-2014, Google Inc. All rights reserved.          --
---         Copyright (c) 2007-2010, Hantro OY. All rights reserved.           --
---------------------------------------------------------------------------------
--- Redistribution and use in source and binary forms, with or without         --
--- modification, are permitted provided that the following conditions are met:--
--- * Redistributions of source code must retain the above copyright notice,   --
---       this list of conditions and the following disclaimer.                --
--- * Redistributions in binary form must reproduce the above copyright        --
---       notice, this list of conditions and the following disclaimer in the  --
---       documentation and/or other materials provided with the distribution. --
--- * Neither the names of the copyright holder nor the names of its           --
---       contributors may be used to endorse or promote products derived from --
---       this software without specific prior written permission.             --
---------------------------------------------------------------------------------
--- THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"--
--- AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE  --
--- IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE --
--- ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE  --
--- LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR        --
--- CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF       --
--- SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS   --
--- INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN    --
--- CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)    --
--- ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE --
--- POSSIBILITY OF SUCH DAMAGE.                                                --
---------------------------------------------------------------------------------
-------------------------------------------------------------------------------*/
-
 /*------------------------------------------------------------------------------
     2. External compiler flags
 --------------------------------------------------------------------------------
@@ -26790,36 +25791,6 @@ struct DWLDecBuffers JpegPrepareCurDecBuffers(const JpegDecContainer *dec_cont, 
  * software/source/jpeg/jpegdecutils.c
  *============================================================================*/
 /*------------------------------------------------------------------------------
---       Copyright (c) 2015, VeriSilicon Inc. All rights reserved             --
---         Copyright (c) 2011-2014, Google Inc. All rights reserved.          --
---         Copyright (c) 2007-2010, Hantro OY. All rights reserved.           --
---------------------------------------------------------------------------------
--- Redistribution and use in source and binary forms, with or without         --
--- modification, are permitted provided that the following conditions are met:--
--- * Redistributions of source code must retain the above copyright notice,   --
---       this list of conditions and the following disclaimer.                --
--- * Redistributions in binary form must reproduce the above copyright        --
---       notice, this list of conditions and the following disclaimer in the  --
---       documentation and/or other materials provided with the distribution. --
--- * Neither the names of the copyright holder nor the names of its           --
---       contributors may be used to endorse or promote products derived from --
---       this software without specific prior written permission.             --
---------------------------------------------------------------------------------
--- THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"--
--- AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE  --
--- IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE --
--- ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE  --
--- LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR        --
--- CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF       --
--- SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS   --
--- INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN    --
--- CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)    --
--- ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE --
--- POSSIBILITY OF SUCH DAMAGE.                                                --
---------------------------------------------------------------------------------
-------------------------------------------------------------------------------*/
-
-/*------------------------------------------------------------------------------
     2. External compiler flags
 --------------------------------------------------------------------------------
 
@@ -27260,90 +26231,7 @@ void JpegGetStringToVersion(char *str, char* curr_pos, u32 tot_bytes) {
 /*============================================================================*
  * software/source/png/png_decoder.c
  *============================================================================*/
-/*------------------------------------------------------------------------------
---       Copyright (c) 2015, VeriSilicon Inc. All rights reserved             --
---------------------------------------------------------------------------------
--- Redistribution and use in source and binary forms, with or without         --
--- modification, are permitted provided that the following conditions are met:--
--- * Redistributions of source code must retain the above copyright notice,   --
---       this list of conditions and the following disclaimer.                --
--- * Redistributions in binary form must reproduce the above copyright        --
---       notice, this list of conditions and the following disclaimer in the  --
---       documentation and/or other materials provided with the distribution. --
--- * Neither the names of the copyright holder nor the names of its           --
---       contributors may be used to endorse or promote products derived from --
---       this software without specific prior written permission.             --
---------------------------------------------------------------------------------
--- THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"--
--- AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE  --
--- IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE --
--- ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE  --
--- LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR        --
--- CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF       --
--- SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS   --
--- INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN    --
--- CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)    --
--- ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE --
--- POSSIBILITY OF SUCH DAMAGE.                                                --
---------------------------------------------------------------------------------
-------------------------------------------------------------------------------*/
-/*------------------------------------------------------------------------------
---       Copyright (c) 2015, VeriSilicon Inc. All rights reserved             --
---------------------------------------------------------------------------------
--- Redistribution and use in source and binary forms, with or without         --
--- modification, are permitted provided that the following conditions are met:--
--- * Redistributions of source code must retain the above copyright notice,   --
---       this list of conditions and the following disclaimer.                --
--- * Redistributions in binary form must reproduce the above copyright        --
---       notice, this list of conditions and the following disclaimer in the  --
---       documentation and/or other materials provided with the distribution. --
--- * Neither the names of the copyright holder nor the names of its           --
---       contributors may be used to endorse or promote products derived from --
---       this software without specific prior written permission.             --
---------------------------------------------------------------------------------
--- THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"--
--- AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE  --
--- IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE --
--- ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE  --
--- LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR        --
--- CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF       --
--- SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS   --
--- INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN    --
--- CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)    --
--- ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE --
--- POSSIBILITY OF SUCH DAMAGE.                                                --
---------------------------------------------------------------------------------
-------------------------------------------------------------------------------*/
-
 #define PNG_DECODER_H
-
-/*------------------------------------------------------------------------------
---       Copyright (c) 2015, VeriSilicon Inc. All rights reserved             --
---------------------------------------------------------------------------------
--- Redistribution and use in source and binary forms, with or without         --
--- modification, are permitted provided that the following conditions are met:--
--- * Redistributions of source code must retain the above copyright notice,   --
---       this list of conditions and the following disclaimer.                --
--- * Redistributions in binary form must reproduce the above copyright        --
---       notice, this list of conditions and the following disclaimer in the  --
---       documentation and/or other materials provided with the distribution. --
--- * Neither the names of the copyright holder nor the names of its           --
---       contributors may be used to endorse or promote products derived from --
---       this software without specific prior written permission.             --
---------------------------------------------------------------------------------
--- THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"--
--- AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE  --
--- IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE --
--- ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE  --
--- LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR        --
--- CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF       --
--- SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS   --
--- INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN    --
--- CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)    --
--- ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE --
--- POSSIBILITY OF SUCH DAMAGE.                                                --
---------------------------------------------------------------------------------
-------------------------------------------------------------------------------*/
 
 #define PNGDECCONT_H
 
@@ -27559,34 +26447,6 @@ typedef struct {
 
   u32 sbi_pic_start;
 } PngDecContainer;
-
-/*------------------------------------------------------------------------------
---       Copyright (c) 2015, VeriSilicon Inc. All rights reserved             --
---------------------------------------------------------------------------------
--- Redistribution and use in source and binary forms, with or without         --
--- modification, are permitted provided that the following conditions are met:--
--- * Redistributions of source code must retain the above copyright notice,   --
---       this list of conditions and the following disclaimer.                --
--- * Redistributions in binary form must reproduce the above copyright        --
---       notice, this list of conditions and the following disclaimer in the  --
---       documentation and/or other materials provided with the distribution. --
--- * Neither the names of the copyright holder nor the names of its           --
---       contributors may be used to endorse or promote products derived from --
---       this software without specific prior written permission.             --
---------------------------------------------------------------------------------
--- THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"--
--- AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE  --
--- IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE --
--- ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE  --
--- LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR        --
--- CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF       --
--- SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS   --
--- INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN    --
--- CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)    --
--- ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE --
--- POSSIBILITY OF SUCH DAMAGE.                                                --
---------------------------------------------------------------------------------
-------------------------------------------------------------------------------*/
 
 #define PNGDECUTILS_H
 
@@ -28141,34 +27001,6 @@ u32 PngCheckIsValidChunk(PngDecContainer *dec_cont, u32 chunk_type, u32 len) {
 /*============================================================================*
  * software/source/png/pngdecapi.c
  *============================================================================*/
-/*------------------------------------------------------------------------------
---       Copyright (c) 2015, VeriSilicon Inc. All rights reserved             --
---------------------------------------------------------------------------------
--- Redistribution and use in source and binary forms, with or without         --
--- modification, are permitted provided that the following conditions are met:--
--- * Redistributions of source code must retain the above copyright notice,   --
---       this list of conditions and the following disclaimer.                --
--- * Redistributions in binary form must reproduce the above copyright        --
---       notice, this list of conditions and the following disclaimer in the  --
---       documentation and/or other materials provided with the distribution. --
--- * Neither the names of the copyright holder nor the names of its           --
---       contributors may be used to endorse or promote products derived from --
---       this software without specific prior written permission.             --
---------------------------------------------------------------------------------
--- THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"--
--- AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE  --
--- IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE --
--- ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE  --
--- LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR        --
--- CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF       --
--- SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS   --
--- INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN    --
--- CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)    --
--- ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE --
--- POSSIBILITY OF SUCH DAMAGE.                                                --
---------------------------------------------------------------------------------
-------------------------------------------------------------------------------*/
-
 /* inc/version.h again: it has no include guard */
 #define VCDSW_VERSION_MAJOR 4
 #define VCDSW_VERSION_MINOR 1
@@ -28192,34 +27024,6 @@ u32 PngCheckIsValidChunk(PngDecContainer *dec_cont, u32 chunk_type, u32 len) {
 #define VCDEC_BUILD_CLNUM 1411136
 
 #include <string.h>
-
-/*------------------------------------------------------------------------------
---       Copyright (c) 2015, VeriSilicon Inc. All rights reserved             --
---------------------------------------------------------------------------------
--- Redistribution and use in source and binary forms, with or without         --
--- modification, are permitted provided that the following conditions are met:--
--- * Redistributions of source code must retain the above copyright notice,   --
---       this list of conditions and the following disclaimer.                --
--- * Redistributions in binary form must reproduce the above copyright        --
---       notice, this list of conditions and the following disclaimer in the  --
---       documentation and/or other materials provided with the distribution. --
--- * Neither the names of the copyright holder nor the names of its           --
---       contributors may be used to endorse or promote products derived from --
---       this software without specific prior written permission.             --
---------------------------------------------------------------------------------
--- THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"--
--- AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE  --
--- IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE --
--- ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE  --
--- LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR        --
--- CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF       --
--- SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS   --
--- INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN    --
--- CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)    --
--- ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE --
--- POSSIBILITY OF SUCH DAMAGE.                                                --
---------------------------------------------------------------------------------
-------------------------------------------------------------------------------*/
 
 #ifndef PNGHWD__ASIC_H_
 #define PNGHWD_ASIC_H_
@@ -29635,34 +28439,6 @@ static void PngCaseInfoCollect(PngDecContainer *dec_cont, CaseInfo *case_info) {
 /*============================================================================*
  * software/source/png/pngdecutils.c
  *============================================================================*/
-/*------------------------------------------------------------------------------
---       Copyright (c) 2015, VeriSilicon Inc. All rights reserved             --
---------------------------------------------------------------------------------
--- Redistribution and use in source and binary forms, with or without         --
--- modification, are permitted provided that the following conditions are met:--
--- * Redistributions of source code must retain the above copyright notice,   --
---       this list of conditions and the following disclaimer.                --
--- * Redistributions in binary form must reproduce the above copyright        --
---       notice, this list of conditions and the following disclaimer in the  --
---       documentation and/or other materials provided with the distribution. --
--- * Neither the names of the copyright holder nor the names of its           --
---       contributors may be used to endorse or promote products derived from --
---       this software without specific prior written permission.             --
---------------------------------------------------------------------------------
--- THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"--
--- AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE  --
--- IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE --
--- ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE  --
--- LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR        --
--- CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF       --
--- SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS   --
--- INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN    --
--- CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)    --
--- ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE --
--- POSSIBILITY OF SUCH DAMAGE.                                                --
---------------------------------------------------------------------------------
-------------------------------------------------------------------------------*/
-
 const u32 crc_table[256] = {
     0x00000000, 0x77073096, 0xee0e612c, 0x990951ba, 0x076dc419,
     0x706af48f, 0xe963a535, 0x9e6495a3, 0x0edb8832, 0x79dcb8a4,
@@ -29971,34 +28747,6 @@ struct DWLDecBuffers PngPrepareCurDecBuffers(const PngDecContainer *dec_cont, co
 /*============================================================================*
  * software/source/png/pnghwd_asic.c
  *============================================================================*/
-/*------------------------------------------------------------------------------
---       Copyright (c) 2015, VeriSilicon Inc. All rights reserved             --
---------------------------------------------------------------------------------
--- Redistribution and use in source and binary forms, with or without         --
--- modification, are permitted provided that the following conditions are met:--
--- * Redistributions of source code must retain the above copyright notice,   --
---       this list of conditions and the following disclaimer.                --
--- * Redistributions in binary form must reproduce the above copyright        --
---       notice, this list of conditions and the following disclaimer in the  --
---       documentation and/or other materials provided with the distribution. --
--- * Neither the names of the copyright holder nor the names of its           --
---       contributors may be used to endorse or promote products derived from --
---       this software without specific prior written permission.             --
---------------------------------------------------------------------------------
--- THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"--
--- AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE  --
--- IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE --
--- ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE  --
--- LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR        --
--- CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF       --
--- SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS   --
--- INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN    --
--- CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)    --
--- ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE --
--- POSSIBILITY OF SUCH DAMAGE.                                                --
---------------------------------------------------------------------------------
-------------------------------------------------------------------------------*/
-
 /* png/pnghwd_asic.h again: it has no include guard */
 #ifndef PNGHWD__ASIC_H_
 #define PNGHWD_ASIC_H_

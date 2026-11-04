@@ -147,7 +147,13 @@ Consequences:
 
 - This code is **not** covered by the `Apache-2.0` notice used by the rest of the `display`
   repository. Do not add, rewrite or normalise SPDX identifiers here.
-- Do not delete or alter a single line of any vendor copyright or license block.
+- Do not delete or alter a single line of any vendor copyright or license block **in the vendor
+  files**. The generated `vcdj_ctrlsw.c` / `.h` are not vendor files: their per-file blocks are
+  collapsed into one merged block at the top by the `merge_license` rule. Every clause survives
+  verbatim once and the copyright lines are merged into a union, so nothing a per-file notice said
+  is dropped; the rule stops with an error on a clause or holder it has not seen. `8170enum.h` and
+  `8170table.h` carry a VeriSilicon proprietary notice, and it is kept as its own clause, not
+  folded into the BSD text.
 - The package is classified **VeriSilicon LEVEL B: CONFIDENTIAL — DISTRIBUTION RESTRICTED**.
   It must not be pushed to github, gitee or any other external hosting, and its contents must not
   be sent to external services.
