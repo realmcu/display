@@ -318,6 +318,21 @@ typedef union
         16:14    R/W    cmp_num                   0x0
         20:17    R/W    block_num                 0x0
         31:21    R      reserved                  0x0
+
+        Values follow from the layout above plus
+        compInfo[0] = (mcuWidth >> 3) << 3 | (mcuHeight >> 3). The driver
+        recomputes them from the SOF marker; these are for dumps and bring-up.
+
+            JPU_FORMAT    MCU     blk cmp  0x18
+            _420         16x16     6   3   0x000CD255
+            _422         16x8      4   3   0x0008D155
+            _224          8x16     4   3   0x0008CA55
+            _444          8x8      3   3   0x0006C955
+            _400          8x8      1   1   0x00024900
+            _400 ROI     32x8      4   1   0x00086100  (vendor only, unimpl)
+
+        Packing lives in DPB_CONFIG pack_mode, not here -- 4:4:4 packed and
+        planar share the value above.
     */
     typedef union
         {
