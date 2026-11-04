@@ -1273,11 +1273,11 @@ static JPU_ERROR JPU_Enc_Prepare(JPU_ENC_PARAM *usr_param, JPU_ENC_PARAM_INT *pa
 
     param->buff_sz = (usr_param->jpg_buff_sz) ? usr_param->jpg_buff_sz : DEFAULT_JPG_BUFF_SZ;
 
-    // if (param->frameFormat != PACKED_FORMAT_444 && param->jpgFormat == JPU_FORMAT_444)
-    // {
-    //     //- DBG_DIRECT("Invalid format convert: must 444 -> 444.\n");
-    //     return JPU_ERR_INVALID_PARAM;
-    // }
+    // packed 4:4:4 carries full-resolution chroma, so only a 4:4:4 JPEG can use it
+    if (param->frameFormat == PACKED_FORMAT_444 && param->jpgFormat != JPU_FORMAT_444)
+    {
+        return JPU_ERR_INVALID_PARAM;
+    }
 
     if (param->frameFormat == PACKED_FORMAT_NONE && param->useWrapper)
     {
@@ -1730,6 +1730,13 @@ JPU_ERROR hal_jpu_decode(JPU_DEC_PARAM *dec_param, uint8_t **frame_buff, uint32_
         return JPU_ERR_FAILURE;
     }
     // log_dec_info(info);
+
+    // packed 4:4:4 output needs a 4:4:4 source
+    if (param->packedFormat == PACKED_FORMAT_444 && info->format != JPU_FORMAT_444)
+    {
+        DBG_DIRECT("packed 444 needs a 4:4:4 JPEG\n");
+        return JPU_ERR_INVALID_PARAM;
+    }
 
     // ROI is floored to MCU units; it must keep at least one MCU inside the image
     if (param->roiEnable)
