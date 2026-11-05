@@ -291,8 +291,9 @@ static void vcdj_plat_reg_write32(void *ctx, uint32_t offset, uint32_t value)
  * It never reclaims: reset it before each job; exhaustion returns ERR_NO_MEM.
  */
 extern unsigned char __gpu_ram_start;    /* SYS_RAM reserved for the GPU */
+extern unsigned char __psram_start;      /* FMC1 PSRAM, 4 MB (link.lds) */
 
-static int vcdj_dma_probe_region;        /* 0 = heap, 1 = sysram2 */
+static int vcdj_dma_probe_region;        /* 0 = heap, 1 = sysram2, 2 = psram */
 static uintptr_t vcdj_dma_probe_base;
 static size_t vcdj_dma_probe_size;
 static size_t vcdj_dma_probe_used;
@@ -315,6 +316,13 @@ void vcdj_plat_dma_region_set(int region)
          * output); no case between it and PNG@23 (1.88 MB) exists. */
         vcdj_dma_probe_base = (uintptr_t)&__gpu_ram_start;
         vcdj_dma_probe_size = 896U * 1024U;
+        break;
+    case 2:
+        /* The caller must know the PSRAM is up: the window is not decoded
+         * before drv_fmc1 has initialised FMC1. The arena takes 3.375 MB and
+         * leaves the top 640 KB for the stream window (JPEG@14 is 621 KB). */
+        vcdj_dma_probe_base = (uintptr_t)&__psram_start;
+        vcdj_dma_probe_size = 3456U * 1024U;
         break;
     default:
         vcdj_dma_probe_base = 0U;
