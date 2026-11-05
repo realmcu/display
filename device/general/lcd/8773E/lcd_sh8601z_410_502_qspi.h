@@ -10,6 +10,7 @@
 extern "C" {
 #endif
 #include "stdint.h"
+#include "stdbool.h"
 
 
 #define SH8601Z_MAX_PARA_COUNT             (60)
