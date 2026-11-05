@@ -306,16 +306,16 @@ void vcdj_plat_dma_region_set(int region)
     switch (region)
     {
     case 1:
-        /* GPU RAM is 1.125 MB (link.lds) from 0x20640000. The arena takes
-         * 896 KB and leaves the top 256 KB from 0x20720000 for the stream
-         * window. Keep the two apart: the arena never reclaims, so an overlap
-         * would be silently overwritten mid-decode.
+        /* GPU RAM is 1 MB (link.lds) from 0x20660000. The arena takes 768 KB
+         * and leaves the top 256 KB from 0x20720000 for the stream window.
+         * Keep the two apart: the arena never reclaims, so an overlap would be
+         * silently overwritten mid-decode.
          *
-         * The 896 KB is sized by the largest case that fits at all - JPEG@201
-         * needs 786,625 B (input + four PPU lanczos tables + the 540x380 RGB
-         * output); no case between it and PNG@23 (1.88 MB) exists. */
+         * 768 KB is the anchor set by VGA RGB565 output (614400 B), which the
+         * 256 KB heap cannot hold. JPEG@201 needs 786,625 B and does not fit;
+         * on PSRAM-less boards it stays ERR_NO_MEM. */
         vcdj_dma_probe_base = (uintptr_t)&__gpu_ram_start;
-        vcdj_dma_probe_size = 896U * 1024U;
+        vcdj_dma_probe_size = 768U * 1024U;
         break;
     case 2:
         /* The caller must know the PSRAM is up: the window is not decoded
