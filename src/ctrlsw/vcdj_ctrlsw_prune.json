@@ -172,6 +172,25 @@
       "first":  "^#undef MAGIC_WORD_LENGTH$",
       "last":   "^#undef NUM_OFFSETS$",
       "why": "K: the #undefs of the macros the rule above removed"
+    },
+    {
+      "action": "delete_type",
+      "name": "SwRegisters",
+      "guard": "INCLUDE_SW_REGISTERS0_H_",
+      "why": "K: its only filler was SetSwCtrl, which is AV1-only and zero-call; the u32 regs[] shadow it is confused with is a different object",
+      "header": false
+    },
+    {
+      "action": "delete_type",
+      "name": "VvcSwCtrl",
+      "why": "K: no instance and no reference in any vendor source",
+      "header": false
+    },
+    {
+      "action": "delete_type",
+      "name": "Avs3SwCtrl",
+      "why": "K: no instance and no reference in any vendor source",
+      "header": false
     }
   ]
 }

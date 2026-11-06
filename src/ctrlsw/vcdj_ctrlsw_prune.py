@@ -189,6 +189,42 @@ def delete_declaration(rule, doc):
     del doc['origin'][lo:hi + 1]
 
 
+def delete_type(rule, doc, which):
+    """Delete a `struct <name> { ... };` definition at file scope.
+
+    The body is found by brace matching, so nested structs and `#if 0` runs
+    inside it need no special handling. `guard`, when given, is the include
+    guard the generator left above the expanded header; only blank lines may
+    separate the two, otherwise the rule is out of date.
+    """
+    name = rule['name']
+    lines = doc['lines']
+    code = code_lines(lines)
+    pat = re.compile(r'^struct\s+%s\s*\{' % re.escape(name))
+    hits = [i for i, l in enumerate(code) if pat.match(l)]
+    if len(hits) != 1:
+        raise PruneError('%s: struct %s: expected 1 definition, found %d at '
+                         'lines %s' % (which, name, len(hits),
+                                       [h + 1 for h in hits]))
+    lo = hits[0]
+    hi = match_brace(code, lo)
+    if rule.get('guard'):
+        gpat = re.compile(r'^#\s*define\s+%s\b' % re.escape(rule['guard']))
+        g = [i for i, l in enumerate(code[:lo]) if gpat.match(l)]
+        if len(g) != 1:
+            raise PruneError('%s: struct %s: guard %s: expected 1 #define, '
+                             'found %d' % (which, name, rule['guard'], len(g)))
+        if any(l.strip() for l in lines[g[0] + 1:lo]):
+            raise PruneError('%s: struct %s: guard %s at line %d is not adjacent '
+                             'to the definition at line %d'
+                             % (which, name, rule['guard'], g[0] + 1, lo + 1))
+        lo = g[0]
+    if hi + 1 < len(lines) and not lines[hi + 1].strip():
+        hi += 1          # the blank line after the body goes too
+    del lines[lo:hi + 1]
+    del doc['origin'][lo:hi + 1]
+
+
 def delete_region(rule, doc, which):
     """Delete a run of lines located by two anchors.
 
@@ -394,10 +430,11 @@ def merge_license(rule, doc, which):
 
 ACTIONS = {
     'delete_function': (delete_function, check_no_code_references),
+    'delete_type': (delete_type, check_no_code_references),
     'delete_region': (delete_region, None),
     'merge_license': (merge_license, None),
 }
-# Actions that touch no header declaration; the rest name a function.
+# Actions that touch no header declaration; the rest name a function or type.
 NO_HEADER = {'merge_license', 'delete_region'}
 
 
