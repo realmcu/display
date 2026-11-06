@@ -79,21 +79,35 @@ def code_lines(lines):
     return ''.join(out).split('\n')
 
 
-def find_definition(code, name, where):
-    """Index of the line holding the definition's opening brace."""
+def file_scope_hits(code, name):
+    """[(first line, terminator line, is_definition)] for `name` at column 0.
+
+    A file-scope line naming the function is a definition if `{` comes before
+    `;` and a prototype otherwise. Some vendor files declare their own
+    functions before defining them, so both forms occur.
+    """
     pat = re.compile(r'^[A-Za-z_][\w \t\*]*\b%s\s*\(' % re.escape(name))
-    hits = [i for i, l in enumerate(code) if pat.match(l)]
-    if len(hits) != 1:
+    hits = []
+    for i, l in enumerate(code):
+        if not pat.match(l):
+            continue
+        for j in range(i, len(code)):
+            if '{' in code[j]:
+                hits.append((i, j, True))
+                break
+            if ';' in code[j]:
+                hits.append((i, j, False))
+                break
+    return hits
+
+
+def find_definition(code, name, where):
+    """(first line, opening brace line) of the definition of `name`."""
+    defs = [h for h in file_scope_hits(code, name) if h[2]]
+    if len(defs) != 1:
         raise PruneError('%s: %s: expected 1 definition, found %d at lines %s'
-                         % (where, name, len(hits), [h + 1 for h in hits]))
-    start = hits[0]
-    for i in range(start, len(code)):
-        if '{' in code[i]:
-            return start, i
-        if ';' in code[i]:
-            break
-    raise PruneError('%s: %s: definition at line %d has no body'
-                     % (where, name, start + 1))
+                         % (where, name, len(defs), [h[0] + 1 for h in defs]))
+    return defs[0][0], defs[0][1]
 
 
 def match_brace(code, open_line):
@@ -136,37 +150,78 @@ def delete_function(rule, doc, which):
     code = code_lines(lines)
     start, open_line = find_definition(code, name, which)
     hi = match_brace(code, open_line)
-    lo, hi = guard_span(lines, start, hi)
+    # A comment block directly abutting the definition documents it, so it
+    # goes too; left behind it would appear to document its successor.
+    j = start - 1
+    while j >= 0 and lines[j].strip() and not code[j].strip():
+        j -= 1
+    lo, hi = guard_span(lines, j + 1, hi)
     if hi + 1 < len(lines) and not lines[hi + 1].strip():
         hi += 1          # the blank line after the body goes too
     del doc['lines'][lo:hi + 1]
+    del doc['origin'][lo:hi + 1]
+    # A prototype the same file carries for the function it just lost would
+    # count as a dangling reference in the check below, so drop it here.
+    code = code_lines(doc['lines'])
+    for first, last, is_definition in reversed(file_scope_hits(code, name)):
+        if not is_definition:
+            del doc['lines'][first:last + 1]
+            del doc['origin'][first:last + 1]
 
 
 def delete_declaration(rule, doc):
     name = rule['name']
     lines = doc['lines']
-    code = code_lines(lines)
-    pat = re.compile(r'\b%s\s*\(' % re.escape(name))
-    hits = [i for i, l in enumerate(code) if pat.search(l)]
+    hits = file_scope_hits(code_lines(lines), name)
     if not hits:
         if rule.get('header', True):
             raise PruneError('vcdj_ctrlsw.h: %s: declaration not found' % name)
         return
-    if len(hits) != 1:
+    if len(hits) != 1 or hits[0][2]:
         raise PruneError('vcdj_ctrlsw.h: %s: expected 1 declaration, found %d at '
-                         'lines %s' % (name, len(hits), [h + 1 for h in hits]))
-    lo = hits[0]
-    hi = lo
-    while hi < len(lines) and not code[hi].rstrip().endswith(';'):
-        hi += 1
-    if hi == len(lines):
-        raise PruneError('vcdj_ctrlsw.h: %s: declaration at line %d is not terminated'
-                         % (name, lo + 1))
+                         'lines %s' % (name, len(hits), [h[0] + 1 for h in hits]))
+    lo, hi, _ = hits[0]
     # A #ifdef / #endif pair that wraps only this declaration goes with it.
     if (lo > 0 and GUARD_OPEN.match(lines[lo - 1]) and hi + 1 < len(lines)
             and re.match(r'\s*#\s*endif\b', lines[hi + 1])):
         lo, hi = lo - 1, hi + 1
     del lines[lo:hi + 1]
+    del doc['origin'][lo:hi + 1]
+
+
+def delete_region(rule, doc, which):
+    """Delete a run of lines located by two anchors.
+
+    Used for data that only the deleted functions used and that carries no
+    declaration in the header, so a name rule cannot reach it. Each anchor is
+    one regex matched against a single line and must hit exactly once.
+
+    `after` / `until` keep their own lines and delete what lies between them;
+    `first` / `last` delete their own lines too, plus the one blank line above
+    `first` that separated the run from what preceded it.
+    """
+    lines = doc['lines']
+    code = code_lines(lines)
+
+    def only(anchor):
+        pat = re.compile(anchor)
+        hits = [i for i, l in enumerate(code) if pat.search(l)]
+        if len(hits) != 1:
+            raise PruneError('%s: %r matches %d lines, the rule needs exactly one'
+                             % (which, anchor, len(hits)))
+        return hits[0]
+
+    if 'first' in rule:
+        lo, hi = only(rule['first']), only(rule['last'])
+        if lo > 0 and not lines[lo - 1].strip():
+            lo -= 1
+        hi += 1          # exclusive end, the last line goes too
+    else:
+        lo, hi = only(rule['after']) + 1, only(rule['until'])
+    if hi <= lo:
+        raise PruneError('%s: region %s is empty or reversed' % (which, rule))
+    del lines[lo:hi]
+    del doc['origin'][lo:hi]
 
 
 def dead_regions(code):
@@ -339,10 +394,11 @@ def merge_license(rule, doc, which):
 
 ACTIONS = {
     'delete_function': (delete_function, check_no_code_references),
+    'delete_region': (delete_region, None),
     'merge_license': (merge_license, None),
 }
-# Actions with no header declaration to delete; the rest are function deletions.
-WHOLE_FILE = {'merge_license'}
+# Actions that touch no header declaration; the rest name a function.
+NO_HEADER = {'merge_license', 'delete_region'}
 
 
 def apply_rules(h, c, rules):
@@ -357,7 +413,7 @@ def apply_rules(h, c, rules):
             fn(rule, docs[which], which)
             if verify:
                 verify(rule, docs[which], which)
-        if action not in WHOLE_FILE:
+        if action not in NO_HEADER:
             delete_declaration(rule, docs['vcdj_ctrlsw.h'])
             verify(rule, docs['vcdj_ctrlsw.h'], 'vcdj_ctrlsw.h')
     return (list(zip(docs['vcdj_ctrlsw.h']['lines'], docs['vcdj_ctrlsw.h']['origin'])),

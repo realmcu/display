@@ -7821,9 +7821,6 @@ void PPSetLancozsScaleRegs(u32 *pp_regs,
 
 enum DecPictureFormat TransUnitConfig2Format(PpUnitIntConfig *ppu_int_cfg);
 
-void InitPpUnitBoundCoeff(const struct DecHwFeatures *hw_feature,
-                                  u32 field_pic,
-                                  PpUnitIntConfig *ppu_cfg);
 
 void PPSetSBIRegs(u32 *pp_regs, u32 i, PpUnitIntConfig *ppu_cfg, u32 sbi_pic_start);
 u32 CheckPpStride(PpUnitIntConfig *ppu_cfg);
@@ -8322,8 +8319,6 @@ void SwAbortSliceDec(const void *dwl, const void *dec_inst, u32 *regs,
                      u32 vcmd_used, u32 core_id);
 void SwAbortDec(const void *dwl, struct DWLReqInfo *info, u32 vcmd_used,
                   u32 n_cores_available, void *cmd_info);
-u32 SwCheckSliceStatus(const void *dwl, u32 vcmd_used, u32 id);
-u32 SwCheckClientType(enum DWLClientType client_type);
 /**
  * Get free/new mem for crc.
  * \param [in]     crc                           Pointer to a crc queue.
@@ -8459,7 +8454,6 @@ void SwUpdateLowLatencyInfo(const void *dwl, const struct DecHwFeatures *hw_feat
                             enum DWLClientType client_type, struct LLStrmInfo *llstrminfo, u32 *regs);
 void SwReleaseLowLatencyInfo(const void *dwl, struct LLStrmInfo *llstrminfo);
 
-void SwSetDecIRQAttr(u32 *regs, u32 vcmd_version_flag);
 void SwSetCacheShaperReg(u32 *regs, u32 sim_mc);
 
 #ifdef __cplusplus
@@ -8680,13 +8674,6 @@ struct DecInfo {
 };
 
 /* function: generate fake table */
-void GenerateFakeRFCTable(u8 *cmp_tble_addr,
-                          u32 pic_width_in_cbsy,
-                          u32 pic_height_in_cbsy,
-                          u32 pic_width_in_cbsc,
-                          u32 pic_height_in_cbsc,
-                          u32 bit_depth,
-                          u32 buffer_align);
 
 enum DpbResetStatus{
   TO_RELEASE_OLD_DPB = 0,
@@ -8736,8 +8723,6 @@ void CommonSetM2MPComands(PpUnitIntConfig *ppu_cfg, struct M2MP_INFO vcmd_m2mp_d
 enum DecRet DecLinkAndRunCmds(const void *instance, struct DecCmdInfo *info_m, u32 cmdbuf_id);
 
 void SwGetSubsampling(u32 chroma_format_idc, u32 *subsampling_x, u32 *subsampling_y);
-enum DecRet SwAllocFilmGrainMem(const void *dwl_inst, u32 subsampling_x, u32 subsampling_y, u32 secure_mode,
-                                struct DWLLinearMem *film_grain_mem);
 
 /*------------------------------------------------------------------------------
     2. Module defines

@@ -76,6 +76,102 @@
       "action": "delete_function",
       "name": "SwLogBufInfo",
       "why": "A: zero call sites"
+    },
+    {
+      "action": "delete_function",
+      "name": "SetSwCtrl",
+      "why": "K: zero call sites; body is inside #ifdef ENABLE_AV1_SUPPORT, undefined here",
+      "header": false
+    },
+    {
+      "action": "delete_function",
+      "name": "InitPpUnitBoundCoeff",
+      "why": "K: zero call sites; scale_cost_support[0] is MIDDLE_SCALER, so its first condition is never true"
+    },
+    {
+      "action": "delete_function",
+      "name": "getG1OutDataErrorRatio",
+      "why": "K: zero call sites; G1 error concealment is video only",
+      "header": false
+    },
+    {
+      "action": "delete_function",
+      "name": "SwCheckClientType",
+      "why": "K: zero call sites; names every codec 0x2070 lacks, for a trace line only"
+    },
+    {
+      "action": "delete_function",
+      "name": "SwSetDecIRQAttr",
+      "why": "K: zero call sites; serves VCMD mode, which 0x2070 has no block for"
+    },
+    {
+      "action": "delete_function",
+      "name": "SwCheckSliceStatus",
+      "why": "K: zero call sites; does nothing unless vcmd_used"
+    },
+    {
+      "action": "delete_function",
+      "name": "GenerateFakeRFCTable",
+      "why": "K: zero call sites; rfc_support is 0"
+    },
+    {
+      "action": "delete_function",
+      "name": "SwAllocFilmGrainMem",
+      "why": "K: zero call sites; film grain is an AV1 feature"
+    },
+    {
+      "action": "delete_function",
+      "name": "ProcessPartialFreeze",
+      "why": "K: zero call sites; partial freeze needs reference frames, JPEG and PNG have none",
+      "header": false
+    },
+    {
+      "action": "delete_function",
+      "name": "GetPartialFreezePos",
+      "why": "K: zero call sites; partial freeze needs reference frames, JPEG and PNG have none",
+      "header": false
+    },
+    {
+      "action": "delete_function",
+      "name": "PreparePartialFreeze",
+      "why": "K: zero call sites; partial freeze needs reference frames, JPEG and PNG have none",
+      "header": false
+    },
+    {
+      "action": "delete_function",
+      "name": "IsECDropOutput",
+      "why": "K: zero call sites; JpegECDecisionOutput has the same test inlined",
+      "header": false
+    },
+    {
+      "action": "delete_function",
+      "name": "CopyRows",
+      "why": "K: orphaned by ProcessPartialFreeze",
+      "header": false
+    },
+    {
+      "action": "delete_function",
+      "name": "GetMbOffset",
+      "why": "K: orphaned by the partial freeze functions",
+      "header": false
+    },
+    {
+      "action": "delete_function",
+      "name": "PrepareG1ErrPicInfo",
+      "why": "K: orphaned by getG1OutDataErrorRatio",
+      "header": false
+    },
+    {
+      "action": "delete_region",
+      "first":  "^#define MAGIC_WORD_LENGTH",
+      "last":   "^static const u32 row_offsets\\[\\]",
+      "why": "K: the partial freeze magic word and row offsets, used only by the deleted functions; no header declaration, so no name rule reaches them"
+    },
+    {
+      "action": "delete_region",
+      "first":  "^#undef MAGIC_WORD_LENGTH$",
+      "last":   "^#undef NUM_OFFSETS$",
+      "why": "K: the #undefs of the macros the rule above removed"
     }
   ]
 }
