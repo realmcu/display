@@ -45,11 +45,11 @@
 #define LCD_QSPI_D1                       P9_1
 #define LCD_QSPI_D2                       P9_0
 #define LCD_QSPI_D3                       P9_5
-#define LCD_QSPI_RST                      P5_2
-#define LCD_QSPI_TE                       P3_1
-#define LCD_QSPI_RS                       P2_4
+#define LCD_QSPI_RST                      P4_0
+#define LCD_QSPI_TE                       P2_2
+// #define LCD_QSPI_RS                       P2_4
 
-#define LCD_PIN_BL                        P5_0
+#define LCD_PIN_BL                        P2_5
 
 
 
@@ -74,8 +74,8 @@ typedef struct _JD9855_CMD_DESC
 static void qspi_pad_config(void)
 {
     // power en
-    Pad_Config(P5_1, PAD_SW_MODE, PAD_IS_PWRON, PAD_PULL_NONE, PAD_OUT_ENABLE, PAD_OUT_HIGH);
-    Pad_Config(LCD_QSPI_RS, PAD_SW_MODE, PAD_IS_PWRON, PAD_PULL_NONE, PAD_OUT_ENABLE, PAD_OUT_HIGH);
+    // Pad_Config(P5_1, PAD_SW_MODE, PAD_IS_PWRON, PAD_PULL_NONE, PAD_OUT_ENABLE, PAD_OUT_HIGH);
+    // Pad_Config(LCD_QSPI_RS, PAD_SW_MODE, PAD_IS_PWRON, PAD_PULL_NONE, PAD_OUT_ENABLE, PAD_OUT_HIGH);
 
     /*QSPI Config*/
     /*QSPI Pad Config, P9_0 -> SIO2, P9_1 -> SIO1, P9_2 -> CS, P9_3 -> SIO0, P9_4 -> CLK, P9_5 -> SIO3*/
@@ -85,7 +85,7 @@ static void qspi_pad_config(void)
     Pad_Config(LCD_QSPI_D1, PAD_SW_MODE, PAD_IS_PWRON, PAD_PULL_UP, PAD_OUT_DISABLE, PAD_OUT_HIGH);
     Pad_Config(LCD_QSPI_D2, PAD_SW_MODE, PAD_IS_PWRON, PAD_PULL_UP, PAD_OUT_DISABLE, PAD_OUT_HIGH);
     Pad_Config(LCD_QSPI_D3, PAD_SW_MODE, PAD_IS_PWRON, PAD_PULL_UP, PAD_OUT_DISABLE, PAD_OUT_HIGH);
-    // Pad_Config(LCD_QSPI_TE, PAD_SW_MODE, PAD_IS_PWRON, PAD_PULL_DOWN, PAD_OUT_DISABLE, PAD_OUT_HIGH);
+    Pad_Config(LCD_QSPI_TE, PAD_SW_MODE, PAD_IS_PWRON, PAD_PULL_DOWN, PAD_OUT_DISABLE, PAD_OUT_HIGH);
 
     Pad_HighSpeedFuncSel(LCD_QSPI_CS, HS_Func0);
     Pad_HighSpeedFuncSel(LCD_QSPI_CLK, HS_Func0);
@@ -100,7 +100,7 @@ static void qspi_pad_config(void)
     Pad_HighSpeedMuxSel(LCD_QSPI_D1, 1);
     Pad_HighSpeedMuxSel(LCD_QSPI_D2, 1);
     Pad_HighSpeedMuxSel(LCD_QSPI_D3, 1);
-    // Pad_HighSpeedMuxSel(LCD_QSPI_TE, 1);
+    Pad_HighSpeedMuxSel(LCD_QSPI_TE, 1);
 }
 
 #if 0
@@ -168,37 +168,44 @@ static const JD9855_CMD_DESC JD9855_POST_OTP_POWERON_SEQ_CMD[] =
 {
     {JD9855_QSPI_INST_CMD_WRITE, 0xDE, 0, 1, {0x00}},
     {JD9855_QSPI_INST_CMD_WRITE, 0xDF, 0, 2, {0x98, 0x55}},
-    {JD9855_QSPI_INST_CMD_WRITE, 0xB2, 0, 1, {0x30}},
-    {JD9855_QSPI_INST_CMD_WRITE, 0xB7, 0, 4, {0x01, 0x39, 0x01, 0x61}},
-    {JD9855_QSPI_INST_CMD_WRITE, 0xBB, 0, 6, {0x1B, 0x64, 0xE4, 0x36, 0x3E, 0xF3}},
-    {JD9855_QSPI_INST_CMD_WRITE, 0xBC, 0, 4, {0x00, 0x18, 0xF3, 0xC0}},
-    {JD9855_QSPI_INST_CMD_WRITE, 0xC0, 0, 2, {0x22, 0x24}},
-    {JD9855_QSPI_INST_CMD_WRITE, 0xC3, 0, 11, {0x00, 0x02, 0x23, 0x0B, 0x08, 0x47, 0x08, 0x04, 0x62, 0x30, 0x30}},
-    {JD9855_QSPI_INST_CMD_WRITE, 0xC4, 0, 11, {0x40, 0x00, 0xAD, 0x68, 0x44, 0x05, 0x05, 0x16, 0x44, 0x05, 0x05}},
-    {JD9855_QSPI_INST_CMD_WRITE, 0xC8, 0, 32, {0x3F, 0x31, 0x28, 0x23, 0x24, 0x27, 0x22, 0x23, 0x22, 0x21, 0x1D, 0x12, 0x0D, 0x08, 0x04, 0x02, 0x3F, 0x31, 0x28, 0x23, 0x24, 0x27, 0x22, 0x23, 0x22, 0x21, 0x1D, 0x12, 0x0D, 0x08, 0x04, 0x02}},
+    {JD9855_QSPI_INST_CMD_WRITE, 0xCE, 0, 2, {0x0D, 0x00}},  //QSPI read lane: 00=D1 read; 40=D0 read
+    {JD9855_QSPI_INST_CMD_WRITE, 0xB2, 0, 1, {0x23}},        //FMA=6%
+    {JD9855_QSPI_INST_CMD_WRITE, 0xB7, 0, 4, {0x01, 0x2D, 0x01, 0x55}},
+    {JD9855_QSPI_INST_CMD_WRITE, 0xBB, 0, 6, {0x24, 0x64, 0xC4, 0x0E, 0x3F, 0xF6}},  //VGH=12V, VGL=-11.5V
+    {JD9855_QSPI_INST_CMD_WRITE, 0xBC, 0, 4, {0x03, 0x22, 0xF3, 0xC0}},
+    {JD9855_QSPI_INST_CMD_WRITE, 0xC0, 0, 2, {0x22, 0xA4}},
+    {JD9855_QSPI_INST_CMD_WRITE, 0xC3, 0, 11, {0x00, 0x02, 0x2A, 0x0B, 0x08, 0x48, 0x08, 0x04, 0x62, 0x30, 0x30}},
+    {JD9855_QSPI_INST_CMD_WRITE, 0xC4, 0, 11, {0x40, 0x00, 0xAD, 0x68, 0x43, 0x07, 0x04, 0x16, 0x43, 0x07, 0x04}},
+    {
+        JD9855_QSPI_INST_CMD_WRITE, 0xC8, 0, 32, {
+            0x3F, 0x31, 0x28, 0x25, 0x25, 0x27, 0x22, 0x22, 0x20, 0x1F, 0x1C, 0x12, 0x0F, 0x0B, 0x02, 0x02,
+            0x3F, 0x31, 0x28, 0x25, 0x25, 0x27, 0x22, 0x22, 0x20, 0x1F, 0x1C, 0x12, 0x0F, 0x0B, 0x02, 0x02
+        }
+    },
     {JD9855_QSPI_INST_CMD_WRITE, 0xD3, 0, 2, {0x28, 0x13}},
+    {JD9855_QSPI_INST_CMD_WRITE, 0xD7, 0, 2, {0x00, 0x30}},
     {JD9855_QSPI_INST_CMD_WRITE, 0xD9, 0, 6, {0x00, 0x00, 0xFF, 0x00, 0xF0, 0x00}},
     {JD9855_QSPI_INST_CMD_WRITE, 0xDE, 0, 1, {0x01}},
-    {JD9855_QSPI_INST_CMD_WRITE, 0xB7, 0, 8, {0x13, 0xE7, 0x64, 0x39, 0x06, 0x36, 0x18, 0x18}},
+    {JD9855_QSPI_INST_CMD_WRITE, 0xB7, 0, 8, {0x13, 0xE7, 0x64, 0x39, 0x06, 0x36, 0x1A, 0x1C}},
     {JD9855_QSPI_INST_CMD_WRITE, 0xBE, 0, 1, {0x00}},
-    {JD9855_QSPI_INST_CMD_WRITE, 0xC1, 0, 4, {0x04, 0x4A, 0x90, 0x08}},
+    {JD9855_QSPI_INST_CMD_WRITE, 0xC1, 0, 3, {0x05, 0x4A, 0x80}},      //SD_V0
     {JD9855_QSPI_INST_CMD_WRITE, 0xC2, 0, 4, {0x00, 0x16, 0xDA, 0xE7}},
-    {JD9855_QSPI_INST_CMD_WRITE, 0xC7, 0, 6, {0x00, 0x00, 0x0C, 0x3C, 0x0C, 0x3C}},
-    {JD9855_QSPI_INST_CMD_WRITE, 0xC8, 0, 6, {0x00, 0x00, 0x0B, 0x3C, 0x0C, 0x3C}},
-    {JD9855_QSPI_INST_CMD_WRITE, 0xC9, 0, 5, {0x00, 0x0A, 0x08, 0x06, 0x04}},
-    {JD9855_QSPI_INST_CMD_WRITE, 0xCA, 0, 5, {0x1E, 0x1F, 0x10, 0x17, 0x18}},
-    {JD9855_QSPI_INST_CMD_WRITE, 0xCB, 0, 5, {0x01, 0x0B, 0x09, 0x07, 0x05}},
-    {JD9855_QSPI_INST_CMD_WRITE, 0xCC, 0, 5, {0x1E, 0x1F, 0x11, 0x17, 0x18}},
-    {JD9855_QSPI_INST_CMD_WRITE, 0xCD, 0, 5, {0x31, 0x25, 0x27, 0x29, 0x2B}},
-    {JD9855_QSPI_INST_CMD_WRITE, 0xCE, 0, 5, {0x3F, 0x3E, 0x21, 0x37, 0x38}},
-    {JD9855_QSPI_INST_CMD_WRITE, 0xCF, 0, 5, {0x30, 0x24, 0x26, 0x28, 0x2A}},
-    {JD9855_QSPI_INST_CMD_WRITE, 0xD0, 0, 5, {0x3F, 0x3E, 0x20, 0x37, 0x38}},
-    {JD9855_QSPI_INST_CMD_WRITE, 0xD1, 0, 5, {0x08, 0x30, 0xA5, 0xDD, 0x30}},
-    {JD9855_QSPI_INST_CMD_WRITE, 0xD3, 0, 6, {0x3B, 0x0A, 0x00, 0x00, 0x00, 0x00}},
-    {JD9855_QSPI_INST_CMD_WRITE, 0xD4, 0, 6, {0x67, 0x00, 0x00, 0x01, 0x00, 0x01}},
-    {JD9855_QSPI_INST_CMD_WRITE, 0xD5, 0, 7, {0x10, 0x10, 0x05, 0x05, 0x0F, 0x94, 0x26}},
+    {JD9855_QSPI_INST_CMD_WRITE, 0xC7, 0, 8, {0x00, 0x00, 0x00, 0x38, 0x08, 0x08, 0x00, 0x01}},
+    {JD9855_QSPI_INST_CMD_WRITE, 0xC8, 0, 6, {0x00, 0x00, 0x00, 0x00, 0x15, 0x3B}},
+    {JD9855_QSPI_INST_CMD_WRITE, 0xC9, 0, 5, {0x06, 0x04, 0x0A, 0x08, 0x1E}},
+    {JD9855_QSPI_INST_CMD_WRITE, 0xCA, 0, 5, {0x00, 0x35, 0x15, 0x1F, 0x1F}},
+    {JD9855_QSPI_INST_CMD_WRITE, 0xCB, 0, 5, {0x07, 0x05, 0x0B, 0x09, 0x1E}},
+    {JD9855_QSPI_INST_CMD_WRITE, 0xCC, 0, 5, {0x01, 0x35, 0x15, 0x1F, 0x1F}},
+    {JD9855_QSPI_INST_CMD_WRITE, 0xCD, 0, 5, {0x09, 0x0B, 0x05, 0x07, 0x1E}},
+    {JD9855_QSPI_INST_CMD_WRITE, 0xCE, 0, 5, {0x01, 0x35, 0x1F, 0x15, 0x1F}},
+    {JD9855_QSPI_INST_CMD_WRITE, 0xCF, 0, 5, {0x08, 0x0A, 0x04, 0x06, 0x1E}},
+    {JD9855_QSPI_INST_CMD_WRITE, 0xD0, 0, 5, {0x00, 0x35, 0x1F, 0x15, 0x1F}},
+    {JD9855_QSPI_INST_CMD_WRITE, 0xD1, 0, 2, {0x02, 0x30}},
+    {JD9855_QSPI_INST_CMD_WRITE, 0xD2, 0, 5, {0x02, 0x03, 0x52, 0xDF, 0xDD}},
+    {JD9855_QSPI_INST_CMD_WRITE, 0xD3, 0, 3, {0x3B, 0x04, 0x48}},
+    {JD9855_QSPI_INST_CMD_WRITE, 0xD5, 0, 7, {0x10, 0x10, 0x04, 0x04, 0x0F, 0x94, 0x26}},
     {JD9855_QSPI_INST_CMD_WRITE, 0xD6, 0, 3, {0x00, 0x00, 0x40}},
-    {JD9855_QSPI_INST_CMD_WRITE, 0xD7, 0, 3, {0x03, 0x8F, 0x20}},
+    {JD9855_QSPI_INST_CMD_WRITE, 0xD7, 0, 3, {0x00, 0x00, 0x20}},
     {JD9855_QSPI_INST_CMD_WRITE, 0xDE, 0, 1, {0x02}},
     {JD9855_QSPI_INST_CMD_WRITE, 0xB6, 0, 1, {0x1C}},
     {JD9855_QSPI_INST_CMD_WRITE, 0xDE, 0, 1, {0x00}},
@@ -207,16 +214,11 @@ static const JD9855_CMD_DESC JD9855_POST_OTP_POWERON_SEQ_CMD[] =
     {JD9855_QSPI_INST_CMD_WRITE, 0x4F, 0, 1, {0x00}},
     {JD9855_QSPI_INST_CMD_WRITE, 0x4C, 10, 1, {0x01}},
     {JD9855_QSPI_INST_CMD_WRITE, 0x4C, 0, 1, {0x00}},
-    {JD9855_QSPI_INST_CMD_WRITE, 0x2A, 0, 4, {0x00, 0x00, 0x01, 0x67}},
-    {JD9855_QSPI_INST_CMD_WRITE, 0x2B, 0, 4, {0x00, 0x00, 0x01, 0x67}},
-    {JD9855_QSPI_INST_CMD_WRITE, 0x35, 0, 1, {0x00}},
-    {JD9855_QSPI_INST_CMD_WRITE, 0x36, 0, 1, {0x00}},
-    {JD9855_QSPI_INST_CMD_WRITE, 0x3A, 0, 1, {0x55}},
-    {JD9855_QSPI_INST_CMD_WRITE, 0xDE, 0, 1, {0x01}},
-    {JD9855_QSPI_INST_CMD_WRITE, 0xE7, 0, 1, {0x0E}},
-    {JD9855_QSPI_INST_CMD_WRITE, 0xDE, 0, 1, {0x02}},
-    {JD9855_QSPI_INST_CMD_WRITE, 0xBA, 0, 2, {0x32, 0x01}},
-    {JD9855_QSPI_INST_CMD_WRITE, 0xDE, 0, 1, {0x00}},
+    {JD9855_QSPI_INST_CMD_WRITE, 0x36, 0, 1, {0x00}},   //MADCTL: 00=FW; 03=BW
+    {JD9855_QSPI_INST_CMD_WRITE, 0x35, 0, 0, {0x00}},
+    {JD9855_QSPI_INST_CMD_WRITE, 0x2A, 0, 4, {0x00, 0x00, 0x01, 0x67}},  //End_X=360
+    {JD9855_QSPI_INST_CMD_WRITE, 0x2B, 0, 4, {0x00, 0x00, 0x01, 0x67}},  //End_Y=360
+    {JD9855_QSPI_INST_CMD_WRITE, 0x3A, 0, 1, {0x55}},   //66=RGB666; 55=RGB565
     {JD9855_QSPI_INST_CMD_WRITE, 0x11, 120, 0, {0x00}},
     {JD9855_QSPI_INST_CMD_WRITE, 0x29, 20, 0, {0x00}},
 
@@ -253,6 +255,23 @@ static void JD9855_Reg_Write(const JD9855_CMD_DESC *cmd)
         idx++;
     }
     // os_mem_free(sdat);
+}
+
+void rtk_lcd_hal_set_brightness(uint8_t brightness)
+{
+    (void)brightness;
+}
+
+void rtk_lcd_hal_set_display(bool on)
+{
+    uint8_t sdat[20] = {0};
+    sdat[0] = JD9855_QSPI_INST_CMD_WRITE;
+
+    sdat[1] = 0;
+    sdat[2] = on ? 0x29 : 0x28;
+    sdat[3] = 0;
+
+    lcdc_dbic_write(sdat, 0 + 4);
 }
 
 void JD9855_Init_Post_OTP(void)
