@@ -191,6 +191,30 @@
       "name": "Avs3SwCtrl",
       "why": "K: no instance and no reference in any vendor source",
       "header": false
+    },
+    {
+      "action": "delete_if_block",
+      "opening": "^\\s*#\\s*if\\s+0\\s*$",
+      "followed_by": "^\\s*if\\(dec_cont->vlc\\.ac_table0\\.vals\\)\\s*\\{",
+      "why": "I16: the only allocation of vlc.*.vals is JpegDecDecodeHuffmanTables, which itself sits inside the #if 0 block removed by I22; nothing allocates, so nothing to free"
+    },
+    {
+      "action": "delete_if_block",
+      "opening": "^\\s*#\\s*if\\s+0\\s*$",
+      "followed_by": "External compiler flags",
+      "also_delete": [
+        "^\\s*enum DecRet JpegDecDecodeFrameHdr\\(JpegDecContainer \\* p_dec_data\\);\\s*$",
+        "^\\s*enum DecRet JpegDecDecodeQuantTables\\(JpegDecContainer \\* p_dec_data\\);\\s*$",
+        "^\\s*enum DecRet JpegDecDecodeHuffmanTables\\(JpegDecContainer \\* p_dec_data\\);\\s*$",
+        "^\\s*void JpegDecDefaultHuffmanTables\\(JpegDecContainer \\* p_dec_data\\);\\s*$"
+      ],
+      "why": "I22: the whole body of jpegdechdrs.c is #if 0; its four functions have zero call sites and no symbol in the object. The four trailing prototypes go too, so nobody writes a caller against them"
+    },
+    {
+      "action": "delete_if_block",
+      "opening": "^\\s*#\\s*if\\s+0\\s*$",
+      "followed_by": "^\\s*dec_cont->vlc\\.default_tables = 0;",
+      "why": "I23: same as I16 -- clears and frees VLC tables that are never allocated"
     }
   ]
 }

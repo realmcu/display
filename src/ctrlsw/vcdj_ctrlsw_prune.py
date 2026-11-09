@@ -260,6 +260,70 @@ def delete_region(rule, doc, which):
     del doc['origin'][lo:hi]
 
 
+def first_body_line(lines, lo):
+    """Index of the first line inside the block that is code, not decoration."""
+    for i in range(lo + 1, min(lo + 26, len(lines))):
+        s = lines[i].strip()
+        if not s or s.startswith(('#', '/*', '*', '//')):
+            continue
+        return i
+    return None
+
+
+def delete_if_block(rule, doc, which):
+    """Delete a whole preprocessor block, located by structural anchors.
+
+    `opening` matches the `#if` / `#ifdef` / `#ifndef` line and `followed_by`
+    matches the block's first code line; together they must pick out exactly one
+    block, which keeps the rule stable as long as the code itself does not
+    change. The matching `#endif` is found by nesting, so the inside may hold
+    further conditionals. `also_delete` names further lines by regex, each of
+    which must hit exactly once -- used for prototypes left dangling.
+    """
+    lines = doc['lines']
+    open_pat = re.compile(rule['opening'])
+    body_pat = re.compile(rule['followed_by'])
+    hits = []
+    for i, l in enumerate(lines):
+        if not open_pat.search(l):
+            continue
+        if not GUARD_OPEN.match(l):
+            raise PruneError('%s: line %d matches `opening` but is not a '
+                             'preprocessor conditional' % (which, i + 1))
+        b = first_body_line(lines, i)
+        if b is not None and body_pat.search(lines[b]):
+            hits.append(i)
+    if len(hits) != 1:
+        raise PruneError('%s: (%r, %r) matches %d blocks, the rule needs exactly '
+                         'one%s' % (which, rule['opening'], rule['followed_by'],
+                                    len(hits),
+                                    ' at lines %s' % [h + 1 for h in hits] if hits else ''))
+    lo, depth = hits[0], 0
+    for i in range(lo, len(lines)):
+        m = GUARD_ANY.match(lines[i])
+        if not m:
+            continue
+        if m.group(1) == 'endif':
+            depth -= 1
+            if depth == 0:
+                del lines[lo:i + 1]
+                del doc['origin'][lo:i + 1]
+                break
+        else:
+            depth += 1
+    else:
+        raise PruneError('%s: block opened at line %d has no matching #endif'
+                         % (which, lo + 1))
+    for anchor in rule.get('also_delete', []):
+        a = re.compile(anchor)
+        found = [i for i, l in enumerate(doc['lines']) if a.search(l)]
+        if len(found) != 1:
+            raise PruneError('%s: also_delete %r matches %d lines, needs exactly one'
+                             % (which, anchor, len(found)))
+        del doc['lines'][found[0]]
+        del doc['origin'][found[0]]
+
+
 def dead_regions(code):
     """Line indices inside an `#if 0` block that has no #else / #elif.
 
@@ -432,10 +496,11 @@ ACTIONS = {
     'delete_function': (delete_function, check_no_code_references),
     'delete_type': (delete_type, check_no_code_references),
     'delete_region': (delete_region, None),
+    'delete_if_block': (delete_if_block, None),
     'merge_license': (merge_license, None),
 }
 # Actions that touch no header declaration; the rest name a function or type.
-NO_HEADER = {'merge_license', 'delete_region'}
+NO_HEADER = {'merge_license', 'delete_region', 'delete_if_block'}
 
 
 def apply_rules(h, c, rules):
