@@ -32,46 +32,11 @@
 #define SH8601A_DPHY_SRC_CLK_MHZ          (40U)     /* D-PHY PLL reference (CKREF) */
 #define SH8601A_LCD_CLK_KHZ               (SH8601A_EDPI_SRC_CLK_KHZ / SH8601A_EDPI_CLOCK_DIV)
 
-/* Convert a pixel-domain duration to lane byte clock cycles. */
-#define SH8601A_PIX_TO_LBC(pix)           \
-    (((pix) * SH8601A_LANE_BYTE_CLK_KHZ) / SH8601A_LCD_CLK_KHZ)
-
 #define SH8601A_DSI_LANES                 (1U)
-#define SH8601A_DSI_TX_ESC_CLK_DIV        3      /* TxClkEsc = 50MHz / 3, must be <= 20MHz */
-#define SH8601A_DSI_DATA_HS2LP_LBC        (0x10U)
-#define SH8601A_DSI_DATA_LP2HS_LBC        (0x37U)
-
 /* Set to 1 to make the DSI host emit its own test pattern instead of eDPI pixels. */
 #define SH8601A_DSI_VPG_ENABLE            (0U)
 
 #define SH8601A_DSI_CMD_DONE_TIMEOUT_MS   (100U)
-
-#define SH8601A_HLINE_LBC                 SH8601A_PIX_TO_LBC(SH8601A_LCD_WIDTH + SH8601A_LCD_HSYNC + \
-                                                             SH8601A_LCD_HBP + SH8601A_LCD_HFP)
-#define SH8601A_HSA_LBC                   SH8601A_PIX_TO_LBC(SH8601A_LCD_HSYNC)
-#define SH8601A_HBP_LBC                   SH8601A_PIX_TO_LBC(SH8601A_LCD_HBP)
-/* Burst mode: one line of pixels plus packet header/CRC at full link rate. */
-#define SH8601A_ACTIVE_LBC                (((SH8601A_LCD_WIDTH * OUTPUT_PIXEL_BYTES) + 6U) / \
-                                           SH8601A_DSI_LANES)
-
-/*
- * Largest LP command (in bytes) the host may insert into one video line.
- *
- * One LPDT byte takes 16 TxClkEsc periods; every LP window also pays
- * HS->LP + LP->HS plus escape entry/exit (~24 TxClkEsc). Too large a value
- * lets an inserted command overrun the line and break the video timing.
- * With the current timing this gives 45 bytes outside and 16 inside VACT.
- */
-#define SH8601A_LP_BYTE_LBC               (16U * SH8601A_DSI_TX_ESC_CLK_DIV)
-#define SH8601A_LP_WINDOW_OVERHEAD_LBC    (SH8601A_DSI_DATA_HS2LP_LBC + SH8601A_DSI_DATA_LP2HS_LBC + \
-                                           (24U * SH8601A_DSI_TX_ESC_CLK_DIV))
-#define SH8601A_LPCMD_BYTES(window_lbc)   \
-    (((window_lbc) - SH8601A_LP_WINDOW_OVERHEAD_LBC) / SH8601A_LP_BYTE_LBC)
-#define SH8601A_OUTVACT_LPCMD_BYTES       SH8601A_LPCMD_BYTES(SH8601A_HLINE_LBC - SH8601A_HSA_LBC - \
-                                                              SH8601A_HBP_LBC)
-// #define SH8601A_INVACT_LPCMD_BYTES          0
-#define SH8601A_INVACT_LPCMD_BYTES        SH8601A_LPCMD_BYTES(SH8601A_HLINE_LBC - SH8601A_HSA_LBC - \
-                                                              SH8601A_HBP_LBC - SH8601A_ACTIVE_LBC)
 
 __weak void DSI_IO_WriteCmd(uint32_t NbrParams, uint8_t *pParams)
 {
@@ -325,129 +290,61 @@ void rtk_lcd_hal_init(void)
     EDPI_Init(&eDPICfg);
 
     DSI_DeInit(DSI);
-    DSI_InitTypeDef   DSI_InitStruct = {0};
-    DSI_InitStruct.VirtualChannelID             = 0;
 
-    DSI_InitStruct.ColorCoding                  = 5;
-    DSI_InitStruct.DEPolarity                   = 0;
-    DSI_InitStruct.HSPolarity                   = 0;
-    DSI_InitStruct.VSPolarity                   = 0;
+    const DSI_ConfigTypeDef dsi_cfg =
+    {
+        .LaneCount           = SH8601A_DSI_LANES,
+        .ColorCoding         = DSI_COLOR_RGB888,
+        .LaneByteClkKHz      = SH8601A_LANE_BYTE_CLK_KHZ,
+        .Polarity            = 0,                   /* all sync and DE active high */
+        /* Command mode first: the panel init table goes out before video. */
+        .Mode                = DSI_MODE_CMD,
+        .eDPICommandSize     = DSI_EDPI_DEFAULT_CMD_SIZE,
+    };
 
-    DSI_InitStruct.phy_mode = 0x0;  //D-PHY
-    DSI_InitStruct.NumberOfLanes = SH8601A_DSI_LANES;
-    DSI_InitStruct.StopWaitTime = 0;    //skip
-    DSI_InitStruct.InterruptMask0 = 0x1FFFFF;
-    DSI_InitStruct.InterruptMask1 = 0x1FFFFF;
-    DSI_InitStruct.HS_TX_CNT =
-        0xFFFF;                 //for trigger timeout error measured in TO_CLK_DIVISION
-    DSI_InitStruct.LP_RX_CNT =
-        0xFFFF;                 //for trigger timeout error measured in TO_CLK_DIVISION
-    DSI_InitStruct.TOCkdiv = 0x45;
-    DSI_InitStruct.TXEscapeCkdiv = SH8601A_DSI_TX_ESC_CLK_DIV;
-    /* Start in command mode: the panel init table is sent before any video. */
-    DSI_InitStruct.ModeCfg = DSI_MODE_CMD;
-    DSI_InitStruct.CommandSize                  = 598;
-    DSI_InitStruct.PeripherCharacteristics = 0;
-    DSI_InitStruct.GenericPacketVCID = 0;
-    DSI_InitStruct.GenericTearVCID = 0;
-    DSI_InitStruct.GenericReadBackVCID = 0;
-    DSI_InitStruct.AutoHS2LPEnable = 1;
-    DSI_InitStruct.TxRequestCLKEnable = 1;
-    DSI_InitStruct.ClockLaneHS2LPTime = 0x24;
-    DSI_InitStruct.ClockLaneLP2HSTime = 0x3d;
-    DSI_InitStruct.DataLaneHS2LPTime = 0x26;
-    DSI_InitStruct.DataLaneLP2HSTime = 0xA1;
-    DSI_InitStruct.DataLaneMaxReadTime = 0;
-    DSI_InitStruct.phy_shutdownz = 1;
-//    DSI_InitStruct.phy_testclr = 0;
-//    DSI_InitStruct.phy_testen = 0;
-    DSI_InitStruct.phy_enableclk = 1;
-//    DSI_InitStruct.phy_forcepll = 0;
-    DSI_InitStruct.phy_rstz = 1;
-//    DSI_InitStruct.phy_auto_ulps = 0;
-//    DSI_InitStruct.phy_pll_off_ulps = 0;
-//    DSI_InitStruct.phy_pre_pll_off_req = 0;
-//    DSI_InitStruct.phy_auto_ulps_delay = 0;
-//    DSI_InitStruct.phy_auto_ulps_time = 0;
-
-    DSI_InitStruct.AcknowledgeRequest           = DSI_ACKNOWLEDGE_DISABLE;
-    DSI_InitStruct.LPGenReadTime                = 0;
-    DSI_InitStruct.HSGenReadTime                = 0;
-    DSI_InitStruct.LPGenWriteTime               = 0;
-    DSI_InitStruct.HSGenWriteTime               = 0;
-    DSI_InitStruct.BTATime                      = 0;
-    /* Every command packet type goes out in LP (escape mode LPDT), including
-       DCS long writes such as 0x2A/0x2B. */
-    DSI_InitStruct.LPGenShortWriteNoP           = DSI_LP_GSW0P_ENABLE;
-    DSI_InitStruct.LPGenShortWriteOneP          = DSI_LP_GSW1P_ENABLE;
-    DSI_InitStruct.LPGenShortWriteTwoP          = DSI_LP_GSW2P_ENABLE;
-    DSI_InitStruct.LPGenShortReadNoP            = DSI_LP_GSR0P_ENABLE;
-    DSI_InitStruct.LPGenShortReadOneP           = DSI_LP_GSR1P_ENABLE;
-    DSI_InitStruct.LPGenShortReadTwoP           = DSI_LP_GSR2P_ENABLE;
-    DSI_InitStruct.LPGenLongWrite               = DSI_LP_GLW_ENABLE;
-    DSI_InitStruct.LPDcsShortWriteNoP           = DSI_LP_DSW0P_ENABLE;
-    DSI_InitStruct.LPDcsShortWriteOneP          = DSI_LP_DSW1P_ENABLE;
-    DSI_InitStruct.LPDcsShortReadNoP            = DSI_LP_DSR0P_ENABLE;
-    DSI_InitStruct.LPDcsLongWrite               = DSI_LP_DLW_ENABLE;
-    DSI_Init(DSI, &DSI_InitStruct);
+    DSI_Init(DSI, &dsi_cfg);
+    /* DCS long writes such as 0x2A/0x2B also go out in LP, as DSI_Init left
+       every packet type there. */
 
     {
-        DSI_VidCfgTypeDef   VideoCmd_InitStruct = {0};
-        VideoCmd_InitStruct.Mode = VIDEO_BURST_MODE_2;
-        VideoCmd_InitStruct.LPCommandEnable = ENABLE;
-        VideoCmd_InitStruct.FrameBTAAcknowledgeEnable = DISABLE;
-        VideoCmd_InitStruct.LPVerticalSyncActiveEnable = ENABLE;
-        VideoCmd_InitStruct.LPVerticalBackPorchEnable = ENABLE;
-        VideoCmd_InitStruct.LPVerticalFrontPorchEnable = ENABLE;
-        VideoCmd_InitStruct.LPVerticalActiveEnable = ENABLE;
-        VideoCmd_InitStruct.LPHorizontalBackPorchEnable = ENABLE;
-        VideoCmd_InitStruct.LPHorizontalFrontPorchEnable = ENABLE;
+        const DSI_VideoCfgTypeDef vid_cfg =
+        {
+            .Width              = SH8601A_LCD_WIDTH,
+            .Height             = SH8601A_LCD_HEIGHT,
+            .HSync              = SH8601A_LCD_HSYNC,
+            .HBackPorch         = SH8601A_LCD_HBP,
+            .HFrontPorch        = SH8601A_LCD_HFP,
+            .VSync              = SH8601A_LCD_VSYNC,
+            .VBackPorch         = SH8601A_LCD_VBP,
+            .VFrontPorch        = SH8601A_LCD_VFP,
+            .PixelClkKHz        = SH8601A_LCD_CLK_KHZ,
+            .LaneByteClkKHz     = SH8601A_LANE_BYTE_CLK_KHZ,
+            .LaneCount          = SH8601A_DSI_LANES,
+            .BytesPerPixel      = OUTPUT_PIXEL_BYTES,
+            .Mode               = VIDEO_BURST_MODE_2,
+            /* One packet per line, no filler. A non-zero null size pads the
+               link, which is only wanted when the D-PHY runs much faster than
+               the DPI and the effective pixel rate has to come down. */
+            .NumberOfChunks     = 0,
+            .NullPacketSize     = 0,
+        };
 
-        /* Largest LP command per line, derived from the line timing. */
-        VideoCmd_InitStruct.invact_lpcmd_size = SH8601A_INVACT_LPCMD_BYTES;
-        VideoCmd_InitStruct.outvact_lpcmd_size = SH8601A_OUTVACT_LPCMD_BYTES;
+        if (DSI_ConfigVideoMode(DSI, &vid_cfg) != DSI_STATUS_OK)
+        {
+            DBG_DIRECT("SH8601A: video timing rejected\n");
+        }
 
-        /*
-        * One video packet per line, no chunking.
-        *
-        * NullPacketSize must stay 0: with NumberOfChunks == 0 the line is still
-        * sent as a single packet, but a non-zero null size makes the controller
-        * append a null packet to every line, which overruns the line time and
-        * keeps the panel from ever locking on.
-        */
-        VideoCmd_InitStruct.PacketSize = SH8601A_LCD_WIDTH;
-        // VideoCmd_InitStruct.NumberOfChunks = 1;
-        // VideoCmd_InitStruct.NullPacketSize = 0x1e00;
-
-        /* Horizontal timings are expressed in lane byte clock cycles. */
-        VideoCmd_InitStruct.HorizontalSyncActive = SH8601A_HSA_LBC;
-        VideoCmd_InitStruct.HorizontalBackPorch = SH8601A_HBP_LBC;
-        VideoCmd_InitStruct.HorizontalLine = SH8601A_HLINE_LBC;
-        /* Vertical timings are in lines and used as-is. */
-        VideoCmd_InitStruct.VerticalSyncActive = SH8601A_LCD_VSYNC;
-        VideoCmd_InitStruct.VerticalBackPorch = SH8601A_LCD_VBP;
-        VideoCmd_InitStruct.VerticalFrontPorch = SH8601A_LCD_VFP;
-        VideoCmd_InitStruct.VerticalActive = SH8601A_LCD_HEIGHT;
-
-        VideoCmd_InitStruct.VPGMode = VIDEO_VPG_MODE_V_AND_H;
-        VideoCmd_InitStruct.VPGOrientation = VIDEO_VPG_ORIENTATION_H;
-        VideoCmd_InitStruct.VPGEnable = SH8601A_DSI_VPG_ENABLE;
-
-        DSI_ConfigVideoMode(DSI, &VideoCmd_InitStruct);
+        DSI_ConfigVPG(DSI, SH8601A_DSI_VPG_ENABLE,
+                      VIDEO_VPG_MODE_V_AND_H, VIDEO_VPG_ORIENTATION_H);
     }
 
     /* CKREF = 40MHz, HS bit clock = 8 x lane byte clock = 400MHz */
-    DPHY_Init(DSI_InitStruct.NumberOfLanes,
+    DPHY_Init(SH8601A_DSI_LANES,
               SH8601A_DPHY_SRC_CLK_MHZ,
               (SH8601A_LANE_BYTE_CLK_KHZ * 8U) / 1000U);
 
-    DSI_PhyCfgTypeDef dsi_phy = {0};
-    dsi_phy.phy_forcepll  = PHY_FORCEPLL_DISABLE;
-    dsi_phy.phy_enableclk  = PHY_CLK_ENABLE;
-    dsi_phy.phy_rstz   = PHY_RST_ENABLE;
-    dsi_phy.phy_shutdownz   = PHY_SHUTDOWN_ENABLE;
     /* Wait for PLL lock and all lanes in stop state (LP-11) before any command. */
-    if (DSI_ConfigPhy(DSI, &dsi_phy) != DSI_STATUS_OK)
+    if (DSI_ConfigPhyPins(DSI) != DSI_STATUS_OK)
     {
         DBG_DIRECT("SH8601A: dphy not in stop state, status 0x%08x\n", DSI->PHY_STATUS);
     }

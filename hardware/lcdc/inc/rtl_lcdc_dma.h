@@ -101,6 +101,7 @@ typedef enum
     LCDC_DMA_DataSize_Byte     = 0x0,    /*!< Data size is 8 bits. */
     LCDC_DMA_DataSize_HalfWord = 0x1,    /*!< Data size is 16 bits. */
     LCDC_DMA_DataSize_Word     = 0x2,    /*!< Data size is 32 bits. */
+    LCDC_DMA_DataSize_Dword    = 0x3,    /*!< Data size is 64 bits. */
 } LCDC_DMA_DATASIZE_T;
 
 #define IS_LCDC_DMA_DATA_SIZE(SIZE) (((SIZE) == LCDC_DMA_DataSize_Byte) || \

@@ -245,103 +245,40 @@ void rtk_lcd_hal_init(void)
     EDPI_Init(&eDPICfg);
 
     DSI_DeInit(DSI);
-    DSI_InitTypeDef   DSI_InitStruct = {0};
-    DSI_InitStruct.VirtualChannelID             = 0;
 
-    DSI_InitStruct.ColorCoding                  = 5;
-    DSI_InitStruct.LPMaxReadPacket              = DSI_LP_MRDP_DISABLE;
-    DSI_InitStruct.DEPolarity                   = 0;
-    DSI_InitStruct.HSPolarity                   = 0;
-    DSI_InitStruct.VSPolarity                   = 0;
+    const DSI_ConfigTypeDef dsi_cfg =
+    {
+        .LaneCount           = 1U,
+        .ColorCoding         = DSI_COLOR_RGB888,
+        /* 400MHz HS bit clock / 8 = 50MHz lane byte clock. */
+        .LaneByteClkKHz      = 50000U,
+        .Polarity            = 0,                   /* all sync and DE active high */
+        .Mode                = DSI_MODE_CMD,
+        .eDPICommandSize     = DSI_EDPI_DEFAULT_CMD_SIZE,
+    };
 
-    DSI_InitStruct.phy_mode = 0x0;  //fix
-    DSI_InitStruct.NumberOfLanes = 0x01;
-    DSI_InitStruct.StopWaitTime = 0;    //skip
-    DSI_InitStruct.InterruptMask0 = 0x1FFFFF;
-    DSI_InitStruct.InterruptMask1 = 0x1FFFFF;
-    DSI_InitStruct.HS_TX_CNT =
-        0xFFFF;                 //for trigger timeout error measured in TO_CLK_DIVISION
-    DSI_InitStruct.LP_RX_CNT =
-        0xFFFF;                 //for trigger timeout error measured in TO_CLK_DIVISION
-    DSI_InitStruct.TOCkdiv = 0x14;
-    DSI_InitStruct.TXEscapeCkdiv = 0x03;
-    DSI_InitStruct.ModeCfg = 1;                   //config for video mode or cmd mode
-    DSI_InitStruct.CommandSize                  = 598;
-    DSI_InitStruct.PeripherCharacteristics = 0;
-    DSI_InitStruct.GenericPacketVCID = 0;
-    DSI_InitStruct.GenericTearVCID = 0;
-    DSI_InitStruct.GenericReadBackVCID = 0;
-    DSI_InitStruct.AutoHS2LPEnable = 1;
-    DSI_InitStruct.TxRequestCLKEnable = 1;
-    DSI_InitStruct.ClockLaneHS2LPTime = 0x24;
-    DSI_InitStruct.ClockLaneLP2HSTime = 0x3d;
-    DSI_InitStruct.DataLaneHS2LPTime = 0x26;
-    DSI_InitStruct.DataLaneLP2HSTime = 0xA1;
-    DSI_InitStruct.DataLaneMaxReadTime = 0;
-    DSI_InitStruct.phy_shutdownz = 1;
-//    DSI_InitStruct.phy_testclr = 0;
-//    DSI_InitStruct.phy_testen = 0;
-    DSI_InitStruct.phy_enableclk = 1;
-//    DSI_InitStruct.phy_forcepll = 0;
-    DSI_InitStruct.phy_rstz = 1;
-//    DSI_InitStruct.phy_auto_ulps = 0;
-//    DSI_InitStruct.phy_pll_off_ulps = 0;
-//    DSI_InitStruct.phy_pre_pll_off_req = 0;
-//    DSI_InitStruct.phy_auto_ulps_delay = 0;
-//    DSI_InitStruct.phy_auto_ulps_time = 0;
-
-    DSI_InitStruct.AcknowledgeRequest           = DSI_ACKNOWLEDGE_DISABLE;
-    DSI_InitStruct.LPGenReadTime                = 0;
-    DSI_InitStruct.HSGenReadTime                = 0;
-    DSI_InitStruct.LPGenWriteTime               = 0;
-    DSI_InitStruct.HSGenWriteTime               = 0;
-    DSI_InitStruct.BTATime                      = 0;
-    DSI_InitStruct.LPGenShortWriteNoP           = DSI_LP_GSW0P_ENABLE;
-    DSI_InitStruct.LPGenShortWriteOneP          = DSI_LP_GSW1P_ENABLE;
-    DSI_InitStruct.LPGenShortWriteTwoP          = DSI_LP_GSW2P_ENABLE;
-    DSI_InitStruct.LPGenShortReadNoP            = DSI_LP_GSR0P_ENABLE;
-    DSI_InitStruct.LPGenShortReadOneP           = DSI_LP_GSR1P_ENABLE;
-    DSI_InitStruct.LPGenShortReadTwoP           = DSI_LP_GSR2P_ENABLE;
-    DSI_InitStruct.LPGenLongWrite               = DSI_LP_GLW_ENABLE;
-    DSI_InitStruct.LPDcsShortWriteNoP           = DSI_LP_DSW0P_ENABLE;
-    DSI_InitStruct.LPDcsShortWriteOneP          = DSI_LP_DSW1P_ENABLE;
-    DSI_InitStruct.LPDcsShortReadNoP            = DSI_LP_DSR0P_ENABLE;
-    DSI_InitStruct.LPDcsLongWrite               = DSI_LP_DLW_DISABLE;
-    DSI_Init(DSI, &DSI_InitStruct);
-
-    DSI_AdaptedCmdCfgTypeDef   AdaptedCmd_InitStruct = {0};
-    AdaptedCmd_InitStruct.TEAcknowledgeRequest         = DSI_TE_ACKNOWLEDGE_DISABLE;
-    AdaptedCmd_InitStruct.hw_tear_effect_gen       = 0;
-    AdaptedCmd_InitStruct.scan_line_parameter   = 0;
-    AdaptedCmd_InitStruct.hw_set_scan_line    = 0;
-    AdaptedCmd_InitStruct.hw_tear_effect_on   = 0;
-
-    DSI_ConfigAdaptedCommandMode(DSI, &AdaptedCmd_InitStruct);
+    DSI_Init(DSI, &dsi_cfg);
+    /* Command mode only: the panel never takes a video stream here, so a DCS
+       long write stays on the generic path rather than LPDT. */
+    DSI_ConfigLPM(DSI, DSI_LP_CMD_ALL & ~DSI_LP_DCS_LONG_WRITE);
+    /* TE is off for now: the panel does not drive tear_request on this link.
+       Fill the structure in once it does. */
+    const DSI_AdaptedCmdCfgTypeDef adapted_cfg =
+    {
+        .TEAcknowledgeRequest = DSI_TE_ACKNOWLEDGE_DISABLE,
+        .hw_tear_effect_on    = 0,
+        .hw_tear_effect_gen   = 0,
+        .hw_set_scan_line     = 0,
+        .scan_line_parameter  = 0,
+    };
+    DSI_ConfigAdaptedCommandMode(DSI, &adapted_cfg);
 
     /* CKREF = 40MHz, HS bit clock = 400MHz */
-    DPHY_Init(DSI_InitStruct.NumberOfLanes, 40U, 400U);
+    DPHY_Init(1U, 40U, 400U);
 
-    DSI_PhyCfgTypeDef dsi_phy = {0};
-    dsi_phy.phy_forcepll  = PHY_FORCEPLL_DISABLE;
-    dsi_phy.phy_enableclk  = PHY_CLK_ENABLE;
-    dsi_phy.phy_rstz   = PHY_RST_ENABLE;
-    dsi_phy.phy_shutdownz   = PHY_SHUTDOWN_ENABLE;
-    DSI_ConfigPhy(DSI, &dsi_phy);
+    DSI_ConfigPhyPins(DSI);
 
     DSI_Start(DSI);
-
-//    uint8_t pass_word_0[] = {0x5a, 0x5a, 0xC0};
-//    DSI_IO_WriteCmd(2, (uint8_t *)pass_word_0);
-//    uint8_t pass_word_1[] = {0x5a, 0x5a, 0xC1};
-//    DSI_IO_WriteCmd(2, (uint8_t *)pass_word_1);
-//    uint8_t video[] = {0xB1, 0X00};
-//    DSI_IO_WriteCmd(0, (uint8_t *)video);
-
-
-
-    //for bist mode
-//    uint8_t bist[] = {0xBA, 0X81};
-//    DSI_IO_WriteCmd(0, (uint8_t *)bist);
 
     driver_ic_init();
     rtk_lcd_hal_rect_fill(0, 0, 454, 454, 0xFF00FF00);

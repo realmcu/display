@@ -893,6 +893,9 @@ typedef union
 
 #define IS_DSI_N_Lanes(MODE) (((MODE) == DSI_1_LANE) || ((MODE) == DSI_2_LANE) || ((MODE) == DSI_3_LANE) || ((MODE) == DSI_4_LANE))
 
+    /*!< Lane count as written by the caller (1 to 4), not the encoded register value. */
+#define IS_DSI_LANE_COUNT(COUNT) (((COUNT) >= 1UL) && ((COUNT) <= 4UL))
+
     /** End of DSI_N_Lanes
          * \}
          */
@@ -904,6 +907,9 @@ typedef union
      */
 #define DSI_COLOR_RGB565     0          /*!< RGB565 color coding mode. */
 #define DSI_COLOR_RGB888     5          /*!< RGB888 color coding mode. */
+
+    /*!< DPI_COLOR_CODING is 4 bits wide, so any value below 16 fits the register. */
+#define IS_DSI_COLOR_CODING(CODING) ((CODING) <= 0xFUL)
 
     /** End of DSI_Color_Coding
          * \}
@@ -967,36 +973,115 @@ typedef union
 
 
     /**
-     * \defgroup    DSI_LP DSI LP
+     * \defgroup    DSI_LP DSI LP Command Transport
+     *
+     *              CMD_MODE_CFG selects, per packet type, whether the command is
+     *              sent as a low-power escape (LPDT) or as a high-speed packet.
+     *              These masks match the CMD_MODE_CFG bit positions, so
+     *              \ref DSI_Init copies the mask straight into the register.
      * \{
      * \ingroup     DSI_Exported_Constants
      */
-#define DSI_LP_GSW0P_DISABLE     0
-#define DSI_LP_GSW0P_ENABLE      1
-#define DSI_LP_GSW1P_DISABLE     0
-#define DSI_LP_GSW1P_ENABLE      1
-#define DSI_LP_GSW2P_DISABLE     0
-#define DSI_LP_GSW2P_ENABLE      1
-#define DSI_LP_GSR0P_DISABLE     0
-#define DSI_LP_GSR0P_ENABLE      1
-#define DSI_LP_GSR1P_DISABLE     0
-#define DSI_LP_GSR1P_ENABLE      1
-#define DSI_LP_GSR2P_DISABLE     0
-#define DSI_LP_GSR2P_ENABLE      1
-#define DSI_LP_GLW_DISABLE       0
-#define DSI_LP_GLW_ENABLE        1
-#define DSI_LP_DSW0P_DISABLE     0
-#define DSI_LP_DSW0P_ENABLE      1
-#define DSI_LP_DSW1P_DISABLE     0
-#define DSI_LP_DSW1P_ENABLE      1
-#define DSI_LP_DSR0P_DISABLE     0
-#define DSI_LP_DSR0P_ENABLE      1
-#define DSI_LP_DLW_DISABLE       0
-#define DSI_LP_DLW_ENABLE        1
-#define DSI_LP_MRDP_DISABLE      0
-#define DSI_LP_MRDP_ENABLE       1
+#define DSI_LP_GEN_SHORT_WRITE_0P   (1UL << 8)   /*!< Generic short write, no parameter.   */
+#define DSI_LP_GEN_SHORT_WRITE_1P   (1UL << 9)   /*!< Generic short write, one parameter.  */
+#define DSI_LP_GEN_SHORT_WRITE_2P   (1UL << 10)  /*!< Generic short write, two parameters. */
+#define DSI_LP_GEN_SHORT_READ_0P    (1UL << 11)  /*!< Generic short read, no parameter.    */
+#define DSI_LP_GEN_SHORT_READ_1P    (1UL << 12)  /*!< Generic short read, one parameter.   */
+#define DSI_LP_GEN_SHORT_READ_2P    (1UL << 13)  /*!< Generic short read, two parameters.  */
+#define DSI_LP_GEN_LONG_WRITE       (1UL << 14)  /*!< Generic long write.                  */
+#define DSI_LP_DCS_SHORT_WRITE_0P   (1UL << 16)  /*!< DCS short write, no parameter.       */
+#define DSI_LP_DCS_SHORT_WRITE_1P   (1UL << 17)  /*!< DCS short write, one parameter.      */
+#define DSI_LP_DCS_SHORT_READ_0P    (1UL << 18)  /*!< DCS short read, no parameter.        */
+#define DSI_LP_DCS_LONG_WRITE       (1UL << 19)  /*!< DCS long write.                      */
+#define DSI_LP_MAX_READ_PACKET      (1UL << 24)  /*!< Send the max-size read packet in LP. */
+
+    /*!< Every command packet type goes out in low-power. The usual panel setting. */
+#define DSI_LP_CMD_ALL              (DSI_LP_GEN_SHORT_WRITE_0P | DSI_LP_GEN_SHORT_WRITE_1P | \
+                                     DSI_LP_GEN_SHORT_WRITE_2P | DSI_LP_GEN_SHORT_READ_0P  | \
+                                     DSI_LP_GEN_SHORT_READ_1P  | DSI_LP_GEN_SHORT_READ_2P  | \
+                                     DSI_LP_GEN_LONG_WRITE     | DSI_LP_DCS_SHORT_WRITE_0P | \
+                                     DSI_LP_DCS_SHORT_WRITE_1P | DSI_LP_DCS_SHORT_READ_0P  | \
+                                     DSI_LP_DCS_LONG_WRITE)
+
+    /*!< Every bit of CMD_MODE_CFG that a DSI_LP mask can own: DSI_LP_CMD_ALL plus
+         DSI_LP_MAX_READ_PACKET. What DSI_ConfigLPM leaves untouched. */
+#define DSI_LP_ALL_MASK             (DSI_LP_CMD_ALL | DSI_LP_MAX_READ_PACKET)
 
     /** End of DSI_LP
+         * \}
+         */
+
+    /**
+     * \defgroup    DSI_Polarity DSI Signal Polarity
+     *
+     *              The DPI pin polarities are independent bits, so
+     *              \ref DSI_ConfigTypeDef::Polarity wants them as one mask.
+     *              They match the DPI_CFG_POL bit positions.
+     * \{
+     * \ingroup     DSI_Exported_Constants
+     */
+#define DSI_POL_DATAEN_LOW          (1UL << 0)   /*!< dpidataen is active low. */
+#define DSI_POL_VSYNC_LOW           (1UL << 1)   /*!< dpivsync is active low.  */
+#define DSI_POL_HSYNC_LOW           (1UL << 2)   /*!< dpihsync is active low.  */
+#define DSI_POL_SHUTD_LOW           (1UL << 3)   /*!< dpishutdn is active low. */
+#define DSI_POL_COLORM_LOW          (1UL << 4)   /*!< dpicolorm is active low. */
+
+#define IS_DSI_POLARITY(POL) (((POL) & ~0x1FUL) == 0UL)
+
+    /** End of DSI_Polarity
+         * \}
+         */
+
+    /**
+     * \defgroup    DSI_FLAG DSI Host Behaviour Flags
+     *
+     *              The remaining on/off switches the host needs at init, as one
+     *              mask in \ref DSI_ConfigTypeDef::Flags.
+     * \{
+     * \ingroup     DSI_Exported_Constants
+     */
+#define DSI_FLAG_CLKLANE_STOP_IDLE  (1UL << 0)   /*!< LPCLK_CTRL.auto_clklane_ctrl: park the clock lane in LP while idle. */
+#define DSI_FLAG_EOTP_TX            (1UL << 1)   /*!< PCKHDL_CFG.eotp_tx_en: append end-of-transmission to video packets. */
+#define DSI_FLAG_BTA                (1UL << 2)   /*!< PCKHDL_CFG.bta_en: allow a bus turnaround, required by \ref DSI_Read. */
+
+#define IS_DSI_FLAGS(FLAG) (((FLAG) & ~0x7UL) == 0UL)
+
+    /** End of DSI_FLAG
+         * \}
+         */
+
+    /**
+     * \defgroup    DSI_PHY_DEFAULT D-PHY Defaults
+     *
+     *              Values fixed by this chip's D-PHY databook. They are the same
+     *              for every panel, so \ref DSI_Init programs them without the
+     *              caller having to repeat them.
+     * \{
+     * \ingroup     DSI_Exported_Constants
+     */
+
+    /** PHY_TMR_LPCLK_CFG.phy_clkhs2lp_time. */
+#define DSI_PHY_DEFAULT_CLK_HS2LP       (0x24U)
+    /** PHY_TMR_LPCLK_CFG.phy_clklp2hs_time. */
+#define DSI_PHY_DEFAULT_CLK_LP2HS       (0x3dU)
+    /** PHY_TMR_CFG.phy_hs2lp_time. */
+#define DSI_PHY_DEFAULT_DATA_HS2LP      (0x26U)
+    /** PHY_TMR_CFG.phy_lp2hs_time. */
+#define DSI_PHY_DEFAULT_DATA_LP2HS      (0xA1U)
+    /** CLKMGR_CFG.to_clk_division: about 90ms of HS/LP timeout at a 50MHz lanebyteclk. */
+#define DSI_PHY_DEFAULT_TIMEOUT_CLK_DIV (0x45U)
+    /** Target TxClkEsc rate used to derive the divider; the D-PHY allows 2 to 20MHz.
+     *  Dividing lanebyteclk by this keeps the escape clock at or below it without
+     *  falling under the 2MHz floor. */
+#define DSI_PHY_ESC_CLK_TARGET_KHZ      (20000U)
+
+    /** eDPI line buffer depth, the largest command the panel may hand over at once. */
+#define DSI_EDPI_DEFAULT_CMD_SIZE       (598U)
+
+    /** EDPI_CMD_SIZE.edpi_allowed_cmd_size is 16 bits wide. */
+#define IS_DSI_DPI_COMMAND_SIZE(SIZE)   ((SIZE) <= 0xFFFFUL)
+
+    /** End of DSI_PHY_DEFAULT
          * \}
          */
 
@@ -1053,9 +1138,15 @@ typedef union
      * \ingroup     DSI_Exported_Constants
      */
 #define DSI_DCS_SHORT_PKT_READ      0x00000006U /*!< DCS short read                     */
+#define DSI_DCS_SHORT_PKT_READ_P0   0x00000006U /*!< DCS short read, no parameters      */
+#define DSI_DCS_SHORT_PKT_READ_P1   0x00000016U /*!< DCS short read, one parameter      */
 #define DSI_GEN_SHORT_PKT_READ_P0   0x00000004U /*!< Generic short read, no parameters  */
 #define DSI_GEN_SHORT_PKT_READ_P1   0x00000014U /*!< Generic short read, one parameter  */
 #define DSI_GEN_SHORT_PKT_READ_P2   0x00000024U /*!< Generic short read, two parameters */
+
+#define IS_DSI_READ_PKT(Type) (((Type) == DSI_DCS_SHORT_PKT_READ) || ((Type) == DSI_DCS_SHORT_PKT_READ_P0) || \
+                               ((Type) == DSI_DCS_SHORT_PKT_READ_P1) || ((Type) == DSI_GEN_SHORT_PKT_READ_P0) || \
+                               ((Type) == DSI_GEN_SHORT_PKT_READ_P1) || ((Type) == DSI_GEN_SHORT_PKT_READ_P2))
 
     /** End of DSI_SHORT_READ_PKT_Data_Type
          * \}
@@ -1101,20 +1192,14 @@ typedef union
      * \{
      * \ingroup     DSI_Exported_Constants
      */
-#define PHY_FORCEPLL_ENABLE     1
-#define PHY_FORCEPLL_DISABLE    0
-#define PHY_CLK_ENABLE     1
-#define PHY_CLK_DISABLE    0
-#define PHY_RST_ENABLE     1
-#define PHY_RST_DISABLE    0
-#define PHY_SHUTDOWN_ENABLE     1
-#define PHY_SHUTDOWN_DISABLE    0
-
 #define DSI_STATUS_ERROR        ((FlagStatus)0)
 #define DSI_STATUS_OK           ((FlagStatus)1)
 #ifndef DSI_POLL_TIMEOUT
 #define DSI_POLL_TIMEOUT        0x100000U
 #endif
+
+    /*!< CMD_MODE_CFG / PCKHDL_CFG bit 2: enable the Bus Turn-Around request. */
+#define DSI_PCKHDL_BTA          (1UL << 2)
 
     /*============================================================================*
     *                         Types
@@ -1127,141 +1212,118 @@ typedef union
     /**
      * \brief       DSI init structure definition.
      *
-     *              Used by \ref DSI_Init. Call \ref DSI_StructInit first to load the
-     *              default values, then overwrite the fields that depend on the
-     *              panel and the D-PHY PLL.
+     *              Holds only what genuinely varies per panel. Everything else
+     *              is fixed by the databook and programmed by \ref DSI_Init
+     *              without the caller passing it:
+     *
+     *              | Register field            | Value                              |
+     *              |:--------------------------|:-----------------------------------|
+     *              | PHY_IF_CFG.stop_wait_time | 0                                  |
+     *              | INT_MSK0 / INT_MSK1       | 0x1FFFFF (every source unmasked)   |
+     *              | TO_CNT_CFG HS/LP RX       | 0xFFFF (longest timeout)           |
+     *              | PIN_LP_CMD_TIM in/out     | 0 (filled in by DSI_ConfigVideoMode)|
+     *              | GEN_VCID, DPI_VCID        | 0                                  |
+     *              | HS/LP RD/WR/BTA timeouts  | 0 (disabled)                       |
+     *              | PHY_TMR_CFG / LPCLK_CFG   | \ref DSI_PHY_DEFAULT group          |
+     *              | CLKMGR_CFG divisders      | timeout from \ref DSI_PHY_DEFAULT_TIMEOUT_CLK_DIV,
+     *                                           TxClkEsc derived from LaneByteClkKHz |
+     *              | CMD_MODE_CFG LP bits      | all set, see \ref DSI_LP_CMD_ALL    |
+     *              | PCKHDL_CFG / LPCLK_CTRL   | EoTp and BTA off, clock lane parked in LP |
      *
      * \ingroup     DSI_Exported_Types
      */
     typedef struct
 {
-    uint32_t phy_mode;                  /*!< Selects a D-PHY (\ref DSI_DPHY) or a C-PHY (\ref DSI_CPHY) core. */
-    uint32_t ColorCoding;               /*!< Pixel color coding, \ref DSI_COLOR_RGB565 or \ref DSI_COLOR_RGB888. */
-    uint32_t NumberOfLanes;             /*!< Active data lanes, 1 to 4. The driver writes NumberOfLanes - 1 to the register. */
-    uint32_t StopWaitTime;              /*!< Minimum time the PHY stays in StopState before requesting an HS transfer. */
-    uint32_t InterruptMask0;            /*!< Mask of the INT_ST0 error sources. A 1 un-masks (enables) the source, a 0 masks it. */
-    uint32_t InterruptMask1;            /*!< Mask of the INT_ST1 error sources, same polarity as INT_MSK0. */
-    uint32_t HS_TX_CNT;                 /*!< High-speed transmit timeout, in to_clk_division cycles. */
-    uint32_t LP_RX_CNT;                 /*!< Low-power receive timeout, in to_clk_division cycles. */
-    uint32_t TOCkdiv;                   /*!< Divides lanebyteclk to produce the time-out clock used by the counters. */
-    uint32_t TXEscapeCkdiv;             /*!< Divides lanebyteclk for the TX escape clock. 0 and 1 stop the clock. */
-    uint32_t ModeCfg;                   /*!< \ref DSI_MODE_VIDEO or \ref DSI_MODE_CMD, the operating mode of the host. */
-
-    uint32_t PeripherCharacteristics;   /*!< eotp_tx_lp_en, crc_rx_en, ecc_rx_en, bta_en, eotp_rx_en and eotp_tx_en. */
-    uint32_t GenericPacketVCID;         /*!< Virtual channel of generic packets generated and sent by hardware. */
-    uint32_t GenericTearVCID;           /*!< Virtual channel used for the hardware generated tearing effect. */
-    uint32_t GenericReadBackVCID;       /*!< Virtual channel expected on generic read-back packets. */
-
-    uint32_t AutoHS2LPEnable;           /*!< Lets the clock lane stop automatically when time allows. */
-    uint32_t TxRequestCLKEnable;        /*!< Drives the D-PHY PPI txrequestclkhs signal from the controller. */
-
-    uint32_t ClockLaneHS2LPTime;        /*!< Max clock-lane HS to LP time, in lanebyteclk cycles. */
-    uint32_t ClockLaneLP2HSTime;        /*!< Max clock-lane LP to HS time, in lanebyteclk cycles. */
-    uint32_t DataLaneHS2LPTime;         /*!< Max data-lane HS to LP time, in lanebyteclk cycles. */
-    uint32_t DataLaneLP2HSTime;         /*!< Max data-lane LP to HS time, in lanebyteclk cycles. */
-    uint32_t DataLaneMaxReadTime;       /*!< Max time allowed for a read command, in lanebyteclk cycles. */
-    uint32_t VirtualChannelID;          /*!< Virtual channel indexed into the Video mode and eDPI packets. */
-
-
-    uint8_t phy_shutdownz;              /*!< 0 puts the complete D-PHY macro in power-down, 1 powers it up. */
-    uint8_t phy_enableclk;              /*!< 1 enables the D-PHY clock lane module. */
-    uint8_t phy_forcepll;               /*!< 1 keeps the D-PHY PLL enabled while the D-PHY is in ULPS. */
-    uint8_t phy_rstz;                   /*!< 0 resets the digital section of the D-PHY, 1 releases it. */
-
-    uint32_t ColorModePolarity;         /*!< 1 makes the dpicolorm pin active low, 0 active high. */
-    uint32_t ShutDownPolarity;          /*!< 1 makes the dpishutdn pin active low, 0 active high. */
-    uint32_t HSPolarity;                /*!< \ref DSI_HSPOL_AL or \ref DSI_HSPOL_AH for the dpihsync pin. */
-    uint32_t VSPolarity;                /*!< \ref DSI_VSPOL_AL or \ref DSI_VSPOL_AH for the dpivsync pin. */
-    uint32_t DEPolarity;                /*!< \ref DSI_DEPOL_AL or \ref DSI_DEPOL_AH for the dpidataen pin. */
-    uint32_t CommandSize;               /*!< Pixels the eDPI may send before a WMS command, so both FIFOs fill evenly. */
-
-    uint32_t LPMaxReadPacket;           /*!< Transmission type (HS or LP) of the maximum-size read packet command. */
-    uint32_t LPGenReadTime;             /*!< PRESP_TO counter for a generic read in LP. 0 disables the timeout. */
-    uint32_t HSGenReadTime;             /*!< PRESP_TO counter for a generic read in HS. 0 disables the timeout. */
-    uint32_t LPGenWriteTime;            /*!< PRESP_TO counter for a generic write in LP. 0 disables the timeout. */
-    uint32_t HSGenWriteTime;            /*!< PRESP_TO counter for a generic write in HS. 0 disables the timeout. */
-    uint32_t BTATime;                   /*!< PRESP_TO counter for a Bus Turn-Around. 0 disables the timeout. */
-    uint32_t AcknowledgeRequest;        /*!< 1 requests an acknowledge after every packet transmission. */
-
-    uint32_t LPGenShortWriteNoP;        /*!< 1 sends a generic short write, no parameter, in low-power. */
-    uint32_t LPGenShortWriteOneP;       /*!< 1 sends a generic short write, one parameter, in low-power. */
-    uint32_t LPGenShortWriteTwoP;       /*!< 1 sends a generic short write, two parameters, in low-power. */
-    uint32_t LPGenShortReadNoP;         /*!< 1 sends a generic short read, no parameter, in low-power. */
-    uint32_t LPGenShortReadOneP;        /*!< 1 sends a generic short read, one parameter, in low-power. */
-    uint32_t LPGenShortReadTwoP;        /*!< 1 sends a generic short read, two parameters, in low-power. */
-    uint32_t LPGenLongWrite;            /*!< 1 sends a generic long write in low-power. */
-    uint32_t LPDcsShortWriteNoP;        /*!< 1 sends a DCS short write, no parameter, in low-power. */
-    uint32_t LPDcsShortWriteOneP;       /*!< 1 sends a DCS short write, one parameter, in low-power. */
-    uint32_t LPDcsShortReadNoP;         /*!< 1 sends a DCS short read, no parameter, in low-power. */
-    uint32_t LPDcsLongWrite;            /*!< 1 sends a DCS long write in low-power. */
-
-} DSI_InitTypeDef;
+    uint32_t LaneCount;         /*!< Active data lanes, 1 to 4. Written as LaneCount - 1. */
+    uint32_t ColorCoding;       /*!< \ref DSI_COLOR_RGB565 or \ref DSI_COLOR_RGB888. */
+    uint32_t LaneByteClkKHz;    /*!< lanebyteclk = per-lane HS bit rate / 8, in kHz. The
+                                     TxClkEsc divider is derived from it. */
+    uint32_t Polarity;          /*!< OR of the \ref DSI_Polarity masks. */
+    uint32_t Mode;              /*!< \ref DSI_MODE_CMD to send an init table first and switch later
+                                     through \ref DSI_StartVideoMode, or \ref DSI_MODE_VIDEO to
+                                     start straight in video mode. */
+    uint32_t eDPICommandSize;   /*!< EDPI_CMD_SIZE.edpi_allowed_cmd_size: longest command
+                                     eDPI will accept, bounded by its line buffer. */
+} DSI_ConfigTypeDef;
 
 /**
- * \brief       DSI video mode configuration structure definition.
+ * \brief       DSI video mode configuration, in the pixel domain.
+ *
+ *              Straight off the panel datasheet: \ref DSI_ConfigVideoMode turns
+ *              the pixel and line counts into the lane byte clock cycles the
+ *              host needs, so nothing here involves lanebyteclk arithmetic.
+ *
+ *              The low-power blanking enables and the frame BTA acknowledge are
+ *              fixed by \ref DSI_ConfigVideoMode; use \ref DSI_ConfigVPG for the
+ *              test pattern generator.
  *
  * \ingroup     DSI_Exported_Types
  */
 typedef struct
 {
-    uint32_t Mode;                         /*!< \ref VIDEO_NON_BURST_WITH_SYNC_PULSES, \ref VIDEO_NON_BURST_WITH_SYNC_EVENTS, */
-    /*!<   \ref VIDEO_BURST_MODE_2 or \ref VIDEO_BURST_MODE_3. */
-    uint32_t LPCommandEnable;              /*!< 1 sends non-video packets in low-power during the blanking periods. */
-    uint32_t FrameBTAAcknowledgeEnable;    /*!< 1 requests an acknowledge at the end of every frame. */
-    uint32_t LPHorizontalFrontPorchEnable; /*!< 1 allows a return to low-power inside the HFP period. */
-    uint32_t LPHorizontalBackPorchEnable;  /*!< 1 allows a return to low-power inside the HBP period. */
-    uint32_t LPVerticalActiveEnable;       /*!< 1 allows a return to low-power inside the VACT period. */
-    uint32_t LPVerticalFrontPorchEnable;   /*!< 1 allows a return to low-power inside the VFP period. */
-    uint32_t LPVerticalBackPorchEnable;    /*!< 1 allows a return to low-power inside the VBP period. */
-    uint32_t LPVerticalSyncActiveEnable;   /*!< 1 allows a return to low-power inside the VSA period. */
+    uint32_t Width;             /*!< Horizontal active pixels. */
+    uint32_t Height;            /*!< Vertical active lines. */
+    uint32_t HSync;             /*!< Horizontal sync width, in pixels. */
+    uint32_t HBackPorch;        /*!< Horizontal back porch, in pixels. */
+    uint32_t HFrontPorch;       /*!< Horizontal front porch, in pixels. */
+    uint32_t VSync;             /*!< Vertical sync width, in lines. */
+    uint32_t VBackPorch;        /*!< Vertical back porch, in lines. */
+    uint32_t VFrontPorch;       /*!< Vertical front porch, in lines. */
 
-    uint32_t invact_lpcmd_size;            /*!< Bytes available for a low-power command inside VACT. */
-    uint32_t outvact_lpcmd_size;           /*!< Bytes available for a low-power command outside VACT. */
+    uint32_t PixelClkKHz;       /*!< DPI pixel clock, in kHz. */
+    uint32_t LaneByteClkKHz;    /*!< lanebyteclk, in kHz. */
+    uint32_t LaneCount;         /*!< Number of active data lanes, 1 to 4. */
+    uint32_t BytesPerPixel;     /*!< Bytes each pixel occupies on the link, usually 3 for RGB888. */
 
-    uint32_t PacketSize;                   /*!< Pixels per video packet; equals the panel width for one packet per line. */
-    uint32_t NumberOfChunks;               /*!< Chunks per line, 0 or 1 sends the line as a single packet. */
-    uint32_t NullPacketSize;               /*!< Payload size of the null packet paired with each video packet. */
+    uint32_t Mode;              /*!< \ref VIDEO_NON_BURST_WITH_SYNC_PULSES,
+                                     \ref VIDEO_NON_BURST_WITH_SYNC_EVENTS,
+                                     \ref VIDEO_BURST_MODE_2 or \ref VIDEO_BURST_MODE_3. */
 
-    uint32_t HorizontalSyncActive;         /*!< Horizontal synchronism active duration (in lane byte clock cycles) */
-    uint32_t HorizontalBackPorch;          /*!< Horizontal back-porch duration (in lane byte clock cycles)        */
-    uint32_t HorizontalLine;               /*!< Horizontal line duration (in lane byte clock cycles)              */
-    uint32_t VerticalSyncActive;           /*!< Vertical synchronism active duration, in lines                           */
-    uint32_t VerticalBackPorch;            /*!< Vertical back-porch duration, in lines                                   */
-    uint32_t VerticalFrontPorch;           /*!< Vertical front-porch duration, in lines                                  */
-    uint32_t VerticalActive;               /*!< Vertical active duration, in lines                              */
-
-    uint32_t VPGOrientation;               /*!< \ref VIDEO_VPG_ORIENTATION_V or \ref VIDEO_VPG_ORIENTATION_H. */
-    uint32_t VPGMode;                      /*!< \ref VIDEO_VPG_MODE_V_AND_H or \ref VIDEO_VPG_MODE_ONLY_V. */
-    uint32_t VPGEnable;                    /*!< 1 makes the host send its internal test pattern instead of eDPI pixels. */
-
-} DSI_VidCfgTypeDef;
+    /* Optional, both default to 0, which sends the line as one packet with no
+       filler. A null packet pads the link, so a burst-mode line leaves at the
+       pixel rate instead of at full link rate: raise NullPacketSize to slow the
+       effective pixel rate when the D-PHY runs much faster than the DPI. */
+    uint32_t NumberOfChunks;    /*!< Chunks per line; 0 or 1 means a single packet. */
+    uint32_t NullPacketSize;    /*!< Payload size of the null packet paired with each packet. */
+} DSI_VideoCfgTypeDef;
 
 /**
- * \brief       DSI adapted command mode (eDPI) configuration structure definition.
+ * \brief       DSI adapted command mode (eDPI) tearing-effect configuration.
+ *
+ *              All fields default to 0, which leaves TE off. Pointers this
+ *              structure at \ref DSI_ConfigAdaptedCommandMode once a panel needs
+ *              the host to track its frame boundary.
  *
  * \ingroup     DSI_Exported_Types
  */
 typedef struct
 {
-    uint32_t TEAcknowledgeRequest;  /*!< 1 enables the tearing effect acknowledge request. */
-    uint32_t scan_line_parameter;   /*!< TE output line mode parameter; byte 1 in [31:24], byte 2 in [23:16]. */
-    uint32_t hw_set_scan_line;      /*!< 0 sends set_tear_on, 1 sends set_tear_scanline on a TE request. */
-    uint32_t hw_tear_effect_gen;    /*!< 0 runs the TE protocol right after eDPI data, 1 after eDPI and generic traffic. */
-    uint32_t hw_tear_effect_on;     /*!< 1 lets the tear_request pin trigger TE, 0 requires a software command. */
-
+    uint32_t TEAcknowledgeRequest;  /*!< 1 enables CMD_MODE_CFG.tear_fx_en and, since the
+                                         panel then has to drive the link back, PCKHDL_CFG.bta_en. */
+    uint32_t scan_line_parameter;   /*!< EDPI_TE_HW_CFG.scan_line_parameter: the line the TE
+                                         fires on when hw_set_scan_line is 1 (16 bits). */
+    uint32_t hw_set_scan_line;      /*!< 0 sends set_tear_on, 1 sends set_tear_scanline. */
+    uint32_t hw_tear_effect_gen;    /*!< 0 runs the TE protocol right after eDPI data,
+                                         1 after eDPI and generic traffic. */
+    uint32_t hw_tear_effect_on;     /*!< 1 lets the tear_request pin trigger TE,
+                                         0 requires a software command. */
 } DSI_AdaptedCmdCfgTypeDef;
 
 /**
  * \brief       DSI D-PHY control structure definition.
  *
+ *              Only worth touching on a link that must selectively keep the
+ *              PLL alive or the clock lane parked; the ordinary power-up is
+ *              \ref DSI_ConfigPhyPins.
+ *
  * \ingroup     DSI_Exported_Types
  */
 typedef struct
 {
-    uint32_t phy_forcepll;   /*!< 1 keeps the D-PHY PLL enabled while the D-PHY is in ULPS. */
-    uint32_t phy_enableclk;  /*!< 1 enables the D-PHY clock lane module. */
-    uint32_t phy_rstz;       /*!< 0 resets the digital section of the D-PHY, 1 releases it. */
-    uint32_t phy_shutdownz;  /*!< 0 powers down the complete D-PHY macro, 1 powers it up. */
+    uint32_t ForcePll;       /*!< 1 keeps the D-PHY PLL enabled while the D-PHY is in ULPS. */
+    uint32_t EnableClock;    /*!< 1 enables the D-PHY clock lane module. */
+    uint32_t ReleaseReset;   /*!< 0 resets the digital section of the D-PHY, 1 releases it. */
+    uint32_t PowerUp;        /*!< 0 powers down the complete D-PHY macro, 1 powers it up. */
 } DSI_PhyCfgTypeDef;
 
 /**
@@ -1317,175 +1379,87 @@ typedef struct
 void DSI_DeInit(DSI_TypeDef *DSIx);
 
 /**
- * \brief       Fills each DSI_InitTypeDef member with its default value.
+ * \brief       Initialize the DSI host controller.
  *
- *              Gives panel-independent defaults so the caller only has to
- *              overwrite the fields that depend on the panel and the D-PHY PLL.
+ *              Programs lanes, PHY interface, clock manager, DPI and command
+ *              mode transmission, then derives the timeouts and PHY timings
+ *              from LaneByteClkKHz and PixelClkKHz. Follows the DWC MIPI DSI
+ *              Host programming flow (reset -> PHY_IF_CFG -> INT_MSK -> DPI ->
+ *              PHY timing).
  *
- * \param[in]   DSI_Init : pointer to a DSI_InitTypeDef structure which will be
- *                         initialized.
+ * \param[in]   DSIx   : pointer to the DSI peripheral registers.
+ * \param[in]   Config : pointer to DSI_ConfigTypeDef that contains the
+ *                       panel and D-PHY PLL parameters.
  *
- * \note The default settings for the DSI_InitTypeDef members are shown in the
- *       following table. The register and bit names refer to the DWC MIPI DSI
- *       Host Controller databook (v1.51a).
- *       | DSI_InitTypeDef Member  | Default Value                | Description                                                                     |
- *       |:------------------------|:-----------------------------|:--------------------------------------------------------------------------------|
- *       | phy_mode                | \ref DSI_DPHY                | Selects a D-PHY (DSI_DPHY) or a C-PHY (DSI_CPHY) core.                          |
- *       | ColorCoding             | \ref DSI_COLOR_RGB888        | Pixel color coding for Video mode and eDPI packets.                             |
- *       | NumberOfLanes           | \ref DSI_1_LANE              | Active data lanes. The driver writes NumberOfLanes - 1, so 1 means lane 0 only. |
- *       | StopWaitTime            | 0                            | Minimum time the PHY stays in StopState before requesting an HS TX.             |
- *       | InterruptMask0          | 0x1FFFFF                     | INT_ST0 error source mask. A 1 un-masks (enables) the source, a 0 masks it.     |
- *       | InterruptMask1          | 0x1FFFFF                     | INT_ST1 error source mask, same polarity as INT_MSK0.                           |
- *       | HS_TX_CNT               | 0xFFFF                       | HS transmit timeout, in to_clk_division cycles (16-bit, max defers the reset).  |
- *       | LP_RX_CNT               | 0xFFFF                       | LP receive timeout, in to_clk_division cycles (16-bit).                         |
- *       | TOCkdiv                 | 0                            | Divides lanebyteclk to produce the time-out clock used by the counters.         |
- *       | TXEscapeCkdiv           | 0                            | Divides lanebyteclk for the TX escape clock (0 and 1 stop the clock).           |
- *       | ModeCfg                 | \ref DSI_MODE_CMD            | 0 = video mode, 1 = command mode.                                               |
- *       | PeripherCharacteristics | 0                            | EoTp TX/RX, BTA, ECC RX and CRC RX packet handling enables.                     |
- *       | GenericPacketVCID       | 0                            | Virtual channel of generic packets generated and transmitted by hardware.       |
- *       | GenericTearVCID         | 0                            | Virtual channel used for the hardware generated tearing effect.                 |
- *       | GenericReadBackVCID     | 0                            | Virtual channel expected on generic read-back packets.                          |
- *       | AutoHS2LPEnable         | ENABLE                       | Lets the controller stop the clock lane automatically when time allows.         |
- *       | TxRequestCLKEnable      | ENABLE                       | Drives the D-PHY PPI txrequestclkhs signal from the controller.                 |
- *       | ClockLaneHS2LPTime      | 0                            | Max clock-lane HS to LP time, in lanebyteclk cycles.                            |
- *       | ClockLaneLP2HSTime      | 0                            | Max clock-lane LP to HS time, in lanebyteclk cycles.                            |
- *       | DataLaneHS2LPTime       | 0                            | Max data-lane HS to LP time, in lanebyteclk cycles.                             |
- *       | DataLaneLP2HSTime       | 0                            | Max data-lane LP to HS time, in lanebyteclk cycles.                             |
- *       | DataLaneMaxReadTime     | 0                            | Max time allowed for a read command, in lanebyteclk cycles.                     |
- *       | VirtualChannelID        | 0                            | Virtual channel indexed into the Video mode / eDPI packets.                     |
- *       | phy_shutdownz           | 1                            | 0 puts the complete D-PHY macro in power-down, 1 powers it up.                  |
- *       | phy_enableclk           | 1                            | 1 enables the D-PHY clock lane module.                                          |
- *       | phy_forcepll            | 0                            | 1 keeps the D-PHY PLL enabled while the D-PHY is in ULPS.                       |
- *       | phy_rstz                | 1                            | 0 resets the digital section of the D-PHY, 1 releases it.                       |
- *       | ColorModePolarity       | 0                            | 1 makes the dpicolorm pin active low (0 = active high).                         |
- *       | ShutDownPolarity        | 0                            | 1 makes the dpishutdn pin active low (0 = active high).                         |
- *       | HSPolarity              | \ref DSI_HSPOL_AH            | 1 makes the dpihsync pin active low (0 = active high).                          |
- *       | VSPolarity              | \ref DSI_VSPOL_AH            | 1 makes the dpivsync pin active low (0 = active high).                          |
- *       | DEPolarity              | \ref DSI_DEPOL_AH            | 1 makes the dpidataen pin active low (0 = active high).                         |
- *       | CommandSize             | 0                            | Pixels the eDPI may send before a WMS command, so both FIFOs fill evenly.       |
- *       | LPMaxReadPacket         | \ref DSI_LP_MRDP_DISABLE     | Transmission type (HS/LP) of the maximum-size read packet command.              |
- *       | LPGenReadTime           | 0                            | PRESP_TO counter for generic read in LP, 0 disables it.                         |
- *       | HSGenReadTime           | 0                            | PRESP_TO counter for generic read in HS, 0 disables it.                         |
- *       | LPGenWriteTime          | 0                            | PRESP_TO counter for generic write in LP, 0 disables it.                        |
- *       | HSGenWriteTime          | 0                            | PRESP_TO counter for generic write in HS, 0 disables it.                        |
- *       | BTATime                 | 0                            | PRESP_TO counter for Bus Turn-Around, 0 disables it.                            |
- *       | AcknowledgeRequest      | \ref DSI_ACKNOWLEDGE_DISABLE | 1 requests an acknowledge after every packet transmission.                      |
- *       | LPGenShortWriteNoP      | \ref DSI_LP_GSW0P_ENABLE     | 1 sends generic short write, no parameter, in low-power.                        |
- *       | LPGenShortWriteOneP     | \ref DSI_LP_GSW1P_ENABLE     | 1 sends generic short write, one parameter, in low-power.                       |
- *       | LPGenShortWriteTwoP     | \ref DSI_LP_GSW2P_ENABLE     | 1 sends generic short write, two parameters, in low-power.                      |
- *       | LPGenShortReadNoP       | \ref DSI_LP_GSR0P_ENABLE     | 1 sends generic short read, no parameter, in low-power.                         |
- *       | LPGenShortReadOneP      | \ref DSI_LP_GSR1P_ENABLE     | 1 sends generic short read, one parameter, in low-power.                        |
- *       | LPGenShortReadTwoP      | \ref DSI_LP_GSR2P_ENABLE     | 1 sends generic short read, two parameters, in low-power.                       |
- *       | LPGenLongWrite          | \ref DSI_LP_GLW_ENABLE       | 1 sends generic long write in low-power.                                        |
- *       | LPDcsShortWriteNoP      | \ref DSI_LP_DSW0P_ENABLE     | 1 sends DCS short write, no parameter, in low-power.                            |
- *       | LPDcsShortWriteOneP     | \ref DSI_LP_DSW1P_ENABLE     | 1 sends DCS short write, one parameter, in low-power.                           |
- *       | LPDcsShortReadNoP       | \ref DSI_LP_DSR0P_ENABLE     | 1 sends DCS short read, no parameter, in low-power.                             |
- *       | LPDcsLongWrite          | \ref DSI_LP_DLW_ENABLE       | 1 sends DCS long write in low-power.                                            |
+ * \return      DSI_STATUS_OK.
  *
- * \note TOCkdiv, TXEscapeCkdiv, CommandSize and the PHY timing fields are left
- *       at 0 because they depend on the lane byte clock and the D-PHY PLL of the
- *       actual panel; the caller must set them before \ref DSI_Init.
+ * \note        Every field is range-checked with assert_param(IS_DSI_*), so a
+ *              value out of range trips an assertion rather than returning an
+ *              error. Both callers pass compile-time constants; the checks are
+ *              there to catch a bad table entry during bring-up.
+ *
+ * \note        \ref DSI_ConfigPhyPins must run after this to release the PHY.
  *
  * <b>Example usage</b>
  * \code{.c}
  *
  * void driver_dsi_init(void)
  * {
- *     DSI_InitTypeDef DSI_InitStruct = {0};
+ *     static const DSI_ConfigTypeDef cfg =
+ *     {
+ *         .LaneCount       = 1,
+ *         .ColorCoding     = DSI_COLOR_RGB888,
+ *         .LaneByteClkKHz  = 50000,   // 400Mbps / 8
+ *         .Polarity        = 0,       // every DPI pin active high
+ *         .Mode            = DSI_MODE_CMD,
+ *         .eDPICommandSize = DSI_EDPI_DEFAULT_CMD_SIZE,
+ *     };
  *
- *     // Start from the default values.
- *     DSI_StructInit(&DSI_InitStruct);
+ *     DSI_Init(DSI, &cfg);
  *
- *     // Overwrite the panel / PLL dependent fields.
- *     DSI_InitStruct.NumberOfLanes      = 1;
- *     DSI_InitStruct.TOCkdiv            = 0x14;
- *     DSI_InitStruct.TXEscapeCkdiv      = 0x03;
- *     DSI_InitStruct.CommandSize        = 598;
- *     DSI_InitStruct.ClockLaneHS2LPTime = 0x24;
- *     DSI_InitStruct.ClockLaneLP2HSTime = 0x3D;
- *     DSI_InitStruct.DataLaneHS2LPTime  = 0x26;
- *     DSI_InitStruct.DataLaneLP2HSTime  = 0xA1;
- *
- *     DSI_Init(DSI, &DSI_InitStruct);
+ *     // Every packet type goes out in low-power by default; narrow it here.
+ *     DSI_ConfigLPM(DSI, DSI_LP_CMD_ALL & ~DSI_LP_DCS_LONG_WRITE);
  * }
  * \endcode
  *
  * \ingroup     DSI_Exported_Functions
  */
-void DSI_StructInit(DSI_InitTypeDef *DSI_Init);
+FlagStatus DSI_Init(DSI_TypeDef *DSIx, const DSI_ConfigTypeDef *Config);
 
 /**
- * \brief       Initialize/clk-config the DSI host controller.
+ * \brief       Select which packet types go out in low-power.
  *
- *              Programs lanes, PHY interface, clock manager, DPI/eDPI, command
- *              mode transmission and PHY timing registers, following the
- *              DWC MIPI DSI Host programming flow (reset -> PHY_IF_CFG ->
- *              INT_MSK -> DPI/DBI -> PHY timing).
+ *              \ref DSI_Init enables every type in \ref DSI_LP_CMD_ALL; call
+ *              this afterwards to keep a single transaction in high-speed.
  *
- * \param[in]   DSIx     : pointer to the DSI peripheral registers.
- * \param[in]   DSI_Init : pointer to DSI_InitTypeDef structure that contains
- *                         all the initialization parameters.
+ * \param[in]   DSIx : pointer to the DSI peripheral registers.
+ * \param[in]   Mask : OR of the \ref DSI_LP masks.
  *
- * \return      DSI_STATUS_OK on success, DSI_STATUS_ERROR on invalid arguments.
+ * \return      DSI_STATUS_OK on success, DSI_STATUS_ERROR if a bit outside the
+ *              defined masks is set.
  *
  * <b>Example usage</b>
  * \code{.c}
  *
- * void driver_dsi_init(void)
- * {
- *     DSI_InitTypeDef DSI_InitStruct = {0};
- *
- *     DSI_InitStruct.VirtualChannelID   = 0;
- *     DSI_InitStruct.phy_mode           = 0;            // D-PHY
- *     DSI_InitStruct.NumberOfLanes      = 1;
- *     DSI_InitStruct.ColorCoding        = 5;            // RGB888
- *     DSI_InitStruct.ModeCfg            = DSI_MODE_CMD; // start in command mode
- *     DSI_InitStruct.TOCkdiv            = 0x14;
- *     DSI_InitStruct.TXEscapeCkdiv      = 0x03;         // TxClkEsc must be 2-20MHz
- *     DSI_InitStruct.CommandSize        = 598;
- *
- *     DSI_InitStruct.AutoHS2LPEnable    = ENABLE;
- *     DSI_InitStruct.TxRequestCLKEnable = ENABLE;
- *     DSI_InitStruct.ClockLaneHS2LPTime = 0x24;
- *     DSI_InitStruct.ClockLaneLP2HSTime = 0x3D;
- *     DSI_InitStruct.DataLaneHS2LPTime  = 0x26;
- *     DSI_InitStruct.DataLaneLP2HSTime  = 0xA1;
- *
- *     // Send every command packet type in low-power mode.
- *     DSI_InitStruct.LPGenShortWriteNoP  = DSI_LP_GSW0P_ENABLE;
- *     DSI_InitStruct.LPGenShortWriteOneP = DSI_LP_GSW1P_ENABLE;
- *     DSI_InitStruct.LPGenShortWriteTwoP = DSI_LP_GSW2P_ENABLE;
- *     DSI_InitStruct.LPGenShortReadNoP   = DSI_LP_GSR0P_ENABLE;
- *     DSI_InitStruct.LPGenShortReadOneP  = DSI_LP_GSR1P_ENABLE;
- *     DSI_InitStruct.LPGenShortReadTwoP  = DSI_LP_GSR2P_ENABLE;
- *     DSI_InitStruct.LPGenLongWrite      = DSI_LP_GLW_ENABLE;
- *     DSI_InitStruct.LPDcsShortWriteNoP  = DSI_LP_DSW0P_ENABLE;
- *     DSI_InitStruct.LPDcsShortWriteOneP = DSI_LP_DSW1P_ENABLE;
- *     DSI_InitStruct.LPDcsShortReadNoP   = DSI_LP_DSR0P_ENABLE;
- *     DSI_InitStruct.LPDcsLongWrite      = DSI_LP_DLW_ENABLE;
- *
- *     if (DSI_Init(DSI, &DSI_InitStruct) != DSI_STATUS_OK)
- *     {
- *         // invalid lane count or color coding
- *         return;
- *     }
- * }
+ * // Send this one command in high-speed while the rest stay in low-power.
+ * DSI_ConfigLPM(DSI, DSI_LP_CMD_ALL & ~DSI_LP_DCS_LONG_WRITE);
  * \endcode
  *
  * \ingroup     DSI_Exported_Functions
  */
-FlagStatus DSI_Init(DSI_TypeDef *DSIx, const DSI_InitTypeDef *DSI_Init);
+FlagStatus DSI_ConfigLPM(DSI_TypeDef *DSIx, uint32_t Mask);
 
 /**
  * \brief       Configure the DSI to operate in Video mode.
  *
- *              Programs video transmission mode (burst / non-burst), low-power
- *              transition areas, horizontal/vertical timing and the video
- *              pattern generator.
+ *              Converts the panel pixel timing into lane byte clock cycles,
+ *              works out the largest LP command each blanking window can carry,
+ *              then programs the transmission mode (burst / non-burst), the
+ *              low-power blanking areas, chunking, the null packet size and both
+ *              the horizontal and vertical timings.
  *
  * \param[in]   DSIx   : pointer to the DSI peripheral registers.
- * \param[in]   VidCfg : pointer to DSI_VidCfgTypeDef structure that contains
- *                       the video mode configuration parameters.
+ * \param[in]   VidCfg : pointer to DSI_VideoCfgTypeDef, in pixels and lines.
  *
  * \return      DSI_STATUS_OK on success, DSI_STATUS_ERROR on invalid arguments.
  *
@@ -1494,41 +1468,18 @@ FlagStatus DSI_Init(DSI_TypeDef *DSIx, const DSI_InitTypeDef *DSI_Init);
  *
  * void driver_dsi_video_mode_init(void)
  * {
- *     DSI_VidCfgTypeDef VidCfg = {0};
- *
- *     VidCfg.Mode            = VIDEO_BURST_MODE_2;
- *     VidCfg.LPCommandEnable = ENABLE;
- *     // Allow the host to insert LP commands in every blanking period.
- *     VidCfg.LPVerticalSyncActiveEnable    = ENABLE;
- *     VidCfg.LPVerticalBackPorchEnable     = ENABLE;
- *     VidCfg.LPVerticalFrontPorchEnable    = ENABLE;
- *     VidCfg.LPVerticalActiveEnable        = ENABLE;
- *     VidCfg.LPHorizontalBackPorchEnable   = ENABLE;
- *     VidCfg.LPHorizontalFrontPorchEnable  = ENABLE;
- *
- *     // Largest LP command the line timing can carry, in bytes.
- *     VidCfg.invact_lpcmd_size  = 16;
- *     VidCfg.outvact_lpcmd_size = 45;
- *
- *     // One video packet per line, no chunking, no null packets.
- *     VidCfg.PacketSize     = 454;
- *     VidCfg.NumberOfChunks = 0;
- *     VidCfg.NullPacketSize = 0;
- *
- *     // Horizontal timings are in lane byte clock cycles.
- *     VidCfg.HorizontalSyncActive = 10;
- *     VidCfg.HorizontalBackPorch  = 50;
- *     VidCfg.HorizontalLine       = 2380;
- *     // Vertical timings are in lines.
- *     VidCfg.VerticalSyncActive = 2;
- *     VidCfg.VerticalBackPorch  = 8;
- *     VidCfg.VerticalFrontPorch = 8;
- *     VidCfg.VerticalActive     = 454;
- *
- *     // Feed real pixels from eDPI, not the internal test pattern.
- *     VidCfg.VPGEnable      = 0;
- *     VidCfg.VPGMode        = VIDEO_VPG_MODE_V_AND_H;
- *     VidCfg.VPGOrientation = VIDEO_VPG_ORIENTATION_H;
+ *     const DSI_VideoCfgTypeDef VidCfg =
+ *     {
+ *         .Width = 454, .Height = 454,
+ *         .HSync = 2, .HBackPorch = 10, .HFrontPorch = 10,
+ *         .VSync = 2, .VBackPorch = 8, .VFrontPorch = 8,
+ *         .PixelClkKHz    = 10000,
+ *         .LaneByteClkKHz = 50000,
+ *         .LaneCount      = 1,
+ *         .BytesPerPixel  = 3,
+ *         .Mode           = VIDEO_BURST_MODE_2,
+ *         // .NullPacketSize = 0x1e00,  // pad the link to slow the pixel rate
+ *     };
  *
  *     DSI_ConfigVideoMode(DSI, &VidCfg);
  * }
@@ -1536,7 +1487,7 @@ FlagStatus DSI_Init(DSI_TypeDef *DSIx, const DSI_InitTypeDef *DSI_Init);
  *
  * \ingroup     DSI_Exported_Functions
  */
-FlagStatus DSI_ConfigVideoMode(DSI_TypeDef *DSIx, const DSI_VidCfgTypeDef *VidCfg);
+FlagStatus DSI_ConfigVideoMode(DSI_TypeDef *DSIx, const DSI_VideoCfgTypeDef *VidCfg);
 
 /**
  * \brief       Start the DSI in Video mode.
@@ -1559,15 +1510,16 @@ FlagStatus DSI_ConfigVideoMode(DSI_TypeDef *DSIx, const DSI_VidCfgTypeDef *VidCf
 void DSI_StartVideoMode(DSI_TypeDef *DSIx);
 
 /**
- * \brief       Configure the DSI to operate in Adapted Command mode.
+ * \brief       Configure the adapted command mode tearing-effect handling.
  *
- *              Sets up Tearing Effect (TE) acknowledge and the eDPI hardware TE
- *              registers. When TE acknowledge is enabled, PCKHDL_CFG.bta_en is
- *              automatically asserted so the BTA request can be issued.
+ *              Programmes CMD_MODE_CFG.tear_fx_en and the EDPI_TE_HW_CFG
+ *              fields. When TEAcknowledgeRequest is set, PCKHDL_CFG.bta_en is
+ *              asserted as well, because the panel has to turn the link around
+ *              to send the acknowledge back.
  *
- * \param[in]   DSIx           : pointer to the DSI peripheral registers.
- * \param[in]   AdaptedCmdCfg  : pointer to DSI_AdaptedCmdCfgTypeDef structure
- *                               that contains the TE configuration parameters.
+ * \param[in]   DSIx          : pointer to the DSI peripheral registers.
+ * \param[in]   AdaptedCmdCfg : pointer to DSI_AdaptedCmdCfgTypeDef. Pass a
+ *                              zeroed structure to leave TE off.
  *
  * \return      DSI_STATUS_OK on success, DSI_STATUS_ERROR on invalid arguments.
  *
@@ -1576,16 +1528,16 @@ void DSI_StartVideoMode(DSI_TypeDef *DSIx);
  *
  * void driver_dsi_cmd_mode_init(void)
  * {
- *     DSI_AdaptedCmdCfgTypeDef AdaptedCmdCfg = {0};
+ *     DSI_AdaptedCmdCfgTypeDef AdaptedCmdCfg = {0};   // TE off
  *
- *     // Enable TE so the host knows when the panel has finished a frame.
+ *     // Or, once the panel is wired for it:
  *     AdaptedCmdCfg.TEAcknowledgeRequest = DSI_TE_ACKNOWLEDGE_ENABLE;
  *
  *     // Optional: let the host generate the TE pulse itself.
- *     AdaptedCmdCfg.hw_tear_effect_on  = 1;
- *     AdaptedCmdCfg.hw_tear_effect_gen = 1;
- *     AdaptedCmdCfg.hw_set_scan_line   = 1;
- *     AdaptedCmdCfg.scan_line_parameter = 0;
+ *     AdaptedCmdCfg.hw_tear_effect_on    = 1;
+ *     AdaptedCmdCfg.hw_tear_effect_gen   = 1;
+ *     AdaptedCmdCfg.hw_set_scan_line     = 1;
+ *     AdaptedCmdCfg.scan_line_parameter  = 0;
  *
  *     DSI_ConfigAdaptedCommandMode(DSI, &AdaptedCmdCfg);
  * }
@@ -1597,19 +1549,46 @@ FlagStatus DSI_ConfigAdaptedCommandMode(DSI_TypeDef *DSIx,
                                         const DSI_AdaptedCmdCfgTypeDef *AdaptedCmdCfg);
 
 /**
- * \brief       Configure and power-up the D-PHY through the host interface.
+ * \brief       Enable or disable the video pattern generator.
  *
- *              Brings the D-PHY out of shutdown/reset using PHY_RSTZ and waits
- *              until all active lanes (read from PHY_IF_CFG.n_lanes) reach Stop
- *              state. Precondition: the RTL-specific D-PHY PLL must already be
- *              configured.
+ *              With VPG on the host transmits its own test pattern instead of
+ *              the eDPI pixels, which is how the link can be brought up without
+ *              a panel attached.
  *
- * \param[in]   DSIx   : pointer to the DSI peripheral registers.
- * \param[in]   PhyCfg : pointer to DSI_PhyCfgTypeDef structure that contains
- *                       the PHY control parameters.
+ * \param[in]   DSIx         : pointer to the DSI peripheral registers.
+ * \param[in]   Enable       : 1 to send the internal pattern, 0 for real pixels.
+ * \param[in]   Mode         : \ref VIDEO_VPG_MODE_V_AND_H or \ref VIDEO_VPG_MODE_ONLY_V.
+ * \param[in]   Orientation  : \ref VIDEO_VPG_ORIENTATION_V or \ref VIDEO_VPG_ORIENTATION_H.
  *
- * \return      DSI_STATUS_OK on success, DSI_STATUS_ERROR on invalid arguments
- *              or timeout waiting for Stop state.
+ * \return      DSI_STATUS_OK on success, DSI_STATUS_ERROR on invalid arguments.
+ *
+ * <b>Example usage</b>
+ * \code{.c}
+ *
+ * // Send a horizontal-bar test pattern instead of panel data.
+ * DSI_ConfigVPG(DSI, 1, VIDEO_VPG_MODE_V_AND_H, VIDEO_VPG_ORIENTATION_H);
+ * \endcode
+ *
+ * \ingroup     DSI_Exported_Functions
+ */
+FlagStatus DSI_ConfigVPG(DSI_TypeDef *DSIx, uint32_t Enable,
+                         uint32_t Mode, uint32_t Orientation);
+
+/**
+ * \brief       Power up the D-PHY through the host interface.
+ *
+ *              Does the D-PHY power-up sequence the databook asks for: drive
+ *              PHY_RSTZ low, pulse the PHY test interface clear, release reset
+ *              and shutdown, then wait until all active lanes (read back from
+ *              PHY_IF_CFG.n_lanes) reach Stop (LP-11) state.
+ *
+ *              Precondition: the RTL D-PHY PLL must already be configured with
+ *              DPHY_Init(), and \ref DSI_Init must have run.
+ *
+ * \param[in]   DSIx : pointer to the DSI peripheral registers.
+ *
+ * \return      DSI_STATUS_OK once every active lane is in Stop state,
+ *              DSI_STATUS_ERROR on timeout (PHY_STATUS shows which lane stuck).
  *
  * <b>Example usage</b>
  * \code{.c}
@@ -1619,16 +1598,9 @@ FlagStatus DSI_ConfigAdaptedCommandMode(DSI_TypeDef *DSIx,
  *     // The RTL D-PHY PLL must be configured first.
  *     DPHY_Init(1, 40, 400);   // 1 lane, 40MHz CKREF, 400MHz HS bit clock
  *
- *     DSI_PhyCfgTypeDef PhyCfg = {0};
- *     PhyCfg.phy_forcepll  = PHY_FORCEPLL_DISABLE;
- *     PhyCfg.phy_enableclk = PHY_CLK_ENABLE;
- *     PhyCfg.phy_rstz      = PHY_RST_ENABLE;
- *     PhyCfg.phy_shutdownz = PHY_SHUTDOWN_ENABLE;
- *
  *     // Returns only once all active lanes are in Stop (LP-11) state.
- *     if (DSI_ConfigPhy(DSI, &PhyCfg) != DSI_STATUS_OK)
+ *     if (DSI_ConfigPhyPins(DSI) != DSI_STATUS_OK)
  *     {
- *         // panel link not ready, PHY_STATUS tells which lane is stuck
  *         return;
  *     }
  * }
@@ -1636,7 +1608,7 @@ FlagStatus DSI_ConfigAdaptedCommandMode(DSI_TypeDef *DSIx,
  *
  * \ingroup     DSI_Exported_Functions
  */
-FlagStatus DSI_ConfigPhy(DSI_TypeDef *DSIx, const DSI_PhyCfgTypeDef *PhyCfg);
+FlagStatus DSI_ConfigPhyPins(DSI_TypeDef *DSIx);
 
 /**
  * \brief       Configure and enable the Auto-ULPS control scheme.
@@ -1783,6 +1755,84 @@ FlagStatus DSI_LongWrite(DSI_TypeDef *DSIx,
                          uint32_t NbParams,
                          uint32_t Param1,
                          uint8_t *ParametersTable);
+
+/**
+ * \brief       Send a DCS/Generic read and collect the payload.
+ *
+ *              Waits for any earlier read to finish, issues the read command,
+ *              then hands back the first NbBytes of the payload.
+ *
+ *              Only valid in command mode, and the panel must be able to drive
+ *              the link back. \ref DSI_Init leaves every packet type in
+ *              low-power but keeps PCKHDL_CFG.bta_en clear, so a caller that
+ *              reads must first enable the matching \ref DSI_LP read mask
+ *              through \ref DSI_ConfigLPM and set \ref DSI_FLAG_BTA in
+ *              PCKHDL_CFG.
+ *
+ * \param[in]   DSIx      : pointer to the DSI peripheral registers.
+ * \param[in]   ChannelID : virtual channel ID of the packet (2 bits).
+ * \param[in]   Mode      : DSI read data type (e.g. DSI_DCS_SHORT_PKT_READ).
+ * \param[in]   Param1    : first parameter byte (the DCS command code).
+ * \param[in]   Param2    : second parameter byte, ignored for 0-parameter reads.
+ * \param[out]  pBuffer   : destination for the payload; may be NULL to discard.
+ * \param[in]   NbBytes   : how many payload bytes to collect.
+ *
+ * \return      DSI_STATUS_OK on success, DSI_STATUS_ERROR on invalid arguments,
+ *              a command FIFO that never drained, or a read that timed out.
+ *
+ * <b>Example usage</b>
+ * \code{.c}
+ *
+ * void driver_dsi_read_id(void)
+ * {
+ *     uint8_t id[3] = {0};
+ *
+ *     // DCS 0xDA, one parameter (0x00), three payload bytes expected.
+ *     if (DSI_Read(DSI, 0, DSI_DCS_SHORT_PKT_READ, 0xDA, 0x00, id, sizeof(id))
+ *         != DSI_STATUS_OK)
+ *     {
+ *         return;
+ *     }
+ * }
+ * \endcode
+ *
+ * \ingroup     DSI_Exported_Functions
+ */
+FlagStatus DSI_Read(DSI_TypeDef *DSIx,
+                    uint32_t ChannelID,
+                    uint32_t Mode,
+                    uint32_t Param1,
+                    uint32_t Param2,
+                    uint8_t *pBuffer,
+                    uint32_t NbBytes);
+
+/**
+ * \brief       Check whether every queued command packet has been sent.
+ *
+ *              The command and payload FIFOs being empty is the only reliable
+ *              sign that a write really went out on the link, so this is what
+ *              to wait on before reconfiguring or powering the host down.
+ *
+ * \param[in]   DSIx : pointer to the DSI peripheral registers.
+ *
+ * \return      DSI_STATUS_OK when the command FIFO is empty and idle,
+ *              DSI_STATUS_ERROR otherwise.
+ *
+ * <b>Example usage</b>
+ * \code{.c}
+ *
+ * void driver_dsi_before_mode_switch(void)
+ * {
+ *     // Let the last panel command reach the panel before switching modes.
+ *     while (DSI_IsCmdFifoEmpty(DSI) != DSI_STATUS_OK)
+ *     {
+ *     }
+ * }
+ * \endcode
+ *
+ * \ingroup     DSI_Exported_Functions
+ */
+FlagStatus DSI_IsCmdFifoEmpty(DSI_TypeDef *DSIx);
 
 /**
  * \brief       Power-up / start the DSI host controller.
