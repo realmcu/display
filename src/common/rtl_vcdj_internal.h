@@ -72,11 +72,11 @@ extern "C" {
 
 /** \brief Alignment required for every buffer handed to the decoder core.
   *
-  * TODO(hardware-contract): waiting for the hardware contract. 4096 mirrors the
-  * vendor `LINMEM_ALIGN` page assumption and is safe but wasteful on this SoC;
-  * reduce once the real AXI/alignment requirement is known.
+  * The vendor `LINMEM_ALIGN` page assumption of 4096 is a Linux host convenience.
+  * The documented minimum of 128 bits lets the shaper miss full-length bursts
+  * whenever the allocator lands a plane off a 128-byte boundary.
   */
-#define VCDJ_DMA_ALIGN                  4096U
+#define VCDJ_DMA_ALIGN                  128U
 
 /**
  * \brief Narrow set of platform services the platform independent layer needs.
