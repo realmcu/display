@@ -124,6 +124,37 @@ extern "C" {
   * \}
   */
 
+/**
+ * \defgroup    LCDC_DBIC_RX_Timeout LCDC DBIC RX Timeout
+ * \{
+ * \ingroup     LCDC_DBIC_Exported_Constants
+ */
+#ifndef DBIC_RX_TIMEOUT_POLLS
+#define DBIC_RX_TIMEOUT_POLLS       ((uint32_t)0x100000)    /*!< Maximum consecutive status polls without received data in \ref DBIC_ReceiveBuf. */
+#endif
+
+/** End of LCDC_DBIC_RX_Timeout
+  * \}
+  */
+
+/**
+ * \defgroup    LCDC_DBIC_ERR LCDC DBIC Error Code
+ * \{
+ * \ingroup     LCDC_DBIC_Exported_Constants
+ */
+typedef enum
+{
+    DBIC_SUCCESS = 0x0,             /*!< DBIC transfer completed successfully. */
+    DBIC_ERR_NULL_BUFFER,           /*!< Data buffer is NULL. */
+    DBIC_ERR_INVALID_PARAMETER,     /*!< Command length, address length, dummy cycles or data length is out of range. */
+    DBIC_ERR_RX_TIMEOUT,            /*!< No data was received within \ref DBIC_RX_TIMEOUT_POLLS consecutive polls. */
+    DBIC_ERR_BUSY_TIMEOUT,          /*!< DBIC stayed busy for \ref DBIC_RX_TIMEOUT_POLLS consecutive polls after all data was received. */
+} DBIC_ERR;
+
+/** End of LCDC_DBIC_ERR
+  * \}
+  */
+
 /** End of LCDC_DBIC_Exported_Constants
   * \}
   */
@@ -401,25 +432,46 @@ void DBIC_Init(LCDC_DBICCfgTypeDef *DBIC_InitStruct);
 void DBIC_SendBuf(uint8_t *buf, uint32_t len);
 
 /**
- * \brief  Read data through DBIC interface.
+ * \brief  Send command and address, then read data through DBIC interface in single-lane mode.
  *
- * \param[in] addr: The address to be read.
- * \param[in] data_len: The length of the data to be received.
- * \param[out] data: Data buffer for receiving.
- * \param[in] rd_dummy_len: Delay cycles for receiving data in user mode.
+ * \param[in] cmd: Command to be sent. The low cmd_len bytes are sent, MSB first.
+ * \param[in] cmd_len: The length of the command in bytes. This value can be from 0 to 3.
+ * \param[in] addr: Address to be sent. The low addr_len bytes are sent, MSB first.
+ * \param[in] addr_len: The length of the address in bytes. This value can be from 0 to 4.
+ * \param[in] rd_dummy_len: Delay cycles before receiving data, measured in DBIC bus clock.
+ *            This value can be from 0 to 0xFFF.
+ * \param[out] read_buf: Data buffer for receiving, with space for at least read_len bytes.
+ * \param[in] read_len: The length of the data to be received in bytes.
+ *            This value can be from 1 to 0xFFFFFF.
+ *
+ * \return  The status of data receiving.
+ * \retval DBIC_SUCCESS: Data received successfully.
+ * \retval Others: Data receiving failed, cause refers to \ref LCDC_DBIC_ERR.
+ *
+ * \note   Command, address and data phases use a single lane in SDR mode, and data
+ *         is received on SIO0. This function polls the RX FIFO and blocks until all
+ *         data is received or \ref DBIC_RX_TIMEOUT_POLLS consecutive polls find no data.
+ *         No transfer is started when a parameter is invalid.
+ *         Call it only when no display transfer is active. The transfer configuration
+ *         and the AXI MUX mode are restored, and DBIC is left disabled. Panels that
+ *         control DCX with a GPIO must set the DCX level before calling this function.
  *
  * <b>Example usage</b>
  * \code{.c}
  *
  * void driver_lcdc_dbic_init(void)
  * {
- *     uint8_t buf[4] = {0, 0, 0, 0};
- *     DBIC_ReceiveBuf(0x09, 4, buf, 0);
+ *     uint8_t buf[3] = {0, 0, 0};
+ *     DBIC_ERR ret = DBIC_ReceiveBuf(0x03, 1, 0x000400, 3, 0, buf, 3);
+ *     if (ret != DBIC_SUCCESS)
+ *     {
+ *         // Handle the error.
+ *     }
  * }
  * \endcode
  */
-void DBIC_ReceiveBuf(uint16_t addr, uint16_t data_len, uint8_t *data, uint16_t rd_dummy_len);
-
+DBIC_ERR DBIC_ReceiveBuf(uint32_t cmd, uint32_t cmd_len, uint32_t addr, uint32_t addr_len,
+                         uint16_t rd_dummy_len, uint8_t *read_buf, uint32_t read_len);
 
 /** End of LCDC_DBIC_Exported_Functions
   * \}

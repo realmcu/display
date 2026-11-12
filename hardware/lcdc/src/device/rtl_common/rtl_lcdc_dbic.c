@@ -132,62 +132,144 @@ void DBIC_SendBuf(uint8_t *buf, uint32_t len)
 //    while ((LCDC_HANDLER->OPERATE_CTR & LCDC_AUTO_WRITE_START_MSK) != RESET);
 }
 
-void DBIC_ReceiveBuf(uint16_t addr, uint16_t data_len, uint8_t *data, uint16_t rd_dummy_len)
+DBIC_ERR DBIC_ReceiveBuf(uint32_t cmd, uint32_t cmd_len, uint32_t addr, uint32_t addr_len,
+                         uint16_t rd_dummy_len, uint8_t *read_buf, uint32_t read_len)
 {
-    uint32_t rd_num = 0;
-    DBIC_SSIENR_TypeDef dbic_reg_0x08 = {.d32 = DBIC->SSIENR};
-    dbic_reg_0x08.b.spic_en = 0;
-    DBIC->SSIENR = dbic_reg_0x08.d32;//disable DBIC
+    assert_param(read_buf != NULL);
+    assert_param(cmd_len <= 3);
+    assert_param(addr_len <= 4);
+    assert_param(rd_dummy_len <= 0x0FFF);
+    assert_param((read_len > 0) && (read_len <= 0x00FFFFFF));
+    if (read_buf == NULL)
+    {
+        return DBIC_ERR_NULL_BUFFER;
+    }
+    if ((cmd_len > 3) || (addr_len > 4) || (rd_dummy_len > 0x0FFF) ||
+        (read_len == 0) || (read_len > 0x00FFFFFF))
+    {
+        return DBIC_ERR_INVALID_PARAMETER;
+    }
 
-    //set addr channel and data channel in ctrl0 register.
-    DBIC_CTRLR0_TypeDef dbic_reg_0x00 = {.d32 = DBIC->CTRLR0};
+    /* SDI registers are only accessible through APB in firmware mode. */
+    uint32_t axi_mux_mode = LCDC_HANDLER->AXI_MUX_MODE;
+    LCDC_AXIMUXMode(LCDC_FW_MODE);
+
+    /* Save the configuration shared with the display write path. */
+    uint32_t ssienr = DBIC->SSIENR;
+    uint32_t ser = DBIC->SER;
+    uint32_t ctrlr0 = DBIC->CTRLR0;
+    uint32_t ctrlr2 = DBIC->CTRLR2;
+    uint32_t user_length = DBIC->USER_LENGTH;
+    uint32_t rx_ndf = DBIC->RX_NDF;
+    uint32_t tx_ndf = DBIC->TX_NDF;
+    uint32_t dmacr = DBIC->DMACR;
+
+    DBIC_SSIENR_TypeDef dbic_reg_0x08 = {.d32 = ssienr};
+    dbic_reg_0x08.b.spic_en = 0;
+    dbic_reg_0x08.b.atck_cmd = 0;
+    DBIC->SSIENR = dbic_reg_0x08.d32;
+    DBIC_Select();
+
+    /* Single-lane SDR receive in user mode for command, address and data phases. */
+    DBIC_CTRLR0_TypeDef dbic_reg_0x00 = {.d32 = ctrlr0};
     dbic_reg_0x00.b.cmd_ch = DBIC_CH_SINGLE;
-    dbic_reg_0x00.b.data_ch = DBIC_CH_SINGLE;
     dbic_reg_0x00.b.addr_ch = DBIC_CH_SINGLE;
+    dbic_reg_0x00.b.data_ch = DBIC_CH_SINGLE;
+    dbic_reg_0x00.b.ddr_en = 0;
     dbic_reg_0x00.b.tmod = DBIC_TMODE_RX;
     dbic_reg_0x00.b.user_mode = DBIC_USER_MODE;
-    DBIC->CTRLR0 = dbic_reg_0x00.d32;//tx mode
+    DBIC->CTRLR0 = dbic_reg_0x00.d32;
 
-    //spic_set_ctrl1(data_len);
-    DBIC_RX_NDF_TypeDef dbic_reg_0x04 = {.d32 = DBIC->RX_NDF};
-    dbic_reg_0x04.b.rx_ndf = data_len;
-    DBIC->RX_NDF = dbic_reg_0x04.d32;
+    /* Receive single-lane data on spi_sout[0] (SIO0). */
+    DBIC_CTRLR2_TypeDef dbic_reg_0x110 = {.d32 = ctrlr2};
+    dbic_reg_0x110.b.so_dnum = 0;
+    DBIC->CTRLR2 = dbic_reg_0x110.d32;
 
-    DBIC_TX_NDF(0);
+    /* Use polling rather than DMA to drain the receive FIFO. */
+    DBIC->DMACR = 0;
 
-    DBIC_USER_LENGTH_TypeDef dbic_reg_0x118 = {.d32 = DBIC->USER_LENGTH};
-    dbic_reg_0x118.b.user_addr_length = 3;
-    dbic_reg_0x118.b.user_cmd_length = 1;
-    //set dummy_cycle in autolen register[11:0]
-    if (rd_dummy_len > 0x0FFF)
-    {
-        rd_dummy_len = 0x0FFF;
-    }
+    DBIC_FLUSH_FIFO_TypeDef dbic_reg_0x128 = {.d32 = 0};
+    dbic_reg_0x128.b.flush_dr_fifo = 1;
+    DBIC->FLUSH_FIFO = dbic_reg_0x128.d32;
+
+    DBIC_USER_LENGTH_TypeDef dbic_reg_0x118 = {.d32 = user_length};
+    dbic_reg_0x118.b.user_cmd_length = cmd_len;
+    dbic_reg_0x118.b.user_addr_length = addr_len;
     dbic_reg_0x118.b.user_rd_dummy_length = rd_dummy_len;
     DBIC->USER_LENGTH = dbic_reg_0x118.d32;
 
-    addr = addr << 8;
-    DBIC->DR[0].word = 0x03 | __REV(addr);
+    DBIC_RX_NDF_TypeDef dbic_reg_0x04 = {.d32 = rx_ndf};
+    dbic_reg_0x04.b.rx_ndf = read_len;
+    DBIC->RX_NDF = dbic_reg_0x04.d32;
+    DBIC_TX_NDF(0);
 
-    DBIC_CTRLR2_TypeDef dbic_reg_0x0110 = {.d32 = DBIC->CTRLR2};
-    dbic_reg_0x0110.b.so_dnum = 0;
-    DBIC->CTRLR2 = dbic_reg_0x0110.d32;
+    for (uint32_t i = cmd_len; i > 0; i--)
+    {
+        DBIC->DR[0].byte = (uint8_t)(cmd >> ((i - 1) * 8));
+    }
+    for (uint32_t i = addr_len; i > 0; i--)
+    {
+        DBIC->DR[0].byte = (uint8_t)(addr >> ((i - 1) * 8));
+    }
 
     dbic_reg_0x08.b.spic_en = 1;
     DBIC->SSIENR = dbic_reg_0x08.d32;
 
+    DBIC_ERR status = DBIC_SUCCESS;
     DBIC_SR_TypeDef dbic_reg_0x28;
-    while (rd_num < data_len)
+    uint32_t rd_num = 0;
+    uint32_t idle_polls = 0;
+    while (rd_num < read_len)
     {
         dbic_reg_0x28.d32 = DBIC->SR;
-        if (dbic_reg_0x28.b.rfne)
+        if (dbic_reg_0x28.b.rfne && !dbic_reg_0x28.b.dcol)
         {
-            data[rd_num++] = DBIC->DR[0].byte;
+            read_buf[rd_num++] = DBIC->DR[0].byte;
+            idle_polls = 0;
+        }
+        else if (++idle_polls >= DBIC_RX_TIMEOUT_POLLS)
+        {
+            status = DBIC_ERR_RX_TIMEOUT;
+            break;
+        }
+    }
+
+    if (status == DBIC_SUCCESS)
+    {
+        idle_polls = 0;
+        dbic_reg_0x28.d32 = DBIC->SR;
+        while (dbic_reg_0x28.b.busy)
+        {
+            if (++idle_polls >= DBIC_RX_TIMEOUT_POLLS)
+            {
+                status = DBIC_ERR_BUSY_TIMEOUT;
+                break;
+            }
+            dbic_reg_0x28.d32 = DBIC->SR;
         }
     }
 
     dbic_reg_0x08.b.spic_en = 0;
     DBIC->SSIENR = dbic_reg_0x08.d32;
+    if (status != DBIC_SUCCESS)
+    {
+        DBIC->FLUSH_FIFO = dbic_reg_0x128.d32;
+    }
+
+    /* Restore the transfer configuration. DBIC is left disabled. */
+    dbic_reg_0x08.d32 = ssienr;
+    dbic_reg_0x08.b.spic_en = 0;
+    DBIC->SSIENR = dbic_reg_0x08.d32;
+    DBIC->SER = ser;
+    DBIC->CTRLR0 = ctrlr0;
+    DBIC->CTRLR2 = ctrlr2;
+    DBIC->USER_LENGTH = user_length;
+    DBIC->RX_NDF = rx_ndf;
+    DBIC->TX_NDF = tx_ndf;
+    DBIC->DMACR = dmacr;
+    LCDC_HANDLER->AXI_MUX_MODE = axi_mux_mode;
+
+    return status;
 }
 
 void DBIC_Cmd(FunctionalState NewState)
