@@ -57,6 +57,12 @@ config REALTEK_LCD_SH8601Z_410_502_QSPI
 	help
 		This config for realtek display lcd device driver
 
+config REALTEK_LCD_AUTO_360_360_QSPI
+	bool "Enable Realtek auto 360x360 QSPI LCD driver"
+	default n
+	help
+		Enable the Realtek auto 360x360 QSPI LCD driver.
+
 config REALTEK_LCD_ST77916_360_360_QSPI
 	bool "Enable Realtek LCD Device Driver 360 360"
 	default n

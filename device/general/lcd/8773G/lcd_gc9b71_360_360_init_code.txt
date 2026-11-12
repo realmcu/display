@@ -1,0 +1,91 @@
+/*
+ * Copyright(c) 2025, Realtek Semiconductor Corporation. All rights reserved.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * GC9B71 / BOE 1.389-inch 360x360 QSPI initialization.
+ *
+ * Reverse scan: B6 = 00 40 and EC = 87 must be changed together.
+ */
+
+void lcd_auto_write_cmd_data(uint8_t cmd, const uint8_t *data, uint16_t data_len);
+
+void GC9B71_INIT_CODE(void)
+{
+    lcd_auto_write_cmd_data(0xFE, NULL, 0);
+    lcd_auto_write_cmd_data(0xEF, NULL, 0);
+    lcd_auto_write_cmd_data(0x80, (const uint8_t[]){0x11}, 1);
+    lcd_auto_write_cmd_data(0x81, (const uint8_t[]){0x30}, 1);
+    lcd_auto_write_cmd_data(0x82, (const uint8_t[]){0x09}, 1);
+    lcd_auto_write_cmd_data(0x83, (const uint8_t[]){0x03}, 1);
+    lcd_auto_write_cmd_data(0x84, (const uint8_t[]){0x62}, 1);
+    lcd_auto_write_cmd_data(0x89, (const uint8_t[]){0x18}, 1);
+    lcd_auto_write_cmd_data(0x8A, (const uint8_t[]){0x40}, 1);
+    lcd_auto_write_cmd_data(0x8B, (const uint8_t[]){0x0A}, 1);
+    lcd_auto_write_cmd_data(0x3A, (const uint8_t[]){0x05}, 1);
+    lcd_auto_write_cmd_data(0x36, (const uint8_t[]){0x00}, 1);
+    lcd_auto_write_cmd_data(0xEC, (const uint8_t[]){0x07}, 1);
+    lcd_auto_write_cmd_data(0x74,
+        (const uint8_t[]){0x01, 0x80, 0x00, 0x00, 0x00, 0x00}, 6);
+    lcd_auto_write_cmd_data(0x98, (const uint8_t[]){0x3E}, 1);
+    lcd_auto_write_cmd_data(0x99, (const uint8_t[]){0x3E}, 1);
+    lcd_auto_write_cmd_data(0xA1,
+        (const uint8_t[]){0x01, 0x04}, 2);
+    lcd_auto_write_cmd_data(0xA2,
+        (const uint8_t[]){0x01, 0x04}, 2);
+    lcd_auto_write_cmd_data(0xCB, (const uint8_t[]){0x02}, 1);
+    lcd_auto_write_cmd_data(0x7C,
+        (const uint8_t[]){0xB6, 0x24}, 2);
+    lcd_auto_write_cmd_data(0xAC, (const uint8_t[]){0x34}, 1);
+    lcd_auto_write_cmd_data(0xF6, (const uint8_t[]){0x80}, 1);
+    lcd_auto_write_cmd_data(0xB5,
+        (const uint8_t[]){0x0D, 0x0D}, 2);
+    lcd_auto_write_cmd_data(0xEB,
+        (const uint8_t[]){0x01, 0x67}, 2);
+    lcd_auto_write_cmd_data(0x60,
+        (const uint8_t[]){0x38, 0x0E, 0x1F, 0x56}, 4);
+    lcd_auto_write_cmd_data(0x63,
+        (const uint8_t[]){0x38, 0x10, 0x1F, 0x56}, 4);
+    lcd_auto_write_cmd_data(0x64,
+        (const uint8_t[]){0x38, 0x12, 0x72, 0xEA, 0x1F, 0x56}, 6);
+    lcd_auto_write_cmd_data(0x66,
+        (const uint8_t[]){0x38, 0x16, 0x72, 0xEE, 0x1F, 0x56}, 6);
+    lcd_auto_write_cmd_data(0x68,
+        (const uint8_t[]){0x00, 0x0A, 0xEE, 0x0A, 0xEE, 0x1C, 0x1C}, 7);
+    lcd_auto_write_cmd_data(0x69,
+        (const uint8_t[]){0x00, 0x0A, 0xF2, 0x0A, 0xF2, 0x1C, 0x1C}, 7);
+    lcd_auto_write_cmd_data(0x6E,
+        (const uint8_t[]){0x07, 0x01, 0x1A, 0x00, 0x0B, 0x0B, 0x09, 0x09, 0x13, 0x13, 0x11, 0x11, 0x19, 0x1E, 0x1D, 0x00, 0x00, 0x1D, 0x1E, 0x19, 0x12, 0x12, 0x14, 0x14, 0x0A, 0x0A, 0x0C, 0x0C, 0x00, 0x1A, 0x02, 0x08}, 32);
+    lcd_auto_write_cmd_data(0x6C,
+        (const uint8_t[]){0xCC, 0x0C, 0xCC, 0x84, 0xCC, 0x04, 0x50}, 7);
+    lcd_auto_write_cmd_data(0x7D, (const uint8_t[]){0x72}, 1);
+    lcd_auto_write_cmd_data(0x70,
+        (const uint8_t[]){0x02, 0x03, 0x09, 0x07, 0x09, 0x03, 0x09, 0x07, 0x09, 0x03}, 10);
+    lcd_auto_write_cmd_data(0x90,
+        (const uint8_t[]){0x06, 0x06, 0x05, 0x06}, 4);
+    lcd_auto_write_cmd_data(0x93,
+        (const uint8_t[]){0x45, 0xFF, 0x00}, 3);
+    lcd_auto_write_cmd_data(0xC3, (const uint8_t[]){0x10}, 1);
+    lcd_auto_write_cmd_data(0xC4, (const uint8_t[]){0x36}, 1);
+    lcd_auto_write_cmd_data(0xC9, (const uint8_t[]){0x3F}, 1);
+    lcd_auto_write_cmd_data(0xF0,
+        (const uint8_t[]){0x4A, 0x09, 0x0A, 0x06, 0x00, 0x2E}, 6);
+    lcd_auto_write_cmd_data(0xF2,
+        (const uint8_t[]){0x4A, 0x0A, 0x0A, 0x05, 0x00, 0x2E}, 6);
+    lcd_auto_write_cmd_data(0xF1,
+        (const uint8_t[]){0x47, 0xD3, 0x9C, 0x2D, 0x2F, 0xCF}, 6);
+    lcd_auto_write_cmd_data(0xF3,
+        (const uint8_t[]){0x46, 0xD2, 0x9C, 0x2D, 0x2F, 0xCF}, 6);
+    lcd_auto_write_cmd_data(0xBE, (const uint8_t[]){0x11}, 1);
+    lcd_auto_write_cmd_data(0xFB,
+        (const uint8_t[]){0x00, 0x00}, 2);
+    lcd_auto_write_cmd_data(0x11, NULL, 0);
+    platform_delay_ms(120);
+    lcd_auto_write_cmd_data(0x29, NULL, 0);
+    platform_delay_ms(120);
+    lcd_auto_write_cmd_data(0x2C,
+        (const uint8_t[]){0x00, 0x00, 0x00, 0x00}, 4);
+    lcd_auto_write_cmd_data(0x2C,
+        (const uint8_t[]){0x00, 0x00, 0x00, 0x00}, 4);
+    platform_delay_ms(120);
+}

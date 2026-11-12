@@ -5,6 +5,9 @@
 #include <zephyr/sys/printk.h>
 #include <errno.h>
 
+#ifdef CONFIG_REALTEK_LCD_AUTO_360_360_QSPI
+#include "lcd_auto_detect_360_360_qspi.h"
+#else
 #ifdef CONFIG_REALTEK_SH8601Z_454454_QSPI
 #include "SH8601Z_454454_qspi.h"
 #endif
@@ -23,6 +26,7 @@
 #ifdef CONFIG_REALTEK_LCD_ST7801N_466_466_QSPI
 #include "lcd_st7801n_466_466_qspi.h"
 #endif
+#endif /* CONFIG_REALTEK_LCD_AUTO_360_360_QSPI */
 
 #define DT_DRV_COMPAT realtek_rtl87x3g_display_lcd
 
