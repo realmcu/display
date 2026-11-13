@@ -43,7 +43,7 @@ extern "C" {
  *
  * Matches the vendor per-output plane count, which a build-time check in the
  * driver enforces. Packed and luma-only output use one plane, semi-planar YUV
- * two, planar YUV three (not available on every hardware build).
+ * two; no output format of the current hardware build uses the third.
  */
 #define VCDJ_MAX_PLANES                 3U
 
@@ -87,21 +87,17 @@ typedef enum
  * produced in \ref vcdj_picture_t. Always read it back from the picture; the two
  * differ in these cases:
  *  - colour PNG with a YUV request: BGR888, or ABGR8888 when the PNG has alpha
- *    or a tRNS chunk; a YUV layout that cannot be rewritten this way (planar,
- *    packed 4:2:2) is rejected;
- *  - greyscale PNG, or greyscale JPEG with a YUV request: luma only;
- *  - 12-bit JPEG with an 8-bit YUV request: the matching *_PACK10 format
- *    (4:2:2 / 4:4:4 are rejected).
+ *    or a tRNS chunk; packed 4:2:2 cannot be rewritten this way and is rejected;
+ *  - greyscale PNG, or greyscale JPEG with a YUV request: luma only.
  *
  * RGB names give the channels from the most to the least significant bits of
  * one pixel word, stored little endian, so memory order is reversed: RGB888 is
  * B,G,R in memory, BGR888 is R,G,B, ARGB8888 is B,G,R,A, RGBA8888 is A,B,G,R.
  *
- * The hardware build decides what succeeds. 10/16-bit containers need a 12-bit
- * JPEG and YUV400_ALPHA needs a PNG; otherwise \ref VCDJ_ERR_UNSUPPORTED. On the
- * current build every planar, P010/I010/L010 and 1010 format is rejected, and
- * 4:2:2 output (semi-planar or packed) needs a 4:2:2 source.
- * YVU means Cr before Cb.
+ * Only the formats the current hardware build can produce are listed: it has
+ * no planar output and no 10/16-bit container. YUV400_ALPHA needs a PNG
+ * (otherwise \ref VCDJ_ERR_UNSUPPORTED), and 4:2:2 output (semi-planar or
+ * packed) needs a 4:2:2 source. YVU means Cr before Cb.
  */
 typedef enum
 {
@@ -118,77 +114,19 @@ typedef enum
     VCDJ_OUT_XRGB8888 = 8,
     VCDJ_OUT_XBGR8888 = 9,
 
-    /* --- 10/16-bit packed RGB; 12-bit JPEG only ---------------------------- */
-    VCDJ_OUT_A2R10G10B10 = 10,
-    VCDJ_OUT_A2B10G10R10 = 11,
-    VCDJ_OUT_X2R10G10B10 = 12,
-    VCDJ_OUT_X2B10G10R10 = 13,
-    VCDJ_OUT_R10G10B10A2 = 14,
-    VCDJ_OUT_B10G10R10A2 = 15,
-    VCDJ_OUT_R16G16B16 = 16,
-    VCDJ_OUT_B16G16R16 = 17,
-
     /* --- 8-bit YUV -------------------------------------------------------- */
-    VCDJ_OUT_MONOCHROME = 18,      /**< 8 bpp luma only (YUV 4:0:0) */
-    VCDJ_OUT_YUV400_ALPHA = 19,    /**< 16 bpp luma + alpha pairs; PNG only */
-    VCDJ_OUT_YUV420SP = 20,        /**< NV12 */
-    VCDJ_OUT_YVU420SP = 21,        /**< NV21 */
-    VCDJ_OUT_YUV420P = 22,         /**< I420 */
-    VCDJ_OUT_YVU420P = 23,         /**< YV12 */
-    VCDJ_OUT_YUV422SP = 24,
-    VCDJ_OUT_YVU422SP = 25,
-    VCDJ_OUT_YUV422P = 26,
-    VCDJ_OUT_YVU422P = 27,
-    VCDJ_OUT_YUV444P = 28,         /**< 4:4:4 exists only as planar */
-    VCDJ_OUT_YVU444P = 29,
+    VCDJ_OUT_MONOCHROME = 10,      /**< 8 bpp luma only (YUV 4:0:0) */
+    VCDJ_OUT_YUV400_ALPHA = 11,    /**< 16 bpp luma + alpha pairs; PNG only */
+    VCDJ_OUT_YUV420SP = 12,        /**< NV12 */
+    VCDJ_OUT_YVU420SP = 13,        /**< NV21 */
+    VCDJ_OUT_YUV422SP = 14,
+    VCDJ_OUT_YVU422SP = 15,
 
     /* --- packed 4:2:2 ----------------------------------------------------- */
-    VCDJ_OUT_YUYV = 30,
-    VCDJ_OUT_UYVY = 31,
-    VCDJ_OUT_YVYU = 32,
-    VCDJ_OUT_VYUY = 33,
-
-    /* --- 10-bit YUV containers; 12-bit JPEG only --------------------------- */
-    VCDJ_OUT_YUV400_PACK10 = 34,
-    VCDJ_OUT_YUV400_P010 = 35,
-    VCDJ_OUT_YUV400_I010 = 36,
-    VCDJ_OUT_YUV400_L010 = 37,
-    VCDJ_OUT_YUV420SP_PACK10 = 38,
-    VCDJ_OUT_YUV420SP_P010 = 39,
-    VCDJ_OUT_YUV420SP_I010 = 40,
-    VCDJ_OUT_YUV420SP_L010 = 41,
-    VCDJ_OUT_YUV420SP_1010 = 42,
-    VCDJ_OUT_YVU420SP_PACK10 = 43,
-    VCDJ_OUT_YVU420SP_P010 = 44,
-    VCDJ_OUT_YVU420SP_I010 = 45,
-    VCDJ_OUT_YVU420SP_L010 = 46,
-    VCDJ_OUT_YVU420SP_1010 = 47,
-    VCDJ_OUT_YUV420P_PACK10 = 48,
-    VCDJ_OUT_YUV420P_P010 = 49,
-    VCDJ_OUT_YUV420P_I010 = 50,
-    VCDJ_OUT_YUV420P_L010 = 51,
-    VCDJ_OUT_YVU420P_PACK10 = 52,
-    VCDJ_OUT_YVU420P_P010 = 53,
-    VCDJ_OUT_YVU420P_I010 = 54,
-    VCDJ_OUT_YVU420P_L010 = 55,
-    VCDJ_OUT_YUV422SP_P010 = 56,
-    VCDJ_OUT_YUV422SP_I010 = 57,
-    VCDJ_OUT_YUV422SP_L010 = 58,
-    VCDJ_OUT_YVU422SP_P010 = 59,
-    VCDJ_OUT_YVU422SP_I010 = 60,
-    VCDJ_OUT_YVU422SP_L010 = 61,
-    VCDJ_OUT_YUV422P_P010 = 62,
-    VCDJ_OUT_YUV422P_I010 = 63,
-    VCDJ_OUT_YUV422P_L010 = 64,
-    VCDJ_OUT_YVU422P_P010 = 65,
-    VCDJ_OUT_YVU422P_I010 = 66,
-    VCDJ_OUT_YVU422P_L010 = 67,
-    VCDJ_OUT_YUV444P_P010 = 68,
-    VCDJ_OUT_YUV444P_I010 = 69,
-    VCDJ_OUT_YUV444P_L010 = 70,
-    VCDJ_OUT_YVU444P_P010 = 71,
-    VCDJ_OUT_YVU444P_I010 = 72,
-    VCDJ_OUT_YVU444P_L010 = 73,
+    VCDJ_OUT_YUYV = 16,
+    VCDJ_OUT_UYVY = 17,
+    VCDJ_OUT_YVYU = 18,
+    VCDJ_OUT_VYUY = 19,
 
     VCDJ_OUT_UNKNOWN = 0xFF,       /**< Format could not be mapped; treat as an error */
 } vcdj_out_format_t;
@@ -509,7 +447,9 @@ vcdj_error_t vcdj_decode(const vcdj_dec_param_t *param, vcdj_picture_t *pic);
  *
  * @note       For a thumbnail, crop and scale are relative to the thumbnail and
  *             the errors are those of \ref vcdj_get_image_info. A 4:2:0 thumbnail
- *             with a 4:2:2 / 4:4:4 output returns \ref VCDJ_ERR_PARAM.
+ *             with a 4:2:2 output returns \ref VCDJ_ERR_PARAM.
+ * @note       A JPEG deeper than 8 bits returns \ref VCDJ_ERR_UNSUPPORTED whatever
+ *             the output format; its header still parses with \ref vcdj_get_image_info.
  */
 vcdj_error_t vcdj_decode_pp(const vcdj_dec_param_t *param,
                             const vcdj_pp_config_t *pp,
