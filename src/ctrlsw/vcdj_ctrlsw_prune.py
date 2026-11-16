@@ -768,6 +768,215 @@ def check_no_code_references(rule, doc, which):
                          'would leave a dangling use' % (which, name, left[:5]))
 
 
+def _reg_enum(rule, lines, which):
+    """Enum span, members, aliases, table span and rows of a prune_reg_enum rule.
+
+    `base` is [(name, line)] up to and including `last`; `alias` maps a name
+    to (target, line); `rows` is [(name, line)] with the dummy row last.
+    """
+    code = code_lines(lines)
+    enum, table, last = rule['enum'], rule['table'], rule['last']
+    e_lo, = code_hits(code, r'^enum\s+%s\s*\{' % re.escape(enum), 1, which)
+    e_hi = match_brace(code, e_lo)
+    base, alias = [], {}
+    for i in range(e_lo + 1, e_hi):
+        s = code[i].strip()
+        if not s:
+            continue
+        m = re.fullmatch(r'(\w+)\s*=\s*(\w+)\s*,?', s)
+        if m:
+            alias[m.group(1)] = (m.group(2), i)
+            continue
+        m = re.fullmatch(r'(\w+)\s*,', s)
+        if not m or alias:
+            raise PruneError('%s: enum %s: line %d is not one member or one alias '
+                             'after the members' % (which, enum, i + 1))
+        base.append((m.group(1), i))
+    if not base or base[-1][0] != last:
+        raise PruneError('%s: enum %s: the last member is not %s' % (which, enum, last))
+    t_lo, = code_hits(code, r'^const\s+\w+\s+%s\s*\[\s*%s\s*\+\s*1\s*\]\s*=\s*\{'
+                      % (re.escape(table), re.escape(last)), 1, which)
+    t_hi = match_brace(code, t_lo)
+    rows = []
+    for i in range(t_lo + 1, t_hi):
+        if not code[i].strip():
+            continue
+        m = re.match(r'^\s*/\*\s*(\w+|dummy entry)\s*\*/\s*\w+\(', lines[i])
+        if not m:
+            raise PruneError('%s: %s: line %d is not one `/* NAME */ ROW(...)` entry'
+                             % (which, table, i + 1))
+        rows.append((m.group(1), i))
+    return e_lo, e_hi, base, alias, t_lo, t_hi, rows
+
+
+def ifdef_branches(code, macros):
+    """Line indices in the `#ifdef <macro>` branch, up to its #else / #elif / #endif."""
+    out, stack = set(), []
+    for i, l in enumerate(code):
+        m = re.match(r'\s*#\s*(ifdef|ifndef|if|elif|else|endif)\b\s*(\w*)', l)
+        if not m:
+            if any(stack):
+                out.add(i)
+            continue
+        kw = m.group(1)
+        if kw in ('if', 'ifdef', 'ifndef'):
+            stack.append(kw == 'ifdef' and m.group(2) in macros)
+        elif kw == 'endif':
+            if stack:
+                stack.pop()
+        elif stack:
+            stack[-1] = False
+    return out
+
+
+def prune_reg_enum(rule, doc, header):
+    """Drop the members of `enum <enum>` that no code names, with their table rows.
+
+    Member k indexes row k of `<table>[]`, so a member and its row go together,
+    and the two lists must name the same registers in the same order. A member
+    stays when code outside the enum and the table names it, directly, through a
+    `##` paste or as the stem of a `X##_LSB` paste, or when a kept alias points
+    at it. Matching is on text, so a name in a disabled #if branch keeps its
+    member: the rule errs on keeping. `header` counts as code: its macros
+    expand inside the .c.
+
+    Code that uses a position instead of a name stops the rule, except the
+    bounds `< last`, `> last`, `!= last`, the size `last + 1` and `last - n`,
+    which must pick out the same member before and after. In the true branch
+    of an `#ifdef` listed in `inactive` anything goes; that macro may not be
+    #defined in either file.
+
+    `keep` is {"members": n, "aliases": m}, the expected result, `last` not
+    counted. vcdj_ctrlsw_regenum.py recomputes it from gcc -E. An earlier rule
+    or a vendor drop that changes it stops the rule until the numbers follow.
+    """
+    which = 'vcdj_ctrlsw.c'
+    lines, origin = doc['lines'], doc['origin']
+    last, prefix = rule['last'], rule['prefix']
+    e_lo, e_hi, base, alias, t_lo, t_hi, rows = _reg_enum(rule, lines, which)
+    names = [n for n, _ in base[:-1]]
+    if [n for n, _ in rows[:-1]] != names or len(rows) != len(base):
+        raise PruneError('%s: %s does not describe the members of enum %s one row '
+                         'each, in order' % (which, rule['table'], rule['enum']))
+    for a, (t, _) in alias.items():
+        if t not in names:
+            raise PruneError('%s: alias %s points at %s, not a member' % (which, a, t))
+
+    code, hcode = code_lines(lines), code_lines(header['lines'])
+    inactive = set(rule.get('inactive', []))
+    for w, c in ((which, code), ('vcdj_ctrlsw.h', hcode)):
+        for i, l in enumerate(c):
+            m = re.match(r'\s*#\s*define\s+(\w+)', l)
+            if m and m.group(1) in inactive:
+                raise PruneError('%s: line %d defines %s, which the rule lists as '
+                                 'inactive' % (w, i + 1, m.group(1)))
+    users = [(which, i, code[i]) for i in range(len(code))
+             if not (e_lo <= i <= e_hi or t_lo <= i <= t_hi)]
+    users += [('vcdj_ctrlsw.h', i, l) for i, l in enumerate(hcode)]
+    dead = {which: ifdef_branches(code, inactive),
+            'vcdj_ctrlsw.h': ifdef_branches(hcode, inactive)}
+
+    members = set(names) | set(alias) | {last}
+    tok = re.compile(r'\b%s\w*' % re.escape(prefix))
+    paste = re.compile(r'\b%s\w*(?:\s*##\s*\w+)+' % re.escape(prefix))
+    stems = {m.group(1) for _, _, l in users for m in re.finditer(r'##\s*(_\w+)', l)}
+    bound = re.compile(r'(?:[<>]=?|!=)\s*%s\b|\b%s\s*\+\s*1\b' % (last, last))
+    offset = re.compile(r'\b%s\s*-\s*(\d+)\b' % last)
+    position = re.compile(r'(?:[-+*/%<>\[]|[<>=!]=|(?<![=!<>])=|\bcase)\s*{0}\w'
+                          r'|{0}\w+\s*(?:[-+*/%<>]|[<>=!]=)'.format(re.escape(prefix)))
+    named, offsets = set(), set()
+    for w, i, l in users:
+        spans = []
+        for m in paste.finditer(l):
+            parts = [p.strip() for p in m.group(0).split('##')]
+            rx = re.compile(''.join(re.escape(p) if p.startswith((prefix, '_')) else r'\w+'
+                                    for p in parts) + r'\Z')
+            hit = {n for n in members if rx.match(n)}
+            if not hit:
+                raise PruneError('%s: line %d: %r pastes no member' % (w, i + 1, m.group(0)))
+            named |= hit
+            spans.append(m.span())
+        for m in tok.finditer(l):
+            if any(a <= m.start() < b for a, b in spans):
+                continue
+            t = m.group(0)
+            hit = {t} if t in members else {t + s for s in stems if t + s in members}
+            if not hit:
+                raise PruneError('%s: line %d: %s is not a member of enum %s'
+                                 % (w, i + 1, t, rule['enum']))
+            named |= hit
+        if i in dead[w]:
+            continue
+        offsets |= {int(n) for n in offset.findall(l)}
+        rest = offset.sub(' ', bound.sub(' ', l))
+        if position.search(rest):
+            raise PruneError('%s: line %d uses a register position, not a name; '
+                             'the rule cannot keep it valid: %s' % (w, i + 1, l.strip()))
+
+    keep_alias = {a for a in alias if a in named}
+    keep = named | {alias[a][0] for a in keep_alias}
+    kept = [n for n in names if n in keep]
+    want = rule['keep']
+    if len(kept) != want['members'] or len(keep_alias) != want['aliases']:
+        raise PruneError('%s: enum %s keeps %d members and %d aliases, the rule '
+                         'expects %d and %d; see what changed, then update "keep"'
+                         % (which, rule['enum'], len(kept), len(keep_alias),
+                            want['members'], want['aliases']))
+    for n in offsets:
+        if not 1 <= n <= len(kept) or names[len(names) - n] != kept[len(kept) - n]:
+            raise PruneError('%s: %s - %d would no longer name the same member'
+                             % (which, last, n))
+
+    gone = {i for n, i in base[:-1] if n not in keep}
+    gone |= {i for a, (_, i) in alias.items() if a not in keep_alias}
+    drop = gone | _orphan_comments(lines, code, e_lo, e_hi, gone)
+    drop |= {i for (n, i) in rows[:-1] if n not in keep}
+    for i in sorted(drop, reverse=True):
+        del lines[i]
+        del origin[i]
+    hi = match_brace(code_lines(lines), e_lo)
+    for i in range(hi - 1, e_lo, -1):
+        if not lines[i].strip() and (i - 1 == e_lo or not lines[i + 1].strip()
+                                     or i + 1 == hi):
+            del lines[i]        # a blank line doubled or at an edge of the body
+            del origin[i]
+            hi -= 1
+
+    e_lo, e_hi, base, alias, t_lo, t_hi, rows = _reg_enum(rule, lines, which)
+    if ([n for n, _ in base[:-1]] != kept or [n for n, _ in rows[:-1]] != kept
+            or set(alias) != keep_alias):
+        raise PruneError('%s: enum %s: the result differs from what was kept'
+                         % (which, rule['enum']))
+
+
+def _orphan_comments(lines, code, lo, hi, gone):
+    """Lines of the comments inside the braces lo..hi that would head only `gone` lines.
+
+    A comment after a blank line heads its group, up to the next blank line;
+    any other comment heads its section, up to the next comment or blank line.
+    """
+    out, i = set(), lo + 1
+    while i < hi:
+        if not (lines[i].strip() and not code[i].strip()):
+            i += 1
+            continue
+        j = i
+        while j < hi and lines[j].strip() and not code[j].strip():
+            j += 1
+        end = j
+        if i == lo + 1 or not lines[i - 1].strip():
+            while end < hi and lines[end].strip():
+                end += 1
+        else:
+            while end < hi and code[end].strip():
+                end += 1
+        heads = [k for k in range(j, end) if code[k].strip()]
+        if heads and all(k in gone for k in heads):
+            out |= set(range(i, j))
+        i = j
+    return out
+
+
 def strip_decor(line):
     """The line without its box drawing, inner spacing kept."""
     t = line.strip()
@@ -913,6 +1122,7 @@ ACTIONS = {
     'delete_member': (delete_member, None),
     'replace_line': (replace_line, None),
     'merge_license': (merge_license, None),
+    'prune_reg_enum': (None, None),
 }
 # Actions that name a function or type, whose declaration in the header goes too.
 NAMED = {'delete_function', 'delete_type'}
@@ -926,6 +1136,10 @@ def apply_rules(h, c, rules):
         if action not in ACTIONS:
             raise PruneError('rule %d: unknown action %r' % (n, action))
         fn, verify = ACTIONS[action]
+        if action == 'prune_reg_enum':
+            # The enum and its users are in the .c; macros in the .h expand there.
+            prune_reg_enum(rule, docs['vcdj_ctrlsw.c'], docs['vcdj_ctrlsw.h'])
+            continue
         for which in rule.get('files') or ['vcdj_ctrlsw.c']:
             fn(rule, docs[which], which)
             if verify:

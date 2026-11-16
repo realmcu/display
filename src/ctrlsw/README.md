@@ -73,6 +73,8 @@ These files at the root of this directory are **not** part of the vendor release
 - `vcdj_ctrlsw_gen.py`, and the `vcdj_ctrlsw.c` / `vcdj_ctrlsw.h` it generates from the vendor
   files (SCons `VCDJ_CTRLSW = 'merged'`, section 8). The generated files are vendor code under the
   vendor licenses, not Realtek code.
+- `vcdj_ctrlsw_prune.py` / `vcdj_ctrlsw_prune.json`, and `vcdj_ctrlsw_regenum.py`, the census
+  that backs the register enum rule (section 8)
 
 ## 3. Local changes to the vendor files
 
@@ -196,3 +198,20 @@ adding a source does not invalidate it. A rule that matches zero or more than on
 error, and so is a deletion that would leave a live reference behind; a reference inside an
 `#if 0` block with no `#else` does not count. `vcdj_ctrlsw_gen.py --check` forwards to stage 2,
 because the files on disk carry the pruned result.
+
+### The register enum rule
+
+`enum HwIfName` lists the register fields of every codec the vendor supports, and member k indexes
+row k of `hw_dec_reg_spec[]`. The `prune_reg_enum` rule drops the members no code names together
+with their rows, and pins the result in `"keep"`. It must stay the last rule: the code that earlier
+rules delete is what frees members. When an added rule or a vendor drop moves the numbers, the rule
+stops; check the new numbers against the census, which counts through `gcc -E` instead of text:
+
+```sh
+scons --cdb                                        # once, for build/compile_commands.json
+python src/ctrlsw/vcdj_ctrlsw_regenum.py           # exit 1 if it disagrees with "keep"
+```
+
+It writes a per-member table to `build/vcdj_regenum/regenum.tsv` and lists every register id that
+is not a single enum name. Code that uses an id by position (arithmetic, a stored id, an index)
+also stops the rule, except the `HWIF_LAST_REG` bounds the accessors already use.

@@ -1118,6 +1118,16 @@
       "action": "fold_false_if",
       "match": "^\\s*\\} else if \\(p_hw_feature->only_area_scale_alg_support\\[i\\]\\) \\{",
       "why": "D15: the AREA-only scaler arm of the algorithm flags; the general else stays"
+    },
+    {
+      "action": "prune_reg_enum",
+      "enum": "HwIfName",
+      "table": "hw_dec_reg_spec",
+      "last": "HWIF_LAST_REG",
+      "prefix": "HWIF_",
+      "inactive": ["REG_ACCESS_OPT"],
+      "keep": {"members": 318, "aliases": 8},
+      "why": "L: register fields no code names, mostly other codecs; keep this rule last, so it sees only the code the rules above left"
     }
   ]
 }
