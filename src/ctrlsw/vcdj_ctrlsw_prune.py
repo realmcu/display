@@ -401,6 +401,9 @@ def fold_false_if(rule, doc, which):
     the chain going, a single-statement `else if (c) s;` arm, and the head of a
     chain, `if (c) ... else if (d) ...`, which becomes `if (d) ...`. Any other
     shape stops the rule.
+
+    With `comment_above`, a comment directly above the `if`, if there is one,
+    goes too: it described the condition that is being removed.
     """
     lines, origin = doc['lines'], doc['origin']
     hits = code_hits(code_lines(lines), rule['match'], rule.get('count', 1), which)
@@ -408,6 +411,13 @@ def fold_false_if(rule, doc, which):
         code = code_lines(lines)
         p = _parse_if(code, start, which)
         lo, els = p['lo'], p['else']
+        top = lo
+        if rule.get('comment_above'):
+            if p['arm']:
+                raise PruneError('%s: line %d: comment_above on an else-if arm'
+                                 % (which, lo + 1))
+            while top > 0 and lines[top - 1].strip() and not code[top - 1].strip():
+                top -= 1
         if p.get('chain') is not None:
             e = p['chain']
             m = re.match(r'^\s*(?:\}\s*)?else\s+(if\b.*)$', lines[e])
@@ -415,8 +425,8 @@ def fold_false_if(rule, doc, which):
                 raise PruneError('%s: line %d: the next arm of the chain is not on a '
                                  'line of its own; fold it by hand' % (which, e + 1))
             base = lines[lo][:len(lines[lo]) - len(lines[lo].lstrip())]
-            lines[lo:e + 1] = [base + m.group(1)]
-            origin[lo:e + 1] = [origin[e]]
+            lines[top:e + 1] = [base + m.group(1)]
+            origin[top:e + 1] = [origin[e]]
             continue
         if p['arm']:
             # A braced arm's closing line is `}`, `} else {` or `} else if (...) {`:
@@ -427,8 +437,9 @@ def fold_false_if(rule, doc, which):
         elif els:
             base = lines[lo][:len(lines[lo]) - len(lines[lo].lstrip())]
             new, hi = dedent(lines, els[0], els[1], base, which), p['close']
+            lo = top
         else:
-            lo, hi = widen_blank(lines, lo, p['close'])
+            lo, hi = widen_blank(lines, top, p['close'])
             new = []
         lines[lo:hi + 1] = new
         origin[lo:hi + 1] = origin[els[0]:els[1]] if new else []

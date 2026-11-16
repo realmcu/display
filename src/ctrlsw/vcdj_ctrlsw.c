@@ -6808,68 +6808,9 @@ static u32 PPGetUnitStride(PpUnitIntConfig *ppu_cfg) {
 
   pp_width = ppu_cfg->frm_width;
 
-  if (ppu_cfg->tiled_e && !ppu_cfg->tile_mode) {
-    pp_width = NEXT_MULTIPLE(pp_width, 4);
-    if(ppu_cfg->rgb) {
-      if (IS_3PLAN_FORMAT(ppu_cfg->rgb_format))
-        pp_width *= 3;
-      else if (IS_4PLAN_FORMAT(ppu_cfg->rgb_format))
-        pp_width *= 4;
-      else if(ppu_cfg->rgb_format == PP_OUT_RGB565 || ppu_cfg->rgb_format == PP_OUT_BGR565)
-        pp_width *= 2;
-      else if(ppu_cfg->rgb_format == PP_OUT_ARGB8565)
-        pp_width *= 4;
-    }
-    ystride = NEXT_MULTIPLE(4 * pp_width * ppu_cfg->pixel_width, ALIGN(ppu_cfg->align) * 8) / 8;
-    cstride = NEXT_MULTIPLE(4 * (ppu_cfg->sub_x == 1 ? 2 : 1) * pp_width * ppu_cfg->pixel_width, ALIGN(ppu_cfg->align) * 8) / 8;
-    if(ppu_cfg->rgb)
-      cstride = ystride;
-  } else if ((ppu_cfg->out_yuyv || ppu_cfg->out_uyvy) && !ppu_cfg->tiled_e) {/*not tile2x4*/
+  if (ppu_cfg->out_yuyv || ppu_cfg->out_uyvy) {
   /*this cstride didn't use*/
     ystride = cstride = NEXT_MULTIPLE(2 * pp_width * ppu_cfg->pixel_width, ALIGN(ppu_cfg->align) * 8) / 8;
-  } else if (ppu_cfg->tiled_e && ppu_cfg->tile_mode) {
-    if (ppu_cfg->tile_mode == TILED16x16) {
-      pp_width = NEXT_MULTIPLE(pp_width, 16);
-      ystride = cstride = NEXT_MULTIPLE(pp_width * ppu_cfg->pixel_width * 24, ALIGN(ppu_cfg->align) * 8) / 8;
-    } else if (ppu_cfg->tile_mode == TILED8x8  || ppu_cfg->tile_mode == RECONTILED8x8) {
-      pp_width = ppu_cfg->tile_mode == TILED8x8 ? NEXT_MULTIPLE(pp_width, 8) : NEXT_MULTIPLE(pp_width, 16);
-      ystride = NEXT_MULTIPLE(8 * pp_width * ppu_cfg->pixel_width, ALIGN(ppu_cfg->align) * 8) / 8;
-      cstride = NEXT_MULTIPLE(4 * (ppu_cfg->sub_x == 1 ? 2 : 1) * pp_width * ppu_cfg->pixel_width, ALIGN(ppu_cfg->align) * 8) / 8;
-      if (ppu_cfg->dec400_enabled) {
-        ystride = NEXT_MULTIPLE(8 * NEXT_MULTIPLE(pp_width, ppu_cfg->align_pixel_w) * ppu_cfg->pixel_width, ALIGN(ppu_cfg->align) * 8) / 8;
-        cstride = NEXT_MULTIPLE(4 * (ppu_cfg->sub_x == 1 ? 2 : 1) * NEXT_MULTIPLE(pp_width, ppu_cfg->align_pixel_w) * ppu_cfg->pixel_width, ALIGN(ppu_cfg->align) * 8) / 8;
-      }
-    } else if (ppu_cfg->tile_mode == TILED64x64) {
-      /* TILED64x64 only support 4 plan RGB formats. */
-      if (IS_4PLAN_FORMAT(ppu_cfg->rgb_format)) {
-        // pp_width *= 4;
-        // ystride = cstride = pp_width;
-        pp_width = NEXT_MULTIPLE(pp_width, 64);
-        ystride = cstride = NEXT_MULTIPLE(pp_width * 64 * 4, ALIGN(ppu_cfg->align));
-      } else {//yuv420
-        pp_width = NEXT_MULTIPLE(pp_width, 64);
-        // ystride = cstride = NEXT_MULTIPLE(pp_width * 64, ALIGN(ppu_cfg->align));
-        // pp_width = NEXT_MULTIPLE(pp_width * ppu_cfg->pixel_width, 64) / 8;
-        ystride = NEXT_MULTIPLE(pp_width * ppu_cfg->pixel_width * 64, ALIGN(ppu_cfg->align)) / 8;
-        cstride = ystride / 2;
-        // ystride = NEXT_MULTIPLE(pp_width * 64 * ppu_cfg->pixel_width, ALIGN(ppu_cfg->align) * 8) / 8;
-        // cstride = NEXT_MULTIPLE(pp_width * 32 * ppu_cfg->pixel_width, ALIGN(ppu_cfg->align) * 8) / 8;
-      }
-    } else if (ppu_cfg->tile_mode == TILED2x4 && (ppu_cfg->out_yuyv || ppu_cfg->out_uyvy)) {
-      ystride = cstride = NEXT_MULTIPLE(2 * NEXT_MULTIPLE(pp_width, 4) * 4 * ppu_cfg->pixel_width, ALIGN(ppu_cfg->align) * 8) / 8;
-    } else if (ppu_cfg->tile_mode == PACKED422_TILED8x8 && (ppu_cfg->out_yuyv || ppu_cfg->out_uyvy)) {
-      if (ppu_cfg->pixel_width == 8) {
-        ystride = NEXT_MULTIPLE(2/*YUYUV*/ * NEXT_MULTIPLE(pp_width, 16) * 8/*h*/ * ppu_cfg->pixel_width, ALIGN(ppu_cfg->align) * 8) / 8;
-        cstride = 0; /*here cstride didn't use*/
-      } else { // only support P010
-        // when P010, pixel_width = 16
-        ystride = NEXT_MULTIPLE(2/*YUYUV*/ * NEXT_MULTIPLE(pp_width, 8) * 8 * ppu_cfg->pixel_width, ALIGN(ppu_cfg->align) * 8) / 8;
-        cstride = 0;
-      }
-    } else {
-      pp_width = NEXT_MULTIPLE(pp_width, 256);
-      ystride = cstride = NEXT_MULTIPLE(2 * pp_width * ppu_cfg->pixel_width, ALIGN(ppu_cfg->align) * 8) / 8;
-    }
   } else if (ppu_cfg->rgb) {
     if (IS_3PLAN_FORMAT(ppu_cfg->rgb_format)) {
       pp_width *= 3;
@@ -7063,26 +7004,6 @@ u32 CheckPpUnitConfig(const struct DecHwFeatures *hw_feature,
       return 1;
     }
 
-    if (!hw_feature->fmt_tile_support[i] && ppu_cfg->tiled_e && !ppu_cfg->tile_mode) {
-      APITRACEERR("CheckPpUnitConfig# Illegal param[PP %u]: TILE4x4 output is not supuported.\n", i);
-      return 1;
-    }
-
-    if (!hw_feature->fmt_output_tile8x8_support[i] && ppu_cfg->tiled_e && ppu_cfg->tile_mode == TILED8x8) {
-      APITRACEERR("CheckPpUnitConfig# Illegal param[PP %u]: TILE8x8 output is not supuported.\n", i);
-      return 1;
-    }
-
-    if (interlace && ppu_cfg->tiled_e) {
-      APITRACEERR("%s","CheckPpUnitConfig# Illegal param: TILED output not support interlace frame\n");
-      return 1;
-    }
-
-    if (!hw_feature->fmt_supertile_support[i] && ppu_cfg->tile_mode == TILED64x64 && ppu_cfg->rgb) {
-      APITRACEERR("CheckPpUnitConfig# Illegal param[PP %u]: Super_tile output is not supuported.\n", i);
-      return 1;
-    }
-
     if (!hw_feature->pp_3dlut[i] && ppu_cfg->enable_3dlut) {
       APITRACEERR("CheckPpUnitConfig# Illegal param[PP %u]: 3dlut is not supuported.\n", i);
       return 1;
@@ -7214,54 +7135,11 @@ u32 CheckPpUnitConfig(const struct DecHwFeatures *hw_feature,
         }
     }
 
-    if (ppu_cfg->tile_mode == TILED64x64 && !(ppu_cfg->rgb || ppu_cfg->rgb_planar)
-      && (ppu_cfg->out_p012 || ppu_cfg->out_I012)) {
-      APITRACEERR("CheckPpUnitConfig# Illegal param[PP %u]: yuv supertile output only supuport 8bit / pack10 output.\n", i);
-      return 1;
-    }
-
-    if (ppu_cfg->tiled_e && (pixel_width != 8 && ppu_cfg->out_cut_8bits) && ppu_cfg->tile_mode == TILED64x64 &&
-        !(ppu_cfg->rgb || ppu_cfg->rgb_planar)) {
-      APITRACEERR("CheckPpUnitConfig# Illegal param[PP %u]: When 10bit stream outputs in yuv TILED64x64, should not cut_8_bit.\n", i);
-      return 1;
-    }
-
-    if (!ppu_cfg->tiled_e && ppu_cfg->tile_mode == TILED64x64) {
-      APITRACEERR("CheckPpUnitConfig# Illegal param[PP %u]: When output format is TILED64x64, must enable tiled flag.\n", i);
-      return 1;
-    }
-
-    if (ppu_cfg->tiled_e && (pixel_width != 8 && !ppu_cfg->out_cut_8bits) && ppu_cfg->tile_mode && ppu_cfg->tile_mode != RECONTILED8x8 && ppu_cfg->tile_mode != TILED64x64) {
-      APITRACEERR("CheckPpUnitConfig# Illegal param[PP %u]: When 10bit stream outputs in tile mode(except TILED64x64 & RECONTILED8x8), must open one of P010/I010/L010.\n", i);
-      return 1;
-    }
-
-    if (ppu_cfg->tiled_e && ppu_cfg->tile_mode == TILED8x8 && (pixel_width != 8 && !ppu_cfg->out_cut_8bits)) {
-      APITRACEERR("CheckPpUnitConfig# Illegal param[PP %u]: When 10bit stream outputs in tile mode TILED8x8, must open P010, not support I010/L010.\n", i);
-      return 1;
-    }
     /* Realtek: enabled, the release ships it as #if 0. 0x2070 RTL has no
      * 420 -> 422 up-conversion; unchecked, the core writes half the chroma. */
     if (in_chroma_format == PP_CHROMA_420 && ppu_cfg->chroma_format == PP_CHROMA_422 && hw_feature->pp_420to422_support[i] != 1) {
       APITRACEERR("CheckPpUnitConfig# Illegal param[PP %u]: PP don't support 420 to 422.\n", i);
       return 1;
-    }
-
-    if(ppu_cfg->tile_mode == TILED2x4 && !(ppu_cfg->out_yuyv || ppu_cfg->out_uyvy)) {
-      APITRACEERR("CheckPpUnitConfig# Illegal param[PP %u]: only YUYV and UYVY support TILE2x4 output format.\n", i);
-      return 1;
-    }
-    if((ppu_cfg->out_yuyv || ppu_cfg->out_uyvy) && ppu_cfg->tiled_e && !(ppu_cfg->tile_mode == TILED2x4 || ppu_cfg->tile_mode == PACKED422_TILED8x8)) {
-      APITRACEERR("CheckPpUnitConfig# Illegal param[PP %u]: YUYV and UYVY with tile output only support TILE2x4 or PACKED422_TILED8x8.\n", i);
-      return 1;
-    }
-    if(ppu_cfg->tile_mode == PACKED422_TILED8x8 && !(ppu_cfg->out_yuyv || ppu_cfg->out_uyvy)) {
-      APITRACEERR("CheckPpUnitConfig# Illegal param[PP %u]: only YUYV and UYVY support PACKED422_TILED8x8 output format.\n", i);
-      return 1;
-      if ((pixel_width != 8 && !ppu_cfg->out_cut_8bits)) {
-        APITRACEERR("CheckPpUnitConfig# Illegal param[PP %u]: When 10bit stream outputs in tile mode PACKED422_TILED8x8, must open P010, not support others.\n", i);
-        return 1;
-      }
     }
 
     if ((ppu_cfg->out_yuyv || ppu_cfg->out_uyvy) && (!((ppu_cfg->sub_x == 2) && (ppu_cfg->sub_y == 1)))) {
@@ -7297,10 +7175,6 @@ u32 CheckPpUnitConfig(const struct DecHwFeatures *hw_feature,
     //   APITRACEERR("CheckPpUnitConfig# Illegal param[PP %u]: 422 can not support planar output\n", i);
     //   return 1;
     // }
-    if (ppu_cfg->chroma_format == PP_CHROMA_422 && ppu_cfg->tiled_e && !(ppu_cfg->out_yuyv || ppu_cfg->out_uyvy)) {
-      APITRACEERR("CheckPpUnitConfig# Illegal param[PP %u]: 422 can not support tiled output except YUYV/UYVY only support TILED2x4 or PACKED422_TILED8x8\n", i);
-      return 1;
-    }
     if(ppu_cfg->lc_stripe && (ppu_cfg->rgb || ppu_cfg->rgb_planar)) {
       APITRACEERR("CheckPpUnitConfig# Illegal param[PP %u]: line counter doesn't support rgb output\n", i);
       return 1;
@@ -7316,11 +7190,9 @@ u32 CheckPpUnitConfig(const struct DecHwFeatures *hw_feature,
 
     /*support decnano*/
     if(ppu_cfg->decnano_e) {
-      if(ppu_cfg->tile_mode == TILED4x4) {
-        if(ppu_cfg->rgb_format != PP_OUT_BGR888 && ppu_cfg->rgb_format != PP_OUT_ARGB888 && ppu_cfg->rgb_format != PP_OUT_RGB565  && ppu_cfg->rgb_format != PP_OUT_ARGB8565) {
-          APITRACEERR("CheckPpUnitConfig# Illegal param[PP %u]: TILE4x4 + DECNANO only support RGB888/ARGB888/RGB565/ARGB8565)\n", i);
-          return 1;
-        }
+      if(ppu_cfg->rgb_format != PP_OUT_BGR888 && ppu_cfg->rgb_format != PP_OUT_ARGB888 && ppu_cfg->rgb_format != PP_OUT_RGB565  && ppu_cfg->rgb_format != PP_OUT_ARGB8565) {
+        APITRACEERR("CheckPpUnitConfig# Illegal param[PP %u]: TILE4x4 + DECNANO only support RGB888/ARGB888/RGB565/ARGB8565)\n", i);
+        return 1;
       }
     }
 
@@ -7332,10 +7204,6 @@ u32 CheckPpUnitConfig(const struct DecHwFeatures *hw_feature,
       }
       if (!(ppu_cfg->out_format == PP_OUT_FMT_YUV420_8BIT)) {
         APITRACEERR("CheckPpUnitConfig# Illegal pp comp param[PP %u]: pp comp 'pvfbc' only support YUV420 semiplanar (NV12_8it/NV21_8bit/NV12_P010) compression and dosen't support 400/422/RGB\n", i);
-          return 1;
-      }
-      if (ppu_cfg->tiled_e) {
-        APITRACEERR("CheckPpUnitConfig# Illegal pp comp param[PP %u]: pp comp 'pvfbc' dosen't support tiled output format\n", i);
           return 1;
       }
       if (interlace) {
@@ -7368,14 +7236,6 @@ u32 CheckPpUnitConfig(const struct DecHwFeatures *hw_feature,
       APITRACEERR("CheckPpUnitConfig# Illegal param[PP %u]: PP DEC400 input doesn't support RGB planar.\n", i);
       return 1;
     }
-    if (ppu_cfg->dec400_enabled && !ppu_cfg->shaper_enabled && ppu_cfg->tiled_e && (ppu_cfg->tile_mode != TILED64x64)) {
-      APITRACEERR("CheckPpUnitConfig# Illegal param[PP %u]: PP DEC400 must enable shaper, DEC400 is after shaper module.\n", i);
-      return 1;
-    }
-    if (ppu_cfg->dec400_enabled && ppu_cfg->tile_mode == TILED64x64 && !ppu_cfg->rgb) {
-      APITRACEERR("CheckPpUnitConfig# Illegal param[PP %u]: PP DEC400 doesn't support YUV supertile.\n", i);
-      return 1;
-    }
     if (ppu_cfg->dec400_enabled && ppu_cfg->chroma_format == PP_YUV422 && !(ppu_cfg->out_yuyv == 1 || ppu_cfg->out_uyvy == 1)) {
       APITRACEERR("CheckPpUnitConfig# Illegal param[PP %u]: When PP DEC400 outputs 422, must set '--pp-packed-mode' as one of YUYV/UYVY.\n", i);
       return 1;
@@ -7384,8 +7244,7 @@ u32 CheckPpUnitConfig(const struct DecHwFeatures *hw_feature,
       APITRACEERR("CheckPpUnitConfig# Illegal param[PP %u]: PP DEC400 doesn't support 444 output.\n", i);
       return 1;
     }
-    if ((ppu_cfg->tile_mode == TILED64x64 && ppu_cfg->rgb && IS_4PLAN_FORMAT(ppu_cfg->rgb_format)) ||
-        (ppu_cfg->scale.width > ppu_cfg->crop.width*3 || ppu_cfg->scale.height > ppu_cfg->crop.height*3)) {
+    if (ppu_cfg->scale.width > ppu_cfg->crop.width*3 || ppu_cfg->scale.height > ppu_cfg->crop.height*3) {
       ppu_cfg->shaper_enabled = 0;
     }
     if (ppu_cfg->dec400_enabled && ppu_cfg->shaper_enabled && ALIGN(ppu_cfg->align) < 256) {
@@ -7607,25 +7466,7 @@ u32 CheckPpUnitConfig(const struct DecHwFeatures *hw_feature,
       APITRACEERR("CheckPpUnitConfig# Illegal param[PP %u]: too large DS ratio due to max supported ratio is 32.\n", i);
       return 1;
     }
-    if (ppu_cfg->tile_mode == RECONTILED8x8  || ppu_cfg->tile_mode == TILED8x8 || ppu_cfg->tile_mode == TILED64x64) {
-      if (ppu_cfg->scale.width > 8192 || ppu_cfg->scale.height > 8192) {
-        APITRACEERR("%s","CheckPpUnitConfig# Illegal param: TILED8x8 and TILED64x64 with output width or height should no more than 8192\n");
-          return 1;
-      }
-    }
 
-    if (ppu_cfg->tile_mode == TILED64x64 && ppu_cfg->rgb) {
-      if (!IS_4PLAN_FORMAT(ppu_cfg->rgb_format)) {
-        APITRACEERR("CheckPpUnitConfig# Illegal param[PP %u]: TILED64x64 only support 4 plan RGB formats.\n", i);
-        return 1;
-      }
-//      if (!(((ppu_cfg->scale.width == ppu_cfg->crop.width) || (ppu_cfg->scale.width == ppu_cfg->crop.width / 2)) &&
-//            ((ppu_cfg->scale.height == ppu_cfg->crop.height) || (ppu_cfg->scale.height == ppu_cfg->crop.height / 2)))) {
-//        APITRACEERR("CheckPpUnitConfig# Illegal param[PP %u]: TILED64x64 only support no scale or 2:1 scale.\n", i);
-//        return 1;
-//      }
-      ppu_cfg->shaper_enabled = 0;
-    }
 #if 0
     if (ppu_cfg->tiled_e && (ppu_cfg->tile_mode != TILED128x2)) {
       if ((ppu_cfg->crop.x & 3) || (ppu_cfg->crop.width & 3) ||
@@ -7650,19 +7491,6 @@ u32 CheckPpUnitConfig(const struct DecHwFeatures *hw_feature,
       }
     }
 #endif
-    if ((ppu_cfg->tile_mode == TILED128x2) && (ppu_cfg->scale.height & 3)) {
-      APITRACEERR("CheckPpUnitConfig# Illegal param[PP %u]: TILED128x2, height must align to 4.\n", i);
-      return 1;
-    }
-    if (ppu_cfg->tiled_e && !ppu_cfg->tile_mode && ppu_cfg->scale.width > hw_feature->max_pp_out_pic_width[i]) {
-      APITRACEERR("CheckPpUnitConfig# Illegal param[PP %u]: HW limit: TILED4x4 output size can't be bigger than PP max size.\n", i);
-      return 1;
-    }
-    if ((ppu_cfg->tiled_e && (ppu_cfg->crop.width == ppu_cfg->scale.width) && (ppu_cfg->crop.height == ppu_cfg->scale.height)) &&
-      ((ppu_cfg->scale.width  > hw_feature->max_pp_out_pic_width[i]) || (ppu_cfg->scale.height > hw_feature->max_pp_out_pic_height[i]) ) ) {
-      APITRACEERR("CheckPpUnitConfig# Illegal param[PP %u]: Illegal scaling output parameters when enable TILED output.\n", i);
-      return 1;
-    }
 
 #if 0
     if (ppu_cfg->tiled_e && (ppu_cfg->scale.height%16) != 0) {
@@ -7675,101 +7503,9 @@ u32 CheckPpUnitConfig(const struct DecHwFeatures *hw_feature,
       APITRACEERR("CheckPpUnitConfig# Illegal param[PP %u]: Don't support enable PP compression.\n", i);
       return 1;
     }
-    if (!(ppu_cfg->pp_comp && hw_feature->pp_comp_support[i] == 1) && (ppu_cfg->tile_mode == TILED16x16 || ppu_cfg->tile_mode == TILED32x8)) {
-      APITRACEERR("CheckPpUnitConfig# Illegal param[PP %u]: When set '--tiled-mode' as TILED16x16/TILED32x8, must enable PFC compression.\n", i);
-      return 1;
-    }
 
-    if (ppu_cfg->pp_comp && hw_feature->pp_comp_support[i] == 1) {
-      if (!(ppu_cfg->tile_mode == TILED16x16 || ppu_cfg->tile_mode == TILED32x8)) {
-        APITRACEERR("CheckPpUnitConfig# Illegal param[PP %u]: When enable PFC compression, must set '--tiled-mode' as one of TILED16x16/TILED32x8.\n", i);
-        return 1;
-      }
-      if(!ppu_cfg->shaper_enabled) {
-        APITRACEERR("CheckPpUnitConfig# Illegal param[PP %d]:  --pp-shaper-dis conflic with AFBC.\n", i);
-        return 1;
-      }
-      if (ppu_cfg->scale.width > 8192) {
-        APITRACEERR("CheckPpUnitConfig# Illegal param[PP %u]: FBC max width is 8192, cur width %d.\n", i, ppu_cfg->scale.width);
-        return 1;
-      }
-      if (in_chroma_format == PP_CHROMA_400) {
-        APITRACEERR("CheckPpUnitConfig# Illegal pp comp param[PP %u]: AFBC not support YUV400 case.\n", i);
-          return 1;
-      }
-
-      if (hw_feature->scale_cost_support[i] == HIGH_SCALER) {
-        if ((ppu_cfg->pp_filter == BICUBIC && ppu_cfg->antialias == 0) && ppu_cfg->src_sel_mode != NO_ROUND) {
-          APITRACEERR("CheckPpUnitConfig# Illegal param[PP %u]: Channel that support both PFC and PFC compression with High 1/2 SCALE, BICUBIC(antilias=0) only support NO_ROUND mode for src_sel.\n", i);
-          return 1;
-        }
-      }
-
-      if (hw_feature->scale_cost_support[i] == MIDDLE_SCALER) {
-        if ( (ppu_cfg->pp_filter == LANCZOS || (ppu_cfg->pp_filter == BICUBIC && ppu_cfg->antialias == 1)) && ppu_cfg->src_sel_mode == NO_ROUND) {
-          APITRACEERR("CheckPpUnitConfig# Illegal param[PP %u]: Channel that support both PFC and PFC compression with Medium 1/2 SCALE, LANCZOS/BICUBIC(antialias=1) only support DOWN_ROUND/UP_ROUND mode for src_sel.\n", i);
-          return 1;
-        } else if(( (ppu_cfg->pp_filter == BI_LINEAR || ppu_cfg->antialias == 0) || ppu_cfg->pp_filter == BOX) && ppu_cfg->src_sel_mode != NO_ROUND) {
-          APITRACEERR("CheckPpUnitConfig# Illegal param[PP %u]: Channel that support both PFC and PFC compression with Medium 1/2 SCALE, BILINEAR(antialias=0)/ BOX only support NO_ROUND mode for src_sel.\n", i);
-          return 1;
-        } else if( (ppu_cfg->pp_filter == BI_LINEAR && ppu_cfg->antialias == 1) || (ppu_cfg->pp_filter == BICUBIC && ppu_cfg->antialias == 0)) {
-          APITRACEERR("CheckPpUnitConfig# Illegal param[PP %u]: Channel that support both PFC and PFC compression with Medium 1/2 SCALE, Don't support BILINEAR(antialias=1)/ BICUBC(antialias=0).\n", i);
-          return 1;
-        }
-      }
-
-      if (hw_feature->scale_cost_support[i] == ULTRA_SCALER) {
-        if (( ppu_cfg->pp_filter == LANCZOS || ppu_cfg->pp_filter == BICUBIC) && ppu_cfg->src_sel_mode != DOWN_ROUND) {
-          APITRACEERR("CheckPpUnitConfig# Illegal param[PP %u]: Channel that support both PFC and PFC compression with ULTRA 1/2 SCALE, LANCZOS/BICUBIC only support DOWN_ROUND mode for src_sel.\n", i);
-          return 1;
-        } else if(ppu_cfg->pp_filter == BI_LINEAR) {
-          APITRACEERR("CheckPpUnitConfig# Illegal param[PP %u]: Channel that support both PFC and PFC compression with ULTRA 1/2 SCALE, Don't support BILINEAR.\n", i);
-          return 1;
-        }
-      }
-
-      if ((ppu_cfg->out_format == PP_OUT_FMT_YUV400 || ppu_cfg->out_format == PP_OUT_FMT_YUV400_P010 ||
-          ppu_cfg->out_format == PP_OUT_FMT_YUV400_8BIT || ppu_cfg->out_format == PP_OUT_FMT_YUV400_P012)) {
-        APITRACEERR("CheckPpUnitConfig# Illegal param[PP %u]: PFC compression not support monochrome output format.\n", i);
-        return 1;
-      }
-
-      if (interlace) {
-        APITRACEERR("%s","CheckPpUnitConfig# Illegal param: AFBC not support interlace frame\n");
-        return 1;
-      }
-      if((ppu_cfg->scale.ratio_x == 2 || ppu_cfg->scale.ratio_y == 2) && ((ppu_cfg->crop.x & 7) || (ppu_cfg->crop.y & 7) ||
-        (ppu_cfg->crop.width & 3) || (ppu_cfg->crop.height & 3))) {
-        APITRACEERR("CheckPpUnitConfig# Illegal param[PP %d]: PFC compression cropping [W %d]/[H %d] must align to 4. size must align to 4, when downscale 1/2 \n", i, ppu_cfg->crop.width, ppu_cfg->crop.height);
-        return 1;
-      }
-
-      if((ppu_cfg->scale.ratio_x != 2 || ppu_cfg->scale.ratio_y != 2) && ((ppu_cfg->crop.x & 7) || (ppu_cfg->crop.y & 7))) {
-        APITRACEERR("CheckPpUnitConfig# Illegal param[PP %d]: PFC compression cropping x/y must align to 8. \n", i);
-        return 1;
-      }
-
-      if(((ppu_cfg->scale.ratio_x > 1)  && (ppu_cfg->scale.ratio_x != 2)) || ((ppu_cfg->scale.ratio_y > 1)  && (ppu_cfg->scale.ratio_y != 2))) {
-        APITRACEERR("CheckPpUnitConfig# Illegal param[PP %d]: PFC compression only support downscale 1/2 \n", i);
-        return 1;
-      }
-
-      if ((ppu_cfg->scale.width != ppu_cfg->crop.width) ||
-          (ppu_cfg->scale.height != ppu_cfg->crop.height)) {
-        if (((FDIVI(TOFIX(ppu_cfg->crop.width, 16) + ppu_cfg->scale.width / 2, ppu_cfg->scale.width)) != 0x20000) ||
-            ((FDIVI(TOFIX(ppu_cfg->crop.height, 16) + ppu_cfg->scale.height / 2, ppu_cfg->scale.height)) != 0x20000)) {
-          if ((ppu_cfg->crop.width % 4) || (ppu_cfg->crop.height % 4)) {
-            APITRACEERR("CheckPpUnitConfig# Illegal param[PP %u]: Channel that support both PFC and PFC compression, crop size must align to 4.\n", i);
-          } else {
-            APITRACEERR("CheckPpUnitConfig# Illegal param[PP %u]: Channel that support both PFC and PFC compression, only support 1:1 and 1:2 dscale ratio.\n", i);
-          }
-          return 1;
-        }
-      }
-    }
-
-    if (ppu_cfg->tile_mode == TILED64x64 || (ppu_cfg->scale.width > ppu_cfg->crop.width*3 ||
-        ppu_cfg->scale.height > ppu_cfg->crop.height*3)) {
+    if (ppu_cfg->scale.width > ppu_cfg->crop.width*3 ||
+        ppu_cfg->scale.height > ppu_cfg->crop.height*3) {
       ppu_cfg->shaper_enabled = 0;
     }
 
@@ -7802,8 +7538,7 @@ u32 CheckPpUnitConfig(const struct DecHwFeatures *hw_feature,
         return 1;
       }
       if (!(IS_PP_OUT_MONOCHROME(ppu_cfg->out_format) || IS_PP_OUT_PACKED422(ppu_cfg->out_format)
-      || (ppu_cfg->rgb && IS_PACKED_RGB(ppu_cfg->rgb_format))
-      || (ppu_cfg->tiled_e && (!ppu_cfg->tile_mode || ppu_cfg->tile_mode == TILED2x4)))
+      || (ppu_cfg->rgb && IS_PACKED_RGB(ppu_cfg->rgb_format)))
       && ppu_cfg->sbi_lu_stream_id == ppu_cfg->sbi_ch_stream_id && !ppu_cfg->sbi_coupled) {
         APITRACEERR("CheckPpUnitConfig# Illegal param[PP %u]: Sbi chroma stream id should not equal to luma stream id.\n", i);
         return 1;
@@ -8405,31 +8140,9 @@ void PPSetOneChannelRegs(u32 *pp_regs, const struct PpParams *pp_args, u32 chann
       SetPpuRegister(pp_regs, HWIF_PPX_LU_HSCALE_RATIO_U, i, 0);
     }
   }
-  SetPpuRegister(pp_regs, HWIF_PPX_OUT_TILE_E_U, i, ppu_cfg->tiled_e);
-  if (ppu_cfg->tiled_e && ppu_cfg->tile_mode) {
-    if (ppu_cfg->tile_mode != PACKED422_TILED8x8)
-      SetPpuRegister(pp_regs, HWIF_PPX_TILE_SIZE_U, i, ppu_cfg->tile_mode);
-    else
-      SetPpuRegister(pp_regs, HWIF_PPX_OUT_YUV422_TILE_E_U, i, 1);
-    SetPpuRegister(pp_regs, HWIF_PPX_YUV_SUPERTILE_PAD_COPY_E_U, i, ppu_cfg->yuv_supertile_pad_copy_e);
-    /*
-    SetPpuRegister(pp_regs, VIRTUAL_LEFT_U, i, ppu_cfg->vir_left);
-    SetPpuRegister(pp_regs, VIRTUAL_RIGHT_U, i, ppu_cfg->vir_right);
-    SetPpuRegister(pp_regs, VIRTUAL_TOP_U, i, ppu_cfg->vir_top);
-    SetPpuRegister(pp_regs, VIRTUAL_BOTTOM_U, i, ppu_cfg->vir_bottom);
-    SET_PP_ADDR_REG2(pp_regs,
-                      PP_FBC_TILE_BASE_U_LSB,
-                      PP_FBC_TILE_BASE_U_MSB,
-                      i,
-                      ppu_cfg->fbc_tile.bus_address + ppu_cfg->fbc_tile_offset);
-    */
-    //TODO(min): FBC to be supported.
-  }
+  SetPpuRegister(pp_regs, HWIF_PPX_OUT_TILE_E_U, i, 0);
 
-  if (ppu_cfg->pp_comp && (ppu_cfg->tile_mode == TILED16x16 || ppu_cfg->tile_mode == TILED32x8)) {
-    SetPpuRegister(pp_regs, HWIF_PPX_COMP_E_U, i, ppu_cfg->pp_comp);
-    SetPpuRegister(pp_regs, HWIF_PPX_FBC_TILE_E_U, i, ppu_cfg->pp_fbc_tile_enable);
-  } else if(ppu_cfg->pp_pvfbc && p_hw_feature->pp_comp_support[i] == 3) {/*1: fbc, 2:dec400, 3:pvfbc*/
+  if(ppu_cfg->pp_pvfbc && p_hw_feature->pp_comp_support[i] == 3) {/*1: fbc, 2:dec400, 3:pvfbc*/
     SetPpuRegister(pp_regs, HWIF_PPX_COMP_E_U, i, ppu_cfg->pp_pvfbc);
   } else {
     SetPpuRegister(pp_regs, HWIF_PPX_COMP_E_U, i, 0);
@@ -8608,13 +8321,8 @@ void PPSetOneChannelRegs(u32 *pp_regs, const struct PpParams *pp_args, u32 chann
   }
 
 #if 0
-  if (ppu_cfg->tiled_e) {
-    SetPpuRegister(pp_regs, HWIF_PPX_OUT_Y_STRIDE, i, (ppw >> p_hw_feature->pp_tiled_stride_shift));
-    SetPpuRegister(pp_regs, HWIF_PPX_OUT_C_STRIDE, i, (ppw_c >> p_hw_feature->pp_tiled_stride_shift));
-  } else {
-    SetPpuRegister(pp_regs, HWIF_PPX_OUT_Y_STRIDE, i, ppw);
-    SetPpuRegister(pp_regs, HWIF_PPX_OUT_C_STRIDE, i, ppw_c);
-  }
+  SetPpuRegister(pp_regs, HWIF_PPX_OUT_Y_STRIDE, i, ppw);
+  SetPpuRegister(pp_regs, HWIF_PPX_OUT_C_STRIDE, i, ppw_c);
 #else
   SetPpuRegister(pp_regs, HWIF_PPX_OUT_Y_STRIDE, i, ppw / stride_unit[ppu_cfg->unit]);
   SetPpuRegister(pp_regs, HWIF_PPX_OUT_C_STRIDE, i, ppw_c / stride_unit[ppu_cfg->unit]);
@@ -8644,21 +8352,7 @@ void PPSetOneChannelRegs(u32 *pp_regs, const struct PpParams *pp_args, u32 chann
   }
 
   if (!ppu_cfg->rgb_planar) {
-    if (i == 0 && ppu_cfg->pp_comp && (ppu_cfg->tile_mode == TILED16x16 || ppu_cfg->tile_mode == TILED32x8)) {
-      addr_plane_lu_r = cur_pp_out_addr->bus_address + ppu_cfg->header_offset + pp_field_offset;
-      addr_plane_ch_g = cur_pp_out_addr->bus_address + ppu_cfg->payload_offset + pp_field_offset_ch;
-
-      SET_PP_ADDR_REG2(pp_regs,
-                  HWIF_PPX_OUT_LU_BASE_U_LSB,
-                  HWIF_PPX_OUT_LU_BASE_U_MSB,
-                  0,
-                  addr_plane_lu_r);
-      SET_PP_ADDR_REG2(pp_regs,
-                  HWIF_PPX_OUT_CH_BASE_U_LSB,
-                  HWIF_PPX_OUT_CH_BASE_U_MSB,
-                  0,
-                  addr_plane_ch_g);
-    } else if (ppu_cfg->pp_pvfbc) {
+    if (ppu_cfg->pp_pvfbc) {
       addr_plane_lu_r = cur_pp_out_addr->bus_address + ppu_cfg->plane0_offset + pp_field_offset;
       addr_plane_ch_g = cur_pp_out_addr->bus_address + ppu_cfg->plane1_offset + pp_field_offset_ch;
       addr_plane_lu_r_vir = (u8*)cur_pp_out_addr->virtual_address + ppu_cfg->plane0_offset + pp_field_offset;
@@ -8877,43 +8571,6 @@ void PPSetLancozsScaleRegs(u32 *pp_regs,
   }
 }
 
-u32 CalcOnePpUnitFBCHeaderPayloadSize(PpUnitIntConfig *ppu_cfg, u32 header) {
-  u32 width_in_block = 0, height_in_block = 0;
-  u32 block_payload_size = 0;
-  u32 header_size = 0, payload_size = 0;
-  u32 pp_width = ppu_cfg->scale.width;
-  u32 pp_height = ppu_cfg->scale.height;
-  if (ppu_cfg->tile_mode == TILED16x16) {
-    width_in_block = NEXT_MULTIPLE(pp_width, 16) >> 4;
-    height_in_block = NEXT_MULTIPLE(pp_height, 16) >> 4;
-    if(ppu_cfg->pp_fbc_tile_enable) {
-      width_in_block = NEXT_MULTIPLE(width_in_block, 8);
-      height_in_block = NEXT_MULTIPLE(height_in_block, 8);
-    }
-  } else if (ppu_cfg->tile_mode == TILED32x8) {
-    width_in_block = NEXT_MULTIPLE(pp_width, 32) >> 5;
-    height_in_block = NEXT_MULTIPLE(pp_height, 8) >> 3;
-    if(ppu_cfg->pp_fbc_tile_enable) {
-      width_in_block = NEXT_MULTIPLE(width_in_block, 8);
-      height_in_block = NEXT_MULTIPLE(height_in_block, 8);
-    }
-  }
-  if (ppu_cfg->pixel_width == 8)
-    block_payload_size = 384;
-  else
-    block_payload_size = 512;
-  if(ppu_cfg->pp_fbc_tile_enable) {
-    header_size = NEXT_MULTIPLE(width_in_block * 16 * height_in_block, 4096);
-    payload_size = NEXT_MULTIPLE(block_payload_size * width_in_block *height_in_block, 4096);
-  } else {
-    header_size = NEXT_MULTIPLE(width_in_block * 16 * height_in_block, 128);
-    payload_size = NEXT_MULTIPLE(block_payload_size * width_in_block *height_in_block, 128);
-  }
-  if (header)
-    return header_size;
-  else
-    return payload_size;
-}
 u64 CalcOnePpUnitPVFBCPlane0Size(PpUnitIntConfig *ppu_cfg) {
   u64 pp_height = 0, pp_width = 0;
   u64 payload_size = 0, header_size = 0, plane0_size = 0;
@@ -8941,8 +8598,7 @@ u64 CalcOnePpUnitPVFBCPlane1Size(PpUnitIntConfig *ppu_cfg, u32 mono_chrome) {
   u64 pp_height = 0, pp_width = 0;
   u64 payload_size = 0, header_size = 0, plane1_size = 0;
   if (!ppu_cfg->monochrome && !mono_chrome && !ppu_cfg->rgb &&
-    !ppu_cfg->rgb_planar && !ppu_cfg->out_yuyv && !ppu_cfg->out_uyvy &&
-    (ppu_cfg->tile_mode != TILED16x16)) {
+    !ppu_cfg->rgb_planar && !ppu_cfg->out_yuyv && !ppu_cfg->out_uyvy) {
     pp_width = ppu_cfg->sub_x == 2 ? NEXT_MULTIPLE(ppu_cfg->scale.width , 2) : ppu_cfg->scale.width * 2;
     pp_height = ppu_cfg->sub_y == 2 ? (ppu_cfg->scale.height + 1) / 2 : ppu_cfg->scale.height;
     pp_width = ppu_cfg->out_format == PP_OUT_FMT_YUV420_P010 ? pp_width * 2 : pp_width;
@@ -8975,30 +8631,10 @@ void CalcOnePpUnitLumaSize(PpUnitIntConfig *ppu_cfg, u64* size_array) {
   ppu_cfg->frm_width = ppu_cfg->scale.width;
   ppu_cfg->frm_height = ppu_cfg->scale.height;
 
-  if (ppu_cfg->tiled_e)
-    pp_height = NEXT_MULTIPLE(ppu_cfg->scale.height, 4) / 4;
-  else {
-    pp_height = ppu_cfg->frm_height;
-  }
+  pp_height = ppu_cfg->frm_height;
   pp_stride = ppu_cfg->ystride;
 
-  if (ppu_cfg->tiled_e) {
-    if(ppu_cfg->tile_mode == TILED4x4) {
-      luma_size = pp_stride * (NEXT_MULTIPLE(ppu_cfg->scale.height, 4) / 4);
-    } else if (ppu_cfg->tile_mode == TILED16x16) {
-      luma_size = pp_stride * (NEXT_MULTIPLE(ppu_cfg->scale.height, 16) / 16);
-    } else if (ppu_cfg->tile_mode == TILED8x8 || ppu_cfg->tile_mode == RECONTILED8x8) {
-      luma_size = pp_stride * (NEXT_MULTIPLE(ppu_cfg->scale.height, 8) / 8);
-    } else if (ppu_cfg->tile_mode == TILED64x64) {
-      luma_size = pp_stride * (NEXT_MULTIPLE(ppu_cfg->scale.height, 64) / 64);
-    } else if (ppu_cfg->tile_mode == TILED2x4) {/*YUYV/UYVY*/
-      luma_size = pp_stride * (NEXT_MULTIPLE(ppu_cfg->scale.height, 4) / 4);
-    } else if (ppu_cfg->tile_mode == PACKED422_TILED8x8) {/*YUYV/UYVY*/
-      luma_size = pp_stride * (NEXT_MULTIPLE(ppu_cfg->scale.height, 8) / 8);
-    } else {
-      luma_size = pp_stride * ppu_cfg->scale.height;
-    }
-  } else if (ppu_cfg->rgb) {
+  if (ppu_cfg->rgb) {
     luma_size = NEXT_MULTIPLE(pp_stride * pp_height, PLANE_ALIGNMENT);
   } else if (ppu_cfg->rgb_planar) {
     luma_size = 3 * NEXT_MULTIPLE(pp_stride * pp_height, PLANE_ALIGNMENT);
@@ -9012,35 +8648,13 @@ void CalcOnePpUnitChromaSize(PpUnitIntConfig *ppu_cfg, u32 mono_chrome, u64* siz
   u32 pp_height = 0, pp_stride = 0;
   u64 chroma_size = 0;
 
-  /* for dec400 + supertile optimization */
-  if(ppu_cfg->tile_mode && ppu_cfg->tile_mode == TILED64x64 && ppu_cfg->dec400_enabled)
-    chroma_size = NEXT_MULTIPLE(NEXT_MULTIPLE(ppu_cfg->scale.width, 8) / 8, 64) * NEXT_MULTIPLE(ppu_cfg->scale.height,8) / 8;
   if (!ppu_cfg->monochrome && !mono_chrome && !ppu_cfg->rgb &&
-      !ppu_cfg->rgb_planar && !ppu_cfg->out_yuyv && !ppu_cfg->out_uyvy &&
-      (ppu_cfg->tile_mode != TILED16x16)) {
-    if (ppu_cfg->tiled_e && !ppu_cfg->tile_mode) {
-      /*support odd crop*/
-      //pp_height = NEXT_MULTIPLE(ppu_cfg->scale.height/ppu_cfg->sub_y, 4) / 4;
-      pp_height = NEXT_MULTIPLE((ppu_cfg->sub_y == 2 ? (ppu_cfg->scale.height + 1) / 2 : ppu_cfg->scale.height), 4) / 4;
-    } else {
-      /*support odd crop*/
-      //pp_height = ppu_cfg->scale.height / ppu_cfg->sub_y;
-      pp_height = ppu_cfg->sub_y == 2 ? (ppu_cfg->scale.height + 1) / 2 : ppu_cfg->scale.height;
-    }
+      !ppu_cfg->rgb_planar && !ppu_cfg->out_yuyv && !ppu_cfg->out_uyvy) {
+    /*support odd crop*/
+    //pp_height = ppu_cfg->scale.height / ppu_cfg->sub_y;
+    pp_height = ppu_cfg->sub_y == 2 ? (ppu_cfg->scale.height + 1) / 2 : ppu_cfg->scale.height;
     pp_stride = ppu_cfg->cstride;
-    if (ppu_cfg->tiled_e && ppu_cfg->tile_mode) {
-      if (ppu_cfg->tile_mode == TILED8x8  || ppu_cfg->tile_mode == RECONTILED8x8)
-        chroma_size = ppu_cfg->cstride * (ppu_cfg->sub_y == 2 ? NEXT_MULTIPLE((ppu_cfg->scale.height + 1) / 2, 4) / 4 : NEXT_MULTIPLE(ppu_cfg->scale.height, 4) / 4);
-      else if (ppu_cfg->tile_mode == TILED64x64 && !(ppu_cfg->rgb || ppu_cfg->rgb_planar)) {
-        chroma_size = ppu_cfg->cstride * (NEXT_MULTIPLE((ppu_cfg->scale.height + 1) / 2, 32) / 32); //only 420
-      } else {
-        /*support odd crop*/
-        //chroma_size = ppu_cfg->cstride * ppu_cfg->scale.height / 2;
-        chroma_size = ppu_cfg->cstride * (ppu_cfg->sub_y == 2 ? (ppu_cfg->scale.height + 1) / 2 : ppu_cfg->scale.height);
-      }
-    } else {
-      chroma_size = pp_stride * pp_height;
-    }
+    chroma_size = pp_stride * pp_height;
   }
   if (ppu_cfg->luma_sum_e || ppu_cfg->hist_local_e || ppu_cfg->hist_global_e || ppu_cfg->hist_hsv_e) {
     chroma_size = (256 * 32 + 24 * 128 * 32 +2  * 16 * 32 + 256 * 32) / 4;
@@ -9063,7 +8677,7 @@ u64 CalcOnePpUnitDec400TblSize(const struct DecHwFeatures *hw_feature, PpUnitInt
       ppu_cfg->total_buffer_size[0] += ppu_cfg->dec400_luma_table.size;
 
       //chroma
-      if(chroma_size && ppu_cfg->tile_mode != TILED64x64) {
+      if(chroma_size) {
         if(ppu_cfg->dec400_conformance_test_en) {
           ppu_cfg->dec400_chroma_table.logical_size = NEXT_MULTIPLE(DEC400_IN_HEADER_SIZE + (chroma_size / DEC400_TILE_SIZE * 4 + 7) / 8, DEC400_TILE_SIZE);
         } else {
@@ -9092,19 +8706,12 @@ u64 CalcPpUnitBufferSize(const struct DecHwFeatures *hw_feature, PpUnitIntConfig
   u64 luma_size_3 = 0,chroma_size_3 = 0;
   u64 size_array[8];
   u64 ext_buffer_size = 0, dec400_table_size = 0;
-  u32 header_size = 0, payload_size = 0;
   u32 dec400_pln0_tile_status_size = 0, dec400_pln1_tile_status_size = 0;
   u64 plane0_size = 0, plane1_size = 0;
   for (i = 0; i < DEC_MAX_PPU_COUNT; i++, ppu_cfg++) {
     DWLmemset(ppu_cfg->total_buffer_size, 0, sizeof(ppu_cfg->total_buffer_size));
     if (!ppu_cfg->enabled) continue;
-    //only pp0 support embedded FBC core
-    if (i == 0 && ppu_cfg->pp_comp && (ppu_cfg->tile_mode == TILED16x16 || ppu_cfg->tile_mode == TILED32x8)) {
-      header_size = CalcOnePpUnitFBCHeaderPayloadSize(ppu_cfg, 1);
-      payload_size = CalcOnePpUnitFBCHeaderPayloadSize(ppu_cfg, 0);
-      ppu_cfg->header_offset = ext_buffer_size;
-      ppu_cfg->payload_offset = ext_buffer_size + header_size;
-    } else if (ppu_cfg->pp_pvfbc) {
+    if (ppu_cfg->pp_pvfbc) {
       plane0_size = CalcOnePpUnitPVFBCPlane0Size(ppu_cfg);
       plane1_size = CalcOnePpUnitPVFBCPlane1Size(ppu_cfg, mono_chrome);
       ppu_cfg->plane0_offset = ext_buffer_size;
@@ -9147,7 +8754,7 @@ u64 CalcPpUnitBufferSize(const struct DecHwFeatures *hw_feature, PpUnitIntConfig
     if (ppu_cfg->dec400_enabled) {/*suport PP DEC400*/
       dec400_table_size += CalcOnePpUnitDec400TblSize(hw_feature, ppu_cfg, luma_size, chroma_size, i);
       dec400_pln0_tile_status_size = ppu_cfg->dec400_luma_table.size;
-      if(chroma_size && ppu_cfg->tile_mode != TILED64x64)
+      if(chroma_size)
         dec400_pln1_tile_status_size = ppu_cfg->dec400_chroma_table.size;
       ppu_cfg->dec400_pln0_tile_status_offset = ext_buffer_size;
       ppu_cfg->dec400_pln1_tile_status_offset = ext_buffer_size + dec400_pln0_tile_status_size + luma_size;
@@ -9172,14 +8779,7 @@ u64 CalcPpUnitBufferSize(const struct DecHwFeatures *hw_feature, PpUnitIntConfig
         ppu_cfg->chroma_offset = base_offset + luma_size;
       }
     }
-    //only pp0 support embedded FBC core
-    if (i == 0 && ppu_cfg->pp_comp && (ppu_cfg->tile_mode == TILED16x16 || ppu_cfg->tile_mode == TILED32x8)) {
-      ppu_cfg->total_buffer_size[0] = NEXT_MULTIPLE(header_size + payload_size, 16);
-      ext_buffer_size += ppu_cfg->total_buffer_size[0];
-      if (MAX_OUTPUT_PLANE >= 3) {
-        ppu_cfg->total_buffer_size[1] = ppu_cfg->total_buffer_size[2] = 0;
-      }
-    } else if (ppu_cfg->dec400_enabled) { /*supoort PP DEC400*/
+    if (ppu_cfg->dec400_enabled) { /*supoort PP DEC400*/
       ext_buffer_size += luma_size + chroma_size + dec400_pln0_tile_status_size + dec400_pln1_tile_status_size;
     } else if (ppu_cfg->pp_pvfbc) {
       // #ifdef MODEL_SIMULATION
@@ -9237,7 +8837,6 @@ void PpUnitSetIntConfig(PpUnitIntConfig *ppu_int_cfg,
       continue;
     }
     ppu_int_cfg->dis_checker = ppu_ext_cfg->dis_checker;
-    ppu_int_cfg->tiled_e = ppu_ext_cfg->tiled_e;
     ppu_int_cfg->rgb = ppu_ext_cfg->rgb;
     ppu_int_cfg->rgb_planar = ppu_ext_cfg->rgb_planar;
     if (ppu_int_cfg->rgb_planar)
@@ -9277,8 +8876,6 @@ void PpUnitSetIntConfig(PpUnitIntConfig *ppu_int_cfg,
     ppu_int_cfg->cstride = ppu_ext_cfg->cstride;
     ppu_int_cfg->stride_set_by_user = ppu_ext_cfg->stride_set_by_user;
     ppu_int_cfg->video_range = ppu_ext_cfg->video_range;
-    ppu_int_cfg->tile_mode = ppu_ext_cfg->tile_mode;
-    ppu_int_cfg->yuv_supertile_pad_copy_e = ppu_ext_cfg->yuv_supertile_pad_copy_e;
     //ppu_int_cfg->in_lib_name = ppu_ext_cfg->in_lib_name;
 
     ppu_int_cfg->sbi_en = ppu_ext_cfg->sbi_en;
@@ -9700,109 +9297,55 @@ enum DecPictureFormat TransUnitConfig2Format(PpUnitIntConfig *ppu_int_cfg) {
         output_format = DEC_OUT_FRM_DEC400_BGR888;
         break;
       case PP_OUT_ABGR888:
-        if (ppu_int_cfg->tiled_e)
-          output_format = DEC_OUT_FRM_DEC400_ABGR888_TILED64X64;
-        else
-          output_format = DEC_OUT_FRM_DEC400_ABGR888;
+        output_format = DEC_OUT_FRM_DEC400_ABGR888;
         break;
       case PP_OUT_ARGB888:
-        if (ppu_int_cfg->tiled_e)
-          output_format = DEC_OUT_FRM_DEC400_ARGB888_TILED64X64;
-        else
-          output_format = DEC_OUT_FRM_DEC400_ARGB888;
+        output_format = DEC_OUT_FRM_DEC400_ARGB888;
         break;
       case PP_OUT_BGRA888:
-        if (ppu_int_cfg->tiled_e)
-          output_format = DEC_OUT_FRM_DEC400_BGRA888_TILED64X64;
-        else
-          output_format = DEC_OUT_FRM_DEC400_BGRA888;
+        output_format = DEC_OUT_FRM_DEC400_BGRA888;
         break;
       case PP_OUT_RGBA888:
-        if (ppu_int_cfg->tiled_e)
-          output_format = DEC_OUT_FRM_DEC400_RGBA888_TILED64X64;
-        else
-          output_format = DEC_OUT_FRM_DEC400_RGBA888;
+        output_format = DEC_OUT_FRM_DEC400_RGBA888;
         break;
       case PP_OUT_A2B10G10R10:
-        if (ppu_int_cfg->tiled_e)
-          output_format = DEC_OUT_FRM_DEC400_A2B10G10R10_TILED64X64;
-        else
-          output_format = DEC_OUT_FRM_DEC400_A2B10G10R10;
+        output_format = DEC_OUT_FRM_DEC400_A2B10G10R10;
         break;
       case PP_OUT_A2R10G10B10:
-        if (ppu_int_cfg->tiled_e)
-          output_format = DEC_OUT_FRM_DEC400_A2R10G10B10_TILED64X64;
-        else
-          output_format = DEC_OUT_FRM_DEC400_A2R10G10B10;
+        output_format = DEC_OUT_FRM_DEC400_A2R10G10B10;
         break;
       case PP_OUT_B10G10R10A2:
-        if (ppu_int_cfg->tiled_e)
-          output_format = DEC_OUT_FRM_DEC400_B10G10R10A2_TILED64X64;
-        else
-          output_format = DEC_OUT_FRM_DEC400_B10G10R10A2;
+        output_format = DEC_OUT_FRM_DEC400_B10G10R10A2;
         break;
       case PP_OUT_R10G10B10A2:
-        if (ppu_int_cfg->tiled_e)
-          output_format = DEC_OUT_FRM_DEC400_R10G10B10A2_TILED64X64;
-        else
-          output_format = DEC_OUT_FRM_DEC400_R10G10B10A2;
+        output_format = DEC_OUT_FRM_DEC400_R10G10B10A2;
         break;
       case PP_OUT_X2R10G10B10:
-        if (ppu_int_cfg->tiled_e)
-          output_format = DEC_OUT_FRM_DEC400_X2R10G10B10_TILED64X64;
-        else
-          output_format = DEC_OUT_FRM_DEC400_X2R10G10B10;
+        output_format = DEC_OUT_FRM_DEC400_X2R10G10B10;
         break;
       case PP_OUT_X2B10G10R10:
-        if (ppu_int_cfg->tiled_e)
-          output_format = DEC_OUT_FRM_DEC400_X2B10G10R10_TILED64X64;
-        else
-          output_format = DEC_OUT_FRM_DEC400_X2B10G10R10;
+        output_format = DEC_OUT_FRM_DEC400_X2B10G10R10;
         break;
       case PP_OUT_XBGR888:
-        if (ppu_int_cfg->tiled_e)
-          output_format = DEC_OUT_FRM_DEC400_XBGR888_TILED64X64;
-        else
-          output_format = DEC_OUT_FRM_DEC400_XBGR888;
+        output_format = DEC_OUT_FRM_DEC400_XBGR888;
         break;
       case PP_OUT_XRGB888:
-        if (ppu_int_cfg->tiled_e)
-          output_format = DEC_OUT_FRM_DEC400_XRGB888_TILED64X64;
-        else
-          output_format = DEC_OUT_FRM_DEC400_XRGB888;
+        output_format = DEC_OUT_FRM_DEC400_XRGB888;
         break;
       default:
         ASSERT(0);
         break;
       }
     } else if (ppu_int_cfg->monochrome) {
-      if (ppu_int_cfg->tiled_e && !ppu_int_cfg->tile_mode)
-        output_format = DEC_OUT_FRM_DEC400_400TILE;
-      else if (ppu_int_cfg->tiled_e && ppu_int_cfg->tile_mode == TILED8x8) {
-        if (ppu_int_cfg->pixel_width != 8)
-          output_format = DEC_OUT_FRM_DEC400_400TILED8x8_P010;
-        else
-          output_format = DEC_OUT_FRM_DEC400_400TILED8x8;
-      } else {
-        if (ppu_int_cfg->pixel_width != 8)
-          output_format = DEC_OUT_FRM_DEC400_400_P010;
-        else
-          output_format = DEC_OUT_FRM_DEC400_400;
-      }
+      if (ppu_int_cfg->pixel_width != 8)
+        output_format = DEC_OUT_FRM_DEC400_400_P010;
+      else
+        output_format = DEC_OUT_FRM_DEC400_400;
     } else if(ppu_int_cfg->chroma_format < PP_CHROMA_422){
-      if (ppu_int_cfg->tiled_e && !ppu_int_cfg->tile_mode ) {
-        output_format = DEC_OUT_FRM_DEC400_420TILE;
-      } else if (ppu_int_cfg->tiled_e && ppu_int_cfg->tile_mode == TILED8x8) {
-        if (ppu_int_cfg->pixel_width != 8)
-          output_format = ppu_int_cfg->cr_first ? DEC_OUT_FRM_DEC400_NV21TILED8x8_P010 : DEC_OUT_FRM_DEC400_420TILED8x8_P010;
-        else
-          output_format = ppu_int_cfg->cr_first ? DEC_OUT_FRM_DEC400_NV21TILED8x8 : DEC_OUT_FRM_DEC400_420TILED8x8;
-      } else {
-        if (ppu_int_cfg->pixel_width != 8)
-          output_format = ppu_int_cfg->cr_first ? DEC_OUT_FRM_DEC400_NV21SP_P010 : DEC_OUT_FRM_DEC400_420SP_P010;
-        else
-          output_format = ppu_int_cfg->cr_first ? DEC_OUT_FRM_DEC400_NV21SP : DEC_OUT_FRM_DEC400_420SP;
-      }
+      if (ppu_int_cfg->pixel_width != 8)
+        output_format = ppu_int_cfg->cr_first ? DEC_OUT_FRM_DEC400_NV21SP_P010 : DEC_OUT_FRM_DEC400_420SP_P010;
+      else
+        output_format = ppu_int_cfg->cr_first ? DEC_OUT_FRM_DEC400_NV21SP : DEC_OUT_FRM_DEC400_420SP;
     } else if(ppu_int_cfg->out_yuyv) {
       output_format = DEC_OUT_FRM_DEC400_YUV422_YUYV;
     } else if(ppu_int_cfg->out_uyvy) {
@@ -9840,158 +9383,6 @@ enum DecPictureFormat TransUnitConfig2Format(PpUnitIntConfig *ppu_int_cfg) {
           else if(ppu_int_cfg->pp_pvfbc_tile_type == PVFBC_TILED8x8)
             output_format = DEC_OUT_FRM_PVFBC_TILED8X8_420SP_P010;
         }
-      }
-    }
-  } else if (ppu_int_cfg->tiled_e) {
-    /* FBC style */
-    if (ppu_int_cfg->tile_mode == TILED4x4) {
-      if (ppu_int_cfg->rgb_format == PP_OUT_BGR888) {
-        if(ppu_int_cfg->decnano_e)
-          output_format = DEC_OUT_FRM_DECNANO_MODE0_RGB888_TILED4X4;
-        else
-          output_format = DEC_OUT_FRM_RGB888_TILED4X4;
-      } else if (ppu_int_cfg->rgb_format == PP_OUT_ARGB888) {
-        if(ppu_int_cfg->decnano_e)
-          output_format = DEC_OUT_FRM_DECNANO_MODE0_ARGB888_TILED4X4;
-        else
-          output_format = DEC_OUT_FRM_ARGB888_TILED4X4;
-      } else if (ppu_int_cfg->rgb_format == PP_OUT_RGB565) {
-        if(ppu_int_cfg->decnano_e)
-          output_format = DEC_OUT_FRM_DECNANO_MODE0_RGB565_TILED4X4;
-        else
-          output_format = DEC_OUT_FRM_RGB565_TILED4X4;
-      } else if (ppu_int_cfg->rgb_format == PP_OUT_ARGB8565) {
-        if(ppu_int_cfg->decnano_e)
-          output_format = DEC_OUT_FRM_DECNANO_MODE0_ARGB8565_TILED4X4;
-        else
-          output_format = DEC_OUT_FRM_ARGB565_TILED4X4;
-      }
-    } else if (ppu_int_cfg->tile_mode == TILED8x8) {
-      if (!ppu_int_cfg->monochrome) {
-        if (ppu_int_cfg->pixel_width != 8)
-          output_format = DEC_OUT_FRM_TILED_8X8_P010;
-        else
-          output_format = DEC_OUT_FRM_TILED_8X8;
-      } else {
-        if (ppu_int_cfg->pixel_width != 8)
-          output_format = DEC_OUT_FRM_YUV400TILE8x8_P010;
-        else
-          output_format = DEC_OUT_FRM_YUV400TILE8x8;
-      }
-    } else if (ppu_int_cfg->tile_mode == RECONTILED8x8) {
-      if (!ppu_int_cfg->monochrome) {
-        if (ppu_int_cfg->pixel_width != 8)
-          output_format = DEC_OUT_FRM_YUV420RECONTILE8X8_PACK10;
-        else
-          output_format = DEC_OUT_FRM_YUV420RECONTILE8X8;
-      }
-    } else if (ppu_int_cfg->tile_mode == TILED16x16 && !ppu_int_cfg->pp_comp) {
-      if (ppu_int_cfg->pixel_width != 8)
-        output_format = DEC_OUT_FRM_TILED_16X16_P010;
-      else
-        output_format = DEC_OUT_FRM_TILED_16X16;
-    } else if (ppu_int_cfg->tile_mode == TILED16x16 && ppu_int_cfg->pp_comp) {
-      if (ppu_int_cfg->pixel_width != 8)
-        output_format = DEC_OUT_FRM_TILED_16X16_P010_COMP;
-      else
-        output_format = DEC_OUT_FRM_TILED_16X16_COMP;
-    } else if (ppu_int_cfg->tile_mode == TILED32x8 && ppu_int_cfg->pp_comp) {
-      if (ppu_int_cfg->pixel_width != 8)
-        output_format = DEC_OUT_FRM_TILED_32X8_P010_COMP;
-      else
-        output_format = DEC_OUT_FRM_TILED_32X8_COMP;
-    } else if (ppu_int_cfg->tile_mode == TILED128x2) {
-      if (!ppu_int_cfg->tile_coded_image) {
-        if (ppu_int_cfg->pixel_width != 8) {
-          if (ppu_int_cfg->monochrome)
-            output_format = DEC_OUT_FRM_YUV400TILE_128X2_P010;
-          else
-            output_format = DEC_OUT_FRM_YUV420TILE_128X2_P010;
-        } else {
-          if (ppu_int_cfg->monochrome)
-            output_format = DEC_OUT_FRM_YUV400TILE_128X2;
-          else
-            output_format = DEC_OUT_FRM_YUV420TILE_128X2;
-        }
-      } else {
-        if (ppu_int_cfg->pixel_width != 8) {
-          if (ppu_int_cfg->monochrome)
-            output_format = DEC_OUT_FRM_YUV400_P010;
-          else
-            output_format = DEC_OUT_FRM_YUV420SP_P010;
-        } else {
-          if (ppu_int_cfg->monochrome)
-            output_format = DEC_OUT_FRM_YUV400;
-          else
-            output_format = DEC_OUT_FRM_YUV420SP;
-        }
-      }
-    } else if (ppu_int_cfg->tile_mode == TILED64x64) {
-      if (!ppu_int_cfg->rgb) {
-        if (ppu_int_cfg->pixel_width == 8)
-          output_format = DEC_OUT_FRM_TILED_64X64;
-        else
-          output_format = DEC_OUT_FRM_TILED_64X64_PACK10;
-      } else {
-        switch (ppu_int_cfg->rgb_format) {
-        case PP_OUT_ABGR888:
-          output_format = DEC_OUT_FRM_ABGR888_TILED64X64;
-          break;
-        case PP_OUT_ARGB888:
-          output_format = DEC_OUT_FRM_ARGB888_TILED64X64;
-          break;
-        case PP_OUT_A2B10G10R10:
-          output_format = DEC_OUT_FRM_A2B10G10R10_TILED64X64;
-          break;
-        case PP_OUT_A2R10G10B10:
-          output_format = DEC_OUT_FRM_A2R10G10B10_TILED64X64;
-          break;
-        case PP_OUT_X2B10G10R10:
-          output_format = DEC_OUT_FRM_X2B10G10R10_TILED64X64;
-          break;
-        case PP_OUT_X2R10G10B10:
-          output_format = DEC_OUT_FRM_X2R10G10B10_TILED64X64;
-          break;
-        case PP_OUT_XBGR888:
-          output_format = DEC_OUT_FRM_XBGR888_TILED64X64;
-          break;
-        case PP_OUT_XRGB888:
-          output_format = DEC_OUT_FRM_XRGB888_TILED64X64;
-          break;
-        case PP_OUT_BGRA888:
-          output_format = DEC_OUT_FRM_BGRA888_TILED64X64;
-          break;
-        case PP_OUT_RGBA888:
-          output_format = DEC_OUT_FRM_RGBA888_TILED64X64;
-          break;
-        case PP_OUT_B10G10R10A2:
-          output_format = DEC_OUT_FRM_B10G10R10A2_TILED64X64;
-          break;
-        case PP_OUT_R10G10B10A2:
-          output_format = DEC_OUT_FRM_R10G10B10A2_TILED64X64;
-          break;
-        default:
-          ASSERT(0);
-          break;
-        }
-      }
-    } else if(ppu_int_cfg->tile_mode == TILED2x4) {
-      if (ppu_int_cfg->out_yuyv) {
-        if(ppu_int_cfg->decnano_e)
-          output_format = DEC_OUT_FRM_DECNANO_MODE0_YUV422_YUYV_TILED2X4;
-        else
-          output_format = DEC_OUT_FRM_YUV422_YUYV_TILED2X4;
-      } else if(ppu_int_cfg->out_uyvy) {
-        if(ppu_int_cfg->decnano_e)
-          output_format = DEC_OUT_FRM_DECNANO_MODE0_YUV422_UYVY_TILED2X4;
-        else
-          output_format = DEC_OUT_FRM_YUV422_UYVY_TILED2X4;
-      }
-    } else if(ppu_int_cfg->tile_mode == PACKED422_TILED8x8) {
-      if (ppu_int_cfg->out_yuyv) {
-        output_format = DEC_OUT_FRM_YUV422_YUYV_TILED8X8;
-      } else if(ppu_int_cfg->out_uyvy) {
-        output_format = DEC_OUT_FRM_YUV422_UYVY_TILED8X8;
       }
     }
   } else if (ppu_int_cfg->rgb || ppu_int_cfg->rgb_planar) {
@@ -10076,96 +9467,68 @@ enum DecPictureFormat TransUnitConfig2Format(PpUnitIntConfig *ppu_int_cfg) {
     output_format = DEC_OUT_FRM_YUV422_UYVY;
   } else { /* YUV */
     if (ppu_int_cfg->monochrome) { /* YUV400 */
-      if (ppu_int_cfg->tiled_e) {
-        output_format = DEC_OUT_FRM_YUV400TILE;
-        if (ppu_int_cfg->pixel_width != 8) {
-          if (ppu_int_cfg->out_cut_8bits)
-            output_format = DEC_OUT_FRM_YUV400TILE;
-          else if (ppu_int_cfg->out_p012)
-            output_format = DEC_OUT_FRM_YUV400TILE_P012;
-          else if (ppu_int_cfg->out_I012)
-            output_format = DEC_OUT_FRM_YUV400TILE_I012;
+      output_format = ppu_int_cfg->yuv400_with_alpha ? DEC_OUT_FRM_YUV400_WITH_ALPHA : DEC_OUT_FRM_YUV400;
+      if (ppu_int_cfg->pixel_width != 8) {
+        if (ppu_int_cfg->out_cut_8bits) {
+          output_format = DEC_OUT_FRM_YUV400;
+        } else if(ppu_int_cfg->out_p012) {
+          output_format = DEC_OUT_FRM_YUV400_P012;
+        } else if (ppu_int_cfg->out_I012) {
+          output_format = DEC_OUT_FRM_YUV400_I012;
+        } else {
+          if (ppu_int_cfg->pixel_width == 10)
+            output_format = DEC_OUT_FRM_YUV400_PACK10;
           else
-            output_format = DEC_OUT_FRM_YUV400TILE_PACK10;
-        }
-      } else {
-        output_format = ppu_int_cfg->yuv400_with_alpha ? DEC_OUT_FRM_YUV400_WITH_ALPHA : DEC_OUT_FRM_YUV400;
-        if (ppu_int_cfg->pixel_width != 8) {
-          if (ppu_int_cfg->out_cut_8bits) {
-            output_format = DEC_OUT_FRM_YUV400;
-          } else if(ppu_int_cfg->out_p012) {
-            output_format = DEC_OUT_FRM_YUV400_P012;
-          } else if (ppu_int_cfg->out_I012) {
-            output_format = DEC_OUT_FRM_YUV400_I012;
-          } else {
-            if (ppu_int_cfg->pixel_width == 10)
-              output_format = DEC_OUT_FRM_YUV400_PACK10;
-            else
-              output_format = DEC_OUT_FRM_YUV400_PACK12;
-          }
+            output_format = DEC_OUT_FRM_YUV400_PACK12;
         }
       }
     } else {
       /* YUV420 */
       u32 cr_first = ppu_int_cfg->cr_first;
-      if (ppu_int_cfg->tiled_e) {
-        output_format = cr_first ? DEC_OUT_FRM_NV21TILE : DEC_OUT_FRM_YUV420TILE;
-        if (ppu_int_cfg->pixel_width != 8) {
-          if (ppu_int_cfg->out_cut_8bits)
-            output_format = cr_first ? DEC_OUT_FRM_NV21TILE : DEC_OUT_FRM_YUV420TILE;
-          else if (ppu_int_cfg->out_p012)
-            output_format = cr_first ? DEC_OUT_FRM_NV21TILE_P012 : DEC_OUT_FRM_YUV420TILE_P012;
-          else if (ppu_int_cfg->out_I012)
-            output_format = cr_first ? DEC_OUT_FRM_NV21TILE_I012 : DEC_OUT_FRM_YUV420TILE_I012;
+      if (ppu_int_cfg->chroma_format == PP_CHROMA_420)
+        output_format = cr_first ? DEC_OUT_FRM_NV21SP : DEC_OUT_FRM_YUV420SP;
+      else if (ppu_int_cfg->chroma_format == PP_CHROMA_422)
+        output_format = cr_first ? DEC_OUT_FRM_422_NV21SP : DEC_OUT_FRM_YUV422SP;
+      else
+        output_format = cr_first ? DEC_OUT_FRM_444_NV21SP : DEC_OUT_FRM_YUV444SP;
+      if (ppu_int_cfg->pixel_width != 8) {
+        if (ppu_int_cfg->out_cut_8bits) {
+          if (ppu_int_cfg->chroma_format == PP_CHROMA_420)
+            output_format = cr_first ? DEC_OUT_FRM_NV21SP : DEC_OUT_FRM_YUV420SP;
+          else if (ppu_int_cfg->chroma_format == PP_CHROMA_422)
+            output_format = cr_first ? DEC_OUT_FRM_422_NV21SP : DEC_OUT_FRM_YUV422SP;
           else
-            output_format = cr_first ? DEC_OUT_FRM_NV21TILE_PACK10 : DEC_OUT_FRM_YUV420TILE_PACK10;
-        }
-      } else { /* semi-planar */
-        if (ppu_int_cfg->chroma_format == PP_CHROMA_420)
-          output_format = cr_first ? DEC_OUT_FRM_NV21SP : DEC_OUT_FRM_YUV420SP;
-        else if (ppu_int_cfg->chroma_format == PP_CHROMA_422)
-          output_format = cr_first ? DEC_OUT_FRM_422_NV21SP : DEC_OUT_FRM_YUV422SP;
-        else
-          output_format = cr_first ? DEC_OUT_FRM_444_NV21SP : DEC_OUT_FRM_YUV444SP;
-        if (ppu_int_cfg->pixel_width != 8) {
-          if (ppu_int_cfg->out_cut_8bits) {
-            if (ppu_int_cfg->chroma_format == PP_CHROMA_420)
-              output_format = cr_first ? DEC_OUT_FRM_NV21SP : DEC_OUT_FRM_YUV420SP;
-            else if (ppu_int_cfg->chroma_format == PP_CHROMA_422)
-              output_format = cr_first ? DEC_OUT_FRM_422_NV21SP : DEC_OUT_FRM_YUV422SP;
+            output_format = cr_first ? DEC_OUT_FRM_444_NV21SP : DEC_OUT_FRM_YUV444SP;
+        } else if (ppu_int_cfg->out_p012) {
+          if (ppu_int_cfg->chroma_format == PP_CHROMA_420)
+            output_format = cr_first ? DEC_OUT_FRM_NV21SP_P012 : DEC_OUT_FRM_YUV420SP_P012;
+          else if (ppu_int_cfg->chroma_format == PP_CHROMA_422)
+            output_format = cr_first ? DEC_OUT_FRM_422_NV21SP_P012 : DEC_OUT_FRM_YUV422SP_P012;
+          else
+            output_format = cr_first ? DEC_OUT_FRM_444_NV21SP_P012 : DEC_OUT_FRM_YUV444SP_P012;
+        } else if (ppu_int_cfg->out_I012) {
+          if (ppu_int_cfg->chroma_format == PP_CHROMA_420)
+            output_format = cr_first ? DEC_OUT_FRM_NV21SP_I012 : DEC_OUT_FRM_YUV420SP_I012;
+          else if (ppu_int_cfg->chroma_format == PP_CHROMA_422)
+            output_format = cr_first ? DEC_OUT_FRM_422_NV21SP_I012 : DEC_OUT_FRM_YUV422SP_I012;
+          else
+            output_format = cr_first ? DEC_OUT_FRM_444_NV21SP_I012 : DEC_OUT_FRM_YUV444SP_I012;
+        } else {
+          if (ppu_int_cfg->chroma_format == PP_CHROMA_420) {
+            if (ppu_int_cfg->pixel_width == 10)
+              output_format = cr_first ? DEC_OUT_FRM_NV21SP_PACK10 : DEC_OUT_FRM_YUV420SP_PACK10;
             else
-              output_format = cr_first ? DEC_OUT_FRM_444_NV21SP : DEC_OUT_FRM_YUV444SP;
-          } else if (ppu_int_cfg->out_p012) {
-            if (ppu_int_cfg->chroma_format == PP_CHROMA_420)
-              output_format = cr_first ? DEC_OUT_FRM_NV21SP_P012 : DEC_OUT_FRM_YUV420SP_P012;
-            else if (ppu_int_cfg->chroma_format == PP_CHROMA_422)
-              output_format = cr_first ? DEC_OUT_FRM_422_NV21SP_P012 : DEC_OUT_FRM_YUV422SP_P012;
+              output_format = cr_first ? DEC_OUT_FRM_NV21SP_PACK12 : DEC_OUT_FRM_YUV420SP_PACK12;
+          } else if (ppu_int_cfg->chroma_format == PP_CHROMA_422) {
+            if (ppu_int_cfg->pixel_width == 10)
+              output_format = cr_first ? DEC_OUT_FRM_422_NV21SP_PACK10 : DEC_OUT_FRM_YUV422SP_PACK10;
             else
-              output_format = cr_first ? DEC_OUT_FRM_444_NV21SP_P012 : DEC_OUT_FRM_YUV444SP_P012;
-          } else if (ppu_int_cfg->out_I012) {
-            if (ppu_int_cfg->chroma_format == PP_CHROMA_420)
-              output_format = cr_first ? DEC_OUT_FRM_NV21SP_I012 : DEC_OUT_FRM_YUV420SP_I012;
-            else if (ppu_int_cfg->chroma_format == PP_CHROMA_422)
-              output_format = cr_first ? DEC_OUT_FRM_422_NV21SP_I012 : DEC_OUT_FRM_YUV422SP_I012;
-            else
-              output_format = cr_first ? DEC_OUT_FRM_444_NV21SP_I012 : DEC_OUT_FRM_YUV444SP_I012;
+              output_format = cr_first ? DEC_OUT_FRM_422_NV21SP_PACK12 : DEC_OUT_FRM_YUV422SP_PACK12;
           } else {
-            if (ppu_int_cfg->chroma_format == PP_CHROMA_420) {
-              if (ppu_int_cfg->pixel_width == 10)
-                output_format = cr_first ? DEC_OUT_FRM_NV21SP_PACK10 : DEC_OUT_FRM_YUV420SP_PACK10;
-              else
-                output_format = cr_first ? DEC_OUT_FRM_NV21SP_PACK12 : DEC_OUT_FRM_YUV420SP_PACK12;
-            } else if (ppu_int_cfg->chroma_format == PP_CHROMA_422) {
-              if (ppu_int_cfg->pixel_width == 10)
-                output_format = cr_first ? DEC_OUT_FRM_422_NV21SP_PACK10 : DEC_OUT_FRM_YUV422SP_PACK10;
-              else
-                output_format = cr_first ? DEC_OUT_FRM_422_NV21SP_PACK12 : DEC_OUT_FRM_YUV422SP_PACK12;
-            } else {
-              if (ppu_int_cfg->pixel_width == 10)
-                output_format = cr_first ? DEC_OUT_FRM_444_NV21SP_PACK10 : DEC_OUT_FRM_YUV444SP_PACK10;
-              else
-                output_format = cr_first ? DEC_OUT_FRM_444_NV21SP_PACK12 : DEC_OUT_FRM_YUV444SP_PACK12;
-            }
+            if (ppu_int_cfg->pixel_width == 10)
+              output_format = cr_first ? DEC_OUT_FRM_444_NV21SP_PACK10 : DEC_OUT_FRM_YUV444SP_PACK10;
+            else
+              output_format = cr_first ? DEC_OUT_FRM_444_NV21SP_PACK12 : DEC_OUT_FRM_YUV444SP_PACK12;
           }
         }
       }
@@ -10181,12 +9544,6 @@ void PPSetSBIRegs(u32 *pp_regs, u32 i, PpUnitIntConfig *ppu_cfg, u32 sbi_pic_sta
   if (!ppu_cfg->enabled || !ppu_cfg->sbi_en)
     return;
   /* set SBI register */
-  if (ppu_cfg->tiled_e) {
-    if (!ppu_cfg->tile_mode || ppu_cfg->tile_mode == TILED2x4) {
-      ystride /= 4; // tiled4x4/tiled2x4 stride in one row
-      cstride /= 4;
-    }
-  }
 
   sbi_lu_segment_size = ppu_cfg->sbi_lu_segmentbuffer_entry_size * ystride * 16;
   if (ppu_cfg->out_format == PP_OUT_FMT_YUV400_WITH_ALPHA)
@@ -10214,7 +9571,6 @@ void PPSetSBIRegs(u32 *pp_regs, u32 i, PpUnitIntConfig *ppu_cfg, u32 sbi_pic_sta
   /* chroma */
   if (!(IS_PP_OUT_MONOCHROME(ppu_cfg->out_format) || IS_PP_OUT_PACKED422(ppu_cfg->out_format)
       || (ppu_cfg->rgb && IS_PACKED_RGB(ppu_cfg->rgb_format))
-      || (ppu_cfg->tiled_e && (!ppu_cfg->tile_mode || ppu_cfg->tile_mode == TILED2x4))
       || ppu_cfg->sbi_coupled || ppu_cfg->out_format == PP_OUT_FMT_YUV400_WITH_ALPHA)) {
     sbi_ch_segment_size = ppu_cfg->sbi_ch_segmentbuffer_entry_size * cstride * 8;
     if (IS_PP_OUT_422(ppu_cfg->out_format)) sbi_ch_segment_size = sbi_lu_segment_size;
@@ -10264,9 +9620,6 @@ u32 CheckPpStride(PpUnitIntConfig *ppu_cfg) {
     APITRACEERR("%s", "CheckPpStride# Stride not supported.\n");
     return 1;
   }
-  // for yuv420 supertile
-  if (ppu_cfg->tile_mode == TILED64x64 && !ppu_cfg->rgb)
-    unit = 7; // STRIDE_UNIT_512B
 
   ppu_cfg->unit = unit;
 
@@ -16606,18 +15959,11 @@ void JpegSetAsicBuffer(const JpegDecContainer *dec_cont, const struct DWLLinearM
   u32 pp_width = 0, pp_height_luma = 0, pp_stride = 0, pp_buff_size = 0;
   PpUnitIntConfig *ppu_cfg = dec_cont->ppu_cfg;
   if (dec_cont->info.slice_mb_set_value) {
-    if (ppu_cfg->tiled_e) {
-      pp_width = dec_cont->info.X >> dec_cont->dscale_shift_x;
-      pp_height_luma = NEXT_MULTIPLE(dec_cont->info.slice_mb_set_value * 16 >>
-                          dec_cont->dscale_shift_y, 4) / 4;
-      pp_stride = NEXT_MULTIPLE(4 * pp_width, ALIGN(ppu_cfg->align));
-    } else {
-      pp_width = dec_cont->info.X >> dec_cont->dscale_shift_x;
-      pp_height_luma = dec_cont->info.slice_mb_set_value * 16 >>
-                          dec_cont->dscale_shift_y;
-      pp_stride = NEXT_MULTIPLE(pp_width, ALIGN(ppu_cfg->align));
-      pp_buff_size = pp_stride * pp_height_luma;
-    }
+    pp_width = dec_cont->info.X >> dec_cont->dscale_shift_x;
+    pp_height_luma = dec_cont->info.slice_mb_set_value * 16 >>
+                        dec_cont->dscale_shift_y;
+    pp_stride = NEXT_MULTIPLE(pp_width, ALIGN(ppu_cfg->align));
+    pp_buff_size = pp_stride * pp_height_luma;
   }
   if (dec_cont->info.slice_mb_set_value) {
     asic_buff->pp_chroma_buffer->virtual_address =
@@ -18038,17 +17384,10 @@ void JpegSetExternalBufferInfo(JpegDecInst dec_inst) {
   if (dec_cont->pp_enabled) {
     PpUnitIntConfig *ppu_cfg = dec_cont->ppu_cfg;
     if (dec_cont->info.slice_mb_set_value) {
-      if (ppu_cfg->tiled_e) {
-        pp_width = dec_cont->info.X >> dec_cont->dscale_shift_x;
-        pp_height_luma = NEXT_MULTIPLE(dec_cont->info.slice_mb_set_value * 16 >> dec_cont->dscale_shift_y, 4) / 4;
-        pp_stride = NEXT_MULTIPLE(4 * pp_width, ALIGN(ppu_cfg->align));
-        pp_buff_size = pp_stride * pp_height_luma;
-      } else {
-        pp_width = dec_cont->info.X >> dec_cont->dscale_shift_x;
-        pp_height_luma = dec_cont->info.slice_mb_set_value * 16 >> dec_cont->dscale_shift_y;
-        pp_stride = NEXT_MULTIPLE(pp_width, ALIGN(ppu_cfg->align));
-        pp_buff_size = pp_stride * pp_height_luma;
-      }
+      pp_width = dec_cont->info.X >> dec_cont->dscale_shift_x;
+      pp_height_luma = dec_cont->info.slice_mb_set_value * 16 >> dec_cont->dscale_shift_y;
+      pp_stride = NEXT_MULTIPLE(pp_width, ALIGN(ppu_cfg->align));
+      pp_buff_size = pp_stride * pp_height_luma;
       dec_cont->ppu_cfg[0].luma_offset = 0;
       dec_cont->ppu_cfg[0].chroma_offset = pp_buff_size;
     } else {
@@ -23337,10 +22676,6 @@ enum DecRet PngDecSetInfo(PngDecInst dec_inst, struct PngDecConfig *dec_cfg) {
       }
       ppu_cfg->rgb = ppu_cfg->rgb_planar = 0;
       ppu_cfg->monochrome = 1;
-      if(ppu_cfg->tiled_e && ppu_cfg->tile_mode == TILED8x8) { //disable YUV400+TILED8X8 for PNG Only.
-        APITRACEERR("%s","PngDecSetInfo# Unsupported TILED8X8 for PNG YUV400.\n");
-        return DEC_PARAM_ERROR;
-      }
     }
     ppu_cfg++;
   }

@@ -698,6 +698,317 @@
       "struct": "_PpUnitIntConfig",
       "member": "out_L010",
       "why": "D05/D06: the internal copy, no reader left"
+    },
+    {
+      "action": "fold_false_if",
+      "match": "^\\s*if \\(ppu_cfg->tiled_e && !ppu_cfg->tile_mode\\) \\{",
+      "count": 2,
+      "why": "D02: TILED4x4 stride in PPGetUnitStride and chroma height in CalcOnePpUnitChromaSize; 0x2070 has no tile output (fmt_tile_support = 0), so tiled_e is never set"
+    },
+    {
+      "action": "replace_line",
+      "match": "^  if \\(\\(ppu_cfg->out_yuyv \\|\\| ppu_cfg->out_uyvy\\) && !ppu_cfg->tiled_e\\) \\{",
+      "with": "  if (ppu_cfg->out_yuyv || ppu_cfg->out_uyvy) {",
+      "why": "D02: !tiled_e is always true in the packed 422 stride; the /*not tile2x4*/ note on the line goes with it"
+    },
+    {
+      "action": "fold_false_if",
+      "match": "^\\s*\\} else if \\(ppu_cfg->tiled_e && ppu_cfg->tile_mode\\) \\{",
+      "why": "D02-D04: the stride arm for every other tile mode, the four without a feature field included"
+    },
+    {
+      "action": "fold_false_if",
+      "match": "^\\s*if \\(ppu_cfg->tiled_e && ppu_cfg->tile_mode\\) \\{",
+      "count": 2,
+      "why": "D02-D04: the tile size registers in PPSetRegs and the tile chroma size in CalcOnePpUnitChromaSize"
+    },
+    {
+      "action": "substitute",
+      "pattern": "HWIF_PPX_OUT_TILE_E_U, i, ppu_cfg->tiled_e\\)",
+      "with": "HWIF_PPX_OUT_TILE_E_U, i, 0)",
+      "count": 1,
+      "why": "D02: the register keeps being written, with the only value tiled_e ever had"
+    },
+    {
+      "action": "delete_block",
+      "match": "^\\s*if \\(!hw_feature->fmt_tile_support\\[i\\] && ppu_cfg->tiled_e",
+      "why": "D02: TILE4x4 cannot be requested once tiled_e is gone"
+    },
+    {
+      "action": "delete_block",
+      "match": "^\\s*if \\(!hw_feature->fmt_output_tile8x8_support\\[i\\] && ppu_cfg->tiled_e",
+      "why": "D03: TILE8x8 cannot be requested"
+    },
+    {
+      "action": "delete_block",
+      "match": "^\\s*if \\(interlace && ppu_cfg->tiled_e\\) \\{",
+      "why": "D02: tile output with interlace"
+    },
+    {
+      "action": "delete_block",
+      "match": "^\\s*if \\(!hw_feature->fmt_supertile_support\\[i\\] && ppu_cfg->tile_mode == TILED64x64",
+      "why": "D04: supertile cannot be requested"
+    },
+    {
+      "action": "delete_block",
+      "match": "^\\s*if \\(ppu_cfg->tile_mode == TILED64x64 && !\\(ppu_cfg->rgb \\|\\| ppu_cfg->rgb_planar\\)\\s*$",
+      "why": "D04: the YUV supertile bit-depth rule"
+    },
+    {
+      "action": "delete_block",
+      "match": "^\\s*if \\(ppu_cfg->tiled_e && \\(pixel_width != 8 && ppu_cfg->out_cut_8bits\\) && ppu_cfg->tile_mode == TILED64x64",
+      "why": "D04: the YUV supertile cut_8bits rule"
+    },
+    {
+      "action": "delete_block",
+      "match": "^\\s*if \\(!ppu_cfg->tiled_e && ppu_cfg->tile_mode == TILED64x64\\) \\{",
+      "why": "D04: TILED64x64 without the tile flag"
+    },
+    {
+      "action": "delete_block",
+      "match": "^\\s*if \\(ppu_cfg->tiled_e && \\(pixel_width != 8 && !ppu_cfg->out_cut_8bits\\) && ppu_cfg->tile_mode && ",
+      "why": "D02-D04: the 10-bit tile output rule"
+    },
+    {
+      "action": "delete_block",
+      "match": "^\\s*if \\(ppu_cfg->tiled_e && ppu_cfg->tile_mode == TILED8x8 && \\(pixel_width",
+      "why": "D03: the 10-bit TILED8x8 rule"
+    },
+    {
+      "action": "delete_block",
+      "match": "^\\s*if\\(ppu_cfg->tile_mode == TILED2x4 && ",
+      "why": "D02: TILED2x4 has no feature field of its own; tile output as a whole is not supported"
+    },
+    {
+      "action": "delete_block",
+      "match": "^\\s*if\\(\\(ppu_cfg->out_yuyv \\|\\| ppu_cfg->out_uyvy\\) && ppu_cfg->tiled_e && ",
+      "why": "D02: YUYV / UYVY with tile output"
+    },
+    {
+      "action": "delete_block",
+      "match": "^\\s*if\\(ppu_cfg->tile_mode == PACKED422_TILED8x8 && ",
+      "why": "D02: PACKED422_TILED8x8, same as TILED2x4"
+    },
+    {
+      "action": "delete_block",
+      "match": "^\\s*if \\(ppu_cfg->chroma_format == PP_CHROMA_422 && ppu_cfg->tiled_e && ",
+      "why": "D02: 422 with tile output"
+    },
+    {
+      "action": "delete_block",
+      "match": "^\\s*if \\(ppu_cfg->dec400_enabled && !ppu_cfg->shaper_enabled && ppu_cfg->tiled_e",
+      "why": "D02: DEC400 with tile output"
+    },
+    {
+      "action": "delete_block",
+      "match": "^\\s*if \\(ppu_cfg->dec400_enabled && ppu_cfg->tile_mode == TILED64x64 && !ppu_cfg->rgb\\) \\{",
+      "why": "D04: DEC400 with YUV supertile"
+    },
+    {
+      "action": "substitute",
+      "pattern": "\\(\\(ppu_cfg->tile_mode == TILED64x64 && ppu_cfg->rgb && IS_4PLAN_FORMAT\\(ppu_cfg->rgb_format\\)\\) \\|\\|\\s*\\((ppu_cfg->scale\\.width > ppu_cfg->crop\\.width\\*3 \\|\\| ppu_cfg->scale\\.height > ppu_cfg->crop\\.height\\*3)\\)\\)",
+      "with": "(\\1)",
+      "multiline": true,
+      "count": 1,
+      "why": "D04: the supertile term of the first shaper-off test; the 3x upscale term stays"
+    },
+    {
+      "action": "delete_block",
+      "match": "^\\s*if \\(ppu_cfg->tile_mode == RECONTILED8x8\\s+\\|\\| ppu_cfg->tile_mode == TILED8x8 \\|\\| ppu_cfg->tile_mode == TILED64x64\\) \\{",
+      "why": "D03/D04: the 8192 size limit of the 8x8 and 64x64 tile modes"
+    },
+    {
+      "action": "delete_block",
+      "match": "^\\s*if \\(ppu_cfg->tile_mode == TILED64x64 && ppu_cfg->rgb\\) \\{",
+      "why": "D04: the RGB supertile format rule"
+    },
+    {
+      "action": "delete_block",
+      "match": "^\\s*if \\(\\(ppu_cfg->tile_mode == TILED128x2\\) && ",
+      "why": "D02: TILED128x2, same as TILED2x4"
+    },
+    {
+      "action": "delete_block",
+      "match": "^\\s*if \\(ppu_cfg->tiled_e && !ppu_cfg->tile_mode && ppu_cfg->scale\\.width > ",
+      "why": "D02: the TILED4x4 size limit"
+    },
+    {
+      "action": "delete_block",
+      "match": "^\\s*if \\(\\(ppu_cfg->tiled_e && \\(ppu_cfg->crop\\.width == ppu_cfg->scale\\.width\\)",
+      "why": "D02: the unscaled tile output size limit"
+    },
+    {
+      "action": "delete_block",
+      "match": "^\\s*if \\(!\\(ppu_cfg->pp_comp && hw_feature->pp_comp_support\\[i\\] == 1\\) && \\(ppu_cfg->tile_mode == TILED16x16",
+      "why": "D02: TILED16x16 / TILED32x8 without FBC"
+    },
+    {
+      "action": "delete_block",
+      "match": "^\\s*if \\(ppu_cfg->pp_comp && hw_feature->pp_comp_support\\[i\\] == 1\\) \\{",
+      "why": "D02: the FBC rules, which need TILED16x16 / TILED32x8 and pp_comp_support = 1; 0x2070 has neither, and the pp_comp check above it still rejects a compression request"
+    },
+    {
+      "action": "substitute",
+      "pattern": "ppu_cfg->tile_mode == TILED64x64 \\|\\| \\((ppu_cfg->scale\\.width > ppu_cfg->crop\\.width\\*3 \\|\\|\\s*ppu_cfg->scale\\.height > ppu_cfg->crop\\.height\\*3)\\)",
+      "with": "\\1",
+      "multiline": true,
+      "count": 1,
+      "why": "D04: the supertile term of the second shaper-off test"
+    },
+    {
+      "action": "substitute",
+      "pattern": "\\s*\\|\\| \\(ppu_cfg->tiled_e && \\(!ppu_cfg->tile_mode \\|\\| ppu_cfg->tile_mode == TILED2x4\\)\\)",
+      "with": "",
+      "multiline": true,
+      "count": 2,
+      "why": "D02: the tile term of the SBI chroma stream tests in CheckPpUnitConfig and PPSetSBIRegs"
+    },
+    {
+      "action": "fold_false_if",
+      "match": "^\\s*if \\(ppu_cfg->pp_comp && \\(ppu_cfg->tile_mode == TILED16x16 \\|\\| ppu_cfg->tile_mode == TILED32x8\\)\\) \\{",
+      "why": "D02: the FBC arm of the compression register choice; FBC needs TILED16x16 / TILED32x8"
+    },
+    {
+      "action": "fold_false_if",
+      "match": "^\\s*if \\(i == 0 && ppu_cfg->pp_comp && \\(ppu_cfg->tile_mode == TILED16x16 \\|\\| ppu_cfg->tile_mode == TILED32x8\\)\\) \\{",
+      "count": 3,
+      "comment_above": true,
+      "why": "D02: the FBC arm of the output address and of the two buffer size chains"
+    },
+    {
+      "action": "delete_function",
+      "name": "CalcOnePpUnitFBCHeaderPayloadSize",
+      "why": "D02: its only callers were the FBC arm above"
+    },
+    {
+      "action": "delete_line",
+      "match": "^\\s*u32 header_size = 0, payload_size = 0;\\s*$",
+      "why": "D02: CalcPpUnitBufferSize no longer has an FBC header or payload"
+    },
+    {
+      "action": "fold_false_if",
+      "match": "^\\s*if\\(ppu_cfg->tile_mode && ppu_cfg->tile_mode == TILED64x64 && ppu_cfg->dec400_enabled\\)\\s*$",
+      "comment_above": true,
+      "why": "D04: the DEC400 + supertile chroma size"
+    },
+    {
+      "action": "substitute",
+      "pattern": "\\s*&&\\s*\\(ppu_cfg->tile_mode != TILED16x16\\)\\)",
+      "with": ")",
+      "multiline": true,
+      "count": 2,
+      "why": "D02: tile_mode != TILED16x16 is always true in the chroma size tests"
+    },
+    {
+      "action": "substitute",
+      "pattern": "chroma_size && ppu_cfg->tile_mode != TILED64x64\\)",
+      "with": "chroma_size)",
+      "count": 2,
+      "why": "D04: tile_mode != TILED64x64 is always true in the DEC400 chroma table tests"
+    },
+    {
+      "action": "fold_false_if",
+      "match": "^\\s*if \\(ppu_cfg->tiled_e\\)\\s*$",
+      "why": "D02: the tile luma height in CalcOnePpUnitLumaSize"
+    },
+    {
+      "action": "fold_false_if",
+      "match": "^\\s*if \\(ppu_cfg->tiled_e\\) \\{",
+      "count": 6,
+      "why": "D02: the remaining tile tests on PpUnitIntConfig (PVFBC check, luma size, SBI stride, JPEG slice buffer) and two in #if 0 code"
+    },
+    {
+      "action": "fold_false_if",
+      "match": "^\\s*if\\(ppu_cfg->tiled_e && ppu_cfg->tile_mode == TILED8x8\\) \\{",
+      "why": "D03: the PNG YUV400 + TILED8x8 rejection"
+    },
+    {
+      "action": "fold_false_if",
+      "match": "^\\s*if \\(ppu_int_cfg->tiled_e\\)\\s*$",
+      "count": 12,
+      "why": "D04: the DEC400 RGB supertile formats in TransUnitConfig2Format"
+    },
+    {
+      "action": "fold_false_if",
+      "match": "^\\s*if \\(ppu_int_cfg->tiled_e && !ppu_int_cfg->tile_mode\\s*\\)",
+      "count": 2,
+      "why": "D02: the DEC400 400 / 420 TILE4x4 formats, heads of chains that go on with TILED8x8"
+    },
+    {
+      "action": "fold_false_if",
+      "match": "^\\s*if \\(ppu_int_cfg->tiled_e && ppu_int_cfg->tile_mode == TILED8x8\\) \\{",
+      "count": 2,
+      "why": "D03: the DEC400 400 / 420 TILED8x8 formats"
+    },
+    {
+      "action": "fold_false_if",
+      "match": "^\\s*\\} else if \\(ppu_int_cfg->tiled_e\\) \\{",
+      "why": "D02-D04: the tile format arm of TransUnitConfig2Format, all nine tile modes"
+    },
+    {
+      "action": "fold_false_if",
+      "match": "^\\s*if \\(ppu_int_cfg->tiled_e\\) \\{",
+      "count": 2,
+      "why": "D02: the YUV400 and YUV420 tile formats"
+    },
+    {
+      "action": "fold_false_if",
+      "match": "^\\s*if \\(ppu_cfg->tile_mode == TILED64x64 && !ppu_cfg->rgb\\)\\s*$",
+      "comment_above": true,
+      "why": "D04: the YUV supertile stride unit"
+    },
+    {
+      "action": "delete_line",
+      "match": "^\\s*ppu_int_cfg->(?:tiled_e|tile_mode|yuv_supertile_pad_copy_e) = ppu_ext_cfg->(?:tiled_e|tile_mode|yuv_supertile_pad_copy_e);",
+      "count": 3,
+      "why": "D02-D04: the copy from the API struct, which loses the members below"
+    },
+    {
+      "action": "fold_true_if",
+      "match": "^\\s*if\\(ppu_cfg->tile_mode == TILED4x4\\) \\{",
+      "why": "D02: tile_mode was always 0, which is TILED4x4, so the DECNANO format rule always ran; it still does. Last, so the TILED4x4 test in CalcOnePpUnitLumaSize is already gone"
+    },
+    {
+      "action": "delete_member",
+      "files": ["vcdj_ctrlsw.h"],
+      "struct": "_PpUnitConfig",
+      "member": "tiled_e",
+      "why": "D02-D04: removing it makes a tile request a compile error rather than a silent no-op"
+    },
+    {
+      "action": "delete_member",
+      "files": ["vcdj_ctrlsw.h"],
+      "struct": "_PpUnitConfig",
+      "member": "tile_mode",
+      "why": "D02-D04: as tiled_e"
+    },
+    {
+      "action": "delete_member",
+      "files": ["vcdj_ctrlsw.h"],
+      "struct": "_PpUnitConfig",
+      "member": "yuv_supertile_pad_copy_e",
+      "why": "D04: only meaningful with YUV TILED64x64"
+    },
+    {
+      "action": "delete_member",
+      "files": ["vcdj_ctrlsw.h"],
+      "struct": "_PpUnitIntConfig",
+      "member": "tiled_e",
+      "why": "D02-D04: the internal copy, no reader left"
+    },
+    {
+      "action": "delete_member",
+      "files": ["vcdj_ctrlsw.h"],
+      "struct": "_PpUnitIntConfig",
+      "member": "tile_mode",
+      "why": "D02-D04: the internal copy, no reader left"
+    },
+    {
+      "action": "delete_member",
+      "files": ["vcdj_ctrlsw.h"],
+      "struct": "_PpUnitIntConfig",
+      "member": "yuv_supertile_pad_copy_e",
+      "why": "D04: the internal copy, no reader left"
     }
   ]
 }

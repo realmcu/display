@@ -3273,11 +3273,6 @@ typedef struct _PpUnitConfig {
    *  \n - <tt>0</tt>: Disable.
    *  \n - <tt>1</tt>: Enable. */
   u32 enabled;
-  /** \brief Whether to enable 4x4 tiled output.
-   *  \n Valid values:
-   *  \n - <tt>0</tt>: Disable.
-   *  \n - <tt>1</tt>: Enable. */
-  u32 tiled_e;
   /** \brief Whether to enable RGB output.
    *  \n Valid values:
    *  \n - <tt>0</tt>: Disable.
@@ -3447,10 +3442,6 @@ typedef struct _PpUnitConfig {
   u32 x_filter_param;
   /** \brief The vertical window for the Lanczos algorithm. */
   u32 y_filter_param;
-  /** \brief The tiled mode when tiled output is enabled. */
-  u32 tile_mode;
-  /** \brief Whether to pad with 0 or edge pixel value when YUV420 tiled64x64 output is enabled. */
-  u32 yuv_supertile_pad_copy_e;
   /** \brief Whether to enable compression.
    *  \n Valid values:
    *  \n - <tt>0</tt>: Disable.
@@ -7468,7 +7459,6 @@ typedef struct PpLanczosInfo {
    which should not be exposed to external user. */
 typedef struct _PpUnitIntConfig {
   u32 enabled;    /* PP unit enabled */
-  u32 tiled_e;    /* PP unit tiled4x4 output enabled */
   u32 rgb;
   u32 rgb_planar;
   u32 cr_first;   /* CrCb instead of CbCr */
@@ -7594,8 +7584,6 @@ typedef struct _PpUnitIntConfig {
   u32 x_filter_param;
   u32 y_filter_param;
   u32 antialias;
-  u32 tile_mode;
-  u32 yuv_supertile_pad_copy_e;
   u32 pp_comp;
   u32 pp_fbc_tile_enable;
   u32 pp_pvfbc;
@@ -7732,7 +7720,6 @@ u64 CalcPpUnitBufferSize(const struct DecHwFeatures *hw_feature, PpUnitIntConfig
 void CalcOnePpUnitLumaSize(PpUnitIntConfig *ppu_cfg, u64* size_array);
 void CalcOnePpUnitChromaSize(PpUnitIntConfig *ppu_cfg, u32 mono_chrome, u64* size_array);
 u64 CalcOnePpUnitDec400TblSize(const struct DecHwFeatures *hw_feature, PpUnitIntConfig *ppu_cfg, u64 luma_size, u64 chroma_size, u32 i);
-u32 CalcOnePpUnitFBCHeaderPayloadSize(PpUnitIntConfig *ppu_cfg, u32 header);
 u64 CalcOnePpUnitPVFBCPlane0Size(PpUnitIntConfig *ppu_cfg);
 u64 CalcOnePpUnitPVFBCPlane1Size(PpUnitIntConfig *ppu_cfg, u32 mono_chrome);
 
