@@ -436,6 +436,268 @@
       "struct": "_PpUnitIntConfig",
       "member": "planar_f",
       "why": "D01: no reader left"
+    },
+    {
+      "action": "fold_true_if",
+      "match": "^\\s*if \\(!hw_feature->pp_support_6x\\) \\{",
+      "why": "D13: 0x2070 has no 6x upscale (pp_support_6x = 0, Table 11 gives 1x to 3x), so the 3x split always applies"
+    },
+    {
+      "action": "substitute",
+      "pattern": "\\(!hw_feature->pp_support_6x && \\((ppu_cfg->scale\\.width > ppu_cfg->crop\\.width\\*3 \\|\\|\\s*ppu_cfg->scale\\.height > ppu_cfg->crop\\.height\\*3)\\)\\)",
+      "with": "(\\1)",
+      "multiline": true,
+      "count": 2,
+      "why": "D13: the same test where it turns the shaper off, once for the TILED64x64 rule and once on its own"
+    },
+    {
+      "action": "substitute",
+      "pattern": "\\(hw_feature->pp_support_6x \\? 6 : 3\\)",
+      "with": "3",
+      "count": 8,
+      "why": "D13: the scaling bound in the CheckPpUnitConfig branches"
+    },
+    {
+      "action": "substitute",
+      "pattern": "\\(p_hw_feature->pp_support_6x \\? 6 : 3\\)",
+      "with": "3",
+      "count": 5,
+      "why": "D13: the DEC400 ctb height factor"
+    },
+    {
+      "action": "fold_false_if",
+      "match": "^\\s*if \\(hw_feature->pp_half_scale_support\\[i\\] &&",
+      "why": "D14: 0x2070 has no half scale (pp_half_scale_support = 0, Table 11 lists none); the whole check is for a mode the core does not have"
+    },
+    {
+      "action": "delete_block",
+      "match": "^\\s*if \\(!hw_feature->pp_yuv420_101010_support && ppu_cfg->out_1010\\) \\{",
+      "why": "D05: 101010 output cannot be requested, see the out_1010 rules below"
+    },
+    {
+      "action": "delete_block",
+      "match": "^\\s*if \\(!hw_feature->fmt_p010_support &&",
+      "why": "D06: P010 / I010 / L010 output cannot be requested"
+    },
+    {
+      "action": "delete_block",
+      "match": "^\\s*if \\(ppu_cfg->out_1010 && \\(ppu_cfg->chroma_format != PP_CHROMA_420\\)\\) \\{",
+      "why": "D05: the 101010 format rule has nothing left to guard"
+    },
+    {
+      "action": "fold_false_if",
+      "match": "^\\s*\\} else if \\(ppu_cfg->out_1010\\) \\{",
+      "why": "D05: the 101010 stride arm; no request can set out_1010 any more"
+    },
+    {
+      "action": "fold_false_if",
+      "match": "^\\s*else if \\(ppu_cfg->out_p010 \\|\\| ppu_cfg->out_I010 \\|\\| ppu_cfg->out_L010\\)\\s*$",
+      "why": "D06: the P010 / I010 / L010 arm of the monochrome output format choice"
+    },
+    {
+      "action": "substitute",
+      "pattern": "\\(ppu_cfg->out_p010 \\|\\| ppu_cfg->out_I010 \\|\\| ppu_cfg->out_L010 \\|\\| ppu_cfg->out_1010 \\|\\| ppu_cfg->out_p012",
+      "with": "(ppu_cfg->out_p012",
+      "count": 1,
+      "why": "D05/D06: the 10-bit terms of the TILED64x64 yuv rule, which keeps its P012 terms"
+    },
+    {
+      "action": "substitute",
+      "pattern": "\\s*&&\\s*!\\(ppu_cfg->out_p010 \\| ppu_cfg->out_I010 \\| ppu_cfg->out_L010\\)\\) \\{",
+      "with": ") {",
+      "multiline": true,
+      "count": 1,
+      "why": "D06: !(p010 | I010 | L010) is always true, so the tile rule still rejects every 10-bit stream, as it did"
+    },
+    {
+      "action": "substitute",
+      "pattern": " && !ppu_cfg->out_p010\\)",
+      "with": ")",
+      "count": 2,
+      "why": "D06: !out_p010 is always true in the TILED8x8 and PACKED422_TILED8x8 rules"
+    },
+    {
+      "action": "delete_line",
+      "match": "^\\s*!ppu_cfg->out_p010 && !ppu_cfg->out_I010 && !ppu_cfg->out_L010 &&\\s*$",
+      "why": "D06: the 422 / 444 pack10 rule keeps its other terms"
+    },
+    {
+      "action": "substitute",
+      "pattern": " \\|\\| \\(ppu_cfg->out_format == PP_OUT_FMT_YUV420_P010 && ppu_cfg->out_p010\\)",
+      "with": "",
+      "count": 1,
+      "why": "D06: the P010 term of the PVFBC format test"
+    },
+    {
+      "action": "delete_block",
+      "match": "^\\s*if \\(ppu_cfg->out_format == PP_OUT_FMT_YUV420_P010 && ppu_cfg->out_p010 && ppu_cfg->cr_first\\) \\{",
+      "why": "D06: PVFBC with P010 and cr_first, which needs out_p010"
+    },
+    {
+      "action": "substitute",
+      "pattern": "dec400_enabled && !ppu_cfg->out_p010 && ",
+      "with": "dec400_enabled && ",
+      "count": 1,
+      "why": "D06: !out_p010 is always true in the DEC400 10-bit rule"
+    },
+    {
+      "action": "substitute",
+      "pattern": "\\(ppu_cfg->out_L010 \\? 2 :\\s*\\(\\(ppu_cfg->out_I010 \\|\\| ppu_cfg->out_I012\\) \\? 1 : 0\\)\\)",
+      "with": "(ppu_cfg->out_I012 ? 1 : 0)",
+      "multiline": true,
+      "count": 1,
+      "why": "D06: the P010 format register keeps only the I012 case"
+    },
+    {
+      "action": "delete_line",
+      "match": "^\\s*ppu_int_cfg->out_(?:p010|I010|L010|1010) = ppu_ext_cfg->out_(?:p010|I010|L010|1010);",
+      "count": 4,
+      "why": "D05/D06: the copy from the API struct, which loses the members below"
+    },
+    {
+      "action": "delete_line",
+      "match": "^\\s*ppu_int_cfg->out_(?:p010|1010|I010|L010) = 0;",
+      "count": 8,
+      "why": "D05/D06: the clears in the two blocks that reset the 10-bit outputs"
+    },
+    {
+      "action": "fold_false_if",
+      "match": "^\\s*else if \\(ppu_int_cfg->out_p010\\)\\s*$",
+      "count": 3,
+      "why": "D06: the P010 arm of the YUYV, 400 and 420 tile output format choices"
+    },
+    {
+      "action": "fold_false_if",
+      "match": "^\\s*else if \\(ppu_int_cfg->out_I010\\)\\s*$",
+      "count": 2,
+      "why": "D06: the I010 arm of the 400 and 420 tile output format choices"
+    },
+    {
+      "action": "fold_false_if",
+      "match": "^\\s*else if \\(ppu_int_cfg->out_L010\\)\\s*$",
+      "count": 2,
+      "why": "D06: the L010 arm of the 400 and 420 tile output format choices"
+    },
+    {
+      "action": "fold_false_if",
+      "match": "^\\s*if \\(ppu_int_cfg->out_p010 \\|\\| ppu_int_cfg->out_I010 \\|\\| ppu_int_cfg->out_L010\\)\\s*$",
+      "why": "D06: the head of the 400 out_format chain, which goes on with P012"
+    },
+    {
+      "action": "fold_false_if",
+      "match": "^\\s*if \\(ppu_int_cfg->out_p010 \\|\\| ppu_int_cfg->out_I010 \\|\\| ppu_int_cfg->out_L010\\) \\{\\s*$",
+      "why": "D06: the head of the 420 / 422 out_format chain, which goes on with the 8-bit arm"
+    },
+    {
+      "action": "fold_false_if",
+      "match": "^\\s*\\} else if \\(ppu_int_cfg->out_1010\\) \\{",
+      "count": 2,
+      "why": "D05: the 1010 arm of the out_format choice and of the semi-planar format choice"
+    },
+    {
+      "action": "fold_false_if",
+      "match": "^\\s*\\} else if ?\\(ppu_int_cfg->out_p010\\) \\{",
+      "count": 2,
+      "why": "D06: the P010 arm of the 400 and 420 semi-planar format choices"
+    },
+    {
+      "action": "fold_false_if",
+      "match": "^\\s*\\} else if ?\\(ppu_int_cfg->out_I010\\) \\{",
+      "count": 2,
+      "why": "D06: the I010 arm of the same choices"
+    },
+    {
+      "action": "fold_false_if",
+      "match": "^\\s*\\} else if ?\\(ppu_int_cfg->out_L010\\) \\{",
+      "count": 2,
+      "why": "D06: the L010 arm of the same choices"
+    },
+    {
+      "action": "substitute",
+      "pattern": "\\(pixel_width == 8 && \\(!ppu_int_cfg->out_p010 && !ppu_int_cfg->out_I010 && !ppu_int_cfg->out_L010\\)\\)",
+      "with": "(pixel_width == 8)",
+      "count": 1,
+      "why": "D06: the 8-bit case no longer has the P010 exception"
+    },
+    {
+      "action": "substitute",
+      "pattern": "\\(\\(ppu_int_cfg->out_p010 \\|\\| ppu_int_cfg->out_I010 \\|\\| ppu_int_cfg->out_L010 \\|\\|\\s*ppu_int_cfg->out_p012",
+      "with": "((ppu_int_cfg->out_p012",
+      "multiline": true,
+      "count": 1,
+      "why": "D06: the 16-bit container case keeps P012 / I012"
+    },
+    {
+      "action": "delete_member",
+      "files": [
+        "vcdj_ctrlsw.h"
+      ],
+      "struct": "_PpUnitConfig",
+      "member": "out_p010",
+      "why": "D05/D06: removing it makes a 10-bit request a compile error rather than a silent no-op"
+    },
+    {
+      "action": "delete_member",
+      "files": [
+        "vcdj_ctrlsw.h"
+      ],
+      "struct": "_PpUnitConfig",
+      "member": "out_1010",
+      "why": "D05/D06: removing it makes a 10-bit request a compile error rather than a silent no-op"
+    },
+    {
+      "action": "delete_member",
+      "files": [
+        "vcdj_ctrlsw.h"
+      ],
+      "struct": "_PpUnitConfig",
+      "member": "out_I010",
+      "why": "D05/D06: removing it makes a 10-bit request a compile error rather than a silent no-op"
+    },
+    {
+      "action": "delete_member",
+      "files": [
+        "vcdj_ctrlsw.h"
+      ],
+      "struct": "_PpUnitConfig",
+      "member": "out_L010",
+      "why": "D05/D06: removing it makes a 10-bit request a compile error rather than a silent no-op"
+    },
+    {
+      "action": "delete_member",
+      "files": [
+        "vcdj_ctrlsw.h"
+      ],
+      "struct": "_PpUnitIntConfig",
+      "member": "out_p010",
+      "why": "D05/D06: the internal copy, no reader left"
+    },
+    {
+      "action": "delete_member",
+      "files": [
+        "vcdj_ctrlsw.h"
+      ],
+      "struct": "_PpUnitIntConfig",
+      "member": "out_1010",
+      "why": "D05/D06: the internal copy, no reader left"
+    },
+    {
+      "action": "delete_member",
+      "files": [
+        "vcdj_ctrlsw.h"
+      ],
+      "struct": "_PpUnitIntConfig",
+      "member": "out_I010",
+      "why": "D05/D06: the internal copy, no reader left"
+    },
+    {
+      "action": "delete_member",
+      "files": [
+        "vcdj_ctrlsw.h"
+      ],
+      "struct": "_PpUnitIntConfig",
+      "member": "out_L010",
+      "why": "D05/D06: the internal copy, no reader left"
     }
   ]
 }

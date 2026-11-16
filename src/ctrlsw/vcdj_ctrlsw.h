@@ -3361,38 +3361,11 @@ typedef struct _PpUnitConfig {
    *  \n - <tt>0</tt>: Do not output data in a monochrome format.
    *  \n - <tt>1</tt>: Output data in a monochrome format. */
   u32 monochrome;
-  /** \brief Whether to output data in a YUV P010 format.
-   *  \n For details about P010, see <em>Hantro VC9x00D Series Memory Buffer Format
-   *  Specifications</em>.
-   *  \n Valid values:
-   *  \n - <tt>0</tt>: Do not output data in a YUV P010 format.
-   *  \n - <tt>1</tt>: Output data in a YUV P010 format. */
-  u32 out_p010;
    /** \brief Whether to forcibly convert a YUV420 8-bit format into a YUV420 10-bit format when the conversion feature is not supported.
    *  \n Valid values:
    *  \n - <tt>0</tt>: (Default) Do not forcibly convert.
    *  \n - <tt>1</tt>: Forcibly convert the format. */
   u8 Explicit_Specified_010;
-  /** \brief Whether to output data in a YUV 1010 format, where each component is stored using 10 bits.
-   *  \n For details about YUV 1010, see <em>Hantro VC9x00D Series Memory Buffer Format Specifications</em>.
-   *  \n Valid values:
-   *  \n - <tt>0</tt>: Do not output data in a YUV 1010 format.
-   *  \n - <tt>1</tt>: Output data in a YUV 1010 format. */
-  u32 out_1010;
-  /** \brief Whether to output data in a YUV I010 format.
-   *  \n For details about I010, see <em>Hantro VC9x00D Series Memory Buffer Format
-   *  Specifications</em>.
-   *  \n Valid values:
-   *  \n - <tt>0</tt>: Do not output data in a YUV I010 format.
-   *  \n - <tt>1</tt>: Output data in a YUV I010 format. */
-  u32 out_I010;
-  /** \brief Whether to output data in a YUV L010 format.
-   *  \n For details about L010, see <em>Hantro VC9x00D Series Memory Buffer Format
-   *  Specifications</em>.
-   *  \n Valid values:
-   *  \n - <tt>0</tt>: Do not output data in a YUV L010 format.
-   *  \n - <tt>1</tt>: Output data in a YUV L010 format. */
-  u32 out_L010;
   /** \brief Whether to output data in a YUV P012 format.
    *  \n Valid values:
    *  \n - <tt>0</tt>: Do not output data in a YUV P012 format.
@@ -7591,10 +7564,6 @@ typedef struct _PpUnitIntConfig {
   u32 pp_in_format;
   u32 out_format;
   u8  Explicit_Specified_010;
-  u32 out_p010;
-  u32 out_1010;
-  u32 out_I010;
-  u32 out_L010;
   u32 out_p012;
   u32 out_I012;
   u32 out_cut_8bits;

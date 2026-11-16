@@ -397,8 +397,10 @@ def fold_false_if(rule, doc, which):
 
     For a condition that cannot hold on 0x2070. Takes `if (c) { } [else { }]`,
     the single-statement `if (c) s; [else s;]` with each statement on a line of
-    its own, and a braced `} else if (c) { }` arm, whose removal leaves the
-    rest of the chain going. Any other shape stops the rule.
+    its own, a braced `} else if (c) { }` arm, whose removal leaves the rest of
+    the chain going, a single-statement `else if (c) s;` arm, and the head of a
+    chain, `if (c) ... else if (d) ...`, which becomes `if (d) ...`. Any other
+    shape stops the rule.
     """
     lines, origin = doc['lines'], doc['origin']
     hits = code_hits(code_lines(lines), rule['match'], rule.get('count', 1), which)
@@ -406,11 +408,22 @@ def fold_false_if(rule, doc, which):
         code = code_lines(lines)
         p = _parse_if(code, start, which)
         lo, els = p['lo'], p['else']
+        if p.get('chain') is not None:
+            e = p['chain']
+            m = re.match(r'^\s*(?:\}\s*)?else\s+(if\b.*)$', lines[e])
+            if not m:
+                raise PruneError('%s: line %d: the next arm of the chain is not on a '
+                                 'line of its own; fold it by hand' % (which, e + 1))
+            base = lines[lo][:len(lines[lo]) - len(lines[lo].lstrip())]
+            lines[lo:e + 1] = [base + m.group(1)]
+            origin[lo:e + 1] = [origin[e]]
+            continue
         if p['arm']:
-            # The arm's closing line is `}`, `} else {` or `} else if (...) {`:
+            # A braced arm's closing line is `}`, `} else {` or `} else if (...) {`:
             # its `}` goes on to close the block before the arm, so that line
-            # stays and only the arm's own line and body go.
-            new, hi = [], p['brace_end'] - 1
+            # stays and only the arm's own line and body go. A bare arm is
+            # `else if (c)` and one statement, which both go.
+            new, hi = [], p['close'] if p['bare'] else p['brace_end'] - 1
         elif els:
             base = lines[lo][:len(lines[lo]) - len(lines[lo].lstrip())]
             new, hi = dedent(lines, els[0], els[1], base, which), p['close']
@@ -419,6 +432,28 @@ def fold_false_if(rule, doc, which):
             new = []
         lines[lo:hi + 1] = new
         origin[lo:hi + 1] = origin[els[0]:els[1]] if new else []
+
+
+def fold_true_if(rule, doc, which):
+    """Replace each `if` on a `match` line by its then branch; the else goes.
+
+    For a condition that always holds on 0x2070. Takes a plain `if (c) { }
+    [else { }]` or the single-statement form, the same shapes as
+    fold_false_if. An arm or the head of a chain stops the rule: dropping the
+    other arms is a decision about the chain, not about this condition.
+    """
+    lines, origin = doc['lines'], doc['origin']
+    hits = code_hits(code_lines(lines), rule['match'], rule.get('count', 1), which)
+    for start in reversed(hits):
+        p = _parse_if(code_lines(lines), start, which)
+        if p['arm'] or p.get('chain') is not None:
+            raise PruneError('%s: line %d: part of an else-if chain; fold it by hand'
+                             % (which, p['lo'] + 1))
+        lo, (a, b) = p['lo'], p['then']
+        base = lines[lo][:len(lines[lo]) - len(lines[lo].lstrip())]
+        new = dedent(lines, a, b, base, which)
+        origin[lo:p['close'] + 1] = origin[a:b]
+        lines[lo:p['close'] + 1] = new
 
 
 def _parse_if(code, start, where):
@@ -430,8 +465,10 @@ def _parse_if(code, start, where):
     Keys: `lo` (the line the `if` starts on), `arm` (it is a `} else if`),
     `else` (None, or the span (lo, hi) of its body, hi exclusive), `close`
     (the line the whole statement ends on) and, for a braced then,
-    `brace_end` (the line that block closes on). Refuses any shape it cannot
-    describe.
+    `brace_end` (the line that block closes on) and `then` (the span of its
+    body, hi exclusive). `bare` marks an `else if` without a leading `}`.
+    `chain` is set instead of `else` when the statement is followed by another
+    `else if`: the line that one is on. Refuses any shape it cannot describe.
     """
     def fail(msg):
         raise PruneError('%s: line %d: %s' % (where, start + 1, msg))
@@ -446,31 +483,36 @@ def _parse_if(code, start, where):
             fail('the branch is not one statement on one line; fold it by hand')
         return i, i + 1
 
-    lo, opens = start, re.compile(r'^\s*(\} else )?if\s*\(')
+    lo, opens = start, re.compile(r'^\s*(\} else |else )?if\s*\(')
     while lo >= 0 and not opens.match(code[lo]):
         lo -= 1
         if start - lo > 8:
             fail('no `if` starts within 8 lines above')
     if lo < 0:
-        fail('no `if` or `} else if` to fold')
+        fail('no `if` or `else if` to fold')
     m = opens.match(code[lo])
-    out = {'lo': lo, 'arm': bool(m.group(1)), 'else': None}
+    bare = bool(m.group(1)) and not m.group(1).startswith('}')
+    out = {'lo': lo, 'arm': bool(m.group(1)), 'bare': bare, 'else': None}
     j, k = paren_close(code, lo, m.end() - 1, where)
     rest = code[j][k + 1:].strip()
     if rest == '{':
+        if bare:
+            fail('an `else if` with a braced body that does not follow a `}`; '
+                 'fold it by hand')
         t, c = brace_close(code, j, k + 2)
         if code[t][:c].strip():
             fail('the block shares its closing line; fold it by hand')
         out['close'] = out['brace_end'] = t
+        out['then'] = (j + 1, t)
         # The else may follow the closing brace or start the next line.
         e, tail = t, code[t][c + 1:].strip()
         if not tail and re.match(r'else\b', next_code(code, t)):
             e = next_line(t)
             tail = code[e].strip()
     elif rest == '':
-        if out['arm']:
-            fail('an arm without braces; fold it by hand')
-        statement_at(j + 1)
+        if out['arm'] and not bare:
+            fail('a `} else if` without braces; fold it by hand')
+        out['then'] = statement_at(j + 1)
         out['close'] = e = j + 1
         tail = next_code(code, e) if re.match(r'else\b', next_code(code, e)) else ''
         if tail:
@@ -479,6 +521,9 @@ def _parse_if(code, start, where):
         fail('unexpected text after the condition')
     if out['arm'] or not tail:
         return out          # an arm keeps whatever else follows it
+    if re.match(r'else\s+if\s*\(', tail):
+        out['chain'] = e    # the head of a chain: the next `else if` line
+        return out
     if tail == 'else {' or (tail == 'else' and next_code(code, e).startswith('{')):
         b = e if tail.endswith('{') else next_line(e)
         end, _ = brace_close(code, b, code[b].rfind('{'))
@@ -496,9 +541,14 @@ def substitute(rule, doc, which):
     """Rewrite each match of `pattern` in code (not comments) as `with`.
 
     `with` is a re.sub template. The total number of matches must equal `count`.
+    With `multiline` the pattern may span lines (`\\s` then matches the line
+    break); the replacement may be shorter in lines than the match, never longer,
+    and the match may not swallow a comment or a literal.
     """
     pat = re.compile(rule['pattern'])
     code = code_lines(doc['lines'])
+    if rule.get('multiline'):
+        return _substitute_multiline(rule, pat, doc, code, which)
     found = [(i, list(pat.finditer(l))) for i, l in enumerate(code)]
     found = [(i, ms) for i, ms in found if ms]
     total = sum(len(ms) for _, ms in found)
@@ -510,6 +560,28 @@ def substitute(rule, doc, which):
         for m in reversed(ms):
             l = l[:m.start()] + m.expand(rule['with']) + l[m.end():]
         doc['lines'][i] = l
+
+
+def _substitute_multiline(rule, pat, doc, code, which):
+    lines, origin = doc['lines'], doc['origin']
+    text, real = '\n'.join(code), '\n'.join(lines)
+    found = list(pat.finditer(text))
+    if len(found) != rule.get('count', 1):
+        raise PruneError('%s: %r matches %d times, the rule expects %d'
+                         % (which, rule['pattern'], len(found), rule.get('count', 1)))
+    for m in reversed(found):
+        if real[m.start():m.end()] != text[m.start():m.end()]:
+            raise PruneError('%s: %r matches across a comment or literal at line %d'
+                             % (which, rule['pattern'], text.count('\n', 0, m.start()) + 1))
+        a, b = text.count('\n', 0, m.start()), text.count('\n', 0, m.end())
+        col_a = m.start() - (text.rfind('\n', 0, m.start()) + 1)
+        col_b = m.end() - (text.rfind('\n', 0, m.end()) + 1)
+        new = (lines[a][:col_a] + m.expand(rule['with']) + lines[b][col_b:]).split('\n')
+        if len(new) > b - a + 1:
+            raise PruneError('%s: %r: the replacement has more lines than the match'
+                             % (which, rule['pattern']))
+        lines[a:b + 1] = new
+        origin[a:b + 1] = origin[a:a + len(new)]
 
 
 def delete_line(rule, doc, which):
@@ -809,6 +881,7 @@ ACTIONS = {
     'delete_if_block': (delete_if_block, None),
     'delete_block': (delete_block, None),
     'fold_false_if': (fold_false_if, None),
+    'fold_true_if': (fold_true_if, None),
     'substitute': (substitute, None),
     'delete_line': (delete_line, None),
     'delete_member': (delete_member, None),
