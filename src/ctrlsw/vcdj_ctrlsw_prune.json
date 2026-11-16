@@ -1009,6 +1009,115 @@
       "struct": "_PpUnitIntConfig",
       "member": "yuv_supertile_pad_copy_e",
       "why": "D04: the internal copy, no reader left"
+    },
+    {
+      "action": "delete_block",
+      "match": "^\\s*if \\(!\\(ppu_cfg->rgb \\|\\| ppu_cfg->rgb_planar\\) && ppu_cfg->enable_3dlut\\) \\{",
+      "why": "D08: 0x2070 has no 3D LUT (pp_3dlut = 0, swreg420 bit 2 undefined in the register manual); the rgb-only rejection of a request that cannot be made"
+    },
+    {
+      "action": "delete_block",
+      "match": "^\\s*if \\(!hw_feature->pp_3dlut\\[i\\] && ppu_cfg->enable_3dlut\\) \\{",
+      "why": "D08: the feature check of the same request"
+    },
+    {
+      "action": "delete_block",
+      "match": "^\\s*if \\(ppu_cfg->enable_3dlut && \\(ppu_cfg->rgb \\|\\| ppu_cfg->rgb_planar\\)\\) \\{",
+      "comment_above": true,
+      "why": "D08: the enable bit and the table base address registers"
+    },
+    {
+      "action": "delete_line",
+      "match": "^\\s*u8 flag_3dlut = 0;",
+      "why": "D08: only the table reorder below used it"
+    },
+    {
+      "action": "delete_line",
+      "match": "^\\s*ppu_int_cfg->enable_3dlut = ppu_ext_cfg->enable_3dlut;",
+      "comment_above": true,
+      "why": "D08: the copy from the API struct, which loses the member below"
+    },
+    {
+      "action": "delete_block",
+      "match": "^\\s*if \\(ppu_int_cfg->enable_3dlut\\) \\{",
+      "comment_above": true,
+      "why": "D08: the table reorder into the hardware layout, with its temporary buffer"
+    },
+    {
+      "action": "delete_block",
+      "match": "^\\s*if \\(dec_cfg->ppu_config\\[i\\]\\.enable_3dlut && \\(dec_cfg->ppu_config\\[i\\]\\.rgb \\|\\| dec_cfg->ppu_config\\[i\\]\\.rgb_planar\\)\\) \\{",
+      "comment_above": true,
+      "why": "D08: the JPEG container flag that asked for the table sync"
+    },
+    {
+      "action": "delete_line",
+      "match": "^\\s*dec_cont->ppu_cfg\\[i\\]\\.table_3dlut_buffer = dec_cfg->table_3dlut_buffer;",
+      "why": "D08: the table buffer handed to the container"
+    },
+    {
+      "action": "substitute",
+      "pattern": "\\n[ \\t]*if \\(dec_cont->enable_3dlut\\)\\s*DWLSyncMemData\\([^;]*;",
+      "with": "",
+      "multiline": true,
+      "count": 1,
+      "why": "D08: the table cache sync before a decode, a single statement under the flag"
+    },
+    {
+      "action": "delete_line",
+      "match": "^\\s*u8 enable_3dlut;$",
+      "why": "D08: the JpegDecContainer flag; the struct is anonymous, so no member rule reaches it"
+    },
+    {
+      "action": "delete_member",
+      "files": ["vcdj_ctrlsw.h"],
+      "struct": "_PpUnitConfig",
+      "member": "enable_3dlut",
+      "why": "D08: removing it makes a 3D LUT request a compile error rather than a silent no-op"
+    },
+    {
+      "action": "delete_member",
+      "files": ["vcdj_ctrlsw.h"],
+      "struct": "_PpUnitIntConfig",
+      "member": "enable_3dlut",
+      "why": "D08: the internal copy, no reader left"
+    },
+    {
+      "action": "delete_member",
+      "files": ["vcdj_ctrlsw.h"],
+      "struct": "_PpUnitIntConfig",
+      "member": "table_3dlut_buffer",
+      "why": "D08: the internal copy, no reader left"
+    },
+    {
+      "action": "delete_member",
+      "files": ["vcdj_ctrlsw.h"],
+      "struct": "DecConfig",
+      "member": "table_3dlut_buffer",
+      "why": "D08: the table buffer a caller would supply"
+    },
+    {
+      "action": "delete_member",
+      "files": ["vcdj_ctrlsw.h"],
+      "struct": "JpegDecConfig",
+      "member": "table_3dlut_buffer",
+      "why": "D08: as DecConfig, for the JPEG decoder"
+    },
+    {
+      "action": "fold_false_if",
+      "match": "^\\s*if\\(p_hw_feature->pp_standalone\\) \\{",
+      "why": "D09: 0x2070 has no standalone PP (pp_standalone = 0); the colour conversion type register in the else stays"
+    },
+    {
+      "action": "substitute",
+      "pattern": "\\(!hw_feature->scale_cost_support\\[i\\] && !hw_feature->only_area_scale_alg_support\\[i\\]\\)",
+      "with": "!hw_feature->scale_cost_support[i]",
+      "count": 1,
+      "why": "D15: only_area_scale_alg_support is 0, so its term is always true"
+    },
+    {
+      "action": "fold_false_if",
+      "match": "^\\s*\\} else if \\(p_hw_feature->only_area_scale_alg_support\\[i\\]\\) \\{",
+      "why": "D15: the AREA-only scaler arm of the algorithm flags; the general else stays"
     }
   ]
 }

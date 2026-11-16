@@ -6999,16 +6999,6 @@ u32 CheckPpUnitConfig(const struct DecHwFeatures *hw_feature,
     }
 #endif
 
-    if (!(ppu_cfg->rgb || ppu_cfg->rgb_planar) && ppu_cfg->enable_3dlut) {
-      APITRACEERR("CheckPpUnitConfig# Illegal param[PP %u]: 3dlut only supuported when rgb output.\n", i);
-      return 1;
-    }
-
-    if (!hw_feature->pp_3dlut[i] && ppu_cfg->enable_3dlut) {
-      APITRACEERR("CheckPpUnitConfig# Illegal param[PP %u]: 3dlut is not supuported.\n", i);
-      return 1;
-    }
-
 #if 0
     if (!hw_feature->fmt_rgb_support[i] && (ppu_cfg->rgb || ppu_cfg->rgb_planar)) {
       APITRACEERR("CheckPpUnitConfig# Illegal param[PP %u]: RGB is not supported.\n", i);
@@ -7568,7 +7558,7 @@ u32 CheckPpUnitConfig(const struct DecHwFeatures *hw_feature,
     }
 
     /* low cost scale */
-    if ((!hw_feature->scale_cost_support[i] && !hw_feature->only_area_scale_alg_support[i]) && ppu_cfg->pp_filter == AREA) {
+    if (!hw_feature->scale_cost_support[i] && ppu_cfg->pp_filter == AREA) {
       APITRACEERR("CheckPpUnitConfig# Illegal param[PP %u]: Illegal DOWNSCALE filter type in this HwBuildId, AREA can not support, please check POF \n", i);
       return 1;
     }
@@ -7718,23 +7708,14 @@ void PPSetOneChannelRegs(u32 *pp_regs, const struct PpParams *pp_args, u32 chann
       ppu_cfg->rgb_stan -= 1;
     }
 
-    if(p_hw_feature->pp_standalone) {
-      SetDecRegister(pp_regs, HWIF_PP_COLOR_COEFFA2_U, coeff[ppu_cfg->rgb_stan][0]);
-      SetDecRegister(pp_regs, HWIF_PP_COLOR_COEFFA1_U, coeff[ppu_cfg->rgb_stan][0]);
-      SetDecRegister(pp_regs, HWIF_PP_COLOR_COEFFB_U, coeff[ppu_cfg->rgb_stan][1]);
-      SetDecRegister(pp_regs, HWIF_PP_COLOR_COEFFC_U, coeff[ppu_cfg->rgb_stan][2]);
-      SetDecRegister(pp_regs, HWIF_PP_COLOR_COEFFD_U, coeff[ppu_cfg->rgb_stan][3]);
-      SetDecRegister(pp_regs, HWIF_PP_COLOR_COEFFE_U, coeff[ppu_cfg->rgb_stan][4]);
-    } else {
-      if(ppu_cfg->rgb_stan == BT601 || ppu_cfg->rgb_stan == BT601_L) {
-        coversion_type = BT601_TYPE;
-      } else if(ppu_cfg->rgb_stan == BT709 || ppu_cfg->rgb_stan == BT709_L) {
-        coversion_type = BT709_TYPE;
-      } else if (ppu_cfg->rgb_stan == BT2020 || ppu_cfg->rgb_stan == BT2020_L) {
-        coversion_type = BT2020_TYPE;
-      }
-      SetDecRegister(pp_regs, HWIF_COLOR_CONVERSION_TYPE_U, coversion_type);
+    if(ppu_cfg->rgb_stan == BT601 || ppu_cfg->rgb_stan == BT601_L) {
+      coversion_type = BT601_TYPE;
+    } else if(ppu_cfg->rgb_stan == BT709 || ppu_cfg->rgb_stan == BT709_L) {
+      coversion_type = BT709_TYPE;
+    } else if (ppu_cfg->rgb_stan == BT2020 || ppu_cfg->rgb_stan == BT2020_L) {
+      coversion_type = BT2020_TYPE;
     }
+    SetDecRegister(pp_regs, HWIF_COLOR_CONVERSION_TYPE_U, coversion_type);
     SetDecRegister(pp_regs, HWIF_PP_VIDEO_RANGE_U, ppu_cfg->video_range);
     SetDecRegister(pp_regs, HWIF_PP_RGB_RANGE_MAX_U, ppu_cfg->range_max);
     SetDecRegister(pp_regs, HWIF_PP_RGB_RANGE_MIN_U, ppu_cfg->range_min);
@@ -7802,16 +7783,6 @@ void PPSetOneChannelRegs(u32 *pp_regs, const struct PpParams *pp_args, u32 chann
     SetPpuRegister(pp_regs, HWIF_PPX_NORM_EN_U, i, ppu_cfg->norm_enable);
     SetPpuRegister(pp_regs, HWIF_PPX_NORM_OUT_FORMAT_U, i, ppu_cfg->norm_fmat);
     SetPpuRegister(pp_regs, HWIF_PPX_NORM_QUANT_STEP_U, i, ppu_cfg->norm_quant_step);
-  }
-
-  /* for color remapping (3dlut) */
-  if (ppu_cfg->enable_3dlut && (ppu_cfg->rgb || ppu_cfg->rgb_planar)) {
-    SetPpuRegister(pp_regs, HWIF_PPX_3DLUT_ENABLE_U, i, ppu_cfg->enable_3dlut);
-    SET_PP_ADDR_REG2(pp_regs,
-                    HWIF_PP_3DLUT_TBL_BASE_U_LSB,
-                    HWIF_PP_3DLUT_TBL_BASE_U_MSB,
-                    0,
-                    ppu_cfg->table_3dlut_buffer.bus_address);
   }
 
   /* range mapping */
@@ -7919,9 +7890,6 @@ void PPSetOneChannelRegs(u32 *pp_regs, const struct PpParams *pp_args, u32 chann
         SetPpuRegister(pp_regs, HWIF_PPX_HOR_ALG_FLAG_U, i, 3);
         SetPpuRegister(pp_regs, HWIF_PPX_VER_ALG_FLAG_U, i, 3);
       }
-    } else if (p_hw_feature->only_area_scale_alg_support[i]) {
-      SetPpuRegister(pp_regs, HWIF_PPX_HOR_ALG_FLAG_U, i, 0);
-      SetPpuRegister(pp_regs, HWIF_PPX_VER_ALG_FLAG_U, i, 3);
     } else {
       if(ppu_cfg->pp_filter == PP_NEAREST) {
         SetPpuRegister(pp_regs, HWIF_PPX_HOR_ALG_FLAG_U, i, 0);
@@ -8824,7 +8792,6 @@ void PpUnitSetIntConfig(PpUnitIntConfig *ppu_int_cfg,
                         u32 mono_chrome) {
   u32 i, idx;
   u32 chroma_format = 0;
-  u8 flag_3dlut = 0;
   if (ppu_int_cfg == NULL || ppu_ext_cfg == NULL)
     return;
 
@@ -9115,41 +9082,6 @@ void PpUnitSetIntConfig(PpUnitIntConfig *ppu_int_cfg,
           }
         }
       }
-    }
-
-    /* for color remapping (3dlut) */
-    ppu_int_cfg->enable_3dlut = ppu_ext_cfg->enable_3dlut;
-    /* 3dlut: addr adustment for hw*/
-    if (ppu_int_cfg->enable_3dlut) {
-      u32 *temp_addr;
-      temp_addr = (u32*)DWLmalloc(18 * 18 * 18 * sizeof(u32));
-      if (temp_addr == NULL)
-        return;
-      DWLmemset(temp_addr, 0, 18 * 18 * 18 * sizeof(u32));
-      // addr adustment
-      if (!flag_3dlut) {
-        int j = 0;
-        if (pixel_width == 8) {
-          for (int i = 0; i < 18 * 18 * 18 * 3; i++) { // i < number of 16bit
-            DWLmemcpy(((u8*)temp_addr) + j, ((u16*)ppu_int_cfg->table_3dlut_buffer.virtual_address) + i, sizeof(u16));
-            if ((j + 2) % 4 == 0) j++; // B8G8R808
-            j++;
-          }
-          DWLmemcpy((u8 *)ppu_int_cfg->table_3dlut_buffer.virtual_address, temp_addr, 18 * 18 * 18 * sizeof(u32));
-        } else {
-          int k = 0;
-          u32 threed_lut_table_value;
-          for (int i = 0; i < 18 * 18 * 18 * 3; i+=3) {
-            threed_lut_table_value = (*((u16*)ppu_int_cfg->table_3dlut_buffer.virtual_address + i + 2) & 0x3FF) << 20
-                                    | (*((u16*)ppu_int_cfg->table_3dlut_buffer.virtual_address + i + 1) & 0x3FF) << 10
-                                    | (*((u16*)ppu_int_cfg->table_3dlut_buffer.virtual_address + i) & 0x3FF); // B is lsb, 0+R is msb
-            *((u32*)ppu_int_cfg->table_3dlut_buffer.virtual_address + k) = threed_lut_table_value;
-            k++;
-          }
-        }
-      }
-      DWLfree(temp_addr);
-      flag_3dlut = 1;
     }
 
     ppu_int_cfg->antialias = ppu_ext_cfg->antialias;
@@ -14471,7 +14403,6 @@ typedef struct {
   DelogoConfig delogo_params[2];
   const struct DecHwFeatures *hw_feature;
   u32 cur_out_ext_buf_index;
-  u8 enable_3dlut;
   u32 prev_display_width; /* previous display width */
   u32 prev_display_height; /* previous display height */
   u64 pre_buf_size;  /* size of the requested previous external buffer, used for MJPEG dynamic size */
@@ -16820,11 +16751,6 @@ enum DecRet JpegDecSetInfo(JpegDecInst dec_inst,
     if (dec_cfg->ppu_config[i].set_source_range_enable) {
       dec_cont->ppu_cfg[i].source_range = dec_cfg->ppu_config[i].source_range;
     } // when input stream, rgb source range follows yuv source range, which get from stream sps info
-    /* 3dlut */
-    if (dec_cfg->ppu_config[i].enable_3dlut && (dec_cfg->ppu_config[i].rgb || dec_cfg->ppu_config[i].rgb_planar)) {
-      dec_cont->enable_3dlut = 1;
-    }
-    dec_cont->ppu_cfg[i].table_3dlut_buffer = dec_cfg->table_3dlut_buffer;
   }
 
   dec_cont->dec_image_type = dec_cfg->dec_image_type;
@@ -19872,9 +19798,6 @@ enum DecRet JpegDecInitHW(JpegDecContainer * dec_cont) {
       DWLSyncMemData(dec_cont->dwl, &dec_cont->frame.p_table_base[i], 0,
                       dec_cont->frame.p_table_base[i].size, HOST_TO_DEVICE);
   }
-  if (dec_cont->enable_3dlut)
-    DWLSyncMemData(dec_cont->dwl, &dec_cont->ppu_cfg[0].table_3dlut_buffer, 0,
-                    dec_cont->ppu_cfg[0].table_3dlut_buffer.size, HOST_TO_DEVICE);
   if (dec_cont->b_mc || RI_MC_ENABLED(dec_cont->ri_mc_enabled)) {
     if (RI_MC_DISABLED(dec_cont->ri_mc_enabled)) {
       JpegMCSetHwRdyCallback(dec_cont);

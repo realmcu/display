@@ -3425,11 +3425,6 @@ typedef struct _PpUnitConfig {
    *  \n - <tt>0</tt>: Disable.
    *  \n - <tt>1</tt>: Enable. */
   u32 dither_enable;
-  /** \brief Whether to enable 3D LUT for color remapping.
-   *  \n Valid values:
-   *  \n - <tt>0</tt>: Disable.
-   *  \n - <tt>1</tt>: Enable. */
-  u8 enable_3dlut;
 
   /** \brief The alpha value for output ARGB pixels in YUV-to-RGB conversion. */
   u32 rgb_alpha;
@@ -6391,9 +6386,6 @@ struct DecConfig {
   struct DWLLinearMem pp_in_buffer;
   /** \brief (For standalone post-processing only) The post-processing output buffer. */
   struct DWLLinearMem pp_out_buffer;
-  /* for color remapping (3dlut) */
-  /** \brief (For standalone post-processing only) The 3D LUT buffer. */
-  struct DWLLinearMem table_3dlut_buffer;
   /** \brief \- Bits[15:0] control which core is used for decoding.
    * \n <tt>0x00000000</tt>: SDK adaptively chooses a core or a special core is used.
    * \n <tt>0x00000001</tt>: Core 0 is used.
@@ -7568,8 +7560,6 @@ typedef struct _PpUnitIntConfig {
   u32 range_map_flag; /* for range mapping*/
   i32 range_map_max;
   i32 range_map_min;
-  struct DWLLinearMem table_3dlut_buffer; /* the table buffer for 3dlut. */
-  u8 enable_3dlut; /* for color remapping (3dlut) */
   u32 dither_enable;
   u32 rgb_alpha;
   u32 x_filter_size;
@@ -8862,7 +8852,6 @@ struct JpegDecConfig {
   u32 error_ratio;
   DecPicAlignment align;
   PpUnitConfig ppu_config[DEC_MAX_OUT_COUNT];
-  struct DWLLinearMem table_3dlut_buffer;  /* The buffer used for color remapping (3dlut) */
   DelogoConfig delogo_params[2];
   u32 dec_image_type;
   enum DecDecoderMode decoder_mode;

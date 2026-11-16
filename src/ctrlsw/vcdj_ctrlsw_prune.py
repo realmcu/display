@@ -281,6 +281,13 @@ def replace_line(rule, doc, which):
     doc['lines'][i] = rule['with']
 
 
+def comment_top(lines, code, top):
+    """First line of the comment lines that sit directly above line `top`."""
+    while top > 0 and lines[top - 1].strip() and not code[top - 1].strip():
+        top -= 1
+    return top
+
+
 def delete_block(rule, doc, which):
     """Delete the statement on the `match` line together with its braced body.
 
@@ -290,7 +297,8 @@ def delete_block(rule, doc, which):
 
     `above` lists regular expressions for lines that only this statement used,
     immediately above it and in source order, which go with it. It also tells
-    apart several statements that `match` fits.
+    apart several statements that `match` fits. With `comment_above`, the
+    comment lines directly above the whole run go too.
     """
     above = rule.get('above') or []
     lines = doc['lines']
@@ -323,7 +331,10 @@ def delete_block(rule, doc, which):
     if code[hi].strip() != '}' or re.match(r'\s*else\b', nxt):
         raise PruneError('%s: line %d: the block has an else or shares its closing '
                          'line; delete it by hand' % (which, lo + 1))
-    lo, hi = widen_blank(lines, start - len(above), hi)
+    top = start - len(above)
+    if rule.get('comment_above'):
+        top = comment_top(lines, code, top)
+    lo, hi = widen_blank(lines, top, hi)
     del lines[lo:hi + 1]
     del doc['origin'][lo:hi + 1]
 
@@ -596,11 +607,15 @@ def _substitute_multiline(rule, pat, doc, code, which):
 
 
 def delete_line(rule, doc, which):
-    """Delete each line whose code part matches `match`; there must be `count`."""
+    """Delete each line whose code part matches `match`; there must be `count`.
+
+    With `comment_above`, the comment lines directly above each one go too.
+    """
     code = code_lines(doc['lines'])
     for i in reversed(code_hits(code, rule['match'], rule.get('count', 1), which)):
-        del doc['lines'][i]
-        del doc['origin'][i]
+        top = comment_top(doc['lines'], code, i) if rule.get('comment_above') else i
+        del doc['lines'][top:i + 1]
+        del doc['origin'][top:i + 1]
 
 
 def delete_member(rule, doc, which):
