@@ -548,7 +548,7 @@ extern "C" {
 #define MAX_SVC_POINT_LAYER  0x37
 /** \brief The maximum number of output channels from \c VCDecNextPicture().
  *  \ingroup common_group */
-#define MAX_PPU_COUNT 4
+#define MAX_PPU_COUNT 1
 #define DEC_MAX_OUT_COUNT MAX_PPU_COUNT
 /** \brief The post-processing channel 0 start register.
  *  \ingroup common_group */
@@ -3313,17 +3313,6 @@ typedef struct _PpUnitConfig {
   DecPicAlignment dec400_align;
   /** \brief Whether to enable DEC400 compression conformance test. */
   u8 dec400_conformance_test_en;
-  /** \brief Whether to enable planar output.
-   *  \n Valid values:
-   *  \n - <tt>0</tt>: Disable.
-   *  \n - <tt>1</tt>: Enable. */
-  u32 planar;
-   /** \brief Whether to forcibly use planar output.
-   *  \n Valid values:
-   *  \n - <tt>0</tt>: Do not forcibly use planar output. \n The output format depends on the project configurations.
-   *  \n - <tt>1</tt>: Forcibly use planar output.
-   *  \n This field is used only for design verification. */
-  u32 planar_f;
   /** \brief The alignment of the post-processing output. */
   DecPicAlignment align;
   /** \brief The height alignment of the post-processing output. */
@@ -3349,21 +3338,6 @@ typedef struct _PpUnitConfig {
   struct CropParams crop;
   /** \brief The cropping region ID. */
   u32 crop_id;
- /**
- * \ingroup common_group
- */
-  struct {
-    /** \brief <small> Whether to enable cropping after scaling.</small> */
-    u32 enabled;
-    /** \brief <small> The start X coordinate of the cropping region. </small> */
-    u32 x;
-    /** \brief <small> The start Y coordinate of the cropping region.</small> */
-    u32 y;
-    /** \brief <small> The width of the cropping region.</small> */
-    u32 width;
-    /** \brief <small> The height of the cropping region.</small> */
-    u32 height;
-  } crop2;
  /**
  * \ingroup common_group
  */
@@ -7557,8 +7531,6 @@ typedef struct _PpUnitIntConfig {
   u32 dec400_pln0_tile_status_offset;   /* DEC400 pln0 tile status offset of current PPU to pp buffer start addres */
   u32 dec400_pln1_tile_status_offset;  /* DEC400 pln1 tile status offset of current PPU to pp buffer start addres */
   u8  dec400_conformance_test_en;
-  u32 planar;        /* Planar output */
-  u32 planar_f;
   u32 align_pixel_w; /* width align in pixel,set by user */
   DecPicAlignment align;    /* alignment for current PPU */
   DecPicAlignment align_h;    /* height alignment for current PPU */
@@ -7589,13 +7561,6 @@ typedef struct _PpUnitIntConfig {
     u32 width;    /* cropping width */
     u32 height;   /* cropping height */
   } crop;
-  struct {
-    u32 enabled;
-    u32 x;        /* cropping start x */
-    u32 y;        /* cropping start y */
-    u32 width;    /* cropping width */
-    u32 height;   /* cropping height */
-  } crop2;
   struct {
     u32 enabled;  /* whether scaling is enabled */
     u32 scale_by_ratio;   /* scaling by ratio */

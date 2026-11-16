@@ -71,8 +71,9 @@ extern "C" {
  * 429 registers (`vpu_features_list.h`, `regdrv.c`). 0x800 + 0x6B4 fits the
  * 4 KB region.
  *
- * Do not use MAX_REG_COUNT (896): that window runs past the region, and touching
- * the tail wedges the bus until the FPGA bitfile is reloaded.
+ * Do not use MAX_REG_COUNT: it is a software bound (896 in split, 512 in merged
+ * with one PP channel), not what the core decodes. 896 runs past the region, and
+ * touching the tail wedges the bus until the FPGA bitfile is reloaded.
  */
 #define VCDJ_SOC_REG_WINDOW_SIZE        (429U * 4U)
 

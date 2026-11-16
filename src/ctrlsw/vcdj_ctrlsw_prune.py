@@ -240,12 +240,7 @@ def delete_region(rule, doc, which):
     code = code_lines(lines)
 
     def only(anchor):
-        pat = re.compile(anchor)
-        hits = [i for i, l in enumerate(code) if pat.search(l)]
-        if len(hits) != 1:
-            raise PruneError('%s: %r matches %d lines, the rule needs exactly one'
-                             % (which, anchor, len(hits)))
-        return hits[0]
+        return code_hits(code, anchor, 1, which)[0]
 
     if 'first' in rule:
         lo, hi = only(rule['first']), only(rule['last'])
@@ -258,6 +253,321 @@ def delete_region(rule, doc, which):
         raise PruneError('%s: region %s is empty or reversed' % (which, rule))
     del lines[lo:hi]
     del doc['origin'][lo:hi]
+
+
+def code_hits(code, pattern, count, which):
+    """Indices of the lines of `code` that `pattern` matches; there must be `count`."""
+    pat = re.compile(pattern)
+    hits = [i for i, l in enumerate(code) if pat.search(l)]
+    if len(hits) != count:
+        raise PruneError('%s: %r matches %d lines, the rule expects %d%s'
+                         % (which, pattern, len(hits), count,
+                            ' at lines %s' % [h + 1 for h in hits] if hits else ''))
+    return hits
+
+
+def replace_line(rule, doc, which):
+    """Replace the one line matching `match` with `with`.
+
+    For a vendor constant that has to take the 0x2070 value. `match` has to
+    cover the whole line, comment included, so a vendor drop that changes the
+    line stops the rule instead of being overwritten.
+    """
+    i, = code_hits(code_lines(doc['lines']), rule['match'], 1, which)
+    if not re.search(rule['match'], doc['lines'][i]):
+        raise PruneError('%s: line %d: %r matches only the code part; the line '
+                         'carries a comment the rule would drop'
+                         % (which, i + 1, rule['match']))
+    doc['lines'][i] = rule['with']
+
+
+def delete_block(rule, doc, which):
+    """Delete the statement on the `match` line together with its braced body.
+
+    For an `if` inside a function body whose condition cannot hold on 0x2070.
+    The statement must open its brace on the matched line and must not have an
+    `else`; anything else needs a person, not this rule.
+
+    `above` lists regular expressions for lines that only this statement used,
+    immediately above it and in source order, which go with it. It also tells
+    apart several statements that `match` fits.
+    """
+    above = rule.get('above') or []
+    lines = doc['lines']
+    code = code_lines(lines)
+    if above:
+        pat = re.compile(rule['match'])
+        hits = [i for i, l in enumerate(code) if pat.search(l) and all(
+            i - len(above) + k >= 0 and re.search(above[k], code[i - len(above) + k])
+            for k in range(len(above)))]
+        if len(hits) != 1:
+            raise PruneError('%s: %r with the lines above it matches %d sites, the '
+                             'rule needs exactly one' % (which, rule['match'], len(hits)))
+        start = hits[0]
+    else:
+        start, = code_hits(code, rule['match'], 1, which)
+    lo = start
+    if '{' not in code[lo]:
+        for n in range(lo + 1, lo + 4):     # a condition that wraps
+            if '{' in code[n]:
+                if not re.search(r'\)\s*\{\s*$', code[n]):
+                    raise PruneError('%s: line %d: the condition ends mid-line; '
+                                     'delete it by hand' % (which, n + 1))
+                lo = n
+                break
+    if '{' not in code[lo]:
+        raise PruneError('%s: line %d: the matched statement opens no block'
+                         % (which, lo + 1))
+    hi = match_brace(code, lo)
+    nxt = next((l for l in code[hi + 1:] if l.strip()), '')
+    if code[hi].strip() != '}' or re.match(r'\s*else\b', nxt):
+        raise PruneError('%s: line %d: the block has an else or shares its closing '
+                         'line; delete it by hand' % (which, lo + 1))
+    lo, hi = widen_blank(lines, start - len(above), hi)
+    del lines[lo:hi + 1]
+    del doc['origin'][lo:hi + 1]
+
+
+def widen_blank(lines, lo, hi):
+    """[lo, hi] widened so deleting it leaves no stray blank line behind.
+
+    A blank line above the run goes with it when the run is followed by
+    another blank line or by a closing brace.
+    """
+    if lo > 0 and not lines[lo - 1].strip():
+        after = lines[hi + 1] if hi + 1 < len(lines) else ''
+        if not after.strip():
+            hi += 1
+        elif after.lstrip().startswith('}'):
+            lo -= 1
+    return lo, hi
+
+
+def brace_close(code, line, col):
+    """(line, column) of the brace closing the `{` at code[line][col].
+
+    Only what follows the brace counts, so a line such as `} else {` works: its
+    leading `}` belongs to the block before it.
+    """
+    depth = 1
+    for i in range(line, len(code)):
+        for k in range(col + 1 if i == line else 0, len(code[i])):
+            depth += {'{': 1, '}': -1}.get(code[i][k], 0)
+            if depth == 0:
+                return i, k
+    raise PruneError('unterminated block from line %d' % (line + 1))
+
+
+def paren_close(code, line, col, where):
+    """(line, column) of the `)` closing the `(` at code[line][col]."""
+    depth = 0
+    for i in range(line, len(code)):
+        for k in range(col if i == line else 0, len(code[i])):
+            depth += {'(': 1, ')': -1}.get(code[i][k], 0)
+            if depth == 0:
+                return i, k
+    raise PruneError('%s: line %d: unbalanced condition' % (where, line + 1))
+
+
+def next_code(code, i):
+    """The first non-blank code line after line i, stripped."""
+    return next((l.strip() for l in code[i + 1:] if l.strip()), '')
+
+
+def dedent(lines, lo, hi, base, where):
+    """lines[lo:hi] shifted left by one level, the level being taken from the first."""
+    first = next((l for l in lines[lo:hi] if l.strip()), None)
+    if first is None:
+        return []
+    cut = len(first) - len(first.lstrip())
+    if cut <= len(base):
+        raise PruneError('%s: line %d is not indented inside its block' % (where, lo + 1))
+    out = []
+    for i in range(lo, hi):
+        l = lines[i]
+        if l.strip() and (len(l) - len(l.lstrip(' ')) < cut):
+            raise PruneError('%s: line %d sits left of its block; fold it by hand'
+                             % (where, i + 1))
+        out.append(l[cut - len(base):] if l.strip() else l)
+    return out
+
+
+def fold_false_if(rule, doc, which):
+    """Replace each `if` on a `match` line by its else branch, or drop it if it has none.
+
+    For a condition that cannot hold on 0x2070. Takes `if (c) { } [else { }]`,
+    the single-statement `if (c) s; [else s;]` with each statement on a line of
+    its own, and a braced `} else if (c) { }` arm, whose removal leaves the
+    rest of the chain going. Any other shape stops the rule.
+    """
+    lines, origin = doc['lines'], doc['origin']
+    hits = code_hits(code_lines(lines), rule['match'], rule.get('count', 1), which)
+    for start in reversed(hits):
+        code = code_lines(lines)
+        p = _parse_if(code, start, which)
+        lo, els = p['lo'], p['else']
+        if p['arm']:
+            # The arm's closing line is `}`, `} else {` or `} else if (...) {`:
+            # its `}` goes on to close the block before the arm, so that line
+            # stays and only the arm's own line and body go.
+            new, hi = [], p['brace_end'] - 1
+        elif els:
+            base = lines[lo][:len(lines[lo]) - len(lines[lo].lstrip())]
+            new, hi = dedent(lines, els[0], els[1], base, which), p['close']
+        else:
+            lo, hi = widen_blank(lines, lo, p['close'])
+            new = []
+        lines[lo:hi + 1] = new
+        origin[lo:hi + 1] = origin[els[0]:els[1]] if new else []
+
+
+def _parse_if(code, start, where):
+    """Shape of the `if` that `start` picked out.
+
+    `start` may be any line of the condition: a condition that wraps puts the
+    opening brace below it.
+
+    Keys: `lo` (the line the `if` starts on), `arm` (it is a `} else if`),
+    `else` (None, or the span (lo, hi) of its body, hi exclusive), `close`
+    (the line the whole statement ends on) and, for a braced then,
+    `brace_end` (the line that block closes on). Refuses any shape it cannot
+    describe.
+    """
+    def fail(msg):
+        raise PruneError('%s: line %d: %s' % (where, start + 1, msg))
+
+    def next_line(i):
+        return next((n for n in range(i + 1, len(code)) if code[n].strip()), None)
+
+    def statement_at(i):
+        """Span of the one statement on line i, refusing anything longer."""
+        if (i is None or not code[i].rstrip().endswith(';') or '{' in code[i]
+                or re.match(r'\s*(?:if|else|for|while|do|switch)\b', code[i])):
+            fail('the branch is not one statement on one line; fold it by hand')
+        return i, i + 1
+
+    lo, opens = start, re.compile(r'^\s*(\} else )?if\s*\(')
+    while lo >= 0 and not opens.match(code[lo]):
+        lo -= 1
+        if start - lo > 8:
+            fail('no `if` starts within 8 lines above')
+    if lo < 0:
+        fail('no `if` or `} else if` to fold')
+    m = opens.match(code[lo])
+    out = {'lo': lo, 'arm': bool(m.group(1)), 'else': None}
+    j, k = paren_close(code, lo, m.end() - 1, where)
+    rest = code[j][k + 1:].strip()
+    if rest == '{':
+        t, c = brace_close(code, j, k + 2)
+        if code[t][:c].strip():
+            fail('the block shares its closing line; fold it by hand')
+        out['close'] = out['brace_end'] = t
+        # The else may follow the closing brace or start the next line.
+        e, tail = t, code[t][c + 1:].strip()
+        if not tail and re.match(r'else\b', next_code(code, t)):
+            e = next_line(t)
+            tail = code[e].strip()
+    elif rest == '':
+        if out['arm']:
+            fail('an arm without braces; fold it by hand')
+        statement_at(j + 1)
+        out['close'] = e = j + 1
+        tail = next_code(code, e) if re.match(r'else\b', next_code(code, e)) else ''
+        if tail:
+            e = next_line(e)
+    else:
+        fail('unexpected text after the condition')
+    if out['arm'] or not tail:
+        return out          # an arm keeps whatever else follows it
+    if tail == 'else {' or (tail == 'else' and next_code(code, e).startswith('{')):
+        b = e if tail.endswith('{') else next_line(e)
+        end, _ = brace_close(code, b, code[b].rfind('{'))
+        out['else'], out['close'] = (b + 1, end), end
+    elif tail == 'else':
+        out['else'] = statement_at(next_line(e))
+        out['close'] = out['else'][0]
+    else:
+        fail('the else is %r, not a block or a statement on its own line; '
+             'fold it by hand' % tail)
+    return out
+
+
+def substitute(rule, doc, which):
+    """Rewrite each match of `pattern` in code (not comments) as `with`.
+
+    `with` is a re.sub template. The total number of matches must equal `count`.
+    """
+    pat = re.compile(rule['pattern'])
+    code = code_lines(doc['lines'])
+    found = [(i, list(pat.finditer(l))) for i, l in enumerate(code)]
+    found = [(i, ms) for i, ms in found if ms]
+    total = sum(len(ms) for _, ms in found)
+    if total != rule.get('count', 1):
+        raise PruneError('%s: %r matches %d times, the rule expects %d'
+                         % (which, rule['pattern'], total, rule.get('count', 1)))
+    for i, ms in found:
+        l = doc['lines'][i]
+        for m in reversed(ms):
+            l = l[:m.start()] + m.expand(rule['with']) + l[m.end():]
+        doc['lines'][i] = l
+
+
+def delete_line(rule, doc, which):
+    """Delete each line whose code part matches `match`; there must be `count`."""
+    code = code_lines(doc['lines'])
+    for i in reversed(code_hits(code, rule['match'], rule.get('count', 1), which)):
+        del doc['lines'][i]
+        del doc['origin'][i]
+
+
+def delete_member(rule, doc, which):
+    """Delete member `member` of `struct <struct> {`, with the comment above it.
+
+    A member declared as `struct { ... } member;` goes with its whole body.
+    """
+    lines = doc['lines']
+    code = code_lines(lines)
+    spat = re.compile(r'^(?:typedef\s+)?struct\s+%s\s*\{' % re.escape(rule['struct']))
+    tops = [i for i, l in enumerate(code) if spat.match(l)]
+    if len(tops) != 1:
+        raise PruneError('%s: struct %s: expected 1 definition, found %d'
+                         % (which, rule['struct'], len(tops)))
+    top = tops[0]
+    end = match_brace(code, top)
+    mpat = re.compile(r'(?:^|[\s\*\}])%s\s*(?:\[[^\]]*\]\s*)*;' % re.escape(rule['member']))
+    hits, depth = [], code[top].count('{') - code[top].count('}')
+    for i in range(top + 1, end):
+        depth += code[i].count('{') - code[i].count('}')
+        if depth == 1 and mpat.search(code[i]):
+            hits.append(i)
+    if len(hits) != 1:
+        raise PruneError('%s: struct %s: member %s: expected 1, found %d'
+                         % (which, rule['struct'], rule['member'], len(hits)))
+    hi = lo = hits[0]
+    if code[hi].lstrip().startswith('}'):
+        depth = 0
+        for lo in range(hi, top, -1):
+            depth += code[lo].count('}') - code[lo].count('{')
+            if depth == 0:
+                break
+        if depth or not re.match(r'^\s*(?:struct|union)\b[^;]*\{\s*$', code[lo]):
+            raise PruneError('%s: struct %s: member %s: nested body not found'
+                             % (which, rule['struct'], rule['member']))
+    while lo - 1 > top and lines[lo - 1].strip() and not code[lo - 1].strip():
+        lo -= 1          # the comment documenting the member
+    del lines[lo:hi + 1]
+    del doc['origin'][lo:hi + 1]
+
+
+def check_no_member_references(rule, doc, which):
+    """No live `.member` / `->member` may remain in this file."""
+    pat = re.compile(r'(?:\.|->)\s*%s\b' % re.escape(rule['member']))
+    code = code_lines(doc['lines'])
+    dead = dead_regions(code)
+    left = [i + 1 for i, l in enumerate(code) if i not in dead and pat.search(l)]
+    if left:
+        raise PruneError('%s: member %s still used at lines %s'
+                         % (which, rule['member'], left[:5]))
 
 
 def first_body_line(lines, lo):
@@ -497,10 +807,16 @@ ACTIONS = {
     'delete_type': (delete_type, check_no_code_references),
     'delete_region': (delete_region, None),
     'delete_if_block': (delete_if_block, None),
+    'delete_block': (delete_block, None),
+    'fold_false_if': (fold_false_if, None),
+    'substitute': (substitute, None),
+    'delete_line': (delete_line, None),
+    'delete_member': (delete_member, None),
+    'replace_line': (replace_line, None),
     'merge_license': (merge_license, None),
 }
-# Actions that touch no header declaration; the rest name a function or type.
-NO_HEADER = {'merge_license', 'delete_region', 'delete_if_block'}
+# Actions that name a function or type, whose declaration in the header goes too.
+NAMED = {'delete_function', 'delete_type'}
 
 
 def apply_rules(h, c, rules):
@@ -515,7 +831,11 @@ def apply_rules(h, c, rules):
             fn(rule, docs[which], which)
             if verify:
                 verify(rule, docs[which], which)
-        if action not in NO_HEADER:
+        if action == 'delete_member':
+            # The struct lives in one file and its users in both.
+            for which, doc in docs.items():
+                check_no_member_references(rule, doc, which)
+        if action in NAMED:
             delete_declaration(rule, docs['vcdj_ctrlsw.h'])
             verify(rule, docs['vcdj_ctrlsw.h'], 'vcdj_ctrlsw.h')
     return (list(zip(docs['vcdj_ctrlsw.h']['lines'], docs['vcdj_ctrlsw.h']['origin'])),

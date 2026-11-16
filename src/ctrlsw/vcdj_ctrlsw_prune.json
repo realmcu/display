@@ -3,17 +3,49 @@
   "rules": [
     {
       "action": "merge_license",
-      "files": ["vcdj_ctrlsw.c", "vcdj_ctrlsw.h"],
-      "header": ["Copyright and license notices for the VeriSilicon code this file",
-                 "was generated from. The sources under src/ctrlsw/software/source/",
-                 "keep their own blocks; this one carries them all.",
-                 "",
-                 "The copyright lines below are the union of the per-file ones. Each",
-                 "clause that follows is one of the licence texts the sources used,",
-                 "reproduced verbatim once."],
-      "blocks": {"vcdj_ctrlsw.c": 46, "vcdj_ctrlsw.h": 19},
-      "clauses": {"vcdj_ctrlsw.c": ["bsd3", "bsd3-proprietary", "verisilicon-restricted"], "vcdj_ctrlsw.h": ["bsd3", "verisilicon-restricted"]},
-      "holders": {"vcdj_ctrlsw.c": ["Copyright (c) 2015, VeriSilicon Inc. All rights reserved", "Copyright (c) 2023, VeriSilicon Inc. All rights reserved", "Copyright (c) 2011-2014, Google Inc. All rights reserved.", "Copyright (c) 2007-2010, Hantro OY. All rights reserved.", "Copyright 2014-2025 Verisilicon Inc."], "vcdj_ctrlsw.h": ["Copyright 2014-2025 Verisilicon Inc.", "Copyright (c) 2015, VeriSilicon Inc. All rights reserved", "Copyright (c) 2011-2014, Google Inc. All rights reserved.", "Copyright (c) 2007-2010, Hantro OY. All rights reserved."]},
+      "files": [
+        "vcdj_ctrlsw.c",
+        "vcdj_ctrlsw.h"
+      ],
+      "header": [
+        "Copyright and license notices for the VeriSilicon code this file",
+        "was generated from. The sources under src/ctrlsw/software/source/",
+        "keep their own blocks; this one carries them all.",
+        "",
+        "The copyright lines below are the union of the per-file ones. Each",
+        "clause that follows is one of the licence texts the sources used,",
+        "reproduced verbatim once."
+      ],
+      "blocks": {
+        "vcdj_ctrlsw.c": 46,
+        "vcdj_ctrlsw.h": 19
+      },
+      "clauses": {
+        "vcdj_ctrlsw.c": [
+          "bsd3",
+          "bsd3-proprietary",
+          "verisilicon-restricted"
+        ],
+        "vcdj_ctrlsw.h": [
+          "bsd3",
+          "verisilicon-restricted"
+        ]
+      },
+      "holders": {
+        "vcdj_ctrlsw.c": [
+          "Copyright (c) 2015, VeriSilicon Inc. All rights reserved",
+          "Copyright (c) 2023, VeriSilicon Inc. All rights reserved",
+          "Copyright (c) 2011-2014, Google Inc. All rights reserved.",
+          "Copyright (c) 2007-2010, Hantro OY. All rights reserved.",
+          "Copyright 2014-2025 Verisilicon Inc."
+        ],
+        "vcdj_ctrlsw.h": [
+          "Copyright 2014-2025 Verisilicon Inc.",
+          "Copyright (c) 2015, VeriSilicon Inc. All rights reserved",
+          "Copyright (c) 2011-2014, Google Inc. All rights reserved.",
+          "Copyright (c) 2007-2010, Hantro OY. All rights reserved."
+        ]
+      },
       "why": "H: one merged block per generated file; the vendor files keep theirs"
     },
     {
@@ -163,14 +195,14 @@
     },
     {
       "action": "delete_region",
-      "first":  "^#define MAGIC_WORD_LENGTH",
-      "last":   "^static const u32 row_offsets\\[\\]",
+      "first": "^#define MAGIC_WORD_LENGTH",
+      "last": "^static const u32 row_offsets\\[\\]",
       "why": "K: the partial freeze magic word and row offsets, used only by the deleted functions; no header declaration, so no name rule reaches them"
     },
     {
       "action": "delete_region",
-      "first":  "^#undef MAGIC_WORD_LENGTH$",
-      "last":   "^#undef NUM_OFFSETS$",
+      "first": "^#undef MAGIC_WORD_LENGTH$",
+      "last": "^#undef NUM_OFFSETS$",
       "why": "K: the #undefs of the macros the rule above removed"
     },
     {
@@ -215,6 +247,195 @@
       "opening": "^\\s*#\\s*if\\s+0\\s*$",
       "followed_by": "^\\s*dec_cont->vlc\\.default_tables = 0;",
       "why": "I23: same as I16 -- clears and frees VLC tables that are never allocated"
+    },
+    {
+      "action": "replace_line",
+      "files": [
+        "vcdj_ctrlsw.c",
+        "vcdj_ctrlsw.h"
+      ],
+      "match": "^#define MAX_PPU_COUNT 4\\s*$",
+      "with": "#define MAX_PPU_COUNT 1",
+      "why": "D12: 0x2070 has one PP channel (max_ppu_count = 1). The .c copy (deccfg.h) and the .h copy (decapicommon.h) size the same API structs and must stay equal"
+    },
+    {
+      "action": "delete_block",
+      "match": "^\\s*if \\(i < DEC_MAX_PPU_COUNT && ppu_cfg\\[1\\]\\.enabled && ppu_cfg\\[1\\]\\.dec400_enabled\\) \\{",
+      "why": "D12: reads ppu_cfg[1], out of bounds with one channel; it only aligns for DEC400, and dec400_enabled is never set on 0x2070 (pp_comp_support = 0)"
+    },
+    {
+      "action": "delete_block",
+      "match": "^\\s*if \\(i >= hw_feature->max_ppu_count && ppu_cfg->enabled\\) \\{",
+      "why": "D11: with MAX_PPU_COUNT 1 the loop only visits PP0 and max_ppu_count is 1, so a PP1+ request cannot be written; goes with D12, never alone"
+    },
+    {
+      "action": "fold_false_if",
+      "match": "^\\s*(?:\\} else )?if \\(ppu_cfg->crop2\\.enabled\\)",
+      "count": 12,
+      "why": "D07: 0x2070 has no second crop (second_crop_support = 0, no crop2 registers in the register manual); every crop2.enabled branch keeps its else"
+    },
+    {
+      "action": "substitute",
+      "pattern": "ppu_cfg->crop2\\.enabled \\? ppu_cfg->crop2\\.(\\w+) : (ppu_cfg->scale\\.\\1)",
+      "with": "\\2",
+      "count": 4,
+      "why": "D07: the same choice written as a conditional expression"
+    },
+    {
+      "action": "fold_false_if",
+      "match": "^\\s*if \\(!hw_feature->second_crop_support && ppu_cfg->crop2\\.enabled\\)",
+      "why": "D07: the request it rejects can no longer be written, the crop2 member goes below"
+    },
+    {
+      "action": "fold_false_if",
+      "match": "^\\s*if \\(\\(ppu_cfg->crop2\\.x & crop_align\\) \\|\\|",
+      "why": "D07: every term reads crop2, which is all zero when no second crop is requested"
+    },
+    {
+      "action": "delete_line",
+      "match": "^\\s*ppu_int_cfg->crop2\\.\\w+ = ppu_ext_cfg->crop2\\.\\w+;",
+      "count": 5,
+      "why": "D07: the copy from the API struct into the internal one"
+    },
+    {
+      "action": "delete_member",
+      "files": [
+        "vcdj_ctrlsw.h"
+      ],
+      "struct": "_PpUnitConfig",
+      "member": "crop2",
+      "why": "D07: removing it from the API struct makes a second crop request a compile error rather than a silent no-op"
+    },
+    {
+      "action": "delete_member",
+      "files": [
+        "vcdj_ctrlsw.h"
+      ],
+      "struct": "_PpUnitIntConfig",
+      "member": "crop2",
+      "why": "D07: the internal copy, unused once the branches above are folded"
+    },
+    {
+      "action": "delete_block",
+      "match": "^\\s*if \\(ppu_cfg->planar\\) \\{",
+      "above": [
+        "^\\s*u32 pp_height;",
+        "^\\s*pp_height = ppu_cfg->scale.height;"
+      ],
+      "why": "D01: the third plane base address, with the pp_height that only it used; the chroma base above and the rgb_planar else below stay. The two lines above tell it apart from the planars the next rule folds"
+    },
+    {
+      "action": "fold_false_if",
+      "match": "^\\s*if \\(ppu_cfg->planar\\) \\{",
+      "count": 3,
+      "why": "D01: 0x2070 has no planar output (feature table 0, no Plane 3 in Table 13, sw_ppX_rgb_planar obsoleted, vendor confirmed). The planar arms of the stride, the chroma height and the DEC400 buffer size, each with an else that stays"
+    },
+    {
+      "action": "substitute",
+      "pattern": "(ppu_cfg->chroma_format == PP_CHROMA_444) && !ppu_cfg->planar\\)",
+      "with": "\\1)",
+      "why": "D01: 444 output was planar only, so with planar gone every 444 request is refused here; the out_format choice further down has no 444 format to give it"
+    },
+    {
+      "action": "delete_block",
+      "match": "^\\s*if \\(ppu_cfg->planar && pixel_width != 8 &&",
+      "why": "D01: planar output cannot be requested, so this 10-bit rule has nothing left to guard"
+    },
+    {
+      "action": "delete_block",
+      "match": "^\\s*if \\(ppu_cfg->tiled_e && !ppu_cfg->tile_mode && ppu_cfg->planar\\) \\{",
+      "why": "D01: the request it rejects cannot be made"
+    },
+    {
+      "action": "delete_block",
+      "match": "^\\s*if\\s*\\(!ppu_cfg->planar_f\\) \\{",
+      "why": "D01: the planar feature check sits under a guard that is always true because no caller can set planar_f; the whole thing is a dead check on a request that cannot be made"
+    },
+    {
+      "action": "fold_false_if",
+      "match": "^\\s*if \\(p_hw_feature->pp_comp_support\\[i\\] == 2 && p_hw_feature->pp_comp_version\\[i\\] == 2 && ppu_cfg->planar\\) \\{",
+      "count": 2,
+      "why": "D01: the planar branch of the DEC400 ctb size choice and of the third plane tile status address; each else stays and that address belongs to a third plane no output has"
+    },
+    {
+      "action": "fold_false_if",
+      "match": "^\\s*if \\(hw_feature->pp_comp_support\\[i\\] == 2 && hw_feature->pp_comp_version\\[i\\] == 2 && ppu_cfg->planar\\) \\{",
+      "count": 4,
+      "why": "D01: the planar arm of the four DEC400 table size choices; each else is what a semi-planar output takes"
+    },
+    {
+      "action": "substitute",
+      "pattern": " \\|\\| ppu_cfg->planar\\)",
+      "with": ")",
+      "count": 1,
+      "why": "D01: dead term of the 101010 check, which 420 output already satisfies"
+    },
+    {
+      "action": "fold_false_if",
+      "match": "^\\s*if \\(p_hw_feature->pp_planar_support\\[i\\] \\|\\| ppu_cfg->planar_f\\)",
+      "why": "D01: both terms are 0, so DEC400 gets no separate cr table"
+    },
+    {
+      "action": "fold_false_if",
+      "match": "^\\s*\\} else if \\(ppu_int_cfg->planar\\) \\{",
+      "count": 3,
+      "why": "D01: planar is never 1 here, so each arm goes and the chain ends in the else it already had"
+    },
+    {
+      "action": "delete_line",
+      "match": "^\\s*ppu_int_cfg->planar = ppu_ext_cfg->planar;",
+      "why": "D01: the copy from the API struct, which goes below"
+    },
+    {
+      "action": "delete_line",
+      "match": "^\\s*ppu_int_cfg->planar_f = ppu_ext_cfg->planar_f;",
+      "why": "D01: the escape hatch, which has no reader left"
+    },
+    {
+      "action": "delete_block",
+      "match": "^\\s*if \\(\\(ppu_int_cfg->sub_x == 1\\) && \\(ppu_int_cfg->sub_y == 1\\) && !ppu_int_cfg->planar\\) \\{",
+      "why": "D01: turned 444 into planar output; the 444 check above now refuses 444 before it gets here"
+    },
+    {
+      "action": "fold_false_if",
+      "match": "^\\s*if \\(ppu_cfg->planar\\)\\s*$",
+      "why": "D01: monochrome output cleared planar, which no request can set now"
+    },
+    {
+      "action": "delete_member",
+      "files": [
+        "vcdj_ctrlsw.h"
+      ],
+      "struct": "_PpUnitConfig",
+      "member": "planar",
+      "why": "D01: removing it from the API struct makes a planar request a compile error, the same contract as crop2"
+    },
+    {
+      "action": "delete_member",
+      "files": [
+        "vcdj_ctrlsw.h"
+      ],
+      "struct": "_PpUnitConfig",
+      "member": "planar_f",
+      "why": "D01: the design verification escape hatch, unused by any caller; deleting it turns never-set into cannot-set"
+    },
+    {
+      "action": "delete_member",
+      "files": [
+        "vcdj_ctrlsw.h"
+      ],
+      "struct": "_PpUnitIntConfig",
+      "member": "planar",
+      "why": "D01: the internal copy, unused once the branches above are folded"
+    },
+    {
+      "action": "delete_member",
+      "files": [
+        "vcdj_ctrlsw.h"
+      ],
+      "struct": "_PpUnitIntConfig",
+      "member": "planar_f",
+      "why": "D01: no reader left"
     }
   ]
 }
