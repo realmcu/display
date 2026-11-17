@@ -91,8 +91,6 @@ struct vcdj_dwl_inst
     void *priv;
     u32 n_cores;
     i32 reserved_core;
-    DWLIRQCallbackFn *irq_callback[VCDJ_MAX_CORES];
-    void *irq_arg[VCDJ_MAX_CORES];
 
     /** Shadow register file, see VCDJ_SHADOW_REG_COUNT. */
     u32 shadow_regs[VCDJ_MAX_CORES][VCDJ_SHADOW_REG_COUNT];
@@ -644,14 +642,6 @@ enum DWLRet DWLWaitHwReady(const void *instance, i32 core_id, u32 timeout)
     }
 }
 
-void DWLWaitOwnerDone(const void *instance, const void *owner)
-{
-    /* Decoding is fully synchronous in this version, so by the time the caller
-     * gets here every job of `owner` has already completed. */
-    (void)instance;
-    (void)owner;
-}
-
 enum DWLRet DWLReleaseHw(const void *instance, i32 core_id)
 {
     struct vcdj_dwl_inst *inst = vcdj_dwl_of(instance);
@@ -667,19 +657,30 @@ enum DWLRet DWLReleaseHw(const void *instance, i32 core_id)
     return DWL_OK;
 }
 
+/*============================================================================*
+ *                        DWL: multicore - single core on 0x2070
+ *============================================================================*/
+/*
+ * The vendor code calls these only with multicore decoding enabled, which the
+ * HAL never requests. The merged CtrlSW has those paths pruned; split and unity
+ * still link against them. Decoding is synchronous, so nothing waits or calls back.
+ */
+#if !defined(VCDJ_CTRLSW_MERGED)
+void DWLWaitOwnerDone(const void *instance, const void *owner)
+{
+    (void)instance;
+    (void)owner;
+}
+
 void DWLSetIRQCallback(const void *instance, i32 core_id,
                        DWLIRQCallbackFn *callback_fn, void *arg)
 {
-    struct vcdj_dwl_inst *inst = vcdj_dwl_of(instance);
-
-    if ((inst == NULL) || (core_id < 0) || (core_id >= VCDJ_MAX_CORES))
-    {
-        return;
-    }
-
-    inst->irq_callback[core_id] = callback_fn;
-    inst->irq_arg[core_id] = arg;
+    (void)instance;
+    (void)core_id;
+    (void)callback_fn;
+    (void)arg;
 }
+#endif /* !VCDJ_CTRLSW_MERGED */
 
 /*============================================================================*
  *                        DWL: hardware identification
@@ -897,14 +898,15 @@ void SwFreeCrcMem(CrcData **crc)
 }
 
 /*============================================================================*
- *                        DWL: VCMD - not supported in this version
+ *                        DWL: VCMD - not present on 0x2070
  *============================================================================*/
 /*
- * The command buffer (VCMD) path is deliberately left unimplemented: the first
- * version targets a single core in direct register mode. Every entry point below
- * reports "not available" so the vendor code takes its non-VCMD branch, which is
- * what DWLVcmdIsUsed() == 0 already tells it to do.
+ * 0x2070 has no VCMD, so every entry point below reports "not available" and the
+ * vendor code takes its direct register branch. The merged CtrlSW has those
+ * branches pruned and calls none of these; split and unity compile the vendor
+ * files as shipped and still link against them.
  */
+#if !defined(VCDJ_CTRLSW_MERGED)
 u32 DWLVcmdIsUsed(const void *instance)
 {
     (void)instance;
@@ -1085,6 +1087,7 @@ i32 DWLGetVcmdMCVirtualCoreId(const void *instance, u32 cmdbuf_id)
     (void)cmdbuf_id;
     return -1;
 }
+#endif /* !VCDJ_CTRLSW_MERGED */
 
 /*============================================================================*
  *                        dwl_os: Mutex

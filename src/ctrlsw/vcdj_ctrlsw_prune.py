@@ -37,6 +37,8 @@ sys.path.insert(0, HERE)
 import vcdj_ctrlsw_gen as gen  # noqa: E402
 
 GUARD_OPEN = re.compile(r'\s*#\s*(?:if|ifdef|ifndef)\b')
+# The middle line of the banner vcdj_ctrlsw_gen.py puts above each source.
+SECTION_BANNER = re.compile(r'^ \* software/source/\S+$')
 GUARD_ANY = re.compile(r'\s*#\s*(if|ifdef|ifndef|endif)\b')
 
 # A license block is a comment of its own (nothing else on its first or last
@@ -151,11 +153,18 @@ def delete_function(rule, doc, which):
     start, open_line = find_definition(code, name, which)
     hi = match_brace(code, open_line)
     # A comment block directly abutting the definition documents it, so it
-    # goes too; left behind it would appear to document its successor.
+    # goes too; left behind it would appear to document its successor. The
+    # generator's per-source banner is not such a comment and stays.
     j = start - 1
     while j >= 0 and lines[j].strip() and not code[j].strip():
+        if SECTION_BANNER.match(lines[j]):
+            j += 1      # the banner's last line is the one below the source name
+            break
         j -= 1
-    lo, hi = guard_span(lines, j + 1, hi)
+    lo = j + 1
+    if lo < start and not lines[lo].lstrip().startswith(('/*', '//')):
+        lo = start      # continuation of a comment trailing the line above
+    lo, hi = guard_span(lines, lo, hi)
     if hi + 1 < len(lines) and not lines[hi + 1].strip():
         hi += 1          # the blank line after the body goes too
     del doc['lines'][lo:hi + 1]
@@ -189,9 +198,50 @@ def delete_declaration(rule, doc):
     del doc['origin'][lo:hi + 1]
 
 
+def delete_prototype(rule, doc, which):
+    """Delete the file-scope prototype of `name`, with the doc comment above it.
+
+    For a function the DWL implements outside these files and that no code
+    here calls any more; the reference check that follows proves the latter.
+    """
+    lines = doc['lines']
+    code = code_lines(lines)
+    hits = [h for h in file_scope_hits(code, rule['name']) if not h[2]]
+    if len(hits) != 1:
+        raise PruneError('%s: %s: expected 1 prototype, found %d'
+                         % (which, rule['name'], len(hits)))
+    lo, hi, _ = hits[0]
+    lo, hi = widen_blank(lines, comment_top(lines, code, lo), hi)
+    del lines[lo:hi + 1]
+    del doc['origin'][lo:hi + 1]
+
+
+def struct_tops(code, name):
+    """Lines that open the definition of struct `name`.
+
+    `name` is the struct tag or, failing that, the name of an anonymous
+    `typedef struct { ... } <name>;`.
+    """
+    pat = re.compile(r'^(?:typedef\s+)?struct\s+%s\s*\{' % re.escape(name))
+    tops = [i for i, l in enumerate(code) if pat.match(l)]
+    if tops:
+        return tops
+    tpat = re.compile(r'^\}\s*%s\s*;' % re.escape(name))
+    for i in (i for i, l in enumerate(code) if tpat.match(l)):
+        depth = 0
+        for k in range(i, -1, -1):
+            depth += code[k].count('}') - code[k].count('{')
+            if depth == 0:
+                break
+        if depth == 0 and re.match(r'^typedef\s+struct\s*\{\s*$', code[k]):
+            tops.append(k)
+    return tops
+
+
 def delete_type(rule, doc, which):
     """Delete a `struct <name> { ... };` definition at file scope.
 
+    `name` may also name an anonymous `typedef struct { ... } <name>;`.
     The body is found by brace matching, so nested structs and `#if 0` runs
     inside it need no special handling. `guard`, when given, is the include
     guard the generator left above the expanded header; only blank lines may
@@ -200,8 +250,7 @@ def delete_type(rule, doc, which):
     name = rule['name']
     lines = doc['lines']
     code = code_lines(lines)
-    pat = re.compile(r'^struct\s+%s\s*\{' % re.escape(name))
-    hits = [i for i, l in enumerate(code) if pat.match(l)]
+    hits = struct_tops(code, name)
     if len(hits) != 1:
         raise PruneError('%s: struct %s: expected 1 definition, found %d at '
                          'lines %s' % (which, name, len(hits),
@@ -219,6 +268,8 @@ def delete_type(rule, doc, which):
                              'to the definition at line %d'
                              % (which, name, rule['guard'], g[0] + 1, lo + 1))
         lo = g[0]
+    elif rule.get('comment_above'):
+        lo = comment_top(lines, code, lo)
     if hi + 1 < len(lines) and not lines[hi + 1].strip():
         hi += 1          # the blank line after the body goes too
     del lines[lo:hi + 1]
@@ -281,11 +332,16 @@ def replace_line(rule, doc, which):
     doc['lines'][i] = rule['with']
 
 
-def comment_top(lines, code, top):
-    """First line of the comment lines that sit directly above line `top`."""
-    while top > 0 and lines[top - 1].strip() and not code[top - 1].strip():
-        top -= 1
-    return top
+def comment_top(lines, code, top, floor=0):
+    """First line of the comment lines that sit directly above line `top`.
+
+    Lines that only continue a comment opened at the end of a code line
+    belong to that code line, so they are not taken.
+    """
+    k = top
+    while k > floor and lines[k - 1].strip() and not code[k - 1].strip():
+        k -= 1
+    return k if lines[k].lstrip().startswith(('/*', '//')) else top
 
 
 def delete_block(rule, doc, which):
@@ -298,9 +354,15 @@ def delete_block(rule, doc, which):
     `above` lists regular expressions for lines that only this statement used,
     immediately above it and in source order, which go with it. It also tells
     apart several statements that `match` fits. With `comment_above`, the
-    comment lines directly above the whole run go too.
+    comment lines directly above the whole run go too. Without `above`,
+    `count` statements may match; each goes.
     """
     above = rule.get('above') or []
+    if not above and rule.get('count', 1) != 1:
+        hits = code_hits(code_lines(doc['lines']), rule['match'], rule['count'], which)
+        for start in reversed(hits):
+            _delete_block_at(rule, doc, which, start, [])
+        return
     lines = doc['lines']
     code = code_lines(lines)
     if above:
@@ -314,6 +376,12 @@ def delete_block(rule, doc, which):
         start = hits[0]
     else:
         start, = code_hits(code, rule['match'], 1, which)
+    _delete_block_at(rule, doc, which, start, above)
+
+
+def _delete_block_at(rule, doc, which, start, above):
+    lines = doc['lines']
+    code = code_lines(lines)
     lo = start
     if '{' not in code[lo]:
         for n in range(lo + 1, lo + 4):     # a condition that wraps
@@ -387,7 +455,8 @@ def next_code(code, i):
 
 def dedent(lines, lo, hi, base, where):
     """lines[lo:hi] shifted left by one level, the level being taken from the first."""
-    first = next((l for l in lines[lo:hi] if l.strip()), None)
+    first = next((l for l in lines[lo:hi]
+                  if l.strip() and not l.lstrip().startswith('#')), None)
     if first is None:
         return []
     cut = len(first) - len(first.lstrip())
@@ -396,6 +465,9 @@ def dedent(lines, lo, hi, base, where):
     out = []
     for i in range(lo, hi):
         l = lines[i]
+        if l.lstrip().startswith('#'):
+            out.append(l)       # a directive keeps its column, often 0
+            continue
         if l.strip() and (len(l) - len(l.lstrip(' ')) < cut):
             raise PruneError('%s: line %d sits left of its block; fold it by hand'
                              % (where, i + 1))
@@ -427,8 +499,7 @@ def fold_false_if(rule, doc, which):
             if p['arm']:
                 raise PruneError('%s: line %d: comment_above on an else-if arm'
                                  % (which, lo + 1))
-            while top > 0 and lines[top - 1].strip() and not code[top - 1].strip():
-                top -= 1
+            top = comment_top(lines, code, top)
         if p.get('chain') is not None:
             e = p['chain']
             m = re.match(r'^\s*(?:\}\s*)?else\s+(if\b.*)$', lines[e])
@@ -499,11 +570,23 @@ def _parse_if(code, start, where):
         return next((n for n in range(i + 1, len(code)) if code[n].strip()), None)
 
     def statement_at(i):
-        """Span of the one statement on line i, refusing anything longer."""
-        if (i is None or not code[i].rstrip().endswith(';') or '{' in code[i]
-                or re.match(r'\s*(?:if|else|for|while|do|switch)\b', code[i])):
-            fail('the branch is not one statement on one line; fold it by hand')
-        return i, i + 1
+        """Span of the one statement starting on line i, refusing anything else.
+
+        The statement may wrap only inside its parentheses: a call whose
+        arguments continue on the next lines.
+        """
+        if i is None or re.match(r'\s*(?:if|else|for|while|do|switch)\b', code[i]):
+            fail('the branch is not one statement; fold it by hand')
+        depth, end = 0, i
+        while True:
+            if '{' in code[end]:
+                fail('the branch is not one statement; fold it by hand')
+            depth += code[end].count('(') - code[end].count(')')
+            if depth == 0 and code[end].rstrip().endswith(';'):
+                return i, end + 1
+            if depth <= 0 or end + 1 - i > 8:
+                fail('the branch is not one statement; fold it by hand')
+            end += 1
 
     lo, opens = start, re.compile(r'^\s*(\} else |else )?if\s*\(')
     while lo >= 0 and not opens.match(code[lo]):
@@ -535,7 +618,7 @@ def _parse_if(code, start, where):
         if out['arm'] and not bare:
             fail('a `} else if` without braces; fold it by hand')
         out['then'] = statement_at(j + 1)
-        out['close'] = e = j + 1
+        out['close'] = e = out['then'][1] - 1
         tail = next_code(code, e) if re.match(r'else\b', next_code(code, e)) else ''
         if tail:
             e = next_line(e)
@@ -552,7 +635,7 @@ def _parse_if(code, start, where):
         out['else'], out['close'] = (b + 1, end), end
     elif tail == 'else':
         out['else'] = statement_at(next_line(e))
-        out['close'] = out['else'][0]
+        out['close'] = out['else'][1] - 1
     else:
         fail('the else is %r, not a block or a statement on its own line; '
              'fold it by hand' % tail)
@@ -663,12 +746,14 @@ def delete_comment(rule, doc, which):
 def delete_member(rule, doc, which):
     """Delete member `member` of `struct <struct> {`, with the comment above it.
 
-    A member declared as `struct { ... } member;` goes with its whole body.
+    `struct` may also name an anonymous `typedef struct { ... } <struct>;`.
+    A member declared as `struct { ... } member;` (or `union`, `enum`) goes
+    with its whole body. With `blank`, a blank line around the member goes too
+    if it would double up.
     """
     lines = doc['lines']
     code = code_lines(lines)
-    spat = re.compile(r'^(?:typedef\s+)?struct\s+%s\s*\{' % re.escape(rule['struct']))
-    tops = [i for i, l in enumerate(code) if spat.match(l)]
+    tops = struct_tops(code, rule['struct'])
     if len(tops) != 1:
         raise PruneError('%s: struct %s: expected 1 definition, found %d'
                          % (which, rule['struct'], len(tops)))
@@ -690,11 +775,12 @@ def delete_member(rule, doc, which):
             depth += code[lo].count('}') - code[lo].count('{')
             if depth == 0:
                 break
-        if depth or not re.match(r'^\s*(?:struct|union)\b[^;]*\{\s*$', code[lo]):
+        if depth or not re.match(r'^\s*(?:struct|union|enum)\b[^;]*\{\s*$', code[lo]):
             raise PruneError('%s: struct %s: member %s: nested body not found'
                              % (which, rule['struct'], rule['member']))
-    while lo - 1 > top and lines[lo - 1].strip() and not code[lo - 1].strip():
-        lo -= 1          # the comment documenting the member
+    lo = comment_top(lines, code, lo, top + 1)     # the comment documenting the member
+    if rule.get('blank'):
+        lo, hi = widen_blank(lines, lo, hi)
     del lines[lo:hi + 1]
     del doc['origin'][lo:hi + 1]
 
@@ -1211,6 +1297,7 @@ def merge_license(rule, doc, which):
 ACTIONS = {
     'delete_function': (delete_function, check_no_code_references),
     'delete_type': (delete_type, check_no_code_references),
+    'delete_prototype': (delete_prototype, None),
     'delete_region': (delete_region, None),
     'delete_if_block': (delete_if_block, None),
     'delete_block': (delete_block, None),
@@ -1254,8 +1341,8 @@ def apply_rules(h, c, rules):
             # The struct lives in one file and its users in both.
             for which, doc in docs.items():
                 check_no_member_references(rule, doc, which)
-        if action == 'delete_macro':
-            # A macro in the header expands in the .c too.
+        if action in ('delete_macro', 'delete_prototype'):
+            # A macro or a prototype in the header serves the .c too.
             for which, doc in docs.items():
                 check_no_code_references(rule, doc, which)
         if action in NAMED:

@@ -1177,9 +1177,6 @@ void SetCommonConfigRegs(u32 *regs);
 
 #define TOTAL_X170_REGISTERS        (PP0_START_REG+PPU_REG_RANGE*DEC_MAX_PPU_COUNT)
 #define DEC_X170_EXPAND_REGS        27
-/* read status registers count */
-#define BASE_STATUS_REGS            (8)
-#define READ_STATUS_REGS_COUNT      (MAX_VCMD_M2MP_NUM + BASE_STATUS_REGS)
 
 /* Max amount of stream */
 #define DEC_X170_MAX_STREAM         ((1 << 24) - 1)   /* G1 */
@@ -1228,12 +1225,6 @@ void SetCommonConfigRegs(u32 *regs);
 #ifndef DEC_HW_BUILD_ID
 #define DEC_HW_BUILD_ID 0xFFFF
 #endif
-
-/* VCMD buffer numbers */
-#define MAX_VCMD_ENTRIES 256
-
-/* Number of multicore decoding callback context entries */
-#define MAX_MC_CB_ENTRIES MAX_VCMD_ENTRIES // adapte the vcmd mode
 
 #define X170_DEC_SYSTEM_TIMEOUT         0x00FFU
 #define X170_DEC_STREAM_ERROR           0x04FFU /* av1 */
@@ -1379,359 +1370,6 @@ void SetCommonConfigRegs(u32 *regs) {
 /*============================================================================*
  * software/source/common/commonfunction.c
  *============================================================================*/
-void CommonSetM2MPComands(PpUnitIntConfig *ppu_cfg, struct M2MP_INFO vcmd_m2mp_data[MAX_VCMD_M2MP_NUM], addr_t base_bus_addr,
-                          u32 pp_enabled, u32 use_rfc, u32 crop_step_rshift, u32 width, u32 height,
-                          u32 bd, u32 mono_chrome, u32 align) {
-  u32 srcskip;
-  u32 pic_size, size = 0;
-  u32 lu_w =0, lu_h = 0, ch_w = 0, ch_h = 0, pic_width = 0, pic_height = 0;
-  u32 pic_stride = 0, pic_stride_ch = 0;
-  enum DecPictureFormat format;
-  u32 i = 0, j = 0, count = 0;
-  addr_t luma_addr = 0, chroma_addr = 0;
-  u32 lumasum_enable = 0;
-
-  if(!pp_enabled) {
-    if(use_rfc) {
-      lu_w = NEXT_MULTIPLE(width * bd, 8) / 8;
-      lu_h = height / 8;
-      pic_stride = NEXT_MULTIPLE(8 * width * bd, ALIGN(align) * 8) / 8;
-      luma_addr = base_bus_addr;
-      if(!mono_chrome) {
-        ch_w = lu_w / 2;
-        ch_h = lu_h;
-        pic_stride_ch = NEXT_MULTIPLE(4 * width * bd, ALIGN(align) * 8) / 8;
-        chroma_addr = luma_addr + pic_stride * lu_h;
-      }
-    } else {
-      luma_addr = base_bus_addr;
-#ifdef TILE8X8
-      pic_width = NEXT_MULTIPLE(width, 8) * 8;
-      lu_w = NEXT_MULTIPLE(pic_width * bd, 8) / 8;
-      lu_h = NEXT_MULTIPLE(height, 8) / 8;
-      pic_stride = NEXT_MULTIPLE(8 * width * bd, ALIGN(align) * 8) / 8;
-
-      if(!mono_chrome) {
-        pic_width = NEXT_MULTIPLE(width, 4) * 4;
-        ch_w = NEXT_MULTIPLE(pic_width * bd, 8) / 8;
-        ch_h = NEXT_MULTIPLE(height / 2, 4) / 4;
-        pic_stride_ch = NEXT_MULTIPLE(4 * width * bd, ALIGN(align) * 8) / 8;
-        chroma_addr = base_bus_addr + pic_stride * height / 8;
-      }
-#else
-      pic_width = NEXT_MULTIPLE(width, 4) * 4;
-      lu_w = NEXT_MULTIPLE(pic_width * bd, 8) / 8;
-      lu_h = NEXT_MULTIPLE(height, 4) / 4;
-      pic_stride = pic_stride_ch = NEXT_MULTIPLE(4 * width * bd, ALIGN(align) * 8) / 8;
-      if(!mono_chrome) {
-        ch_w = lu_w;
-        ch_h = NEXT_MULTIPLE(height / 2, 4) / 4;
-        chroma_addr = base_bus_addr + pic_stride * height / 4;
-      }
-#endif
-    }
-    for(j = 0; j < (mono_chrome? 1 : 2); j++) {
-      if(j) count++;
-      if(!j) {
-        ASSERT(pic_stride >= lu_w);
-        srcskip = pic_stride - lu_w;
-      } else if (!mono_chrome && j) {
-        ASSERT(pic_stride_ch >= ch_w);
-        srcskip = pic_stride_ch - ch_w;
-      }
-      pic_size = j ? (ch_w * ch_h) : (lu_w * lu_h);
-      vcmd_m2mp_data[count].m2mp_width = srcskip ? (j ? ch_w : lu_w) : (pic_size & 0xFFFF);
-      vcmd_m2mp_data[count].m2mp_height = srcskip ? (j ? ch_h : lu_h) : ((pic_size >> 16) & 0xFFFF);
-      vcmd_m2mp_data[count].m2mp_size = size;
-      vcmd_m2mp_data[count].m2mp_src_addr = j ? (addr_t)chroma_addr: (addr_t)luma_addr;
-      vcmd_m2mp_data[count].m2mp_srcskip = srcskip;
-      vcmd_m2mp_data[count].m2mp_mode = 1;
-    }
-    return;
-  }
-
-  for(i = 0; i < DEC_MAX_OUT_COUNT; i++, ppu_cfg++) {
-    if(!ppu_cfg->enabled) continue;
-    if(i) count++;
-    lumasum_enable = 0;
-    format = TransUnitConfig2Format(ppu_cfg);
-    if(!crop_step_rshift) {
-      pic_width = (ppu_cfg->scale.width / 2) << 1;
-      pic_height = (ppu_cfg->scale.height / 2) << 1;
-    } else {
-      pic_width = (ppu_cfg->scale.width / 2) << 1;
-      pic_height = (ppu_cfg->scale.height / 2) << 1;
-    }
-    luma_addr = base_bus_addr + ppu_cfg->luma_offset;
-    if(!ppu_cfg->monochrome && !IS_PIC_RGB(format) && !IS_PIC_422PACKED(format)
-      && !IS_PIC_TILED16x16(format))
-      chroma_addr = base_bus_addr + ppu_cfg->chroma_offset;
-    else
-      chroma_addr = 0;
-    if(IS_PIC_TILED4x4(format)) {
-      size = (IS_PIC_8BIT(format) || IS_PIC_10BIT(format)) ? 0 : 1;
-      if(IS_PIC_10BIT(format)) {
-        pic_width = NEXT_MULTIPLE(pic_width, 4) * 4;
-        lu_w = NEXT_MULTIPLE(pic_width * 10, 8) / 8;
-      } else
-        lu_w = NEXT_MULTIPLE(pic_width, 4) * 4;
-      lu_h = NEXT_MULTIPLE(pic_height, 4) / 4;
-
-      if(!(IS_PIC_MONOCHROME(format)) && chroma_addr) {
-        ch_w = NEXT_MULTIPLE(pic_width, 4) * 4;
-        ch_h = NEXT_MULTIPLE(pic_height / 2, 4) / 4;
-      }
-    } else if(IS_PIC_REF_TILED8x8(format)) {
-      size = (IS_PIC_8BIT(format) || IS_PIC_10BIT(format)) ? 0 : 1;
-      if(IS_PIC_10BIT(format)) {
-        pic_width = NEXT_MULTIPLE(pic_width, 8) * 8;
-        lu_w = NEXT_MULTIPLE(pic_width * 10, 8) / 8;
-      } else
-        lu_w = NEXT_MULTIPLE(pic_width, 8) * 8;
-      lu_h = NEXT_MULTIPLE(pic_height, 8) / 8;
-
-      if(!(IS_PIC_MONOCHROME(format)) && chroma_addr) {
-        ch_w = NEXT_MULTIPLE(pic_width, 4) * 4;
-        ch_h = NEXT_MULTIPLE(pic_height / 2, 4) / 4;
-      }
-    } else if(IS_PIC_TILED8x8(format)) {
-      size = IS_PIC_8BIT(format) ? 0 : 1;
-      lu_w = NEXT_MULTIPLE(pic_width, 8) * 8;
-      lu_h = NEXT_MULTIPLE(pic_height, 8) / 8;
-
-      if(!(IS_PIC_MONOCHROME(format)) && chroma_addr) {
-        ch_w = NEXT_MULTIPLE(pic_width, 4) * 4;
-        ch_h = NEXT_MULTIPLE(pic_height / 2, 4) / 4;
-      }
-    } else if(IS_PIC_TILED16x16(format)) {
-      size = IS_PIC_8BIT(format) ? 0 : 1;
-      lu_w = NEXT_MULTIPLE(pic_width, 16) * 16 * 3 / 2;
-      lu_h = NEXT_MULTIPLE(pic_height, 16)/ 16;
-
-    } else if(IS_PIC_TILED128x2(format)) {
-      size = IS_PIC_8BIT(format) ? 0 : 1;
-      lu_w = NEXT_MULTIPLE(pic_width, 128) * 2;
-      lu_h = pic_height / 2;
-
-      if(!(IS_PIC_MONOCHROME(format)) && chroma_addr) {
-        ch_w = NEXT_MULTIPLE(pic_width, 128) * 2;
-        ch_h = pic_height / 4;
-      }
-
-    } else if(IS_PIC_RGB_TILED64x64(format)) {
-      size = 2;
-      lu_w = NEXT_MULTIPLE(pic_width, 64) * 64;
-      lu_h = NEXT_MULTIPLE(pic_height, 64) / 64;
-
-    } else if(IS_PIC_TILED64x64(format)) {
-      size = 0;
-      lu_w = NEXT_MULTIPLE(pic_width, 64) * 64;
-      lu_h = NEXT_MULTIPLE(pic_height, 64) / 64;
-
-      if(!(IS_PIC_MONOCHROME(format)) && chroma_addr) {
-        ch_w = NEXT_MULTIPLE((pic_width + 1) / 2, 32) * 32 * 2; // Distinguish U and V
-        ch_h = NEXT_MULTIPLE((pic_height + 1) / 2, 32) / 32;
-      }
-    } else if(IS_PIC_PACKED_RGB(format)) {
-      if (IS_PIC_24BIT(format))
-        size = 3;
-      else if (IS_PIC_32BIT(format))
-        size = 4;
-      else if (IS_PIC_48BIT(format))
-        size = 6;
-      lu_w = pic_width * size;
-      lu_h = pic_height;
-      size = 0;
-
-    } else if(IS_PIC_PLANAR_RGB(format)) {
-      size = IS_PIC_8BIT(format) ? 0 : 1;
-      lu_w = pic_width;
-      lu_h = pic_height;
-
-    } else if(IS_PIC_422PACKED(format)) {
-      size = IS_PIC_8BIT(format) ? 0 : 1;
-      lu_w = pic_width * 2;
-      lu_h = pic_height;
-
-    } else {
-      /* 400/420/422*/
-      /* luma */
-      size = (IS_PIC_8BIT(format) || IS_PIC_1010(format) || IS_PIC_10BIT(format)) ? 0 : 1;
-      if(IS_PIC_1010(format)) {
-        lu_w = pic_width / 3 * 4 + NEXT_MULTIPLE(pic_width % 3 * 10, 8) / 8;
-      } else if(IS_PIC_10BIT(format)) {
-        lu_w = NEXT_MULTIPLE(pic_width * 10, 8) / 8;
-      } else {
-        lu_w = pic_width;
-      }
-	  lu_h = pic_height;
-      /* chroma */
-      if(!(IS_PIC_MONOCHROME(format)) && chroma_addr) {
-        if(IS_PIC_PLANAR(format)) {
-          if (IS_PIC_1010(format)) {
-            if(IS_PIC_YCbCr444(format))
-              ch_w = lu_w;
-            else {
-              ch_w = NEXT_MULTIPLE(pic_width, 2);
-              ch_w = (ch_w / 3 * 4 + NEXT_MULTIPLE(ch_w % 3 * 10, 8) / 8 ) / 2;
-            }
-          } else {
-            if(IS_PIC_YCbCr444(format))
-              ch_w = lu_w;
-            else
-              ch_w = NEXT_MULTIPLE(pic_width, 2) / 2;
-          }
-        } else {
-          if (IS_PIC_1010(format)) {
-            if(IS_PIC_YCbCr444(format))
-              ch_w = lu_w * 2;
-            else {
-              ch_w = NEXT_MULTIPLE(pic_width, 2);
-              ch_w = ch_w / 3 * 4 + NEXT_MULTIPLE(ch_w % 3 * 10, 8) / 8;
-            }
-          } else {
-            if(IS_PIC_YCbCr444(format))
-              ch_w = lu_w * 2;
-            else
-              ch_w = NEXT_MULTIPLE(lu_w, 2);
-          }
-        }
-        if(IS_PIC_YCbCr422(format) || IS_PIC_YCbCr444(format))
-          ch_h = lu_h;
-        else
-          ch_h = NEXT_MULTIPLE(lu_h, 2) / 2;
-      }
-    }
-
-/* luma */
-    if (IS_PIC_DEC400(format) || IS_PIC_RGB_TILED64x64(format) || IS_PIC_TILED64x64(format) ||
-      IS_PIC_PVFBC(format) || IS_PIC_PVFBC_BYPASS(format)) {
-      srcskip = 0;
-      size = 0;
-      lu_w = ppu_cfg->ystride;
-    }
-    else {
-      ASSERT(ppu_cfg->ystride >= (lu_w * (1 << size)));
-      srcskip = ppu_cfg->ystride - lu_w * (1 << size);
-      srcskip = srcskip >> size;
-    }
-    pic_size = lu_w * lu_h;
-    //if pp2 luma sum
-    if(ppu_cfg->luma_sum_e || ppu_cfg->hist_local_e || ppu_cfg->hist_global_e || ppu_cfg->hist_hsv_e)
-    {
-      srcskip = 0;
-      size = 0;
-      pic_size = 16 * 904;
-      lumasum_enable = 1;
-    }
-    vcmd_m2mp_data[count].m2mp_width = srcskip ? lu_w : (pic_size & 0xFFFF);
-    vcmd_m2mp_data[count].m2mp_height = srcskip ? lu_h : ((pic_size >> 16) & 0xFFFF);
-    vcmd_m2mp_data[count].m2mp_size = size;
-    vcmd_m2mp_data[count].m2mp_src_addr = (addr_t)luma_addr;
-    vcmd_m2mp_data[count].m2mp_srcskip = srcskip;
-    vcmd_m2mp_data[count].m2mp_mode = 1;
-/* chroma */
-    if(ch_h && ch_w && chroma_addr && !lumasum_enable) {
-      if (IS_PIC_DEC400(format) || IS_PIC_RGB_TILED64x64(format) || IS_PIC_TILED64x64(format) ||
-        IS_PIC_PVFBC(format) || IS_PIC_PVFBC_BYPASS(format)) {
-        srcskip = 0;
-        size = 0;
-        ch_w = ppu_cfg->cstride;
-      }
-      else {
-        ASSERT(ppu_cfg->ystride >= (ch_w * (1 << size)));
-        srcskip = ppu_cfg->cstride - ch_w * (1 << size);
-        srcskip = srcskip >> size;
-      }
-      pic_size = ch_w * ch_h;
-      for(j = 0; j < (IS_PIC_PLANAR(format) ? 2 : 1); j++) {
-        count++;
-        chroma_addr = chroma_addr + NEXT_MULTIPLE(ppu_cfg->cstride * ch_h, PLANE_ALIGNMENT) * j;
-        vcmd_m2mp_data[count].m2mp_width = srcskip ? ch_w : (pic_size & 0xFFFF);
-        vcmd_m2mp_data[count].m2mp_height = srcskip ? ch_h : ((pic_size >> 16) & 0xFFFF);
-        vcmd_m2mp_data[count].m2mp_size = size;
-        vcmd_m2mp_data[count].m2mp_src_addr = (addr_t)chroma_addr;
-        vcmd_m2mp_data[count].m2mp_srcskip = srcskip;
-        vcmd_m2mp_data[count].m2mp_mode = 1;
-      }
-    } else if(IS_PIC_PLANAR_RGB(format) && !lumasum_enable) {
-      ASSERT(ppu_cfg->ystride >= (lu_w * (1 << size)));
-      srcskip = ppu_cfg->ystride - lu_w * (1 << size);
-      srcskip = srcskip >> size;
-      pic_size = lu_w * lu_h;
-      for(j = 0; j < 2; j++) {
-        count++;
-        luma_addr = luma_addr + NEXT_MULTIPLE(lu_h * ppu_cfg->ystride, PLANE_ALIGNMENT);
-        vcmd_m2mp_data[count].m2mp_width = srcskip ? lu_w : (pic_size & 0xFFFF);
-        vcmd_m2mp_data[count].m2mp_height = srcskip ? lu_h : ((pic_size >> 16) & 0xFFFF);
-        vcmd_m2mp_data[count].m2mp_size = size;
-        vcmd_m2mp_data[count].m2mp_src_addr = (addr_t)luma_addr;
-        vcmd_m2mp_data[count].m2mp_srcskip = srcskip;
-        vcmd_m2mp_data[count].m2mp_mode = 1;
-      }
-    }
-  }
-}
-
-enum DecRet DecLinkAndRunCmds(const void *instance, struct DecCmdInfo *info_m, u32 cmdbuf_id) {
-  u32 cmd_buf_id = MAX_MC_CB_ENTRIES;
-  FifoObject obj;
-  u64 interrupt_ctrl = 0;
-  enum DecRet ret = DEC_OK;
-  struct DecCmdInfo info_tmp = {0}, *info = info_m;
-
-  if (!info) {
-    /* for all formats except 264/265 */
-    info = &info_tmp;
-
-    info->batch_size = 1;
-    info->cmd_num = 1;
-    info->dis_batch_mode = 0;
-    // info->is_relink = 0;
-  }
-
-  if (info->dis_batch_mode && *info->b_mc) {
-    info->batch_size = 1;
-    *info->b_mc = 0;
-    *info->max_batch_size = 1;
-  }
-
-  if (info->batch_size && cmdbuf_id != -1) {
-    if (info_m) {
-      FifoPush(info->fifo_cmd, (FifoObject)(size_t)cmdbuf_id, FIFO_EXCEPTION_DISABLE);
-      info->cmd_num++;
-    }
-    // if (!info->is_relink)
-      DWLPrepareCmds(instance, cmdbuf_id);
-  }
-
-  if(info->cmd_num >= info->batch_size || cmdbuf_id == -1) {
-    while(info->cmd_num) {
-      cmd_buf_id = cmdbuf_id;
-      if (info_m) {
-        interrupt_ctrl = 0;
-        FifoPop(info->fifo_cmd, &obj, FIFO_EXCEPTION_DISABLE);
-        cmd_buf_id = (size_t)obj;
-        if ((info->client_type == DWL_CLIENT_TYPE_H264_DEC ||
-             info->client_type == DWL_CLIENT_TYPE_HEVC_DEC) && info->batch_size > 1) { //batch mode
-          interrupt_ctrl = ((u32)1 << 31);
-          interrupt_ctrl &= ~(u64)1;
-          interrupt_ctrl |= ((u64)info->batch_size << 32);
-          if (info->cmd_num == 1) { //the last job
-            /* set IE flag for last job in current batch */
-            interrupt_ctrl |= (u64)1;
-          }
-        }
-        DWLSetCmdBufIntCtrl(instance, cmd_buf_id, interrupt_ctrl);
-      }
-      DWLEnableCmdBuf(instance, cmd_buf_id);
-      info->cmd_num--;
-    }
-  }
-
-  return ret;
-}
-
 static const u32 ref_ybase[16] = {
   HWIF_REFER0_YBASE_LSB,  HWIF_REFER1_YBASE_LSB,  HWIF_REFER2_YBASE_LSB,
   HWIF_REFER3_YBASE_LSB,  HWIF_REFER4_YBASE_LSB,  HWIF_REFER5_YBASE_LSB,
@@ -8775,17 +8413,6 @@ void StackConsumption(const char *func) {
 }
 #endif
 
-u32 SwGetCores(u32 core_mask) {
-  u32 i, n_cores = 0;
-
-  for (i=0; i<8*sizeof(u32); i++) {
-    if ((core_mask >> i) & 0x1)
-      n_cores++;
-  }
-
-  return n_cores;
-}
-
 u32 SwGetCoreMaskByFeature(const void *dwl_inst, enum FEATURE feature) {
   u32 i, core_mask = 0;
   const struct DecHwFeatures *hw_feature = NULL;
@@ -9135,30 +8762,10 @@ void ClearSwIRQ(u32 *regs) {
   SetDecRegister(regs, HWIF_DEC_E, 0);
 }
 
-/* core_id is cmdbuf_id if vcmd_used */
 void SwAbortSliceDec(const void *dwl, const void *dec_inst, u32 *regs,
-                      u32 vcmd_used, u32 core_id) {
-  if (!vcmd_used) {
-    ClearSwIRQ(regs);
-    DWLReleaseHw(dwl, core_id); /* release HW lock */
-  }
-  else {
-    DWLAbortCmdbuf(dwl, core_id);
-    DWLWaitCmdbufsDone(dwl, dec_inst);
-    ClearSwIRQ(regs);
-  }
-}
-
-void SwAbortDec(const void *dwl, struct DWLReqInfo *info, u32 vcmd_used,
-                  u32 n_cores_available, void *cmd_info) {
-  if (!vcmd_used) {
-    DWLWaitOwnerDone(dwl, info->owner);
-  }
-  else {
-    /* only drop current instance cmd job */
-    DWLDropCmdbufs(dwl, info->owner);
-    DWLWaitCmdbufsDone(dwl, info->owner);
-  }
+                      u32 core_id) {
+  ClearSwIRQ(regs);
+  DWLReleaseHw(dwl, core_id); /* release HW lock */
 }
 
 void SwSaveBuf(struct DWLLinearMem *info, struct DWLLinearMem **mem_infos, u32 *slots) {
@@ -9544,10 +9151,7 @@ typedef struct {
   u32 use_ac_offset[MAX_NUMBER_OF_COMPONENTS];
   Components component[MAX_NUMBER_OF_COMPONENTS];
   u32 mcu_height; /* mcu height in pixels */
-  u32 num_mcu_rows_in_interval;
   u32 num_mcu_rows_in_frame;
-  u32 intervals;  /* total count of restart intervals */
-  u8 **ri_array;  /* pointers to the beginnings of each ri. */
   u32 table_size; /* total size of QP and Huffman table */
 } FrameInfo;
 
@@ -9667,13 +9271,6 @@ typedef struct {
   u32 *table;
 } QuantTables;
 
-typedef struct {
-  u32 core_id;  /* Also used as cmd buffer id when VCMD is enabled. */
-  u32 out_id;
-  const u8 *stream;
-  const void *p_user_data;
-} JpegHwRdyCallbackArg;
-
 typedef struct OutElement_ {
   u32 mem_idx;
   JpegDecOutput pic;
@@ -9698,7 +9295,6 @@ typedef struct FrameBufferList_ {
 
 typedef struct {
   u32 jpeg_regs[TOTAL_X170_REGISTERS];
-  u32 mc_refresh_regs[READ_STATUS_REGS_COUNT];
   u32 asic_running;
   StreamStorage stream;
   StreamStorage hw_stream;
@@ -9738,63 +9334,21 @@ typedef struct {
   u32 use_adaptive_buffers;
   InputQueue pp_buffer_queue;
 
-  struct M2MP_INFO vcmd_m2mp_data[MAX_VCMD_M2MP_NUM];
-
-  u32 b_mc;
   u32 n_cores;
-  u32 n_cores_available;
   FrameBufferList fb_list;
-  JpegHwRdyCallbackArg *hw_rdy_callback_arg[MAX_MC_CB_ENTRIES];
   JpegDecImageInfo p_image_info;
   u32 dec_image_type;
-  struct {
-    DecMCStreamConsumed *fn;
-    const u8 *p_strm_buff; /* stream buffer passed in callback */
-    const void *p_user_data; /* user data to be passed in callback */
-  } stream_consumed_callback;
 
-  /*
-   * Whether it supports restart interval based multicore decoding.
-   * If it's supported in sw, when DRI marker is detected and restart interval
-   * satisfies following condition, then SW will parse all the restart interval
-   * form input bitstream.
-   *  a) each interval covers one or multiple of complete MCU rows, and
-   *  b) pp out won't use pixels that cross interval boundary
-   **/
-  u32 ri_running_cores;   /* cores number running for ri decoding */
-  sem_t sem_ri_mc_done;   /* ri mc decoding done */
-  u32 ri_index;           /* ri to be decoded */
-  u32 first_ri_index;     /* first restart interval of cropping window. */
-  u32 last_ri_index;      /* last restart interval of cropping window */
-  /* start/end ri interval for each PP units */
-  u32 start_ri_index[DEC_MAX_PPU_COUNT];
-  u32 end_ri_index[DEC_MAX_PPU_COUNT];
-  u32 allow_sw_ri_parse;  /* Allow sw parsing intervals when it's not present? */
-  /* multicore to decode one picture based on restart interval. */
-  enum {
-    RI_MC_UNDETERMINED,
-    RI_MC_ENA,
-    RI_MC_DISABLED_BY_USER,   /* user disabled sw parsing */
-    RI_MC_DISABLED_BY_RI,     /* cond a) not satisfied */
-    RI_MC_DISABLED_BY_PP,     /* cond b) not satisfied */
-  } ri_mc_enabled;
   u32 abort;
 
   u32 last_scan;
   u16 pjpeg_coeff_bit_map[3][64];
   addr_t jpeg_hw_start_bus;
 
-  u32 vcmd_used;  /* decoder connects to VCMD engine to start HW */
-  u32 cmd_buf_id; /* command buffer id used for current picture */
-
   struct LLStrmInfo llstrminfo;
 
   u32 secure_mode;
 
-  enum {
-    DEC_IDLE = 0,       /* DEC is idle */
-    DEC_RUNNING         /* DEC is running */
-  } dec_status[MAX_ASIC_CORES]; /* used to track each core's status in MC mode */
   u32 pjpeg_coeff_size_for_cache; /* used to storage the coeff of pjpeg for every scan */
 
 #ifdef FPGA_PERF_AND_BW
@@ -9821,11 +9375,6 @@ typedef struct {
 /*------------------------------------------------------------------------------
     4. Function prototypes
 ------------------------------------------------------------------------------*/
-
-#define RI_MC_DISABLED(ri) ((ri) == RI_MC_DISABLED_BY_USER || \
-                            (ri) == RI_MC_DISABLED_BY_RI || \
-                            (ri) == RI_MC_DISABLED_BY_PP)
-#define RI_MC_ENABLED(ri) ((ri) == RI_MC_ENA)
 
 #define JPEGDECMARKERS_H
 
@@ -10101,8 +9650,6 @@ static void JpegCaseInfoCollect(JpegDecContainer *dec_cont, CaseInfo *case_info)
 /*------------------------------------------------------------------------------
     4. Local function prototypes
 ------------------------------------------------------------------------------*/
-static u32 JpegParseRST(JpegDecInst dec_inst, u8 *img_buf, u32 img_len,
-                             u8 **ri_array);
 
 /*------------------------------------------------------------------------------
     5. Functions
@@ -10160,17 +9707,9 @@ enum DecRet JpegDecInit(JpegDecInst * dec_inst, const void *dwl, struct JpegDecC
                    &dec_cont->core_mask, &dec_cont->secure_mode,
                    dec_cont->hw_features, &dec_cont->cur_hw_feature);
   dec_cont->seq_core_mask = dec_cont->core_mask;
-  dec_cont->n_cores_available = SwGetCores(CORE_MASK(dec_cfg->misc_ctrl));
-
-  dec_cont->stream_consumed_callback.fn = dec_cfg->mcinit_cfg.stream_consumed_callback;
-  dec_cont->b_mc = dec_cfg->mcinit_cfg.mc_enable;
-  dec_cont->ri_mc_enabled = RI_MC_UNDETERMINED;
-  if (dec_cont->b_mc && dec_cont->n_cores_available > 1)
-    SetDecRegister(dec_cont->jpeg_regs, HWIF_DEC_MULTICORE_E, 0);
 
   /* reset internal structures */
   JpegDecClearStructs(dec_cont, 0);
-  dec_cont->vcmd_used = DWLVcmdIsUsed(dwl);
   dec_cont->crc_enabled = dec_cfg->crc_enabled;
 
   /* Reset shadow registers */
@@ -10209,9 +9748,6 @@ enum DecRet JpegDecInit(JpegDecInst * dec_inst, const void *dwl, struct JpegDecC
   dec_cont->error_ratio = dec_cfg->error_ratio;
   /* config error process policy. */
   SetECPolicy(dec_cfg->error_handling, 0, &dec_cont->error_policy);
-#ifdef RI_MC_SW_PARSE
-  dec_cont->allow_sw_ri_parse = 1;
-#endif
 
   /* Init frame buffer list */
   InitList(&dec_cont->fb_list);
@@ -10255,29 +9791,15 @@ void JpegDecRelease(JpegDecInst dec_inst) {
 #ifdef FPGA_PERF_AND_BW
   AveragePerfInfoPrint(&dec_cont->perf_info);
 #endif
-  for (i = 0; i < MAX_ASIC_CORES; i++) {
-    if (dec_cont->hw_rdy_callback_arg[i]) {
-      DWLfree(dec_cont->hw_rdy_callback_arg[i]);
-      dec_cont->hw_rdy_callback_arg[i] = NULL;
-    }
-  }
   dwl = dec_cont->dwl;
 
   if(dec_cont->asic_running) {
-    if (!dec_cont->vcmd_used) {
-      /* Release HW */
-      DWLDisableHw(dec_cont->dwl, dec_cont->core_id, 4 * 1, 0);
-      DWLReleaseHw(dec_cont->dwl, dec_cont->core_id);
-    }
-    else {
-      DWLReleaseCmdBuf(dec_cont->dwl, dec_cont->cmd_buf_id);
-    }
+    /* Release HW */
+    DWLDisableHw(dec_cont->dwl, dec_cont->core_id, 4 * 1, 0);
+    DWLReleaseHw(dec_cont->dwl, dec_cont->core_id);
   }
   if(dec_cont->frame.p_buffer) {
     DWLfree(dec_cont->frame.p_buffer);
-  }
-  if (dec_cont->frame.ri_array) {
-    DWLfree(dec_cont->frame.ri_array);
   }
   /* progressive */
   if(DWL_DEVMEM_VAILD(dec_cont->info.p_coeff_base)) {
@@ -11384,8 +10906,6 @@ enum DecRet JpegDecDecode(JpegDecInst dec_inst, JpegDecInput * p_dec_in,
     p_dec_out->pictures[i].pic_stride_ch = 0;
   }
 
-  dec_cont->stream_consumed_callback.p_strm_buff = (u8 *)p_dec_in->stream_buffer.virtual_address;
-  dec_cont->stream_consumed_callback.p_user_data = p_dec_in->p_user_data;
   /* set mcu/slice value */
   dec_cont->info.slice_mb_set_value = p_dec_in->slice_mb_set;
   DWL_S_CMD_PRIORITY(dec_cont->core_mask, SW_G_CMD_PRIORITY(p_dec_in->dec_ctrl));
@@ -11610,33 +11130,6 @@ enum DecRet JpegDecDecode(JpegDecInst dec_inst, JpegDecInput * p_dec_in,
 
   /* Handle decoded image here */
   if(dec_cont->image.header_ready) {
-    if (!dec_cont->frame.intervals)
-      dec_cont->ri_mc_enabled = RI_MC_DISABLED_BY_RI;
-    if (RI_MC_ENABLED(dec_cont->ri_mc_enabled)) {
-      dec_cont->frame.ri_array = (u8 **)DWLmalloc(dec_cont->frame.intervals * sizeof(u8*));
-      ASSERT(dec_cont->frame.ri_array);
-      if (p_dec_in->ri_count > 1 && p_dec_in->ri_array) {
-        for (i = 0; i < p_dec_in->ri_count; i++) {
-          if (p_dec_in->ri_array[i]) {
-            dec_cont->frame.ri_array[i] = dec_cont->stream.p_start_of_stream +
-                                          p_dec_in->ri_array[i];
-            if (dec_cont->frame.ri_array[i] >=
-               (dec_cont->stream.p_start_of_buffer + dec_cont->stream.strm_buff_size))
-              dec_cont->frame.ri_array[i] -= dec_cont->stream.strm_buff_size;
-          }
-          else {
-            /* Missing restart interval. */
-            dec_cont->frame.ri_array[i] = NULL;
-          }
-        }
-      } else if (dec_cont->allow_sw_ri_parse) {
-        JpegParseRST(dec_cont, dec_cont->stream.p_start_of_stream,
-                    dec_cont->stream.stream_length,
-                    dec_cont->frame.ri_array);
-      }
-      dec_cont->ri_running_cores = 0;
-      dec_cont->ri_index = dec_cont->first_ri_index;
-    }
     /* loop until decoding control should return for user */
     do {
       /* check if we had to load imput buffer or not */
@@ -11649,15 +11142,6 @@ enum DecRet JpegDecDecode(JpegDecInst dec_inst, JpegDecInput * p_dec_in,
         /* Start HW or continue after pause */
         if(!dec_cont->info.SliceReadyForPause) {
           APITRACEDEBUG("%s","JpegDecDecode# Start HW init\n");
-          if (dec_cont->ri_index && RI_MC_ENABLED(dec_cont->ri_mc_enabled)) {
-            dec_cont->stream.p_curr_pos = dec_cont->frame.ri_array[dec_cont->ri_index];
-            dec_cont->stream.bit_pos_in_byte = 0;
-            if (!dec_cont->stream.p_curr_pos) {
-              /* Missing restart interval. */
-              dec_cont->ri_index++;
-              continue;
-            }
-          }
           ret_code = JpegDecInitHW(dec_cont);
           if(ret_code != DEC_OK) {
             /* return DEC_HW_RESERVED */
@@ -11680,52 +11164,24 @@ enum DecRet JpegDecDecode(JpegDecInst dec_inst, JpegDecInput * p_dec_in,
         dec_cont->info.input_buffer_empty = 0;
       }
 
-      if (dec_cont && (dec_cont->b_mc || RI_MC_ENABLED(dec_cont->ri_mc_enabled))) {
-        /* reset shadow HW status reg values so that we dont end up writing
-         * some garbage to next core regs */
-        JpegRefreshRegs(dec_cont);
-        SetDecRegister(dec_cont->jpeg_regs, HWIF_DEC_E, 0);
-        SetDecRegister(dec_cont->jpeg_regs, HWIF_DEC_IRQ_STAT, 0);
-        SetDecRegister(dec_cont->jpeg_regs, HWIF_DEC_IRQ, 0);
-        if (RI_MC_DISABLED(dec_cont->ri_mc_enabled)) {
-          dec_cont->asic_running = 0;
-          dwlret = DWL_HW_WAIT_OK;
-          asic_status = DEC_HW_IRQ_RDY;
-        } else {
-          dwlret = DWL_HW_WAIT_OK;
-          asic_status = DEC_HW_IRQ_RDY;
-        }
-      } else {
 #ifdef JPEGDEC_PERFORMANCE
-        dwlret = DWL_HW_WAIT_OK;
+      dwlret = DWL_HW_WAIT_OK;
 #else
-        /* wait hw ready */
-        if(dec_cont) {
-          if (!dec_cont->vcmd_used)
-            dwlret = DWLWaitHwReady(dec_cont->dwl, dec_cont->core_id,
-                                    dec_cont->info.timeout);
-          else {
-            dwlret = DWLWaitCmdBufReady(dec_cont->dwl, dec_cont->cmd_buf_id);
-            if(dec_cont && dec_cont->crc_enabled) {
-              CrcData *tmp;
-              SwGetCrcMem(&dec_cont->crc, &tmp);
-              DWLRefreshCrcResult(dec_cont->dwl, &tmp, dec_cont->cmd_buf_id);
-            }
-          }
-        }
-#endif /* #ifdef JPEGDEC_PERFORMANCE */
-        /* Refresh regs */
-        JpegRefreshRegs(dec_cont);
+      /* wait hw ready */
+      if(dec_cont) {
+        dwlret = DWLWaitHwReady(dec_cont->dwl, dec_cont->core_id,
+                                dec_cont->info.timeout);
       }
+#endif /* #ifdef JPEGDEC_PERFORMANCE */
+      /* Refresh regs */
+      JpegRefreshRegs(dec_cont);
 
       if(dwlret == DWL_HW_WAIT_OK) {
         APITRACEDEBUG("%s","JpegDecDecode# DWL_HW_WAIT_OK\n");
 
         /* check && reset status */
-        if (dec_cont && !dec_cont->b_mc && RI_MC_DISABLED(dec_cont->ri_mc_enabled)) {
-          asic_status =
-            GetDecRegister(dec_cont->jpeg_regs, HWIF_DEC_IRQ_STAT);
-        }
+        asic_status =
+          GetDecRegister(dec_cont->jpeg_regs, HWIF_DEC_IRQ_STAT);
 
         if(asic_status & DEC_HW_IRQ_BUS) {
           /* check PP status... and go */
@@ -11734,15 +11190,10 @@ enum DecRet JpegDecDecode(JpegDecInst dec_inst, JpegDecInput * p_dec_in,
           JPEGDEC_CLEAR_IRQ;
 
           SetDecRegister(dec_cont->jpeg_regs, HWIF_DEC_E, 0);
-          if (!dec_cont->vcmd_used) {
-            DWLDisableHw(dec_cont->dwl, dec_cont->core_id, 4 * 1,
-                         dec_cont->jpeg_regs[1]);
-            /* Release HW */
-            (void) DWLReleaseHw(dec_cont->dwl, dec_cont->core_id);
-          }
-          else {
-            DWLReleaseCmdBuf(dec_cont->dwl, dec_cont->cmd_buf_id);
-          }
+          DWLDisableHw(dec_cont->dwl, dec_cont->core_id, 4 * 1,
+                       dec_cont->jpeg_regs[1]);
+          /* Release HW */
+          (void) DWLReleaseHw(dec_cont->dwl, dec_cont->core_id);
           /* update asic_running */
           dec_cont->asic_running = 0;
 
@@ -11764,13 +11215,10 @@ enum DecRet JpegDecDecode(JpegDecInst dec_inst, JpegDecInput * p_dec_in,
 
           SetDecRegister(dec_cont->jpeg_regs, HWIF_DEC_E, 0);
           /* Release HW */
-          if (!dec_cont->vcmd_used) {
-            DWLDisableHw(dec_cont->dwl, dec_cont->core_id, 4 * 1,
-                         dec_cont->jpeg_regs[1]);
+          DWLDisableHw(dec_cont->dwl, dec_cont->core_id, 4 * 1,
+                       dec_cont->jpeg_regs[1]);
 
-            (void)DWLReleaseHw(dec_cont->dwl, dec_cont->core_id);
-          } else
-            DWLReleaseCmdBuf(dec_cont->dwl, dec_cont->cmd_buf_id);
+          (void)DWLReleaseHw(dec_cont->dwl, dec_cont->core_id);
 
           /* update asic_running */
           dec_cont->asic_running = 0;
@@ -11783,11 +11231,7 @@ enum DecRet JpegDecDecode(JpegDecInst dec_inst, JpegDecInput * p_dec_in,
           SwGetCrcLast(&dec_cont->crc, &p_dec_out->crc);
           dec_cont->error_info = DEC_FRAME_ERROR;
           JpegMarkOutputPicInfo(dec_cont, p_dec_out);
-          if (dec_cont->b_mc ||
-             (p_dec_in->picture_buffer_y.virtual_address == NULL &&
-             ((dec_cont->ri_mc_enabled == RI_MC_ENA &&
-             dec_cont->ri_index == dec_cont->last_ri_index) ||
-             dec_cont->ri_mc_enabled != RI_MC_ENA))) {
+          if (p_dec_in->picture_buffer_y.virtual_address == NULL) {
             p_dec_out->cycles_per_mb = JpegCycleCount(dec_cont);
             PushOutputPic(&dec_cont->fb_list, p_dec_out, &(dec_cont->p_image_info));
             JpegSetOutBufferAsUsed(dec_cont, p_dec_out);
@@ -11845,66 +11289,55 @@ enum DecRet JpegDecDecode(JpegDecInst dec_inst, JpegDecInput * p_dec_in,
         //                                 HWIF_JPEG_SLICE_H);
 
         /* slice ready ==> reset interrupt */
-        if(!dec_cont->b_mc &&
-            RI_MC_DISABLED(dec_cont->ri_mc_enabled)) {
-          /* discard : use jpeg process flow to process pjpeg. */
-          current_pos = GET_ADDR_REG(dec_cont->jpeg_regs, HWIF_RLC_VLC_BASE);
-          if (current_pos >= dec_cont->jpeg_hw_start_bus)
-            hw_consumed = current_pos - dec_cont->jpeg_hw_start_bus;
-          else
-            hw_consumed = dec_cont->stream.strm_buff_size + current_pos - dec_cont->jpeg_hw_start_bus;
-          ASSERT(hw_consumed);
-          dec_cont->stream.p_curr_pos = dec_cont->stream.p_curr_pos + hw_consumed;
-          ASSERT(dec_cont->stream.read_bits % 8 == 0);
-          sw_consumed = dec_cont->stream.read_bits / 8;
-          bytes_remain = dec_cont->stream.stream_length - hw_consumed - (dec_cont->stream.read_bits >> 3);
-          //u32 read_bits maybe overflow for some 32Kx32K case, not update to read_bits
-          //dec_cont->stream.read_bits += hw_consumed * 8;
-          //(MAX_U32 >> 3) < (hw_consumed + (dec_cont->stream.read_bits >> 3))
+        /* discard : use jpeg process flow to process pjpeg. */
+        current_pos = GET_ADDR_REG(dec_cont->jpeg_regs, HWIF_RLC_VLC_BASE);
+        if (current_pos >= dec_cont->jpeg_hw_start_bus)
+          hw_consumed = current_pos - dec_cont->jpeg_hw_start_bus;
+        else
+          hw_consumed = dec_cont->stream.strm_buff_size + current_pos - dec_cont->jpeg_hw_start_bus;
+        ASSERT(hw_consumed);
+        dec_cont->stream.p_curr_pos = dec_cont->stream.p_curr_pos + hw_consumed;
+        ASSERT(dec_cont->stream.read_bits % 8 == 0);
+        sw_consumed = dec_cont->stream.read_bits / 8;
+        bytes_remain = dec_cont->stream.stream_length - hw_consumed - (dec_cont->stream.read_bits >> 3);
+        //u32 read_bits maybe overflow for some 32Kx32K case, not update to read_bits
+        //dec_cont->stream.read_bits += hw_consumed * 8;
+        //(MAX_U32 >> 3) < (hw_consumed + (dec_cont->stream.read_bits >> 3))
 
-          if (dec_cont->stream.p_curr_pos >=
-              (dec_cont->stream.p_start_of_buffer + dec_cont->stream.strm_buff_size))
-            dec_cont->stream.p_curr_pos -= dec_cont->stream.strm_buff_size;
+        if (dec_cont->stream.p_curr_pos >=
+            (dec_cont->stream.p_start_of_buffer + dec_cont->stream.strm_buff_size))
+          dec_cont->stream.p_curr_pos -= dec_cont->stream.strm_buff_size;
 
-          /* eat EOI marker */
-          for(i = 0;  i < bytes_remain; i++) {
-            current_byte = JpegDecShowByte(&dec_cont->stream, bytes_remain, i);
-            if(current_byte == 0xFF) {
-              current_byte = JpegDecShowByte(&dec_cont->stream, bytes_remain, i+1);
-              if(current_byte > 0x00  && current_byte != 0xD9) {
-                break;
-              }
+        /* eat EOI marker */
+        for(i = 0;  i < bytes_remain; i++) {
+          current_byte = JpegDecShowByte(&dec_cont->stream, bytes_remain, i);
+          if(current_byte == 0xFF) {
+            current_byte = JpegDecShowByte(&dec_cont->stream, bytes_remain, i+1);
+            if(current_byte > 0x00  && current_byte != 0xD9) {
+              break;
             }
           }
-
-          dec_cont->stream.p_curr_pos += i;
-          current_pos += i;
-          // dec_cont->stream.read_bits += i * 8;
-          sw_consumed += i;
-          if (dec_cont->stream.p_curr_pos >=
-              (dec_cont->stream.p_start_of_buffer +
-              dec_cont->stream.strm_buff_size)) {
-            dec_cont->stream.p_curr_pos -= dec_cont->stream.strm_buff_size;
-            current_pos -= dec_cont->stream.strm_buff_size;
-          }
-
-          p_dec_out->output.strm_curr_pos = (u8 *) dec_cont->stream.p_curr_pos;
-          p_dec_out->output.strm_curr_bus_address = current_pos;
-          // p_dec_out->output.data_left = p_dec_in->stream_length - (dec_cont->stream.read_bits >> 3);
-          p_dec_out->output.data_left = p_dec_in->stream_length - hw_consumed - sw_consumed;
-        } else {
-          /* PP not in pipeline, continue do <==> while */
-          dec_cont->info.no_slice_irq_for_user = 0;
         }
+
+        dec_cont->stream.p_curr_pos += i;
+        current_pos += i;
+        // dec_cont->stream.read_bits += i * 8;
+        sw_consumed += i;
+        if (dec_cont->stream.p_curr_pos >=
+            (dec_cont->stream.p_start_of_buffer +
+            dec_cont->stream.strm_buff_size)) {
+          dec_cont->stream.p_curr_pos -= dec_cont->stream.strm_buff_size;
+          current_pos -= dec_cont->stream.strm_buff_size;
+        }
+
+        p_dec_out->output.strm_curr_pos = (u8 *) dec_cont->stream.p_curr_pos;
+        p_dec_out->output.strm_curr_bus_address = current_pos;
+        // p_dec_out->output.data_left = p_dec_in->stream_length - (dec_cont->stream.read_bits >> 3);
+        p_dec_out->output.data_left = p_dec_in->stream_length - hw_consumed - sw_consumed;
 
         if(dec_cont->info.no_slice_irq_for_user == 0) {
           /* Release HW */
-          if (!dec_cont->b_mc && RI_MC_DISABLED(dec_cont->ri_mc_enabled)) {
-            if (!dec_cont->vcmd_used)
-              (void) DWLReleaseHw(dec_cont->dwl, dec_cont->core_id);
-            else
-              (void) DWLReleaseCmdBuf(dec_cont->dwl, dec_cont->cmd_buf_id);
-          }
+          (void) DWLReleaseHw(dec_cont->dwl, dec_cont->core_id);
           /* update asic_running */
           dec_cont->asic_running = 0;
 
@@ -11924,11 +11357,7 @@ enum DecRet JpegDecDecode(JpegDecInst dec_inst, JpegDecInput * p_dec_in,
           //p_dec_out->crc = dec_cont->crc;
           SwGetCrcLast(&dec_cont->crc, &p_dec_out->crc);
           JpegMarkOutputPicInfo(dec_cont, p_dec_out);
-          if (dec_cont->b_mc ||
-             (p_dec_in->picture_buffer_y.virtual_address == NULL &&
-             ((dec_cont->ri_mc_enabled == RI_MC_ENA &&
-             dec_cont->ri_index == dec_cont->last_ri_index) ||
-             dec_cont->ri_mc_enabled != RI_MC_ENA))) {
+          if (p_dec_in->picture_buffer_y.virtual_address == NULL) {
             p_dec_out->cycles_per_mb = JpegCycleCount(dec_cont);
             p_dec_out->luma_sum = GetPpuRegister(dec_cont->jpeg_regs, HWIF_PPX_HIST_GLOBAL_LUMA_SUM_U, 2);
             PushOutputPic(&dec_cont->fb_list, p_dec_out, &(dec_cont->p_image_info));
@@ -11943,10 +11372,7 @@ enum DecRet JpegDecDecode(JpegDecInst dec_inst, JpegDecInput * p_dec_in,
         APITRACEERR("%s","SCAN: DWL HW TIMEOUT\n");
 
         /* Release HW */
-        if (dec_cont->vcmd_used)
-          (void) DWLReleaseCmdBuf(dec_cont->dwl, dec_cont->cmd_buf_id);
-        else
-          (void) DWLReleaseHw(dec_cont->dwl, dec_cont->core_id);
+        (void) DWLReleaseHw(dec_cont->dwl, dec_cont->core_id);
 
         /* update asic_running */
         dec_cont->asic_running = 0;
@@ -11957,10 +11383,7 @@ enum DecRet JpegDecDecode(JpegDecInst dec_inst, JpegDecInput * p_dec_in,
         APITRACEERR("%s","SCAN: DWL HW ERROR\n");
 
         /* Release HW */
-        if (dec_cont->vcmd_used)
-          (void) DWLReleaseCmdBuf(dec_cont->dwl, dec_cont->cmd_buf_id);
-        else
-          (void) DWLReleaseHw(dec_cont->dwl, dec_cont->core_id);
+        (void) DWLReleaseHw(dec_cont->dwl, dec_cont->core_id);
 
         /* update asic_running */
         dec_cont->asic_running = 0;
@@ -11968,17 +11391,8 @@ enum DecRet JpegDecDecode(JpegDecInst dec_inst, JpegDecInput * p_dec_in,
         ret_code = DEC_SYSTEM_ERROR;
         goto end;
       }
-      dec_cont->ri_index++;
-    } while(!dec_cont->image.image_ready ||
-              (RI_MC_ENABLED(dec_cont->ri_mc_enabled) &&
-               dec_cont->ri_index <= dec_cont->last_ri_index));
+    } while(!dec_cont->image.image_ready);
     //dec_cont->n_cores_available = 1;
-  }
-
-  if (RI_MC_ENABLED(dec_cont->ri_mc_enabled)) {
-    sem_wait(&dec_cont->sem_ri_mc_done);
-    dwlret = DWL_HW_WAIT_OK;
-    asic_status = DEC_HW_IRQ_RDY;
   }
 
   if(dec_cont->image.image_ready) {
@@ -12144,41 +11558,6 @@ enum DecRet JpegDecSetInfo_INTERNAL(JpegDecContainer *dec_cont) {
     return DEC_PARAM_ERROR;
   #endif
 
-  /* Check whether pp height satisfies restart interval based multicore. */
-  if (RI_MC_ENABLED(dec_cont->ri_mc_enabled)) {
-    u32 i = 0;
-    u32 ri_height = dec_cont->frame.num_mcu_rows_in_interval *
-                       dec_cont->frame.mcu_height;
-    PpUnitIntConfig *ppu_cfg = dec_cont->ppu_cfg;
-    //u32 first_ri_index, last_ri_index;
-
-    dec_cont->first_ri_index = (u32)-1;
-    dec_cont->last_ri_index = 0;
-    for (i = 0; i < DEC_MAX_PPU_COUNT; i++, ppu_cfg++) {
-      u32 first_slice_height, last_slice_height;
-      if (!ppu_cfg->enabled) continue;
-
-      first_slice_height = ri_height - (ppu_cfg->crop.y % ri_height);
-      last_slice_height = (ppu_cfg->crop.y + ppu_cfg->crop.height) %
-                           ri_height;
-      if ((first_slice_height * ppu_cfg->scale.height % ppu_cfg->crop.height) ||
-          (ri_height * ppu_cfg->scale.height % ppu_cfg->crop.height) ||
-          (last_slice_height * ppu_cfg->scale.height % ppu_cfg->crop.height)) {
-        dec_cont->ri_mc_enabled = RI_MC_DISABLED_BY_PP;
-        break;
-      }
-
-      dec_cont->start_ri_index[i] = ppu_cfg->crop.y / ri_height;
-      dec_cont->end_ri_index[i] = (ppu_cfg->crop.y + ppu_cfg->crop.height - 1) /
-                                   ri_height;
-
-      if (dec_cont->start_ri_index[i] < dec_cont->first_ri_index)
-        dec_cont->first_ri_index = dec_cont->start_ri_index[i];
-      if (dec_cont->end_ri_index[i] > dec_cont->last_ri_index)
-        dec_cont->last_ri_index = dec_cont->end_ri_index[i];
-    }
-  }
-
   return (DEC_OK);
 }
 
@@ -12253,7 +11632,7 @@ static u32 JpegCycleCount(JpegDecContainer * dec_cont) {
   dec_info.pic_size = NEXT_MULTIPLE(dec_cont->info.X, 16) * NEXT_MULTIPLE(dec_cont->info.Y, 16);
   dec_info.bit_depth = dec_cont->frame.P == 8? 8 : 12;
   dec_info.chroma_format = dec_cont->pp_chroma_format;
-  DecPerfInfoCount(dec_cont->dwl, dec_cont->vcmd_used ? dec_cont->cmd_buf_id : dec_cont->core_id,
+  DecPerfInfoCount(dec_cont->dwl, dec_cont->core_id,
                    &dec_cont->perf_info, dec_info);
 #endif
   mbs = (NEXT_MULTIPLE(dec_cont->info.X, 16) *
@@ -12517,10 +11896,7 @@ static void JpegDecStopSBI(JpegDecContainer *dec_cont, u32 i) {
   info.width = dec_cont->info.X;
   info.height = dec_cont->info.Y;
   info.owner = (void *)dec_cont;
-  if (!dec_cont->vcmd_used)
-    ret = DWLReserveHw(dec_cont->dwl, &info, &dec_cont->core_id);
-  else
-    ASSERT(0);
+  ret = DWLReserveHw(dec_cont->dwl, &info, &dec_cont->core_id);
   PpUnitIntConfig *ppu_cfg = &dec_cont->ppu_cfg[i];
   ASSERT(dec_cont->pp_enabled && hw_feature->max_ppu_count);
   struct PpParams pp_args = {dec_cont->cur_hw_feature,
@@ -12534,26 +11910,18 @@ static void JpegDecStopSBI(JpegDecContainer *dec_cont, u32 i) {
   SetDecRegister(dec_cont->jpeg_regs, HWIF_DEC_E, 1);
   SetDecRegister(dec_cont->jpeg_regs, HWIF_DEC_ABORT_E, 1);
   JpegFlushRegs(dec_cont);
-  if (!dec_cont->vcmd_used) {
-    DWLEnableHw(dec_cont->dwl, dec_cont->core_id, 4 * 1, dec_cont->jpeg_regs[1]);
-    ret = DWLWaitHwReady(dec_cont->dwl, dec_cont->core_id, (u32) DEC_X170_TIMEOUT_LENGTH);
-  }
-  else
-    ASSERT(0);
+  DWLEnableHw(dec_cont->dwl, dec_cont->core_id, 4 * 1, dec_cont->jpeg_regs[1]);
+  ret = DWLWaitHwReady(dec_cont->dwl, dec_cont->core_id, (u32) DEC_X170_TIMEOUT_LENGTH);
   JpegRefreshRegs(dec_cont);
   asic_status = GetDecRegister(dec_cont->jpeg_regs, HWIF_DEC_IRQ_STAT);
   ASSERT(asic_status & DEC_HW_IRQ_ABORT);
-  if (!dec_cont->vcmd_used)
-    (void) DWLReleaseHw(dec_cont->dwl, dec_cont->core_id);
-  else
-    ASSERT(0);
+  (void) DWLReleaseHw(dec_cont->dwl, dec_cont->core_id);
 
   DWLFreeLinear(dec_cont->dwl, &dummy_in);
 }
 
 enum DecRet JpegDecEndOfStream(JpegDecInst dec_inst) {
   JpegDecContainer *dec_cont = (JpegDecContainer *) dec_inst;
-  u32 count = 0;
 
   if(dec_inst == NULL) {
     APITRACEERR("%s","JpegDecNextPicture# ERROR: dec_inst or output is NULL\n");
@@ -12568,51 +11936,9 @@ enum DecRet JpegDecEndOfStream(JpegDecInst dec_inst) {
     }
   }
 
-  if(dec_cont->vcmd_used){
-    DWLWaitCmdbufsDone(dec_cont->dwl, dec_inst);
-  } else {
-    /* Check all Core in idle state */
-    for(count = 0; count < dec_cont->n_cores_available; count++) {
-      while (dec_cont->dec_status[count] == DEC_RUNNING)
-        sched_yield();
-    }
-  }
-
   /* wake-up output thread */
   PushOutputPic(&dec_cont->fb_list, NULL, NULL);
   return (DEC_OK);
-}
-
-/* TODO: consider case with missing restart intervals. */
-static u32 JpegParseRST(JpegDecInst dec_inst, u8 *img_buf, u32 img_len,
-                             u8 **ri_array) {
-  u8 *p = img_buf;
-  u32 rst_markers = 0;
-  u32 last_rst, i;
-  while (p < img_buf + img_len) {
-    if (p[0] == 0xFF && p[1] >= 0xD0 && p[1] <= 0xD7) {
-      if (!rst_markers) {
-        rst_markers++;
-      } else {
-        /* missing restart intervals */
-        u32 missing_rst_count = (p[1] - 0xD7 + 8 - last_rst - 1) % 8;
-        for (i = 0; i < missing_rst_count; i++)
-          ri_array[++rst_markers] = NULL;
-        rst_markers++;
-      }
-      last_rst = p[1] - 0xD7;
-      ri_array[rst_markers]  = p + 2;
-#if 0
-      printf("RST%d @ offset %d: %02X%02X\n", p[1] - 0xD0,
-            (u32)(p - img_buf), p[0], p[1]);
-#endif
-    }
-    p++;
-  }
-  return (rst_markers);
-
-  rst_markers++;
-  return (rst_markers);
 }
 
 void JpegSetExternalBufferInfo(JpegDecInst dec_inst) {
@@ -12765,27 +12091,16 @@ enum DecRet JpegDecAbort(JpegDecInst dec_inst) {
 
 enum DecRet JpegDecAbortAfter(JpegDecInst dec_inst) {
   JpegDecContainer *dec_cont = (JpegDecContainer *) dec_inst;
-  struct DWLReqInfo info = {0};
 
   if(dec_inst == NULL) {
     APITRACEERR("%s","JpegDecAbortAfter# ERROR: dec_inst or output is NULL\n");
     return (DEC_PARAM_ERROR);
   }
 
-  if(dec_cont->asic_running && !dec_cont->b_mc) {
-    u32 core_id = (dec_cont->vcmd_used) ? dec_cont->cmd_buf_id : dec_cont->core_id;
-    SwAbortSliceDec(dec_cont->dwl, dec_inst, dec_cont->jpeg_regs, dec_cont->vcmd_used, core_id);
+  if(dec_cont->asic_running) {
+    u32 core_id = dec_cont->core_id;
+    SwAbortSliceDec(dec_cont->dwl, dec_inst, dec_cont->jpeg_regs, core_id);
     dec_cont->asic_running = 0;
-  }
-
-  /* In multi-Core senario, waithwready is executed through listener thread,
-          here to check whether HW is finished */
-  if(dec_cont->b_mc) {
-
-    info.core_mask = dec_cont->core_mask;
-    info.owner = (void *)dec_cont;
-    SwAbortDec(dec_cont->dwl, &info, dec_cont->vcmd_used,
-                 dec_cont->n_cores_available, NULL);
   }
 
   ResetOutFifoInList(&dec_cont->fb_list);
@@ -14603,10 +13918,6 @@ extern u32 pjpeg_coeff_size;
 #define TRACE_COMPONENT_ID(id)
 #endif
 
-static void JpegMCSetHwRdyCallback(JpegDecInst dec_inst);
-static void JpegRiMCSetHwRdyCallback(JpegDecInst dec_inst);
-static void ClearHWOutput(FrameBufferList *fb_list, u32 id, u32 type);
-static void MarkHWOutput(FrameBufferList *fb_list, u32 id, u32 type);
 
 /*------------------------------------------------------------------------------
     4. Local function prototypes
@@ -14867,32 +14178,13 @@ enum DecRet JpegDecInitHW(JpegDecContainer * dec_cont) {
     info.width = dec_cont->info.X;
     info.height = dec_cont->info.Y;
     info.owner = (void *)dec_cont;
-    if (!dec_cont->vcmd_used) {
-      if(DWLReserveHw(dec_cont->dwl,  &info, &dec_cont->core_id) == DWL_ERROR) {
-        APITRACEERR("%s","JpegDecInitHW: ERROR hw resource unavailable\n");
-        return DEC_HW_RESERVED;
-      }
-    } else {
-      /* Always store registers in jpeg_regs[0] when VCMD is used.*/
-#if 0
-      core_id = dec_cont->core_id + 1;
-      core_id = (core_id>=MAX_MC_CB_ENTRIES)?0:core_id;
-      dec_cont->core_id = core_id;
-#endif
-      dec_cont->core_id = 0;
-      if (DWLReserveCmdBuf(dec_cont->dwl, &info, &dec_cont->cmd_buf_id) == DWL_ERROR) {
-        APITRACEERR("%s","JpegDecInitHW: ERROR command buffer unavailable\n");
-        return DEC_HW_RESERVED;
-      }
-    }
-
-    if (dec_cont->b_mc) {
-      if (!dec_cont->vcmd_used)
-        dec_cont->dec_status[dec_cont->core_id] = DEC_RUNNING;
+    if(DWLReserveHw(dec_cont->dwl,  &info, &dec_cont->core_id) == DWL_ERROR) {
+      APITRACEERR("%s","JpegDecInitHW: ERROR hw resource unavailable\n");
+      return DEC_HW_RESERVED;
     }
   }
 
-  core_id = dec_cont->b_mc ? dec_cont->core_id : 0;
+  core_id = 0;
   /*************** Set swreg4 data ************/
   APITRACEDEBUG("%s","INTERNAL: Set Frame width\n");
   SetDecRegister(dec_cont->jpeg_regs, HWIF_PIC_WIDTH_IN_CBS,
@@ -14972,67 +14264,6 @@ enum DecRet JpegDecInitHW(JpegDecContainer * dec_cont) {
   {
     ASSERT(dec_cont->pp_enabled);
     if (dec_cont->pp_enabled /*&& ((asic_id & 0x0000F000) >> 12 >= 7)*/) {
-      PpUnitIntConfig *ppu_cfg = &dec_cont->ppu_cfg[0];
-      PpUnitIntConfig *tmp_ppu_cfg = NULL;
-      if (RI_MC_ENABLED(dec_cont->ri_mc_enabled)) {
-        tmp_ppu_cfg = (PpUnitIntConfig *)DWLmalloc(sizeof(dec_cont->ppu_cfg));
-        if (tmp_ppu_cfg == NULL) {
-          if (!dec_cont->vcmd_used)
-            DWLReleaseHw(dec_cont->dwl, dec_cont->core_id);
-          else
-            DWLReleaseCmdBuf(dec_cont->dwl, dec_cont->cmd_buf_id);
-          return DEC_MEMFAIL;
-        }
-        DWLmemcpy(tmp_ppu_cfg, dec_cont->ppu_cfg, sizeof(dec_cont->ppu_cfg));
-        u32 ri_height = dec_cont->frame.num_mcu_rows_in_interval *
-                        dec_cont->frame.mcu_height;
-        for (i = 0; i < DEC_MAX_PPU_COUNT; i++, ppu_cfg++) {
-          u32 full_crop_h = ppu_cfg->crop.height;
-          u32 full_scale_h = ppu_cfg->scale.height;
-          if (!ppu_cfg->enabled ||
-              /* Not in cropping window. */
-              dec_cont->ri_index < dec_cont->start_ri_index[i] ||
-              dec_cont->ri_index > dec_cont->end_ri_index[i]) {
-              ppu_cfg->enabled = 0;
-              continue;
-          }
-          if (dec_cont->ri_index == dec_cont->start_ri_index[i]) {
-            /* First restart interval:
-             * Update:
-             *    crop.y
-             *    crop.height
-             *    scale.height
-             */
-            /* Becareful of overflow & underflow, especially for 16/32K jpeg. */
-            ppu_cfg->crop.y = ppu_cfg->crop.y % ri_height;
-            ppu_cfg->crop.height = ri_height - ppu_cfg->crop.y;
-          } else {
-            /* Middle/last restart intervals:
-             * Update:
-             *    crop.y -> 0
-             *    crop.height -> restart interval height / real height in ri
-             *    scale.height
-             *    luma_offset/chroma_offset
-             */
-            if (dec_cont->ri_index == dec_cont->end_ri_index[i]) {
-              ppu_cfg->crop.height = (ppu_cfg->crop.y + ppu_cfg->crop.height) % ri_height;
-              if (!ppu_cfg->crop.height)
-                ppu_cfg->crop.height = ri_height;
-            } else {
-              ppu_cfg->crop.height = ri_height;
-            }
-            ppu_cfg->luma_offset += ppu_cfg->luma_size / full_crop_h *
-                                    (dec_cont->ri_index * ri_height -
-                                     ppu_cfg->crop.y);
-            ppu_cfg->chroma_offset += ppu_cfg->chroma_size / full_crop_h *
-                                      (dec_cont->ri_index * ri_height -
-                                       ppu_cfg->crop.y);
-            ppu_cfg->crop.y = 0;
-          }
-          ppu_cfg->scale.height = ppu_cfg->crop.height *
-                                    full_scale_h / full_crop_h;
-          }
-        }
         /* PPSetRegs need to add slice_mb_set_value support in future  */
         DelogoSetRegs(dec_cont->jpeg_regs, hw_feature, dec_cont->delogo_params);
         struct DWLDecBuffers *dec_buffers = InputQueueGetBufByID(dec_cont->pp_buffer_queue,
@@ -15063,12 +14294,6 @@ enum DecRet JpegDecInitHW(JpegDecContainer * dec_cont) {
         PPSetRegs(dec_cont->jpeg_regs, &pp_args);
         dec_cont->sbi_pic_start = 1;
         PPSetLancozsScaleRegs(dec_cont->jpeg_regs, hw_feature, dec_cont->ppu_cfg, core_id);
-        if (tmp_ppu_cfg != NULL) {
-          /* Restore ppu config. */
-          DWLmemcpy(dec_cont->ppu_cfg, tmp_ppu_cfg, sizeof(dec_cont->ppu_cfg));
-          DWLfree(tmp_ppu_cfg);
-          dec_cont->ri_running_cores++;
-        }
       }
       /* Crop when hight is multiple of 8 instead of 16. */
       if (((dec_cont->frame.Y + 7) >> 3) & 1) {
@@ -15076,10 +14301,7 @@ enum DecRet JpegDecInitHW(JpegDecContainer * dec_cont) {
       } else
         SetDecRegister(dec_cont->jpeg_regs, HWIF_MB_HEIGHT_OFF, 0);
   }
-  /* In slice decoding mode, HW is only reserved once, but HW must be reserved for each
-   * ri in ri-based multicore decoding. */
-  if (!RI_MC_ENABLED(dec_cont->ri_mc_enabled))
-    dec_cont->info.slice_start_count = 1;
+  dec_cont->info.slice_start_count = 1;
 
   /* Enable jpeg mode and set slice mode */
   APITRACEDEBUG("%s","INTERNAL: Enable jpeg\n");
@@ -15093,27 +14315,7 @@ enum DecRet JpegDecInitHW(JpegDecContainer * dec_cont) {
       DWLSyncMemData(dec_cont->dwl, &dec_cont->frame.p_table_base[i], 0,
                       dec_cont->frame.p_table_base[i].size, HOST_TO_DEVICE);
   }
-  if (dec_cont->b_mc || RI_MC_ENABLED(dec_cont->ri_mc_enabled)) {
-    if (RI_MC_DISABLED(dec_cont->ri_mc_enabled)) {
-      JpegMCSetHwRdyCallback(dec_cont);
-    } else {
-      JpegRiMCSetHwRdyCallback(dec_cont);
-    }
-  }
-  if (!dec_cont->vcmd_used)
-    DWLEnableHw(dec_cont->dwl, dec_cont->core_id, 4 * 1, dec_cont->jpeg_regs[1]);
-  else {
-    if(dec_cont->crc_enabled) {
-      u32 bd = dec_cont->frame.P == 8? 8 : 12;
-      DWLmemset(dec_cont->vcmd_m2mp_data, 0, sizeof(dec_cont->vcmd_m2mp_data));
-      CommonSetM2MPComands(dec_cont->ppu_cfg, dec_cont->vcmd_m2mp_data, dec_cont->asic_buff.pp_luma_buffer[0].bus_address,
-                           dec_cont->pp_enabled, 0, hw_feature->crop_step_rshift,
-                           dec_cont->frame.X , dec_cont->frame.Y,
-                           bd, 0, dec_cont->align);
-      DWLCmdM2MPSendData(dec_cont->dwl, NULL, dec_cont->vcmd_m2mp_data, dec_cont->cmd_buf_id);
-    }
-    DecLinkAndRunCmds(dec_cont->dwl, NULL, dec_cont->cmd_buf_id);
-  }
+  DWLEnableHw(dec_cont->dwl, dec_cont->core_id, 4 * 1, dec_cont->jpeg_regs[1]);
   dec_cont->asic_running = 1;
 
   return DEC_OK;
@@ -15203,13 +14405,6 @@ void JpegDecInitHWContinue(JpegDecContainer * dec_cont) {
   }
   DWLWriteReg(dec_cont->dwl, dec_cont->core_id, 0x14,
               dec_cont->jpeg_regs[5]);
-  if (dec_cont->b_mc || RI_MC_ENABLED(dec_cont->ri_mc_enabled)) {
-    if (RI_MC_DISABLED(dec_cont->ri_mc_enabled)) {
-      JpegMCSetHwRdyCallback(dec_cont);
-    } else {
-      JpegRiMCSetHwRdyCallback(dec_cont);
-    }
-  }
   DWLEnableHw(dec_cont->dwl, dec_cont->core_id, 0x4,
               dec_cont->jpeg_regs[1]);
 
@@ -15298,13 +14493,6 @@ void JpegDecInitHWInputBuffLoad(JpegDecContainer * dec_cont) {
               dec_cont->jpeg_regs[5]);
   DWLWriteReg(dec_cont->dwl, dec_cont->core_id, 0x18,
               dec_cont->jpeg_regs[6]);
-  if (dec_cont->b_mc || RI_MC_ENABLED(dec_cont->ri_mc_enabled)) {
-    if (RI_MC_DISABLED(dec_cont->ri_mc_enabled)) {
-      JpegMCSetHwRdyCallback(dec_cont);
-    } else {
-      JpegRiMCSetHwRdyCallback(dec_cont);
-    }
-  }
   DWLEnableHw(dec_cont->dwl, dec_cont->core_id, 0x04,
               dec_cont->jpeg_regs[1]);
 
@@ -15625,14 +14813,7 @@ void JpegDecSliceSizeCalculation(JpegDecContainer * dec_cont) {
 void JpegRefreshRegs(JpegDecContainer * dec_cont) {
   u32 *dec_regs = dec_cont->jpeg_regs;
 
-  if(dec_cont->vcmd_used) {
-    DWLRefreshRegister(dec_cont->dwl, dec_cont->cmd_buf_id, dec_regs);
-    if(dec_cont->b_mc)
-      DWLVcmdMCRefreshStatusRegs(dec_cont->dwl, dec_regs, dec_cont->cmd_buf_id);
-  }
-  else {
-    DWLReadRegs(dec_cont->dwl, dec_cont->core_id, 4*1, &dec_regs[1], dec_cont->cur_hw_feature->max_regs);
-  }
+  DWLReadRegs(dec_cont->dwl, dec_cont->core_id, 4*1, &dec_regs[1], dec_cont->cur_hw_feature->max_regs);
 }
 
 /*------------------------------------------------------------------------------
@@ -15643,159 +14824,19 @@ void JpegRefreshRegs(JpegDecContainer * dec_cont) {
 ------------------------------------------------------------------------------*/
 void JpegFlushRegs(JpegDecContainer * dec_cont) {
 
-  if(dec_cont->vcmd_used)
-    DWLFlushRegister(dec_cont->dwl, dec_cont->cmd_buf_id, dec_cont->jpeg_regs,
-                     dec_cont->mc_refresh_regs, dec_cont->core_id);
-  else
-    FlushDecRegisters(dec_cont->dwl, dec_cont->core_id, dec_cont->jpeg_regs,
-                      dec_cont->cur_hw_feature->max_regs);
+  FlushDecRegisters(dec_cont->dwl, dec_cont->core_id, dec_cont->jpeg_regs,
+                    dec_cont->cur_hw_feature->max_regs);
 }
 
 u32 JpegCheckHwStatus(JpegDecContainer *dec_cont)
 {
    u32 tmp = 0;
-   if (dec_cont->vcmd_used) {
-     tmp = dec_cont->jpeg_regs[1];
-   } else {
-     tmp = DWLReadRegFromHw(dec_cont->dwl, dec_cont->core_id, 4 * 1);
-   }
+   tmp = DWLReadRegFromHw(dec_cont->dwl, dec_cont->core_id, 4 * 1);
 
   if(tmp & 0x01)
     return 1;
   else
     return 0;
-}
-
-static void ClearHWOutput(FrameBufferList *fb_list, u32 id, u32 type) {
-  u32 *bs = fb_list->fb_stat + id;
-
-  pthread_mutex_lock(&fb_list->ref_count_mutex);
-
-  ASSERT(*bs & (FB_HW_ONGOING));
-
-  *bs &= ~type;
-
-  if ((*bs & FB_HW_ONGOING) == 0) {
-    /* signal that this buffer is done by HW */
-    pthread_cond_signal(&fb_list->hw_rdy_cv);
-  }
-
-  pthread_mutex_unlock(&fb_list->ref_count_mutex);
-}
-
-static void MarkHWOutput(FrameBufferList *fb_list, u32 id, u32 type) {
-
-  pthread_mutex_lock(&fb_list->ref_count_mutex);
-
-  ASSERT( fb_list->fb_stat[id] ^ type );
-
-  fb_list->fb_stat[id] |= type;
-
-  pthread_mutex_unlock(&fb_list->ref_count_mutex);
-}
-
-static void JpegMCHwRdyCallback(void *args, i32 core_id) {
-  JpegDecContainer *dec_cont = (JpegDecContainer *)args;
-  JpegHwRdyCallbackArg *info;
-
-  const void *dwl;
-
-  u32 type = FB_HW_ONGOING;
-
-  ASSERT(dec_cont != NULL);
-  ASSERT(core_id < MAX_ASIC_CORES || (dec_cont->vcmd_used && core_id < MAX_MC_CB_ENTRIES));
-
-  /* take a copy of the args as after we release the HW they
-   * can be overwritten.
-   */
-  dwl = dec_cont->dwl;
-  info = dec_cont->hw_rdy_callback_arg[core_id];
-
-  /* React to the HW return value */
-
-  if(dec_cont->stream_consumed_callback.fn)
-    dec_cont->stream_consumed_callback.fn((u8*)info->stream,
-                                          (void*)info->p_user_data);
-  ClearHWOutput(&dec_cont->fb_list, info->out_id, type);
-  /* clear IRQ status reg and release HW core */
-  if (!dec_cont->vcmd_used) {
-    DWLDisableHw(dwl, core_id, 0x04, 0);
-    dec_cont->dec_status[info->core_id] = DEC_IDLE;
-    DWLReleaseHw(dwl, info->core_id);
-  } else {
-    DWLReleaseCmdBuf(dwl, info->core_id);
-  }
-}
-
-static void JpegMCSetHwRdyCallback(JpegDecInst dec_inst) {
-  JpegDecContainer *dec_cont = (JpegDecContainer *) dec_inst;
-  u32 type = FB_HW_ONGOING;
-  JpegHwRdyCallbackArg *arg = dec_cont->hw_rdy_callback_arg[dec_cont->core_id];
-  i32 core_id = dec_cont->core_id;
-
-  if (arg == NULL) {
-    dec_cont->hw_rdy_callback_arg[core_id] = DWLmalloc(sizeof(JpegHwRdyCallbackArg));
-    arg = dec_cont->hw_rdy_callback_arg[core_id];
-  }
-  if (dec_cont->vcmd_used) {
-    arg = dec_cont->hw_rdy_callback_arg[dec_cont->cmd_buf_id];
-    core_id = dec_cont->cmd_buf_id;
-  }
-  arg->core_id = core_id;
-  arg->stream = dec_cont->stream_consumed_callback.p_strm_buff;
-  arg->p_user_data = dec_cont->stream_consumed_callback.p_user_data;
-  arg->out_id = dec_cont->fb_list.wr_id;
-
-  DWLSetIRQCallback(dec_cont->dwl, core_id, JpegMCHwRdyCallback,
-                    dec_cont);
-
-  MarkHWOutput(&dec_cont->fb_list, arg->out_id, type);
-}
-
-static void JpegRiMCHwRdyCallback(void *args, i32 core_id) {
-  JpegDecContainer *dec_cont = (JpegDecContainer *)args;
-  JpegHwRdyCallbackArg *info;
-  const void *dwl;
-
-  ASSERT(dec_cont != NULL);
-  ASSERT(core_id < MAX_ASIC_CORES);
-
-  /* take a copy of the args as after we release the HW they
-   * can be overwritten.
-   */
-  dwl = dec_cont->dwl;
-  info = dec_cont->hw_rdy_callback_arg[core_id];
-  dec_cont->ri_running_cores--;
-
-  /* React to the HW return value */
-#if 0
-  u32 perf_cycles;
-  perf_cycles = DWLReadReg(dwl, core_id, 63 * 4);
-  printf("Core[%d] cycles %d/MB\n", core_id,
-          perf_cycles /
-          (dec_cont->info.X * dec_cont->frame.mcu_height *
-           dec_cont->frame.num_mcu_rows_in_interval / 256));
-#endif
-
-  /* clear IRQ status reg and release HW core */
-  DWLDisableHw(dwl, core_id, 0x04, 0);
-  DWLReleaseHw(dwl, info->core_id);
-
-  if (dec_cont->ri_index > dec_cont->last_ri_index &&
-      dec_cont->ri_running_cores == 0) {
-    sem_post(&dec_cont->sem_ri_mc_done);
-  }
-  dec_cont->dec_status[info->core_id] = DEC_IDLE;
-}
-
-static void JpegRiMCSetHwRdyCallback(JpegDecInst dec_inst) {
-  JpegDecContainer *dec_cont = (JpegDecContainer *) dec_inst;
-  JpegHwRdyCallbackArg *arg = dec_cont->hw_rdy_callback_arg[dec_cont->core_id];
-
-  arg->core_id = dec_cont->core_id;
-
-  DWLSetIRQCallback(dec_cont->dwl, dec_cont->core_id, JpegRiMCHwRdyCallback,
-                    dec_cont);
 }
 
 struct DWLDecBuffers JpegPrepareCurDecBuffers(const JpegDecContainer *dec_cont, const struct DWLLinearMem *luma,
@@ -16447,20 +15488,11 @@ typedef struct {
   u32 abort;
 
   addr_t png_hw_start_bus;
-  u32 vcmd_used;  /* decoder connects to VCMD engine to start HW */
-  u32 cmd_buf_id; /* command buffer id used for current picture */
-  u32 mc_refresh_regs[READ_STATUS_REGS_COUNT];
-  u32 n_cores_available;
   u32 n_cores;
 
   struct LLStrmInfo llstrminfo;
 
   u32 secure_mode;
-
-  enum {
-    Png_DEC_IDLE = 0,       /* DEC is idle */
-    Png_DEC_RUNNING         /* DEC is running */
-  } dec_status[MAX_ASIC_CORES]; /* used to track each core's status in MC mode */
 
 #ifdef FPGA_PERF_AND_BW
   DecPerfInfo perf_info;
@@ -16470,7 +15502,6 @@ typedef struct {
   u32 seq_core_mask;
   const struct DecHwFeatures *cur_hw_feature;
 
-  struct M2MP_INFO vcmd_m2mp_data[MAX_VCMD_M2MP_NUM];
   CrcData *crc;
   u32 crc_enabled;
 
@@ -17151,7 +16182,6 @@ enum DecRet PngDecInit(PngDecInst * dec_inst, const void *dwl, struct PngDecConf
                    &dec_cont->core_mask, &dec_cont->secure_mode,
                    dec_cont->hw_features, &dec_cont->cur_hw_feature);
   dec_cont->seq_core_mask = dec_cont->core_mask;
-  dec_cont->n_cores_available = SwGetCores(CORE_MASK(dec_cfg->misc_ctrl));
 
   // dec_cont->stream_consumed_callback.fn = dec_cfg->mcinit_cfg.stream_consumed_callback;
   // dec_cont->b_mc = dec_cfg->mcinit_cfg.mc_enable;
@@ -17161,7 +16191,6 @@ enum DecRet PngDecInit(PngDecInst * dec_inst, const void *dwl, struct PngDecConf
   /* reset internal structures */
   PngDecClearStructs(dec_cont);
 
-  dec_cont->vcmd_used = DWLVcmdIsUsed(dec_cont->dwl);
   dec_cont->crc_enabled = dec_cfg->crc_enabled;
 
   dec_cont->png_regs[0] = DWLReadAsicID(dec_cont->dwl, DWL_CLIENT_TYPE_PNG_DEC);
@@ -17220,14 +16249,9 @@ void PngDecRelease(PngDecInst dec_inst) {
   }
 
   if(dec_cont->asic_running) {
-    if (!dec_cont->vcmd_used) {
-      /* Release HW */
-      DWLDisableHw(dec_cont->dwl, dec_cont->core_id, 4 * 1, 0);
-      DWLReleaseHw(dec_cont->dwl, dec_cont->core_id);
-    }
-    else {
-      DWLReleaseCmdBuf(dec_cont->dwl, dec_cont->cmd_buf_id);
-    }
+    /* Release HW */
+    DWLDisableHw(dec_cont->dwl, dec_cont->core_id, 4 * 1, 0);
+    DWLReleaseHw(dec_cont->dwl, dec_cont->core_id);
   }
 
 /* TODO realease other buffer here , such as palette buffer */
@@ -17475,15 +16499,10 @@ enum DecRet PngDecDecode(PngDecInst dec_inst,
           SwGetCrcLast(&dec_cont->crc, &p_dec_out->crc);
           Png_PushOutputPic(&dec_cont->fb_list, p_dec_out, &dec_cont->image_info);
 
-          if (!dec_cont->vcmd_used) {
-            DWLDisableHw(dec_cont->dwl, dec_cont->core_id, 4 * 1,
-                         dec_cont->png_regs[1]);
-            /* Release HW */
-            (void) DWLReleaseHw(dec_cont->dwl, dec_cont->core_id);
-          }
-          else {
-            DWLReleaseCmdBuf(dec_cont->dwl, dec_cont->cmd_buf_id);
-          }
+          DWLDisableHw(dec_cont->dwl, dec_cont->core_id, 4 * 1,
+                       dec_cont->png_regs[1]);
+          /* Release HW */
+          (void) DWLReleaseHw(dec_cont->dwl, dec_cont->core_id);
           /* update asic_running */
           dec_cont->asic_running = 0;
           return DEC_PIC_RDY;
@@ -17494,15 +16513,10 @@ enum DecRet PngDecDecode(PngDecInst dec_inst,
           PNGDEC_CLEAR_IRQ;
 
           SetDecRegister(dec_cont->png_regs, HWIF_DEC_E, 0);
-          if (!dec_cont->vcmd_used) {
-            DWLDisableHw(dec_cont->dwl, dec_cont->core_id, 4 * 1,
-                         dec_cont->png_regs[1]);
-            /* Release HW */
-            (void) DWLReleaseHw(dec_cont->dwl, dec_cont->core_id);
-          }
-          else {
-            DWLReleaseCmdBuf(dec_cont->dwl, dec_cont->cmd_buf_id);
-          }
+          DWLDisableHw(dec_cont->dwl, dec_cont->core_id, 4 * 1,
+                       dec_cont->png_regs[1]);
+          /* Release HW */
+          (void) DWLReleaseHw(dec_cont->dwl, dec_cont->core_id);
           /* update asic_running */
           dec_cont->asic_running = 0;
 
@@ -17535,13 +16549,10 @@ enum DecRet PngDecDecode(PngDecInst dec_inst,
 
           SetDecRegister(dec_cont->png_regs, HWIF_DEC_E, 0);
           /* Release HW */
-          if (!dec_cont->vcmd_used) {
-            DWLDisableHw(dec_cont->dwl, dec_cont->core_id, 4 * 1,
-                         dec_cont->png_regs[1]);
+          DWLDisableHw(dec_cont->dwl, dec_cont->core_id, 4 * 1,
+                       dec_cont->png_regs[1]);
 
-            (void)DWLReleaseHw(dec_cont->dwl, dec_cont->core_id);
-          } else
-            DWLReleaseCmdBuf(dec_cont->dwl, dec_cont->cmd_buf_id);
+          (void)DWLReleaseHw(dec_cont->dwl, dec_cont->core_id);
 
           /* update asic_running */
           dec_cont->asic_running = 0;
@@ -17740,10 +16751,7 @@ static void PngDecStopSBI(PngDecContainer *dec_cont, u32 i) {
   info.width = dec_cont->Hdrs.pic_width;
   info.height = dec_cont->Hdrs.pic_height;
   info.owner = (void *)dec_cont;
-  if (!dec_cont->vcmd_used)
-    ret = DWLReserveHw(dec_cont->dwl, &info, &dec_cont->core_id);
-  else
-    ASSERT(0);
+  ret = DWLReserveHw(dec_cont->dwl, &info, &dec_cont->core_id);
   PpUnitIntConfig *ppu_cfg = &dec_cont->ppu_cfg[i];
   ASSERT(dec_cont->pp_enabled && hw_feature->max_ppu_count);
   struct PpParams pp_args = {dec_cont->cur_hw_feature,
@@ -17758,26 +16766,18 @@ static void PngDecStopSBI(PngDecContainer *dec_cont, u32 i) {
   SetDecRegister(dec_cont->png_regs, HWIF_DEC_E, 1);
   SetDecRegister(dec_cont->png_regs, HWIF_DEC_ABORT_E, 1);
   PngFlushRegs(dec_cont);
-  if (!dec_cont->vcmd_used) {
-    DWLEnableHw(dec_cont->dwl, dec_cont->core_id, 4 * 1, dec_cont->png_regs[1]);
-    ret = DWLWaitHwReady(dec_cont->dwl, dec_cont->core_id, (u32) DEC_X170_TIMEOUT_LENGTH);
-  }
-  else
-    ASSERT(0);
+  DWLEnableHw(dec_cont->dwl, dec_cont->core_id, 4 * 1, dec_cont->png_regs[1]);
+  ret = DWLWaitHwReady(dec_cont->dwl, dec_cont->core_id, (u32) DEC_X170_TIMEOUT_LENGTH);
   PngRefreshRegs(dec_cont);
   asic_status = GetDecRegister(dec_cont->png_regs, HWIF_DEC_IRQ_STAT);
   ASSERT(asic_status & DEC_HW_IRQ_ABORT);
-  if (!dec_cont->vcmd_used)
-    (void) DWLReleaseHw(dec_cont->dwl, dec_cont->core_id);
-  else
-    ASSERT(0);
+  (void) DWLReleaseHw(dec_cont->dwl, dec_cont->core_id);
 
   DWLFreeLinear(dec_cont->dwl, &dummy_in);
 }
 
 enum DecRet PngDecEndOfStream(PngDecInst dec_inst) {
   PngDecContainer *dec_cont;
-  u32 count = 0;
 
   if(dec_inst == NULL) {
     APITRACEERR("%s","PngDecNextPicture# ERROR: dec_inst or output is NULL\n");
@@ -17790,16 +16790,6 @@ enum DecRet PngDecEndOfStream(PngDecInst dec_inst) {
       usleep(10000);
       PngDecStopSBI(dec_cont, i);
       break;
-    }
-  }
-
-  if(dec_cont->vcmd_used){
-    DWLWaitCmdbufsDone(dec_cont->dwl, dec_inst);
-  } else {
-    /* Check all Core in idle state */
-    for(count = 0; count < dec_cont->n_cores_available; count++) {
-      while (dec_cont->dec_status[count] == Png_DEC_RUNNING)
-        sched_yield();
     }
   }
 
@@ -18798,18 +17788,9 @@ u32 PngRunAsic(PngDecContainer *dec_cont) {
     info.width = dec_cont->Hdrs.pic_width;
     info.height = dec_cont->Hdrs.pic_height;
     info.owner = (void *)dec_cont;
-    if (!dec_cont->vcmd_used) {
-      if(DWLReserveHw(dec_cont->dwl,  &info, &dec_cont->core_id) == DWL_ERROR) {
-        APITRACEERR("%s","PngDecInitHW: ERROR hw resource unavailable\n");
-        return DEC_HW_RESERVED;
-      }
-    } else {
-      /* Always store registers in png_regs[0] when VCMD is used.*/
-      dec_cont->core_id = 0;
-      if (DWLReserveCmdBuf(dec_cont->dwl, &info, &dec_cont->cmd_buf_id) == DWL_ERROR) {
-        APITRACEERR("%s","PngDecInitHW: ERROR command buffer unavailable\n");
-        return DEC_HW_RESERVED;
-      }
+    if(DWLReserveHw(dec_cont->dwl,  &info, &dec_cont->core_id) == DWL_ERROR) {
+      APITRACEERR("%s","PngDecInitHW: ERROR hw resource unavailable\n");
+      return DEC_HW_RESERVED;
     }
   }
 
@@ -18916,31 +17897,10 @@ u32 PngRunAsic(PngDecContainer *dec_cont) {
   /* Flush regs to hw register */
   PngFlushRegs(dec_cont);
 
-  if (!dec_cont->vcmd_used)
-    DWLEnableHw(dec_cont->dwl, dec_cont->core_id, 4 * 1, dec_cont->png_regs[1]);
-  else {
-    if(dec_cont->crc_enabled) {
-      DWLmemset(dec_cont->vcmd_m2mp_data, 0, sizeof(dec_cont->vcmd_m2mp_data));
-      CommonSetM2MPComands(dec_cont->ppu_cfg, dec_cont->vcmd_m2mp_data, dec_cont->asic_buff.pp_luma_buffer[0].bus_address,
-                           dec_cont->pp_enabled, 0, hw_feature->crop_step_rshift,
-                           dec_cont->Hdrs.pic_width, dec_cont->Hdrs.pic_height,
-                           8, 0, dec_cont->align);
-      DWLCmdM2MPSendData(dec_cont->dwl, NULL, dec_cont->vcmd_m2mp_data, dec_cont->cmd_buf_id);
-    }
-    DecLinkAndRunCmds(dec_cont->dwl, NULL, dec_cont->cmd_buf_id);
-  }
+  DWLEnableHw(dec_cont->dwl, dec_cont->core_id, 4 * 1, dec_cont->png_regs[1]);
   dec_cont->asic_running = 1;
-  if (dec_cont->vcmd_used) {
-    ret = DWLWaitCmdBufReady(dec_cont->dwl, dec_cont->cmd_buf_id);
-    if(dec_cont->crc_enabled) {
-      CrcData *tmp;
-      SwGetCrcMem(&dec_cont->crc, &tmp);
-      DWLRefreshCrcResult(dec_cont->dwl, &tmp, dec_cont->cmd_buf_id);
-    }
-  } else {
-    ret = DWLWaitHwReady(dec_cont->dwl, dec_cont->core_id,
-                         (u32)DEC_X170_TIMEOUT_LENGTH);
-  }
+  ret = DWLWaitHwReady(dec_cont->dwl, dec_cont->core_id,
+                       (u32)DEC_X170_TIMEOUT_LENGTH);
 
   if (ret != DWL_HW_WAIT_OK) {
     APITRACEDEBUG("%s","DWLWaitHwReady\n");
@@ -18951,13 +17911,9 @@ u32 PngRunAsic(PngDecContainer *dec_cont) {
     SetDecRegister(dec_cont->png_regs, HWIF_DEC_IRQ, 0);
 
     dec_cont->asic_running = 0;
-    if (!dec_cont->vcmd_used) {
-      DWLDisableHw(dec_cont->dwl, dec_cont->core_id, 4 * 1,
-                   dec_cont->png_regs[1]);
-      (void) DWLReleaseHw(dec_cont->dwl, dec_cont->core_id);
-    }
-    else
-      (void) DWLReleaseCmdBuf(dec_cont->dwl, dec_cont->cmd_buf_id);
+    DWLDisableHw(dec_cont->dwl, dec_cont->core_id, 4 * 1,
+                 dec_cont->png_regs[1]);
+    (void) DWLReleaseHw(dec_cont->dwl, dec_cont->core_id);
 
     return (ret == DWL_HW_WAIT_ERROR) ? X170_DEC_SYSTEM_ERROR : X170_DEC_SYSTEM_TIMEOUT;
   }
@@ -18972,22 +17928,14 @@ u32 PngRunAsic(PngDecContainer *dec_cont) {
 }
 
 void PngFlushRegs(PngDecContainer *dec_cont) {
-  if(dec_cont->vcmd_used)
-    DWLFlushRegister(dec_cont->dwl, dec_cont->cmd_buf_id, dec_cont->png_regs,
-                     dec_cont->mc_refresh_regs, dec_cont->core_id);
-  else
-    FlushDecRegisters(dec_cont->dwl, dec_cont->core_id, dec_cont->png_regs,
-                      dec_cont->cur_hw_feature->max_regs);
+  FlushDecRegisters(dec_cont->dwl, dec_cont->core_id, dec_cont->png_regs,
+                    dec_cont->cur_hw_feature->max_regs);
 }
 
 void PngRefreshRegs(PngDecContainer *dec_cont) {
   u32 *dec_regs = dec_cont->png_regs;
 
-  if(dec_cont->vcmd_used) {
-    DWLRefreshRegister(dec_cont->dwl, dec_cont->cmd_buf_id, dec_regs);
-  } else {
-    DWLReadRegs(dec_cont->dwl, dec_cont->core_id, 4*1, &dec_regs[1], dec_cont->cur_hw_feature->max_regs);
-  }
+  DWLReadRegs(dec_cont->dwl, dec_cont->core_id, 4*1, &dec_regs[1], dec_cont->cur_hw_feature->max_regs);
 }
 
 void PngDecSetHwStrmParams(PngDecContainer *dec_cont) {
@@ -19063,11 +18011,7 @@ void PngDecSetHwStrmParams(PngDecContainer *dec_cont) {
 u32 PngCheckHwStatus(PngDecContainer *dec_cont)
 {
    u32 tmp = 0;
-   if (dec_cont->vcmd_used) {
-     tmp = dec_cont->png_regs[1];
-   } else {
-     tmp = DWLReadRegFromHw(dec_cont->dwl, dec_cont->core_id, 4 * 1);
-   }
+   tmp = DWLReadRegFromHw(dec_cont->dwl, dec_cont->core_id, 4 * 1);
 
   if(tmp & 0x01)
     return 1;
