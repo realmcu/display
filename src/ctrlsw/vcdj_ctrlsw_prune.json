@@ -1120,13 +1120,391 @@
       "why": "D15: the AREA-only scaler arm of the algorithm flags; the general else stays"
     },
     {
+      "action": "delete_macro",
+      "name": "SET_ADDR_REG2",
+      "comment_above": true,
+      "why": "D10: no caller"
+    },
+    {
+      "action": "delete_macro",
+      "name": "SET_ADDR_REG3",
+      "comment_above": true,
+      "why": "D10: no caller"
+    },
+    {
+      "action": "delete_macro",
+      "name": "SET_PP_ADDR_REG",
+      "why": "D10: no caller"
+    },
+    {
+      "action": "delete_macro",
+      "name": "SET_ADDR64_REG",
+      "why": "D10: no caller"
+    },
+    {
+      "action": "substitute",
+      "pattern": "(?m)^    if \\(hw_feature->addr64_support\\) \\{ \\\\\\n(?:.*\\n){4}    \\} else \\{ \\\\\\n      (if\\(sizeof\\(addr_t\\) == 8\\) \\\\)\\n        (ASSERT.*\\\\)\\n    \\} \\\\\\n",
+      "with": "    \\1\n      \\2\n",
+      "multiline": true,
+      "count": 1,
+      "why": "D10: 0x2070 has 32-bit addresses (addr64_support = 0, HW Features Table 5), so SET_ADDR_REG keeps only its 32-bit arm"
+    },
+    {
+      "action": "substitute",
+      "pattern": "(?m)^    if \\(hw_feature->addr64_support\\) \\{ \\\\\\n.*\\n    \\} else \\{ \\\\\\n      (assert.*\\\\)\\n      (SetPpuRegister.*\\\\)\\n    \\} \\\\\\n",
+      "with": "    \\1\n    \\2\n",
+      "multiline": true,
+      "count": 1,
+      "why": "D10: as SET_ADDR_REG; the MSB register is still written as 0"
+    },
+    {
+      "action": "delete_block",
+      "match": "^\\s*if \\(ppu_ext_cfg->comp_enabled\\) \\{",
+      "why": "C01/C02: 0x2070 has no PP compression (pp_comp_support = 0; HW Features Table 11 lists none, DEC400 removed per the Implementation Manual). The request field goes below, so asking for compression is a compile error"
+    },
+    {
+      "action": "fold_false_if",
+      "match": "^\\s*if \\(ppu_int_cfg->dec400_enabled\\) \\{",
+      "why": "C02: dec400_enabled was only set by the block above; the shaper no-pad else stays"
+    },
+    {
+      "action": "fold_false_if",
+      "match": "^\\s*if \\(dec_cfg->ppu_config\\[i\\]\\.comp_enabled && ",
+      "why": "C02: the PNG DEC400 alignment arm"
+    },
+    {
+      "action": "delete_block",
+      "match": "^\\s*if \\(ppu_cfg->pp_pvfbc\\)\\{",
+      "comment_above": true,
+      "why": "C01: the PVFBC request checks"
+    },
+    {
+      "action": "delete_block",
+      "match": "^\\s*if \\(ppu_cfg->pp_pvfbc_bypass && ppu_cfg->pp_pvfbc == 0\\) \\{",
+      "why": "C01: the PVFBC bypass check"
+    },
+    {
+      "action": "delete_block",
+      "match": "^\\s*if \\(pixel_width > 8 && ppu_cfg->dec400_enabled && ",
+      "why": "C02: the DEC400 request checks in CheckPpUnitConfig"
+    },
+    {
+      "action": "delete_block",
+      "match": "^\\s*if \\(ppu_cfg->dec400_enabled && interlace\\) \\{",
+      "comment_above": true,
+      "why": "C02"
+    },
+    {
+      "action": "delete_block",
+      "match": "^\\s*if \\(ppu_cfg->dec400_enabled && ppu_cfg->rgb_planar\\) \\{",
+      "why": "C02"
+    },
+    {
+      "action": "delete_block",
+      "match": "^\\s*if \\(ppu_cfg->dec400_enabled && ppu_cfg->chroma_format == PP_YUV422 ",
+      "why": "C02"
+    },
+    {
+      "action": "delete_block",
+      "match": "^\\s*if \\(ppu_cfg->dec400_enabled && ppu_cfg->chroma_format == PP_YUV444\\) \\{",
+      "why": "C02"
+    },
+    {
+      "action": "delete_block",
+      "match": "^\\s*if \\(ppu_cfg->dec400_enabled && ppu_cfg->shaper_enabled ",
+      "why": "C02"
+    },
+    {
+      "action": "delete_block",
+      "match": "^\\s*if \\(ppu_cfg->dec400_enabled && !\\(ppu_cfg->dec400_align ",
+      "why": "C02"
+    },
+    {
+      "action": "delete_block",
+      "match": "^\\s*if \\(ppu_cfg->dec400_enabled && ppu_cfg->norm_enable\\) \\{",
+      "why": "C02"
+    },
+    {
+      "action": "delete_block",
+      "match": "^\\s*if \\(ppu_cfg->dec400_enabled && ppu_cfg->rgb && \\(!IS_4PLAN_FORMAT",
+      "why": "C02"
+    },
+    {
+      "action": "delete_block",
+      "match": "^\\s*if \\(ppu_cfg->dec400_conformance_test_en && !ppu_cfg->dec400_enabled\\) \\{",
+      "why": "C02"
+    },
+    {
+      "action": "delete_block",
+      "match": "^\\s*if \\(ppu_cfg->pp_comp && \\(!hw_feature->pp_comp_support\\[i\\]\\)\\) \\{",
+      "why": "C01: pp_comp was only set by the FBC case of the block removed above"
+    },
+    {
+      "action": "fold_false_if",
+      "match": "^\\s*\\} else if \\(ppu_cfg->pp_pvfbc_bypass\\) \\{",
+      "why": "C01: the PVFBC bypass stride"
+    },
+    {
+      "action": "fold_false_if",
+      "match": "^\\s*if \\(IS_PIC_PVFBC\\(format\\) \\|\\| IS_PIC_PVFBC_BYPASS\\(format\\)\\) \\{",
+      "count": 2,
+      "why": "C01: the PVFBC plane sizes in CommonSetM2MPComands"
+    },
+    {
+      "action": "delete_block",
+      "match": "^\\s*if \\(IS_PIC_DEC400\\(format\\)\\) \\{",
+      "comment_above": true,
+      "why": "C02: the DEC400 tables in CommonSetM2MPComands"
+    },
+    {
+      "action": "fold_false_if",
+      "match": "^\\s*if\\(ppu_cfg->pp_pvfbc && p_hw_feature->pp_comp_support\\[i\\] == 3\\) \\{",
+      "why": "C01: the compression enable bit, still written as 0"
+    },
+    {
+      "action": "delete_block",
+      "match": "^\\s*if \\(ppu_cfg->pp_pvfbc && p_hw_feature->pp_comp_support\\[i\\] == 3\\) \\{",
+      "why": "C01: the PVFBC registers"
+    },
+    {
+      "action": "delete_block",
+      "match": "^\\s*if\\(p_hw_feature->pp_comp_support\\[i\\] == 1 && ",
+      "why": "C01: the FBC 1/2 downscale filter weights"
+    },
+    {
+      "action": "fold_false_if",
+      "match": "^\\s*\\} else if \\(ppu_cfg->pp_pvfbc\\) \\{",
+      "why": "C01: the PVFBC buffer size"
+    },
+    {
+      "action": "fold_false_if",
+      "match": "^\\s*\\} else if\\(ppu_cfg->dec400_enabled\\) \\{",
+      "why": "C02: the DEC400 buffer offsets"
+    },
+    {
+      "action": "fold_false_if",
+      "match": "^\\s*if\\(ppu_cfg->pp_pvfbc\\) \\{",
+      "why": "C01: the PVFBC buffer offsets"
+    },
+    {
+      "action": "fold_false_if",
+      "match": "^\\s*if \\(ppu_cfg->pp_pvfbc\\) \\{",
+      "count": 2,
+      "why": "C01: the PVFBC output addresses and plane sizes"
+    },
+    {
+      "action": "fold_false_if",
+      "match": "^\\s*if \\(ppu_cfg->dec400_enabled\\) \\{",
+      "count": 4,
+      "comment_above": true,
+      "why": "C02: the DEC400 stride alignment, registers, table sizes and buffer size"
+    },
+    {
+      "action": "delete_line",
+      "match": "^\\s*if \\(ppu_cfg->dec400_enabled\\) size_array\\[[04]\\] = ",
+      "count": 2,
+      "why": "C02: the DEC400 256-byte plane alignment"
+    },
+    {
+      "action": "delete_line",
+      "match": "^\\s*dec400_(?:pln[01]_tile_status_size|table_size) = 0;",
+      "count": 3,
+      "why": "C02: no reader left"
+    },
+    {
+      "action": "delete_line",
+      "match": "^\\s*u32 dec400_pln0_tile_status_size = 0, dec400_pln1_tile_status_size = 0;",
+      "why": "C02: no reader left"
+    },
+    {
+      "action": "substitute",
+      "pattern": ", dec400_table_size = 0;",
+      "with": ";",
+      "why": "C02: no reader left"
+    },
+    {
+      "action": "delete_line",
+      "match": "^\\s*u64 plane0_size = 0, plane1_size = 0;",
+      "why": "C01: no reader left"
+    },
+    {
+      "action": "delete_line",
+      "match": "^\\s*u8 \\*addr_plane_lu_r_vir, \\*addr_plane_ch_g_vir;",
+      "why": "C01: only the PVFBC header clear used them"
+    },
+    {
+      "action": "delete_line",
+      "match": "^\\s*u8 \\*ppu_out_vir_addr = ",
+      "why": "C02: only the DEC400 table clear used it"
+    },
+    {
+      "action": "delete_line",
+      "match": "^\\s*ppu_int_cfg->(?:dec400_align|dec400_conformance_test_en|pp_pvfbc_\\w+|pp_fbc_tile_enable) = ppu_ext_cfg->\\w+;",
+      "count": 9,
+      "why": "C01/C02: the copy from the API struct, which loses the members below"
+    },
+    {
+      "action": "fold_false_if",
+      "match": "^\\s*\\} else if \\(ppu_int_cfg->dec400_enabled\\) \\{",
+      "why": "C02: the DEC400 formats in TransUnitConfig2Format"
+    },
+    {
+      "action": "fold_false_if",
+      "match": "^\\s*\\} else if \\(ppu_int_cfg->pp_pvfbc\\) \\{",
+      "why": "C01: the PVFBC formats in TransUnitConfig2Format"
+    },
+    {
+      "action": "delete_line",
+      "match": "^\\s*JpegPrepareDec400Data\\(dec_cont, p_dec_out\\);",
+      "count": 3,
+      "why": "C02: the JPEG DEC400 table output"
+    },
+    {
+      "action": "delete_function",
+      "name": "JpegPrepareDec400Data",
+      "header": false,
+      "why": "C02: callers removed above"
+    },
+    {
+      "action": "substitute",
+      "pattern": "\\n[ \\t]*if \\(ppu_cfg->dec400_enabled\\)\\s*PpFillDec400TblInfo\\([^;]*;",
+      "with": "",
+      "multiline": true,
+      "count": 1,
+      "why": "C02: the PNG DEC400 table output"
+    },
+    {
+      "action": "delete_line",
+      "match": "^\\s*p_dec_out->pictures\\[i\\]\\.pp_fbc_tile_enable = ppu_cfg->pp_fbc_tile_enable;",
+      "why": "C01: the FBC tile header flag in the JPEG output"
+    },
+    {
+      "action": "delete_comment",
+      "match": "^/\\* INTERNAL_DEC400: Embed into VCD IPS",
+      "why": "C02: the DEC400 buffer layout CalcPpUnitBufferSize no longer builds"
+    },
+    {
+      "action": "delete_function",
+      "name": "PpFillDec400TblInfo",
+      "why": "C02: callers removed above"
+    },
+    {
+      "action": "delete_function",
+      "name": "CalcOnePpUnitDec400TblSize",
+      "why": "C02: its caller was the DEC400 buffer size"
+    },
+    {
+      "action": "delete_function",
+      "name": "CalcOnePpUnitPVFBCPlane0Size",
+      "why": "C01: callers removed above"
+    },
+    {
+      "action": "delete_function",
+      "name": "CalcOnePpUnitPVFBCPlane1Size",
+      "why": "C01: callers removed above"
+    },
+    {
+      "action": "delete_macro",
+      "files": ["vcdj_ctrlsw.h"],
+      "name": "DEC400_TILE_SIZE",
+      "why": "C02: no user left"
+    },
+    {
+      "action": "delete_macro",
+      "files": ["vcdj_ctrlsw.h"],
+      "name": "DEC400_TBL_ALIGN_FACTOR",
+      "why": "C02: no user left"
+    },
+    {
+      "action": "delete_macro",
+      "files": ["vcdj_ctrlsw.h"],
+      "name": "DEC400_IN_HEADER_SIZE",
+      "why": "C02: no user left"
+    },
+    {
+      "action": "delete_macro",
+      "files": ["vcdj_ctrlsw.h"],
+      "name": "PVFBC_TILED8x8",
+      "comment_above": true,
+      "why": "C01: no user left"
+    },
+    {
+      "action": "delete_macro",
+      "files": ["vcdj_ctrlsw.h"],
+      "name": "PVFBC_TILED16x4",
+      "comment_above": true,
+      "why": "C01: no user left"
+    },
+    {
+      "action": "delete_comment",
+      "files": ["vcdj_ctrlsw.h"],
+      "match": "^// #define PVFBC_TILED32x2 3 ",
+      "why": "C01: a disabled PVFBC tile mode"
+    },
+    {
+      "action": "delete_comment",
+      "files": ["vcdj_ctrlsw.h"],
+      "match": "^/\\*\\* \\*/$",
+      "why": "C01: the empty doc comment of the line above"
+    },
+    {"action": "delete_member", "files": ["vcdj_ctrlsw.h"], "struct": "_PpUnitConfig", "member": "comp_enabled",
+     "why": "C01/C02: removing it makes a compression request a compile error rather than a silent no-op"},
+    {"action": "delete_member", "files": ["vcdj_ctrlsw.h"], "struct": "_PpUnitConfig", "member": "dec400_align", "why": "C02"},
+    {"action": "delete_member", "files": ["vcdj_ctrlsw.h"], "struct": "_PpUnitConfig", "member": "dec400_conformance_test_en", "why": "C02"},
+    {"action": "delete_member", "files": ["vcdj_ctrlsw.h"], "struct": "_PpUnitConfig", "member": "pp_pvfbc_lu_const0", "why": "C01"},
+    {"action": "delete_member", "files": ["vcdj_ctrlsw.h"], "struct": "_PpUnitConfig", "member": "pp_pvfbc_lu_const1", "why": "C01"},
+    {"action": "delete_member", "files": ["vcdj_ctrlsw.h"], "struct": "_PpUnitConfig", "member": "pp_pvfbc_ch_const0", "why": "C01"},
+    {"action": "delete_member", "files": ["vcdj_ctrlsw.h"], "struct": "_PpUnitConfig", "member": "pp_pvfbc_ch_const1", "why": "C01"},
+    {"action": "delete_member", "files": ["vcdj_ctrlsw.h"], "struct": "_PpUnitConfig", "member": "pp_pvfbc_tile_type", "why": "C01"},
+    {"action": "delete_member", "files": ["vcdj_ctrlsw.h"], "struct": "_PpUnitConfig", "member": "pp_pvfbc_bypass", "why": "C01"},
+    {"action": "delete_member", "files": ["vcdj_ctrlsw.h"], "struct": "_PpUnitConfig", "member": "pp_fbc_tile_enable", "why": "C01"},
+    {"action": "delete_member", "files": ["vcdj_ctrlsw.h"], "struct": "_PpUnitIntConfig", "member": "header_offset", "why": "C01: FBC, no reader"},
+    {"action": "delete_member", "files": ["vcdj_ctrlsw.h"], "struct": "_PpUnitIntConfig", "member": "payload_offset", "why": "C01: FBC, no reader"},
+    {"action": "delete_member", "files": ["vcdj_ctrlsw.h"], "struct": "_PpUnitIntConfig", "member": "plane0_offset", "why": "C01"},
+    {"action": "delete_member", "files": ["vcdj_ctrlsw.h"], "struct": "_PpUnitIntConfig", "member": "plane1_offset", "why": "C01"},
+    {"action": "delete_member", "files": ["vcdj_ctrlsw.h"], "struct": "_PpUnitIntConfig", "member": "dec400_enabled", "why": "C02"},
+    {"action": "delete_member", "files": ["vcdj_ctrlsw.h"], "struct": "_PpUnitIntConfig", "member": "dec400_align", "why": "C02"},
+    {"action": "delete_member", "files": ["vcdj_ctrlsw.h"], "struct": "_PpUnitIntConfig", "member": "dec400_pln0_tile_status_offset", "why": "C02"},
+    {"action": "delete_member", "files": ["vcdj_ctrlsw.h"], "struct": "_PpUnitIntConfig", "member": "dec400_pln1_tile_status_offset", "why": "C02"},
+    {"action": "delete_member", "files": ["vcdj_ctrlsw.h"], "struct": "_PpUnitIntConfig", "member": "dec400_conformance_test_en", "why": "C02"},
+    {"action": "delete_member", "files": ["vcdj_ctrlsw.h"], "struct": "_PpUnitIntConfig", "member": "dec400_luma_table", "why": "C02"},
+    {"action": "delete_member", "files": ["vcdj_ctrlsw.h"], "struct": "_PpUnitIntConfig", "member": "dec400_chroma_table", "why": "C02"},
+    {"action": "delete_member", "files": ["vcdj_ctrlsw.h"], "struct": "_PpUnitIntConfig", "member": "pp_comp", "why": "C01"},
+    {"action": "delete_member", "files": ["vcdj_ctrlsw.h"], "struct": "_PpUnitIntConfig", "member": "pp_fbc_tile_enable", "why": "C01"},
+    {"action": "delete_member", "files": ["vcdj_ctrlsw.h"], "struct": "_PpUnitIntConfig", "member": "pp_pvfbc", "why": "C01"},
+    {"action": "delete_member", "files": ["vcdj_ctrlsw.h"], "struct": "_PpUnitIntConfig", "member": "pvfbc_plane0_headr_size", "why": "C01"},
+    {"action": "delete_member", "files": ["vcdj_ctrlsw.h"], "struct": "_PpUnitIntConfig", "member": "pvfbc_plane1_headr_size", "why": "C01"},
+    {"action": "delete_member", "files": ["vcdj_ctrlsw.h"], "struct": "_PpUnitIntConfig", "member": "pp_pvfbc_lu_const0", "why": "C01"},
+    {"action": "delete_member", "files": ["vcdj_ctrlsw.h"], "struct": "_PpUnitIntConfig", "member": "pp_pvfbc_lu_const1", "why": "C01"},
+    {"action": "delete_member", "files": ["vcdj_ctrlsw.h"], "struct": "_PpUnitIntConfig", "member": "pp_pvfbc_ch_const0", "why": "C01"},
+    {"action": "delete_member", "files": ["vcdj_ctrlsw.h"], "struct": "_PpUnitIntConfig", "member": "pp_pvfbc_ch_const1", "why": "C01"},
+    {"action": "delete_member", "files": ["vcdj_ctrlsw.h"], "struct": "_PpUnitIntConfig", "member": "pp_pvfbc_tile_type", "why": "C01"},
+    {"action": "delete_member", "files": ["vcdj_ctrlsw.h"], "struct": "_PpUnitIntConfig", "member": "pp_pvfbc_bypass", "why": "C01"},
+    {"action": "delete_member", "files": ["vcdj_ctrlsw.h"], "struct": "_PpUnitIntConfig", "member": "fbc_tile", "why": "C01: FBC, no reader"},
+    {"action": "delete_member", "files": ["vcdj_ctrlsw.h"], "struct": "_PpUnitIntConfig", "member": "fbc_tile_offset", "why": "C01: FBC, no reader"},
+    {
+      "action": "delete_line",
+      "files": ["vcdj_ctrlsw.h"],
+      "match": "^\\s*struct DWLLinearMem dec400_(?:luma|chroma)_table;",
+      "count": 4,
+      "why": "C02: the DEC400 tables in the JPEG and PNG output, never filled now"
+    },
+    {
+      "action": "delete_line",
+      "files": ["vcdj_ctrlsw.h"],
+      "match": "^\\s*u8 (?:dec400_conformance_test_en|pp_fbc_tile_enable);",
+      "count": 4,
+      "comment_above": true,
+      "why": "C01/C02: the output flags in struct DecPicture and JpegDecOutput, never set now"
+    },
+    {
       "action": "prune_reg_enum",
       "enum": "HwIfName",
       "table": "hw_dec_reg_spec",
       "last": "HWIF_LAST_REG",
       "prefix": "HWIF_",
       "inactive": ["REG_ACCESS_OPT"],
-      "keep": {"members": 318, "aliases": 8},
+      "keep": {"members": 297, "aliases": 8},
       "why": "L: register fields no code names, mostly other codecs; keep this rule last, so it sees only the code the rules above left"
     }
   ]

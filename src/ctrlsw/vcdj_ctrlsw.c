@@ -286,8 +286,6 @@ enum HwIfName { //cppcheck-suppress syntaxError
   HWIF_PPX_OUT_SWAP_U,
   HWIF_PPX_SHAPER_DIS_U,
   HWIF_PPX_COMP_E_U,
-  HWIF_PPX_PP_COMP_DIRECT_MAP_U,
-  HWIF_PPX_DEC400_ALIGN_U,
   HWIF_PPX_OUT_FORMAT_U,
   HWIF_PPX_OUT_RGB_FMT_U,
   HWIF_PPX_OUT_P010_FMT_U,
@@ -352,13 +350,6 @@ enum HwIfName { //cppcheck-suppress syntaxError
   HWIF_PPX_CROP2_STARTY_U,
   HWIF_PPX_CROP2_OUT_WIDTH_U,
   HWIF_PPX_CROP2_OUT_HEIGHT_U,
-  HWIF_PPX_DS_COEFF3_U,
-  HWIF_PPX_DS_COEFF2_U,
-  HWIF_PPX_DS_COEFF1_U,
-  HWIF_PPX_DS_COEFF0_U,
-  HWIF_PPX_DS_COEFF6_U,
-  HWIF_PPX_DS_COEFF5_U,
-  HWIF_PPX_DS_COEFF4_U,
   HWIF_PPX_CH_WSCALE_INVRA_U,
   HWIF_PPX_CH_HSCALE_INVRA_U,
   HWIF_PPX_RANGE_MAX_U,
@@ -366,20 +357,8 @@ enum HwIfName { //cppcheck-suppress syntaxError
   HWIF_PPX_RANGE_MAP_FLAG_U,
   HWIF_PPX_RANGE_MAP_COEFF2_U,
   HWIF_PPX_RANGE_MAP_COEFF1_U,
-  HWIF_PPX_DEC400_PLN0_TS_BASE_U_MSB,
-  HWIF_PPX_DEC400_PLN0_TS_BASE_U_LSB,
-  HWIF_PPX_DEC400_PLN1_TS_BASE_U_MSB,
-  HWIF_PPX_DEC400_PLN1_TS_BASE_U_LSB,
   HWIF_PPX_CH_WSCALE_RATIO_U,
   HWIF_PPX_CH_HSCALE_RATIO_U,
-  HWIF_PPX_PVFBC_TILE_TYPE_U,
-  HWIF_PPX_PVFBC_CH_VAL0_U,
-  HWIF_PPX_PVFBC_LU_VAL1_U,
-  HWIF_PPX_PVFBC_LU_VAL0_U,
-  HWIF_PPX_PVFBC_BYPASS_U,
-  HWIF_PPX_PVFBC_CH_VAL1_U,
-  HWIF_PPX_PVFBC_PLN0_PLD_OFFSET_U,
-  HWIF_PPX_PVFBC_PLN1_PLD_OFFSET_U,
   HWIF_PP_OUT_RB_MODE_U,
   HWIF_PP_OUT_RB_EN_U,
   HWIF_PP_OUT_SEGMENT_ENTRY_HEIGHT_U,
@@ -534,69 +513,14 @@ u32 GetPpuRegister(const u32 *pp_reg_base, u32 id, int ppu_index);
 /* G1&G2 */
 #define SET_ADDR_REG(reg_base, REGBASE, addr) do {\
     SetDecRegister((reg_base), REGBASE##_LSB, (u32)(addr));  \
-    if (hw_feature->addr64_support) { \
-      if(sizeof(addr_t) == 4) \
-        SetDecRegister((reg_base), REGBASE##_MSB, 0); \
-      else \
-        SetDecRegister((reg_base), REGBASE##_MSB, (u32)((u64)(addr) >> 32)); \
-    } else { \
-      if(sizeof(addr_t) == 8) \
-        ASSERT(((u32)((u64)(addr) >> 32)) == 0); \
-    } \
-  } while (0)
-
-/* for both G1&G2 */
-#define SET_ADDR_REG2(reg_base, lsb, msb, addr) do {\
-    SetDecRegister((reg_base), (lsb), (u32)(addr));  \
-    if (hw_feature->addr64_support) { \
-      SetDecRegister((reg_base), (msb), (u32)((u64)(addr) >> 32)); \
-    } else { \
-      ASSERT((u32)((u64)(addr) >> 32) == 0); \
-      SetDecRegister((reg_base), (msb), 0); \
-    } \
-  } while (0)
-
-/* only used in cmodel */
-#define SET_ADDR_REG3(reg_base, REGBASE, addr, addr64_support) do {\
-    SetDecRegister((reg_base), REGBASE##_LSB, (u32)(addr));  \
-    if (addr64_support) { \
-      if(sizeof(addr_t) == 4) \
-        SetDecRegister((reg_base), REGBASE##_MSB, 0); \
-      else \
-        SetDecRegister((reg_base), REGBASE##_MSB, (u32)((u64)(addr) >> 32)); \
-    } else { \
-      if(sizeof(addr_t) == 8) \
-        ASSERT(((u32)((u64)(addr) >> 32)) == 0); \
-    } \
-  } while (0)
-
-#define SET_PP_ADDR_REG(reg_base, REGBASE, addr) do {\
-    SetDecRegister((reg_base), REGBASE, (u32)(addr));  \
-    if (hw_feature->addr64_support) { \
-      SetDecRegister((reg_base), REGBASE##_MSB, (u32)((u64)(addr) >> 32)); \
-    } else { \
-      assert((u32)((u64)(addr) >> 32) == 0); \
-    } \
+    if(sizeof(addr_t) == 8) \
+      ASSERT(((u32)((u64)(addr) >> 32)) == 0); \
   } while (0)
 
 #define SET_PP_ADDR_REG2(reg_base, lsb, msb, i, addr) do {\
     SetPpuRegister((reg_base), (lsb), (i), (u32)(addr));  \
-    if (hw_feature->addr64_support) { \
-      SetPpuRegister((reg_base), (msb), (i), (u32)((u64)(addr) >> 32)); \
-    } else { \
-      assert((u32)((u64)(addr) >> 32) == 0); \
-      SetPpuRegister((reg_base), (msb), (i), 0); \
-    } \
-  } while (0)
-
-#define SET_ADDR64_REG(reg_base, REGBASE, addr) do {\
-    SetDecRegister((reg_base), REGBASE##_LSB, (u32)(addr));  \
-    if (hw_feature->addr64_support) { \
-      SetDecRegister((reg_base), REGBASE##_MSB, (u32)((addr_t)(addr) >> 32)); \
-    } else { \
-      assert((u32)((addr_t)(addr) >> 32) == 0); \
-      SetDecRegister((reg_base), REGBASE##_MSB, 0); \
-    } \
+    assert((u32)((u64)(addr) >> 32) == 0); \
+    SetPpuRegister((reg_base), (msb), (i), 0); \
   } while (0)
 
 #define GET_ADDR_REG(reg_base, REGBASE)  \
@@ -1691,12 +1615,7 @@ void CommonSetM2MPComands(PpUnitIntConfig *ppu_cfg, struct M2MP_INFO vcmd_m2mp_d
       srcskip = ppu_cfg->ystride - lu_w * (1 << size);
       srcskip = srcskip >> size;
     }
-    if (IS_PIC_PVFBC(format) || IS_PIC_PVFBC_BYPASS(format)) {
-      pic_size = CalcOnePpUnitPVFBCPlane0Size(ppu_cfg);
-    }
-    else {
-      pic_size = lu_w * lu_h;
-    }
+    pic_size = lu_w * lu_h;
     //if pp2 luma sum
     if(ppu_cfg->luma_sum_e || ppu_cfg->hist_local_e || ppu_cfg->hist_global_e || ppu_cfg->hist_hsv_e)
     {
@@ -1724,12 +1643,7 @@ void CommonSetM2MPComands(PpUnitIntConfig *ppu_cfg, struct M2MP_INFO vcmd_m2mp_d
         srcskip = ppu_cfg->cstride - ch_w * (1 << size);
         srcskip = srcskip >> size;
       }
-      if (IS_PIC_PVFBC(format) || IS_PIC_PVFBC_BYPASS(format)) {
-        pic_size = CalcOnePpUnitPVFBCPlane1Size(ppu_cfg,0);
-      }
-      else {
-        pic_size = ch_w * ch_h;
-      }
+      pic_size = ch_w * ch_h;
       for(j = 0; j < (IS_PIC_PLANAR(format) ? 2 : 1); j++) {
         count++;
         chroma_addr = chroma_addr + NEXT_MULTIPLE(ppu_cfg->cstride * ch_h, PLANE_ALIGNMENT) * j;
@@ -1752,35 +1666,6 @@ void CommonSetM2MPComands(PpUnitIntConfig *ppu_cfg, struct M2MP_INFO vcmd_m2mp_d
         vcmd_m2mp_data[count].m2mp_height = srcskip ? lu_h : ((pic_size >> 16) & 0xFFFF);
         vcmd_m2mp_data[count].m2mp_size = size;
         vcmd_m2mp_data[count].m2mp_src_addr = (addr_t)luma_addr;
-        vcmd_m2mp_data[count].m2mp_srcskip = srcskip;
-        vcmd_m2mp_data[count].m2mp_mode = 1;
-      }
-    }
-/* dec400 table */
-    if (IS_PIC_DEC400(format)) {
-      /* luma tbl*/
-      luma_addr = base_bus_addr + ppu_cfg->dec400_pln0_tile_status_offset + DEC400_IN_HEADER_SIZE;
-      size = 0;
-      srcskip = 0;
-      pic_size = ppu_cfg->dec400_luma_table.logical_size;
-      count++;
-      vcmd_m2mp_data[count].m2mp_width = srcskip ? lu_w : (pic_size & 0xFFFF);
-      vcmd_m2mp_data[count].m2mp_height = srcskip ? lu_h : ((pic_size >> 16) & 0xFFFF);
-      vcmd_m2mp_data[count].m2mp_size = size;
-      vcmd_m2mp_data[count].m2mp_src_addr = (addr_t)luma_addr;
-      vcmd_m2mp_data[count].m2mp_srcskip = srcskip;
-      vcmd_m2mp_data[count].m2mp_mode = 1;
-      /* chroma tbl*/
-      if(ch_h && ch_w && chroma_addr) {
-        chroma_addr = base_bus_addr + ppu_cfg->dec400_pln1_tile_status_offset + DEC400_IN_HEADER_SIZE;
-        size = 0;
-        srcskip = 0;
-        pic_size = ppu_cfg->dec400_chroma_table.logical_size;
-        count++;
-        vcmd_m2mp_data[count].m2mp_width = srcskip ? lu_w : (pic_size & 0xFFFF);
-        vcmd_m2mp_data[count].m2mp_height = srcskip ? lu_h : ((pic_size >> 16) & 0xFFFF);
-        vcmd_m2mp_data[count].m2mp_size = size;
-        vcmd_m2mp_data[count].m2mp_src_addr = (addr_t)chroma_addr;
         vcmd_m2mp_data[count].m2mp_srcskip = srcskip;
         vcmd_m2mp_data[count].m2mp_mode = 1;
       }
@@ -4831,12 +4716,6 @@ static u32 PPGetUnitStride(PpUnitIntConfig *ppu_cfg) {
     }
   } else if (ppu_cfg->rgb_planar) {
     ystride = cstride = NEXT_MULTIPLE(pp_width * ppu_cfg->pixel_width, ALIGN(ppu_cfg->align) * 8) / 8;
-  } else if (ppu_cfg->pp_pvfbc_bypass) {
-    //pvfbc bypass tiled 32x8 8bit 32x8 10bit 16x8
-      if(ppu_cfg->pp_pvfbc_tile_type == PVFBC_TILED8x8)
-        ystride = cstride = NEXT_MULTIPLE(8 * pp_width * ppu_cfg->pixel_width, ALIGN(ppu_cfg->align > DEC_ALIGN_256B ? ppu_cfg->align : DEC_ALIGN_256B) * 8) / 8;
-      else if(ppu_cfg->pp_pvfbc_tile_type == PVFBC_TILED16x4)
-        ystride = cstride = NEXT_MULTIPLE(4 * pp_width * ppu_cfg->pixel_width, ALIGN(ppu_cfg->align > DEC_ALIGN_256B ? ppu_cfg->align : DEC_ALIGN_256B) * 8) / 8;
   } else {
     if (ppu_cfg->out_format == PP_OUT_FMT_YUV400_WITH_ALPHA)
       pp_width *= 2;
@@ -4846,11 +4725,6 @@ static u32 PPGetUnitStride(PpUnitIntConfig *ppu_cfg) {
     cstride = NEXT_MULTIPLE((ppu_cfg->sub_x == 2 ? ((pp_width + 1) & ~0x1) : 2 * pp_width) * ppu_cfg->pixel_width, ALIGN(ppu_cfg->align) * 8) / 8;
   }
 
-  /* for dec400 use tile 256x1, need set stride align 256 */
-  if (ppu_cfg->dec400_enabled) {
-    ystride = NEXT_MULTIPLE(ystride, 256);
-    cstride = NEXT_MULTIPLE(cstride, 256);
-  }
   if (ppu_cfg->ystride == 0) {
 #if 0
     if ((ppu_cfg->tiled_e && !ppu_cfg->tile_mode && ((ystride >> hw_feature->pp_tiled_stride_shift) >= PP_MAX_STRIDE)) ||
@@ -4906,22 +4780,9 @@ void SetPpByReleaseHwFeatures(PpUnitIntConfig *ppu_int_cfg, PpUnitConfig *ppu_ex
                               const struct DecHwFeatures *hw_feature) {
   for (u32 i = 0; i < DEC_MAX_PPU_COUNT; i++, ppu_int_cfg++, ppu_ext_cfg++) {
     if (!ppu_ext_cfg->enabled) continue;
-    if (ppu_ext_cfg->comp_enabled) {
-      switch (hw_feature->pp_comp_support[i]) {
-        case 1: ppu_int_cfg->pp_comp = 1; break;
-        case 2: ppu_int_cfg->dec400_enabled = 1; break;
-        case 3: ppu_int_cfg->pp_pvfbc = 1; break;
-        default:
-          APITRACEERR("The HW ppu[%u] don't support --pp-comp.\n", i);
-      }
-    }
     if ((u32)ppu_ext_cfg->align < (u32)hw_feature->shaper_alignment) {
-      if (ppu_int_cfg->dec400_enabled) {
-        ppu_ext_cfg->align = ppu_int_cfg->align = (u32)hw_feature->shaper_alignment;
-      } else {
-        ppu_ext_cfg->shaper_no_pad = ppu_int_cfg->shaper_no_pad = 1;
-        ppu_ext_cfg->shaper_tile_edge_pad = ppu_int_cfg->shaper_tile_edge_pad = 0;
-      }
+      ppu_ext_cfg->shaper_no_pad = ppu_int_cfg->shaper_no_pad = 1;
+      ppu_ext_cfg->shaper_tile_edge_pad = ppu_int_cfg->shaper_tile_edge_pad = 0;
     }
     if(!hw_feature->yuv420_8b_to_p010)
       ppu_ext_cfg->Explicit_Specified_010 = 0;
@@ -5190,64 +5051,10 @@ u32 CheckPpUnitConfig(const struct DecHwFeatures *hw_feature,
       }
     }
 
-    /*pp comp checker*/
-    if (ppu_cfg->pp_pvfbc){
-      if (in_chroma_format == PP_CHROMA_400) {
-        APITRACEERR("CheckPpUnitConfig# Illegal pp comp param[PP %d]: pp comp 'pvfbc' dosen't support YUV400 case.\n", i);
-          return 1;
-      }
-      if (!(ppu_cfg->out_format == PP_OUT_FMT_YUV420_8BIT)) {
-        APITRACEERR("CheckPpUnitConfig# Illegal pp comp param[PP %u]: pp comp 'pvfbc' only support YUV420 semiplanar (NV12_8it/NV21_8bit/NV12_P010) compression and dosen't support 400/422/RGB\n", i);
-          return 1;
-      }
-      if (interlace) {
-        APITRACEERR("CheckPpUnitConfig# Illegal pp comp param[PP %u]: interlace case dosen't support pp comp 'pvfbc'\n", i);
-          return 1;
-      }
-      if (ppu_cfg->scale.width > 8192 || ppu_cfg->scale.height > 8192) {
-        APITRACEERR("CheckPpUnitConfig# Illegal pp comp param[PP %u]: pp comp 'pvfbc' with output width or height should no more than 8192\n", i);
-          return 1;
-      }
-
-    }
-    if (ppu_cfg->pp_pvfbc_bypass && ppu_cfg->pp_pvfbc == 0) {
-      APITRACEERR("CheckPpUnitConfig# Illegal pp comp param[PP %u]: must use pvfbc bypass with --pp-comp\n", i);
-        return 1;
-    }
-
     if (CheckPpStride(ppu_cfg)) return 1;
 
-    if (pixel_width > 8 && ppu_cfg->dec400_enabled && !ppu_cfg->out_cut_8bits && !ppu_cfg->rgb) {
-      APITRACEERR("CheckPpUnitConfig# Illegal param[PP %u]: please open p010 or ARGB when enables dec400 and output 10bit formats.\n", i);
-      return 1;
-    }
-    /*support PP DEC400*/
-    if (ppu_cfg->dec400_enabled && interlace) {
-      APITRACEERR("CheckPpUnitConfig# Illegal param[PP %u]: DEC400 doesn't support interlace stream.\n", i);
-      return 1;
-    }
-    if (ppu_cfg->dec400_enabled && ppu_cfg->rgb_planar) {
-      APITRACEERR("CheckPpUnitConfig# Illegal param[PP %u]: PP DEC400 input doesn't support RGB planar.\n", i);
-      return 1;
-    }
-    if (ppu_cfg->dec400_enabled && ppu_cfg->chroma_format == PP_YUV422 && !(ppu_cfg->out_yuyv == 1 || ppu_cfg->out_uyvy == 1)) {
-      APITRACEERR("CheckPpUnitConfig# Illegal param[PP %u]: When PP DEC400 outputs 422, must set '--pp-packed-mode' as one of YUYV/UYVY.\n", i);
-      return 1;
-    }
-    if (ppu_cfg->dec400_enabled && ppu_cfg->chroma_format == PP_YUV444) {
-      APITRACEERR("CheckPpUnitConfig# Illegal param[PP %u]: PP DEC400 doesn't support 444 output.\n", i);
-      return 1;
-    }
     if (ppu_cfg->scale.width > ppu_cfg->crop.width*3 || ppu_cfg->scale.height > ppu_cfg->crop.height*3) {
       ppu_cfg->shaper_enabled = 0;
-    }
-    if (ppu_cfg->dec400_enabled && ppu_cfg->shaper_enabled && ALIGN(ppu_cfg->align) < 256) {
-      APITRACEERR("CheckPpUnitConfig# Illegal param[PP %u]: shaper algin doesn't less than 256 when enable PP DEC400.\n", i);
-      return 1;
-    }
-    if (ppu_cfg->dec400_enabled && !(ppu_cfg->dec400_align == DEC_ALIGN_32B || ppu_cfg->dec400_align == DEC_ALIGN_64B)) {
-      APITRACEERR("CheckPpUnitConfig# Illegal param[PP %u]: should configure '--dec400-align=32' or '--dec400-align=64' when enable PP DEC400.\n", i);
-      return 1;
     }
 
     if (pixel_width < 12 && (ppu_cfg->out_p012 || ppu_cfg->out_I012)) {
@@ -5255,20 +5062,6 @@ u32 CheckPpUnitConfig(const struct DecHwFeatures *hw_feature,
       return 1;
     }
 
-    if (ppu_cfg->dec400_enabled && ppu_cfg->norm_enable) {
-      APITRACEERR("CheckPpUnitConfig# Illegal param[PP %u]: PP DEC400 doesn't support normalization and quantization.\n", i);
-      return 1;
-    }
-
-    if (ppu_cfg->dec400_enabled && ppu_cfg->rgb && (!IS_4PLAN_FORMAT(ppu_cfg->rgb_format) ||
-       ppu_cfg->rgb_format == PP_OUT_R10G10B10A2 ||  ppu_cfg->rgb_format == PP_OUT_B10G10R10A2)) {
-      APITRACEERR("CheckPpUnitConfig# Illegal param[PP %u]: Illegal RGB parameters with DEC400 enabled.\n", i);
-      return 1;
-    }
-    if (ppu_cfg->dec400_conformance_test_en && !ppu_cfg->dec400_enabled) {
-      APITRACEERR("CheckPpUnitConfig# Illegal param[PP %u]: dec400 conformance test must enable dec400.\n", i);
-      return 1;
-    }
 #if 0
     if (pixel_width == 12 && !ppu_cfg->out_p012 && !ppu_cfg->out_I012) {
       APITRACEERR("CheckPpUnitConfig# Illegal param[PP %u]: pp 12bit input only can output 16bit.\n", i);
@@ -5493,11 +5286,6 @@ u32 CheckPpUnitConfig(const struct DecHwFeatures *hw_feature,
     }
 #endif
 
-    if (ppu_cfg->pp_comp && (!hw_feature->pp_comp_support[i])) {
-      APITRACEERR("CheckPpUnitConfig# Illegal param[PP %u]: Don't support enable PP compression.\n", i);
-      return 1;
-    }
-
     if (ppu_cfg->scale.width > ppu_cfg->crop.width*3 ||
         ppu_cfg->scale.height > ppu_cfg->crop.height*3) {
       ppu_cfg->shaper_enabled = 0;
@@ -5698,7 +5486,6 @@ void PPSetOneChannelRegs(u32 *pp_regs, const struct PpParams *pp_args, u32 chann
   const struct DecHwFeatures *p_hw_feature = pp_args->p_hw_feature;
   PpUnitIntConfig *ppu_cfg = &pp_args->ppu_cfg[channel_id];
   addr_t ppu_out_bus_addr = pp_args->ppu_out_addr->bus_address;
-  u8 *ppu_out_vir_addr = (u8 *)pp_args->ppu_out_addr->virtual_address;
   u32 bottom_field_flag = pp_args->bottom_field_flag;
   const struct DecHwFeatures *hw_feature = p_hw_feature;
   /* pp common registers*/
@@ -6114,65 +5901,7 @@ void PPSetOneChannelRegs(u32 *pp_regs, const struct PpParams *pp_args, u32 chann
   }
   SetPpuRegister(pp_regs, HWIF_PPX_OUT_TILE_E_U, i, 0);
 
-  if(ppu_cfg->pp_pvfbc && p_hw_feature->pp_comp_support[i] == 3) {/*1: fbc, 2:dec400, 3:pvfbc*/
-    SetPpuRegister(pp_regs, HWIF_PPX_COMP_E_U, i, ppu_cfg->pp_pvfbc);
-  } else {
-    SetPpuRegister(pp_regs, HWIF_PPX_COMP_E_U, i, 0);
-  }
-  if (ppu_cfg->pp_pvfbc && p_hw_feature->pp_comp_support[i] == 3) {
-    u32 pp_comp_ctb_height, pp_comp_chroma_ctb_height, luma_ram_size, chroma_ram_size, luma_direct_map, chroma_direct_map;
-    u32 pp_width, pp_height, pp_width_ch, pp_height_ch, plane0_header_size, plane1_header_size, plane0_payload_size, plane1_payload_size;
-    //u32 plane0_offset, plane1_offset;
-    if (p_hw_feature->av1_support || p_hw_feature->vvc_support) {
-      pp_comp_ctb_height = 144;
-    } else if (p_hw_feature->hevc_support || p_hw_feature->h264_adv_support || p_hw_feature->vp9_support || p_hw_feature->avs2_support) {
-      pp_comp_ctb_height = 88;
-    } else /*jpeg, TODO g1*/
-      pp_comp_ctb_height = 24;
-    pp_comp_chroma_ctb_height = pp_comp_ctb_height / 2;
-    luma_ram_size = pp_comp_ctb_height * 32 / 4; // TODO need know actual scale ratio
-    pp_width = ppu_cfg->scale.width;
-    pp_height = ppu_cfg->scale.height;
-    pp_width_ch = ppu_cfg->sub_x == 2 ? NEXT_MULTIPLE(pp_width, 2) : pp_width;
-    pp_height_ch = ppu_cfg->sub_y == 2 ? (pp_height+1) / 2 : pp_height;
-    pp_width = ppu_cfg->out_format == PP_OUT_FMT_YUV420_P010 ? pp_width * 2 : pp_width;
-    pp_width_ch = ppu_cfg->out_format == PP_OUT_FMT_YUV420_P010 ? pp_width_ch * 2 : pp_width_ch;
-    // pp_width = ppu_cfg->out_format == PP_OUT_FMT_PVFBC_YUV420_P010 ? pp_width * 2 : pp_width;
-    // pp_width_ch = ppu_cfg->out_format == PP_OUT_FMT_PVFBC_YUV420_P010 ? pp_width_ch * 2 : pp_width_ch;
-    if(ppu_cfg->pp_pvfbc_tile_type == PVFBC_TILED16x4) {
-      pp_width = NEXT_MULTIPLE(pp_width, 64);
-      pp_width_ch = NEXT_MULTIPLE(pp_width_ch, 64);
-      pp_height = NEXT_MULTIPLE(pp_height, 4);
-      pp_height_ch = NEXT_MULTIPLE(pp_height_ch, 4);
-    } else if(ppu_cfg->pp_pvfbc_tile_type == PVFBC_TILED8x8) {
-      pp_width = NEXT_MULTIPLE(pp_width, 32);
-      pp_width_ch = NEXT_MULTIPLE(pp_width_ch, 32);
-      pp_height = NEXT_MULTIPLE(pp_height, 8);
-      pp_height_ch = NEXT_MULTIPLE(pp_height_ch, 8);
-    }
-    plane0_payload_size = pp_width * pp_height;
-    plane0_header_size = NEXT_MULTIPLE(plane0_payload_size / 256, 256);
-    plane1_payload_size = pp_width_ch * pp_height_ch;
-    plane1_header_size = NEXT_MULTIPLE(plane1_payload_size / 256, 256);
-    luma_direct_map = (luma_ram_size >= plane0_header_size);
-    chroma_ram_size = pp_comp_chroma_ctb_height * 32 / 4;
-    chroma_direct_map = (chroma_ram_size >= plane1_header_size);
-    if (luma_direct_map && chroma_direct_map)
-      SetPpuRegister(pp_regs, HWIF_PPX_PP_COMP_DIRECT_MAP_U, i, 1);
-    else
-      SetPpuRegister(pp_regs, HWIF_PPX_PP_COMP_DIRECT_MAP_U, i, 0);
-    //plane0_offset = plane0_payload_size - plane0_header_size;
-    //plane1_offset = plane1_payload_size - plane1_header_size;
-
-    SetPpuRegister(pp_regs, HWIF_PPX_PVFBC_PLN0_PLD_OFFSET_U, i, plane0_header_size);
-    SetPpuRegister(pp_regs, HWIF_PPX_PVFBC_PLN1_PLD_OFFSET_U, i, plane1_header_size);
-    SetPpuRegister(pp_regs, HWIF_PPX_PVFBC_LU_VAL0_U, i, ppu_cfg->pp_pvfbc_lu_const0);
-    SetPpuRegister(pp_regs, HWIF_PPX_PVFBC_LU_VAL1_U, i, ppu_cfg->pp_pvfbc_lu_const1);
-    SetPpuRegister(pp_regs, HWIF_PPX_PVFBC_CH_VAL0_U, i, ppu_cfg->pp_pvfbc_ch_const0);
-    SetPpuRegister(pp_regs, HWIF_PPX_PVFBC_CH_VAL1_U, i, ppu_cfg->pp_pvfbc_ch_const1);
-    SetPpuRegister(pp_regs, HWIF_PPX_PVFBC_TILE_TYPE_U, i, ppu_cfg->pp_pvfbc_tile_type);
-    SetPpuRegister(pp_regs, HWIF_PPX_PVFBC_BYPASS_U, i, ppu_cfg->pp_pvfbc_bypass);
-  }
+  SetPpuRegister(pp_regs, HWIF_PPX_COMP_E_U, i, 0);
 
   SetPpuRegister(pp_regs, HWIF_PPX_DECNANO_E_U, i, ppu_cfg->decnano_e);
   SetPpuRegister(pp_regs, HWIF_PPX_DECNANO_MODE_U, i, ppu_cfg->decnano_mode);
@@ -6186,86 +5915,12 @@ void PPSetOneChannelRegs(u32 *pp_regs, const struct PpParams *pp_args, u32 chann
       pp_field_offset_ch = ppw_c;
     }
   }
-  /*support PP DEC400*/
-  if (ppu_cfg->dec400_enabled) {
-    u32 dec400_ctb_height, dec400_ctb_ram_size_lu, dec400_ctb_ram_size_cb, dec400_ctb_ram_size_cr;
-    u32 act_compressed_Y_ts_size, act_compressed_UV_ts_size, act_compressed_U_ts_size, act_compressed_V_ts_size, act_compressed_ARGB_ts_size;
-    u8 dec400_direct_mapping = 0;
-    if (p_hw_feature->av1_support || p_hw_feature->vvc_support) {
-      dec400_ctb_height = 144 * (p_hw_feature->uscale_support[i] ? 3 : 1);
-    } else if (p_hw_feature->hevc_support || p_hw_feature->h264_adv_support || p_hw_feature->vp9_support || p_hw_feature->avs2_support) {
-      dec400_ctb_height = 88 * (p_hw_feature->uscale_support[i] ? 3 : 1);
-    } else if (p_hw_feature->mpeg4_support || p_hw_feature->custom_mpeg4_support || p_hw_feature->mpeg2_support ||
-               p_hw_feature->sorenson_spark_support || p_hw_feature->vc1_support || p_hw_feature->rv_support ||
-               p_hw_feature->vp8_support || p_hw_feature->webp_support || p_hw_feature->vp7_support ||
-               p_hw_feature->vp6_support || p_hw_feature->avs_support || p_hw_feature->avs_plus_support) {/*g1*/
-      dec400_ctb_height = 56 * (p_hw_feature->uscale_support[i] ? 3 : 1);
-    } else { /* jpeg only */
-      if (!p_hw_feature->jpeg_support && p_hw_feature->png_support) { /* png only */
-        dec400_ctb_height = 8 * (p_hw_feature->uscale_support[i] ? 3 : 1);
-      } else {
-        dec400_ctb_height = 16 * (p_hw_feature->uscale_support[i] ? 3 : 1);
-      }
-      if (p_hw_feature->uscale_support[i] || p_hw_feature->dscale_support[i]) {
-        dec400_ctb_height += 8;
-      }
-    }
-
-    dec400_ctb_height = 1 << (CeilLog2(dec400_ctb_height));
-    act_compressed_ARGB_ts_size = ppu_cfg->luma_size / 256 / 2;
-    if (p_hw_feature->pp_comp_support[i] == 2 && p_hw_feature->pp_comp_version[i] == 2) {
-      dec400_ctb_ram_size_lu = dec400_ctb_height * 32;
-      dec400_ctb_ram_size_cb =  dec400_ctb_ram_size_lu / 2;
-    } else {
-      dec400_ctb_ram_size_lu = dec400_ctb_height * 32 / 2;
-      dec400_ctb_ram_size_cb =  dec400_ctb_ram_size_lu / 2;
-    }
-    dec400_ctb_ram_size_cr = 0;
-    act_compressed_Y_ts_size = ppu_cfg->luma_size / 256 / 2;
-    act_compressed_UV_ts_size = ppu_cfg->chroma_size / 256 / 2;
-    if((!(ppu_cfg->rgb || ppu_cfg->rgb_planar) && act_compressed_Y_ts_size <= dec400_ctb_ram_size_lu && act_compressed_UV_ts_size <= (dec400_ctb_ram_size_cb + dec400_ctb_ram_size_cr))
-          || ((ppu_cfg->rgb || ppu_cfg->rgb_planar) && act_compressed_ARGB_ts_size <= (dec400_ctb_ram_size_lu + dec400_ctb_ram_size_cb + dec400_ctb_ram_size_cr))) {
-      dec400_direct_mapping = 1;
-    }
-
-    SetPpuRegister(pp_regs, HWIF_PPX_PP_COMP_DIRECT_MAP_U, i, dec400_direct_mapping);
-    SetPpuRegister(pp_regs, HWIF_PPX_COMP_E_U, i, ppu_cfg->dec400_enabled);
-    if (ppu_cfg->dec400_align == DEC_ALIGN_32B) {
-      SetPpuRegister(pp_regs, HWIF_PPX_DEC400_ALIGN_U, i, 0);
-    } else if (ppu_cfg->dec400_align == DEC_ALIGN_64B) {
-      SetPpuRegister(pp_regs, HWIF_PPX_DEC400_ALIGN_U, i, 1);
-    }
-    DWLmemset(ppu_out_vir_addr + ppu_cfg->dec400_pln0_tile_status_offset + pp_field_offset, 0, ppu_cfg->dec400_luma_table.size);
-    if (ppu_cfg->chroma_size) {
-      DWLmemset(ppu_out_vir_addr + ppu_cfg->dec400_pln1_tile_status_offset + pp_field_offset_ch, 0, ppu_cfg->dec400_chroma_table.size);
-    }
-    SET_PP_ADDR_REG2(pp_regs,
-                    HWIF_PPX_DEC400_PLN0_TS_BASE_U_LSB,
-                    HWIF_PPX_DEC400_PLN0_TS_BASE_U_MSB,
-                    i,
-                    ppu_out_bus_addr + ppu_cfg->dec400_pln0_tile_status_offset + pp_field_offset);
-    SET_PP_ADDR_REG2(pp_regs,
-                    HWIF_PPX_DEC400_PLN1_TS_BASE_U_LSB,
-                    HWIF_PPX_DEC400_PLN1_TS_BASE_U_MSB,
-                    i,
-                    ppu_out_bus_addr + ppu_cfg->dec400_pln1_tile_status_offset + pp_field_offset_ch);
-  }
   SET_PP_ADDR_REG2(pp_regs,
                   HWIF_PPX_LANCZOS_TBL_BASE_U_LSB,
                   HWIF_PPX_LANCZOS_TBL_BASE_U_MSB,
                   i,
                   ppu_cfg->lanczos_table.bus_address);
 
-  if(p_hw_feature->pp_comp_support[i] == 1 && ((ppu_cfg->crop.width >> 1) == ppu_cfg->scale.width) && ((ppu_cfg->crop.height >> 1) == ppu_cfg->scale.height) && ppu_cfg->pp_filter != AREA) {
-    /*width and height downscale 1/2: set 7 filter weight factors*/
-    SetPpuRegister(pp_regs, HWIF_PPX_DS_COEFF0_U, i, (i8)*ppu_cfg->lanczos_table.virtual_address); /*low 16 bit*/
-    SetPpuRegister(pp_regs, HWIF_PPX_DS_COEFF1_U, i, (i8)(*(ppu_cfg->lanczos_table.virtual_address) >> 16)); /*high 16 bit*/
-    SetPpuRegister(pp_regs, HWIF_PPX_DS_COEFF2_U, i, (i8)*(ppu_cfg->lanczos_table.virtual_address + 1));
-    SetPpuRegister(pp_regs, HWIF_PPX_DS_COEFF3_U, i, (i8)(*(ppu_cfg->lanczos_table.virtual_address + 1) >> 16));
-    SetPpuRegister(pp_regs, HWIF_PPX_DS_COEFF4_U, i, (i8)*(ppu_cfg->lanczos_table.virtual_address + 2));
-    SetPpuRegister(pp_regs, HWIF_PPX_DS_COEFF5_U, i, (i8)(*(ppu_cfg->lanczos_table.virtual_address + 2) >> 16));
-    SetPpuRegister(pp_regs, HWIF_PPX_DS_COEFF6_U, i, (i8)*(ppu_cfg->lanczos_table.virtual_address + 3));
-  }
   SET_PP_ADDR_REG2(pp_regs,
                   HWIF_PPX_SCALE_COLBUF_WR_BASE_U_LSB,
                   HWIF_PPX_SCALE_COLBUF_WR_BASE_U_MSB,
@@ -6302,7 +5957,6 @@ void PPSetOneChannelRegs(u32 *pp_regs, const struct PpParams *pp_args, u32 chann
 #endif
 
   addr_t addr_plane_lu_r, addr_plane_ch_g, addr_plane_b;
-  u8 *addr_plane_lu_r_vir, *addr_plane_ch_g_vir;
   u32 valid_2nd_addr = 0;
   struct DWLLinearMem *cur_pp_out_addr;
 
@@ -6324,90 +5978,55 @@ void PPSetOneChannelRegs(u32 *pp_regs, const struct PpParams *pp_args, u32 chann
   }
 
   if (!ppu_cfg->rgb_planar) {
-    if (ppu_cfg->pp_pvfbc) {
-      addr_plane_lu_r = cur_pp_out_addr->bus_address + ppu_cfg->plane0_offset + pp_field_offset;
-      addr_plane_ch_g = cur_pp_out_addr->bus_address + ppu_cfg->plane1_offset + pp_field_offset_ch;
-      addr_plane_lu_r_vir = (u8*)cur_pp_out_addr->virtual_address + ppu_cfg->plane0_offset + pp_field_offset;
-      addr_plane_ch_g_vir = (u8*)cur_pp_out_addr->virtual_address + ppu_cfg->plane1_offset + pp_field_offset_ch;
-      if (!ppu_cfg->pp_pvfbc_bypass) {
-        DWLmemset(addr_plane_lu_r_vir, 0, ppu_cfg->pvfbc_plane0_headr_size);
-        DWLmemset(addr_plane_ch_g_vir, 0, ppu_cfg->pvfbc_plane1_headr_size);
-      }
-      // #ifdef MODEL_SIMULATION
-      // SET_PP_ADDR_REG2(pp_regs,
-      //             HWIF_PPX_OUT_LU_BASE_U_LSB,
-      //             HWIF_PPX_OUT_LU_BASE_U_MSB,
-      //             0,
-      //             ppu_out_bus_addr + MAX(ppu_cfg->plane0_offset, ppu_cfg->luma_offset) + pp_field_offset);
-      // SET_PP_ADDR_REG2(pp_regs,
-      //             HWIF_PPX_OUT_CH_BASE_U_LSB,
-      //             HWIF_PPX_OUT_CH_BASE_U_MSB,
-      //             0,
-      //             ppu_out_bus_addr + MAX(ppu_cfg->plane1_offset, ppu_cfg->chroma_offset) + pp_field_offset_ch);
-      // #else
-      SET_PP_ADDR_REG2(pp_regs,
-                  HWIF_PPX_OUT_LU_BASE_U_LSB,
-                  HWIF_PPX_OUT_LU_BASE_U_MSB,
-                  0,
-                  addr_plane_lu_r);
-      SET_PP_ADDR_REG2(pp_regs,
-                  HWIF_PPX_OUT_CH_BASE_U_LSB,
-                  HWIF_PPX_OUT_CH_BASE_U_MSB,
-                  0,
-                  addr_plane_ch_g);
-      //#endif
-    }
-    else {
-        if (ppu_cfg->sbi_en) {
-          if (!ppu_cfg->sbi_lu_addr) {
-            SET_PP_ADDR_REG2(pp_regs,
-                          HWIF_PPX_OUT_LU_BASE_U_LSB,
-                          HWIF_PPX_OUT_LU_BASE_U_MSB,
-                          i,
-                          ppu_out_bus_addr);
-            addr_t ch_addr = NEXT_MULTIPLE(ppu_out_bus_addr +
-                            ppu_cfg->sbi_lu_segmentbuffer_entry_size *
-                            ppu_cfg->sbi_lu_segmentbuffer_entry_count *
-                            ppu_cfg->ystride * 16, PAGE_SIZE);
-            SET_PP_ADDR_REG2(pp_regs,
-                          HWIF_PPX_OUT_CH_BASE_U_LSB,
-                          HWIF_PPX_OUT_CH_BASE_U_MSB,
-                          i,
-                          ch_addr);
-          } else {
-            SET_PP_ADDR_REG2(pp_regs,
-                          HWIF_PPX_OUT_LU_BASE_U_LSB,
-                          HWIF_PPX_OUT_LU_BASE_U_MSB,
-                          i,
-                          ppu_cfg->sbi_lu_addr);
-            SET_PP_ADDR_REG2(pp_regs,
-                          HWIF_PPX_OUT_CH_BASE_U_LSB,
-                          HWIF_PPX_OUT_CH_BASE_U_MSB,
-                          i,
-                          ppu_cfg->sbi_ch_addr);
-          }
-        } else {
-          if (!valid_2nd_addr) {
-            addr_plane_lu_r = cur_pp_out_addr->bus_address + ppu_cfg->luma_offset + pp_field_offset;
-            addr_plane_ch_g = cur_pp_out_addr->bus_address + ppu_cfg->chroma_offset + pp_field_offset_ch;
-          }
-          else {
-            if (pp_field_offset)
-              addr_plane_lu_r += pp_field_offset;
-            if (pp_field_offset_ch)
-              addr_plane_ch_g += pp_field_offset_ch;
-          }
-          SET_PP_ADDR_REG2(pp_regs,
+    if (ppu_cfg->sbi_en) {
+      if (!ppu_cfg->sbi_lu_addr) {
+        SET_PP_ADDR_REG2(pp_regs,
                       HWIF_PPX_OUT_LU_BASE_U_LSB,
                       HWIF_PPX_OUT_LU_BASE_U_MSB,
                       i,
-                      addr_plane_lu_r);
-          SET_PP_ADDR_REG2(pp_regs,
-                        HWIF_PPX_OUT_CH_BASE_U_LSB,
-                        HWIF_PPX_OUT_CH_BASE_U_MSB,
-                        i,
-                        addr_plane_ch_g);
-        }
+                      ppu_out_bus_addr);
+        addr_t ch_addr = NEXT_MULTIPLE(ppu_out_bus_addr +
+                        ppu_cfg->sbi_lu_segmentbuffer_entry_size *
+                        ppu_cfg->sbi_lu_segmentbuffer_entry_count *
+                        ppu_cfg->ystride * 16, PAGE_SIZE);
+        SET_PP_ADDR_REG2(pp_regs,
+                      HWIF_PPX_OUT_CH_BASE_U_LSB,
+                      HWIF_PPX_OUT_CH_BASE_U_MSB,
+                      i,
+                      ch_addr);
+      } else {
+        SET_PP_ADDR_REG2(pp_regs,
+                      HWIF_PPX_OUT_LU_BASE_U_LSB,
+                      HWIF_PPX_OUT_LU_BASE_U_MSB,
+                      i,
+                      ppu_cfg->sbi_lu_addr);
+        SET_PP_ADDR_REG2(pp_regs,
+                      HWIF_PPX_OUT_CH_BASE_U_LSB,
+                      HWIF_PPX_OUT_CH_BASE_U_MSB,
+                      i,
+                      ppu_cfg->sbi_ch_addr);
+      }
+    } else {
+      if (!valid_2nd_addr) {
+        addr_plane_lu_r = cur_pp_out_addr->bus_address + ppu_cfg->luma_offset + pp_field_offset;
+        addr_plane_ch_g = cur_pp_out_addr->bus_address + ppu_cfg->chroma_offset + pp_field_offset_ch;
+      }
+      else {
+        if (pp_field_offset)
+          addr_plane_lu_r += pp_field_offset;
+        if (pp_field_offset_ch)
+          addr_plane_ch_g += pp_field_offset_ch;
+      }
+      SET_PP_ADDR_REG2(pp_regs,
+                  HWIF_PPX_OUT_LU_BASE_U_LSB,
+                  HWIF_PPX_OUT_LU_BASE_U_MSB,
+                  i,
+                  addr_plane_lu_r);
+      SET_PP_ADDR_REG2(pp_regs,
+                    HWIF_PPX_OUT_CH_BASE_U_LSB,
+                    HWIF_PPX_OUT_CH_BASE_U_MSB,
+                    i,
+                    addr_plane_ch_g);
     }
   } else {
     //CalcOnePpUnitLumaSize think rgb_planar only one plane
@@ -6543,59 +6162,6 @@ void PPSetLancozsScaleRegs(u32 *pp_regs,
   }
 }
 
-u64 CalcOnePpUnitPVFBCPlane0Size(PpUnitIntConfig *ppu_cfg) {
-  u64 pp_height = 0, pp_width = 0;
-  u64 payload_size = 0, header_size = 0, plane0_size = 0;
-  pp_width = ppu_cfg->scale.width;
-  pp_height = ppu_cfg->scale.height;
-  pp_width = ppu_cfg->out_format == PP_OUT_FMT_YUV420_P010 ? pp_width * 2 : pp_width;
-  //pp_width = ppu_cfg->out_format == PP_OUT_FMT_PVFBC_YUV420_P010 ? pp_width * 2 : pp_width;
-  if(ppu_cfg->pp_pvfbc_tile_type == PVFBC_TILED16x4)
-    payload_size = NEXT_MULTIPLE(pp_width, 64) * NEXT_MULTIPLE(pp_height, 4);
-  else if(ppu_cfg->pp_pvfbc_tile_type == PVFBC_TILED8x8)
-    payload_size = NEXT_MULTIPLE(pp_width, 32) * NEXT_MULTIPLE(pp_height, 8);
-  header_size = NEXT_MULTIPLE(payload_size / 256, 256);
-  plane0_size = payload_size + header_size;
-  if(ppu_cfg->pp_pvfbc_bypass==1){
-    if(ppu_cfg->pp_pvfbc_tile_type == PVFBC_TILED8x8)
-      plane0_size = ppu_cfg->ystride * (NEXT_MULTIPLE(pp_height, 8) / 8);
-    else if(ppu_cfg->pp_pvfbc_tile_type == PVFBC_TILED16x4)
-      plane0_size = ppu_cfg->ystride * (NEXT_MULTIPLE(pp_height, 4) / 4);
-  } else {
-    ppu_cfg->pvfbc_plane0_headr_size = header_size;
-  }
-  return plane0_size;
-}
-u64 CalcOnePpUnitPVFBCPlane1Size(PpUnitIntConfig *ppu_cfg, u32 mono_chrome) {
-  u64 pp_height = 0, pp_width = 0;
-  u64 payload_size = 0, header_size = 0, plane1_size = 0;
-  if (!ppu_cfg->monochrome && !mono_chrome && !ppu_cfg->rgb &&
-    !ppu_cfg->rgb_planar && !ppu_cfg->out_yuyv && !ppu_cfg->out_uyvy) {
-    pp_width = ppu_cfg->sub_x == 2 ? NEXT_MULTIPLE(ppu_cfg->scale.width , 2) : ppu_cfg->scale.width * 2;
-    pp_height = ppu_cfg->sub_y == 2 ? (ppu_cfg->scale.height + 1) / 2 : ppu_cfg->scale.height;
-    pp_width = ppu_cfg->out_format == PP_OUT_FMT_YUV420_P010 ? pp_width * 2 : pp_width;
-    //pp_width = ppu_cfg->out_format == PP_OUT_FMT_PVFBC_YUV420_P010 ? pp_width * 2 : pp_width;
-    if(ppu_cfg->pp_pvfbc_tile_type == PVFBC_TILED16x4)
-      payload_size = NEXT_MULTIPLE(pp_width, 64) * NEXT_MULTIPLE(pp_height, 4);
-    else if(ppu_cfg->pp_pvfbc_tile_type == PVFBC_TILED8x8)
-      payload_size = NEXT_MULTIPLE(pp_width, 32) * NEXT_MULTIPLE(pp_height, 8);
-    header_size = NEXT_MULTIPLE(payload_size / 256, 256);
-    plane1_size = payload_size + header_size;
-  }
-  if(ppu_cfg->pp_pvfbc_bypass==1){
-    if(ppu_cfg->pp_pvfbc_tile_type == PVFBC_TILED8x8){
-      u64 ds_aln_h_chroma = NEXT_MULTIPLE(pp_height, 8);
-      plane1_size = ppu_cfg->cstride * (ds_aln_h_chroma / 8);
-    }else if(ppu_cfg->pp_pvfbc_tile_type == PVFBC_TILED16x4){
-      u64 ds_aln_h_chroma = NEXT_MULTIPLE(pp_height, 4);
-      plane1_size = ppu_cfg->cstride * (ds_aln_h_chroma / 4);
-    }
-  } else {
-    ppu_cfg->pvfbc_plane1_headr_size = header_size;
-  }
-  return plane1_size;
-}
-
 void CalcOnePpUnitLumaSize(PpUnitIntConfig *ppu_cfg, u64* size_array) {
   u64 pp_height = 0, pp_stride = 0;
   u64 luma_size = 0;
@@ -6634,42 +6200,6 @@ void CalcOnePpUnitChromaSize(PpUnitIntConfig *ppu_cfg, u32 mono_chrome, u64* siz
   size_array[4] = chroma_size;
 }
 
-u64 CalcOnePpUnitDec400TblSize(const struct DecHwFeatures *hw_feature, PpUnitIntConfig *ppu_cfg, u64 luma_size, u64 chroma_size, u32 i) {
-  u64 dec400_table_size = 0;
-    if(ppu_cfg->dec400_enabled){
-      //luma
-      if(ppu_cfg->dec400_conformance_test_en)
-        ppu_cfg->dec400_luma_table.logical_size = NEXT_MULTIPLE(DEC400_IN_HEADER_SIZE + (luma_size / DEC400_TILE_SIZE * 4 + 7) / 8, DEC400_TILE_SIZE);
-      else
-        ppu_cfg->dec400_luma_table.logical_size = NEXT_MULTIPLE((luma_size / DEC400_TILE_SIZE * 4 + 7) / 8, 16);
-      /*always align DEC400_TBL_ALIGN_FACTOR bytes for luma/chroma table to avoid table pading data covers previous data,
-      and uv start address align*/
-      ppu_cfg->dec400_luma_table.size = NEXT_MULTIPLE(DEC400_IN_HEADER_SIZE + NEXT_MULTIPLE(luma_size / DEC400_TILE_SIZE, 128), 256);
-      dec400_table_size += ppu_cfg->dec400_luma_table.size;
-      ppu_cfg->total_buffer_size[0] += ppu_cfg->dec400_luma_table.size;
-
-      //chroma
-      if(chroma_size) {
-        if(ppu_cfg->dec400_conformance_test_en) {
-          ppu_cfg->dec400_chroma_table.logical_size = NEXT_MULTIPLE(DEC400_IN_HEADER_SIZE + (chroma_size / DEC400_TILE_SIZE * 4 + 7) / 8, DEC400_TILE_SIZE);
-        } else {
-          ppu_cfg->dec400_chroma_table.logical_size = NEXT_MULTIPLE((chroma_size / DEC400_TILE_SIZE * 4 + 7) / 8, 16);
-        }
-        /*always align DEC400_TBL_ALIGN_FACTOR bytes for luma/chroma table to avoid table pading data covers previous data,
-          and uv start address align*/
-        ppu_cfg->dec400_chroma_table.size = NEXT_MULTIPLE(DEC400_IN_HEADER_SIZE + NEXT_MULTIPLE(chroma_size / DEC400_TILE_SIZE, 128), 256);
-      }
-      dec400_table_size += ppu_cfg->dec400_chroma_table.size;
-      ppu_cfg->total_buffer_size[1] += ppu_cfg->dec400_chroma_table.size;
-    }
-  return dec400_table_size;
-}
-
-/* INTERNAL_DEC400: Embed into VCD IPS, one PP buffer layout:
-  | luma header |     luma ts       | luma compressed data  |  chroma header  |     chroma ts     | chroma compressed data  |
-  |--128 Bytes--|-------------------|  >= shaper_alignment  |----128 Bytes----|-------------------|    >= shaper_alignment  |
-  |<---------256 bytes align------->|                       |<-----------256 bytes align--------->|
-*/
 u64 CalcPpUnitBufferSize(const struct DecHwFeatures *hw_feature, PpUnitIntConfig *ppu_cfg, u32 mono_chrome, u32 use_separated_pp) {
   u32 i = 0;
   u64 luma_size = 0,chroma_size = 0;
@@ -6677,20 +6207,11 @@ u64 CalcPpUnitBufferSize(const struct DecHwFeatures *hw_feature, PpUnitIntConfig
   u64 luma_size_2 = 0,chroma_size_2 = 0;
   u64 luma_size_3 = 0,chroma_size_3 = 0;
   u64 size_array[8];
-  u64 ext_buffer_size = 0, dec400_table_size = 0;
-  u32 dec400_pln0_tile_status_size = 0, dec400_pln1_tile_status_size = 0;
-  u64 plane0_size = 0, plane1_size = 0;
+  u64 ext_buffer_size = 0;
   for (i = 0; i < DEC_MAX_PPU_COUNT; i++, ppu_cfg++) {
     DWLmemset(ppu_cfg->total_buffer_size, 0, sizeof(ppu_cfg->total_buffer_size));
     if (!ppu_cfg->enabled) continue;
-    if (ppu_cfg->pp_pvfbc) {
-      plane0_size = CalcOnePpUnitPVFBCPlane0Size(ppu_cfg);
-      plane1_size = CalcOnePpUnitPVFBCPlane1Size(ppu_cfg, mono_chrome);
-      ppu_cfg->plane0_offset = ext_buffer_size;
-      ppu_cfg->plane1_offset = ext_buffer_size + plane0_size;
-    }
     CalcOnePpUnitLumaSize(ppu_cfg, size_array);
-    if (ppu_cfg->dec400_enabled) size_array[0] = NEXT_MULTIPLE(size_array[0], 256);
     luma_size = size_array[0];
     luma_size_1 = size_array[1];
     luma_size_2 = size_array[2];
@@ -6707,7 +6228,6 @@ u64 CalcPpUnitBufferSize(const struct DecHwFeatures *hw_feature, PpUnitIntConfig
     ppu_cfg->hdr_offset = ext_buffer_size;
 
     CalcOnePpUnitChromaSize(ppu_cfg, mono_chrome, size_array);
-    if (ppu_cfg->dec400_enabled) size_array[4] = NEXT_MULTIPLE(size_array[4], 256);
     chroma_size = size_array[4];
     chroma_size_1 = size_array[5];
     chroma_size_2 = size_array[6];
@@ -6721,72 +6241,18 @@ u64 CalcPpUnitBufferSize(const struct DecHwFeatures *hw_feature, PpUnitIntConfig
       ppu_cfg->total_buffer_size[2] = 0;
     }
 
-    dec400_pln0_tile_status_size = 0;
-    dec400_pln1_tile_status_size = 0;
-    if (ppu_cfg->dec400_enabled) {/*suport PP DEC400*/
-      dec400_table_size += CalcOnePpUnitDec400TblSize(hw_feature, ppu_cfg, luma_size, chroma_size, i);
-      dec400_pln0_tile_status_size = ppu_cfg->dec400_luma_table.size;
-      if(chroma_size)
-        dec400_pln1_tile_status_size = ppu_cfg->dec400_chroma_table.size;
-      ppu_cfg->dec400_pln0_tile_status_offset = ext_buffer_size;
-      ppu_cfg->dec400_pln1_tile_status_offset = ext_buffer_size + dec400_pln0_tile_status_size + luma_size;
-    }
     //buf_off_set_by_user only used in heif format
     if (!ppu_cfg->buf_off_set_by_user) {
-      if(ppu_cfg->pp_pvfbc) {
-        // ppu_cfg->luma_offset = ext_buffer_size;
-        // ppu_cfg->chroma_offset = ext_buffer_size + plane0_size;
-        ppu_cfg->luma_offset = ppu_cfg->plane0_offset;
-        ppu_cfg->chroma_offset = ppu_cfg->plane1_offset;
-      } else if(ppu_cfg->dec400_enabled) {
-	      ppu_cfg->luma_offset = dec400_pln0_tile_status_size + ppu_cfg->dec400_pln0_tile_status_offset;
-        ppu_cfg->chroma_offset = dec400_pln1_tile_status_size + ppu_cfg->dec400_pln1_tile_status_offset;
-      } else {
-        u32 base_offset = ext_buffer_size;
-        if (use_separated_pp) {
-          base_offset = 0;
-          dec400_table_size = 0;
-        }
-        ppu_cfg->luma_offset = base_offset;
-        ppu_cfg->chroma_offset = base_offset + luma_size;
+      u32 base_offset = ext_buffer_size;
+      if (use_separated_pp) {
+        base_offset = 0;
       }
+      ppu_cfg->luma_offset = base_offset;
+      ppu_cfg->chroma_offset = base_offset + luma_size;
     }
-    if (ppu_cfg->dec400_enabled) { /*supoort PP DEC400*/
-      ext_buffer_size += luma_size + chroma_size + dec400_pln0_tile_status_size + dec400_pln1_tile_status_size;
-    } else if (ppu_cfg->pp_pvfbc) {
-      // #ifdef MODEL_SIMULATION
-      // ext_buffer_size += NEXT_MULTIPLE(MAX(plane0_size, luma_size) + MAX(plane1_size, chroma_size), 16);
-      // #else
-      // ext_buffer_size += plane0_size + plane1_size; /*always 16byte align*/
-      // #endif
-      ext_buffer_size += plane0_size + plane1_size; /*always 16byte align*/
-    }  else {
-      ext_buffer_size += NEXT_MULTIPLE(luma_size + chroma_size, 16);
-    }
+    ext_buffer_size += NEXT_MULTIPLE(luma_size + chroma_size, 16);
   }
   return ext_buffer_size;
-}
-
-void PpFillDec400TblInfo(PpUnitIntConfig *ppu_cfg,
-                         const u32 *pp_start_vir_addr,
-                         addr_t pp_start_bus_addr,
-                         struct DWLLinearMem *luma_tbl,
-                         struct DWLLinearMem *chroma_tbl) {
-
-  addr_t dec400_table_luma_offset = 0;
-  addr_t dec400_table_chroma_offset = 0;
-  dec400_table_luma_offset = ppu_cfg->dec400_pln0_tile_status_offset + DEC400_IN_HEADER_SIZE;
-  dec400_table_chroma_offset = ppu_cfg->dec400_pln1_tile_status_offset + DEC400_IN_HEADER_SIZE;
-  luma_tbl->virtual_address = (u32*)((u8*)pp_start_vir_addr + dec400_table_luma_offset);
-  luma_tbl->bus_address = pp_start_bus_addr + dec400_table_luma_offset;
-  luma_tbl->logical_size = ppu_cfg->dec400_luma_table.logical_size;
-  luma_tbl->size = ppu_cfg->dec400_luma_table.size;
-  if (!ppu_cfg->monochrome) {
-    chroma_tbl->virtual_address = (u32*)((u8*)pp_start_vir_addr + dec400_table_chroma_offset);
-    chroma_tbl->bus_address = pp_start_bus_addr + dec400_table_chroma_offset;
-    chroma_tbl->logical_size = ppu_cfg->dec400_chroma_table.logical_size;
-    chroma_tbl->size = ppu_cfg->dec400_chroma_table.size;
-  }
 }
 
 void PpUnitSetIntConfig(PpUnitIntConfig *ppu_int_cfg,
@@ -6816,8 +6282,6 @@ void PpUnitSetIntConfig(PpUnitIntConfig *ppu_int_cfg,
     ppu_int_cfg->shaper_enabled = ppu_ext_cfg->shaper_enabled;
     ppu_int_cfg->shaper_no_pad = ppu_ext_cfg->shaper_no_pad;
     ppu_int_cfg->shaper_tile_edge_pad = ppu_ext_cfg->shaper_tile_edge_pad;
-    ppu_int_cfg->dec400_align = ppu_ext_cfg->dec400_align;
-    ppu_int_cfg->dec400_conformance_test_en = ppu_ext_cfg->dec400_conformance_test_en;
     ppu_int_cfg->crop.enabled = ppu_ext_cfg->crop.enabled;
     ppu_int_cfg->crop.set_by_user = ppu_ext_cfg->crop.set_by_user;
     ppu_int_cfg->crop.x = ppu_ext_cfg->crop.x;
@@ -6869,13 +6333,6 @@ void PpUnitSetIntConfig(PpUnitIntConfig *ppu_int_cfg,
     ppu_int_cfg->rb_num = ppu_ext_cfg->rb_num;
     ppu_int_cfg->rb_mode = ppu_ext_cfg->rb_mode;
 
-    ppu_int_cfg->pp_pvfbc_lu_const0 = ppu_ext_cfg->pp_pvfbc_lu_const0;
-    ppu_int_cfg->pp_pvfbc_lu_const1 = ppu_ext_cfg->pp_pvfbc_lu_const1;
-    ppu_int_cfg->pp_pvfbc_ch_const0 = ppu_ext_cfg->pp_pvfbc_ch_const0;
-    ppu_int_cfg->pp_pvfbc_ch_const1 = ppu_ext_cfg->pp_pvfbc_ch_const1;
-    ppu_int_cfg->pp_pvfbc_tile_type = ppu_ext_cfg->pp_pvfbc_tile_type;
-    ppu_int_cfg->pp_pvfbc_bypass = ppu_ext_cfg->pp_pvfbc_bypass;
-    ppu_int_cfg->pp_fbc_tile_enable = ppu_ext_cfg->pp_fbc_tile_enable;
     ppu_int_cfg->pad_sel = ppu_ext_cfg->pad_sel;
     ppu_int_cfg->src_sel_mode = ppu_ext_cfg->src_sel_mode;
     ppu_int_cfg->pad_Y = ppu_ext_cfg->pad_Y;
@@ -7222,105 +6679,6 @@ enum DecPictureFormat TransUnitConfig2Format(PpUnitIntConfig *ppu_int_cfg) {
 
   if (ppu_int_cfg->hist_global_e || ppu_int_cfg->hist_local_e || ppu_int_cfg->hist_hsv_e) {
     output_format = DEC_OUT_FRM_HIST;
-  } else if (ppu_int_cfg->dec400_enabled) {
-    /* DEC400 */
-    if (ppu_int_cfg->rgb) {
-      switch (ppu_int_cfg->rgb_format) {
-      case PP_OUT_RGB888:
-        output_format = DEC_OUT_FRM_DEC400_RGB888;
-        break;
-      case PP_OUT_BGR888:
-        output_format = DEC_OUT_FRM_DEC400_BGR888;
-        break;
-      case PP_OUT_ABGR888:
-        output_format = DEC_OUT_FRM_DEC400_ABGR888;
-        break;
-      case PP_OUT_ARGB888:
-        output_format = DEC_OUT_FRM_DEC400_ARGB888;
-        break;
-      case PP_OUT_BGRA888:
-        output_format = DEC_OUT_FRM_DEC400_BGRA888;
-        break;
-      case PP_OUT_RGBA888:
-        output_format = DEC_OUT_FRM_DEC400_RGBA888;
-        break;
-      case PP_OUT_A2B10G10R10:
-        output_format = DEC_OUT_FRM_DEC400_A2B10G10R10;
-        break;
-      case PP_OUT_A2R10G10B10:
-        output_format = DEC_OUT_FRM_DEC400_A2R10G10B10;
-        break;
-      case PP_OUT_B10G10R10A2:
-        output_format = DEC_OUT_FRM_DEC400_B10G10R10A2;
-        break;
-      case PP_OUT_R10G10B10A2:
-        output_format = DEC_OUT_FRM_DEC400_R10G10B10A2;
-        break;
-      case PP_OUT_X2R10G10B10:
-        output_format = DEC_OUT_FRM_DEC400_X2R10G10B10;
-        break;
-      case PP_OUT_X2B10G10R10:
-        output_format = DEC_OUT_FRM_DEC400_X2B10G10R10;
-        break;
-      case PP_OUT_XBGR888:
-        output_format = DEC_OUT_FRM_DEC400_XBGR888;
-        break;
-      case PP_OUT_XRGB888:
-        output_format = DEC_OUT_FRM_DEC400_XRGB888;
-        break;
-      default:
-        ASSERT(0);
-        break;
-      }
-    } else if (ppu_int_cfg->monochrome) {
-      if (ppu_int_cfg->pixel_width != 8)
-        output_format = DEC_OUT_FRM_DEC400_400_P010;
-      else
-        output_format = DEC_OUT_FRM_DEC400_400;
-    } else if(ppu_int_cfg->chroma_format < PP_CHROMA_422){
-      if (ppu_int_cfg->pixel_width != 8)
-        output_format = ppu_int_cfg->cr_first ? DEC_OUT_FRM_DEC400_NV21SP_P010 : DEC_OUT_FRM_DEC400_420SP_P010;
-      else
-        output_format = ppu_int_cfg->cr_first ? DEC_OUT_FRM_DEC400_NV21SP : DEC_OUT_FRM_DEC400_420SP;
-    } else if(ppu_int_cfg->out_yuyv) {
-      output_format = DEC_OUT_FRM_DEC400_YUV422_YUYV;
-    } else if(ppu_int_cfg->out_uyvy) {
-      output_format = DEC_OUT_FRM_DEC400_YUV422_UYVY;
-    }
-  } else if (ppu_int_cfg->pp_pvfbc) {/*only support 420SP/420SP_P010*/
-    if(ppu_int_cfg->pp_pvfbc_bypass){
-      if (ppu_int_cfg->pixel_width == 8) {
-        if (ppu_int_cfg->chroma_format == PP_CHROMA_420) {
-          if(ppu_int_cfg->pp_pvfbc_tile_type == PVFBC_TILED16x4)
-            output_format = DEC_OUT_FRM_PVFBC_BYPASS_TILED16X4_420SP;
-          else if(ppu_int_cfg->pp_pvfbc_tile_type == PVFBC_TILED8x8)
-            output_format = DEC_OUT_FRM_PVFBC_BYPASS_TILED8X8_420SP;
-        }
-      } else {
-        if (ppu_int_cfg->chroma_format == PP_CHROMA_420) {
-          if(ppu_int_cfg->pp_pvfbc_tile_type == PVFBC_TILED16x4)
-            output_format = DEC_OUT_FRM_PVFBC_BYPASS_TILED16X4_420SP_P010;
-          else if(ppu_int_cfg->pp_pvfbc_tile_type == PVFBC_TILED8x8)
-            output_format = DEC_OUT_FRM_PVFBC_BYPASS_TILED8X8_420SP_P010;
-        }
-      }
-    }else{
-      if (ppu_int_cfg->pixel_width == 8) {
-        if (ppu_int_cfg->chroma_format == PP_CHROMA_420) {
-          if(ppu_int_cfg->pp_pvfbc_tile_type == PVFBC_TILED16x4)
-            output_format = DEC_OUT_FRM_PVFBC_TILED16X4_420SP;
-          else if(ppu_int_cfg->pp_pvfbc_tile_type == PVFBC_TILED8x8)
-            output_format = DEC_OUT_FRM_PVFBC_TILED8X8_420SP;
-        }
-      } else {
-        if (ppu_int_cfg->chroma_format == PP_CHROMA_420) {
-          if(ppu_int_cfg->pp_pvfbc_tile_type == PVFBC_TILED16x4)
-            output_format = DEC_OUT_FRM_PVFBC_TILED16X4_420SP_P010;
-          else if(ppu_int_cfg->pp_pvfbc_tile_type == PVFBC_TILED8x8)
-            output_format = DEC_OUT_FRM_PVFBC_TILED8X8_420SP_P010;
-        }
-      }
-    }
   } else if (ppu_int_cfg->rgb || ppu_int_cfg->rgb_planar) {
     /* RGB */
     switch (ppu_int_cfg->rgb_format) {
@@ -7729,8 +7087,6 @@ const HwRegDesc hw_dec_reg_spec[HWIF_LAST_REG + 1] = {
 /* HWIF_PPX_OUT_SWAP_U                                                  */ G2REG(/*swreg*/384,  4, 28,  1),
 /* HWIF_PPX_SHAPER_DIS_U                                                */ G2REG(/*swreg*/384,  1, 27,  1),
 /* HWIF_PPX_COMP_E_U                                                    */ G2REG(/*swreg*/384,  1, 26,  1),
-/* HWIF_PPX_PP_COMP_DIRECT_MAP_U                                        */ G2REG(/*swreg*/384,  1, 25,  1),
-/* HWIF_PPX_DEC400_ALIGN_U                                              */ G2REG(/*swreg*/384,  1, 24,  1),
 /* HWIF_PPX_OUT_FORMAT_U                                                */ G2REG(/*swreg*/384,  5, 18,  1),
 /* HWIF_PPX_OUT_RGB_FMT_U                                               */ G2REG(/*swreg*/384,  5, 13,  1),
 /* HWIF_PPX_OUT_P010_FMT_U                                              */ G2REG(/*swreg*/384,  2, 11,  1),
@@ -7795,13 +7151,6 @@ const HwRegDesc hw_dec_reg_spec[HWIF_LAST_REG + 1] = {
 /* HWIF_PPX_CROP2_STARTY_U                                              */ G2REG(/*swreg*/414, 13,  0,  1),
 /* HWIF_PPX_CROP2_OUT_WIDTH_U                                           */ G2REG(/*swreg*/415, 16, 16,  1),
 /* HWIF_PPX_CROP2_OUT_HEIGHT_U                                          */ G2REG(/*swreg*/415, 16,  0,  1),
-/* HWIF_PPX_DS_COEFF3_U                                                 */ G2REG(/*swreg*/416,  8, 24,  1),
-/* HWIF_PPX_DS_COEFF2_U                                                 */ G2REG(/*swreg*/416,  8, 16,  1),
-/* HWIF_PPX_DS_COEFF1_U                                                 */ G2REG(/*swreg*/416,  8,  8,  1),
-/* HWIF_PPX_DS_COEFF0_U                                                 */ G2REG(/*swreg*/416,  8,  0,  1),
-/* HWIF_PPX_DS_COEFF6_U                                                 */ G2REG(/*swreg*/417,  8, 16,  1),
-/* HWIF_PPX_DS_COEFF5_U                                                 */ G2REG(/*swreg*/417,  8,  8,  1),
-/* HWIF_PPX_DS_COEFF4_U                                                 */ G2REG(/*swreg*/417,  8,  0,  1),
 /* HWIF_PPX_CH_WSCALE_INVRA_U                                           */ G2REG(/*swreg*/418, 24,  0,  1),
 /* HWIF_PPX_CH_HSCALE_INVRA_U                                           */ G2REG(/*swreg*/419, 24,  0,  1),
 /* HWIF_PPX_RANGE_MAX_U                                                 */ G2REG(/*swreg*/420, 12, 20,  1),
@@ -7809,20 +7158,8 @@ const HwRegDesc hw_dec_reg_spec[HWIF_LAST_REG + 1] = {
 /* HWIF_PPX_RANGE_MAP_FLAG_U                                            */ G2REG(/*swreg*/420,  2,  0,  1),
 /* HWIF_PPX_RANGE_MAP_COEFF2_U                                          */ G2REG(/*swreg*/421, 16, 16,  1),
 /* HWIF_PPX_RANGE_MAP_COEFF1_U                                          */ G2REG(/*swreg*/421, 16,  0,  1),
-/* HWIF_PPX_DEC400_PLN0_TS_BASE_U_MSB                                   */ G2REG(/*swreg*/422, 32,  0,  1),
-/* HWIF_PPX_DEC400_PLN0_TS_BASE_U_LSB                                   */ G2REG(/*swreg*/423, 32,  0,  1),
-/* HWIF_PPX_DEC400_PLN1_TS_BASE_U_MSB                                   */ G2REG(/*swreg*/424, 32,  0,  1),
-/* HWIF_PPX_DEC400_PLN1_TS_BASE_U_LSB                                   */ G2REG(/*swreg*/425, 32,  0,  1),
 /* HWIF_PPX_CH_WSCALE_RATIO_U                                           */ G2REG(/*swreg*/426, 18,  0,  1),
 /* HWIF_PPX_CH_HSCALE_RATIO_U                                           */ G2REG(/*swreg*/427, 18,  0,  1),
-/* HWIF_PPX_PVFBC_TILE_TYPE_U                                           */ G2REG(/*swreg*/428,  2, 30,  1),
-/* HWIF_PPX_PVFBC_CH_VAL0_U                                             */ G2REG(/*swreg*/428, 10, 20,  1),
-/* HWIF_PPX_PVFBC_LU_VAL1_U                                             */ G2REG(/*swreg*/428, 10, 10,  1),
-/* HWIF_PPX_PVFBC_LU_VAL0_U                                             */ G2REG(/*swreg*/428, 10,  0,  1),
-/* HWIF_PPX_PVFBC_BYPASS_U                                              */ G2REG(/*swreg*/429,  1, 26,  1),
-/* HWIF_PPX_PVFBC_CH_VAL1_U                                             */ G2REG(/*swreg*/429, 10, 16,  1),
-/* HWIF_PPX_PVFBC_PLN0_PLD_OFFSET_U                                     */ G2REG(/*swreg*/430, 26,  0,  1),
-/* HWIF_PPX_PVFBC_PLN1_PLD_OFFSET_U                                     */ G2REG(/*swreg*/431, 26,  0,  1),
 /* HWIF_PP_OUT_RB_MODE_U                                                */ G2REG(/*swreg*/436,  2,  4,  1),
 /* HWIF_PP_OUT_RB_EN_U                                                  */ G2REG(/*swreg*/436,  1,  2,  1),
 /* HWIF_PP_OUT_SEGMENT_ENTRY_HEIGHT_U                                   */ G2REG(/*swreg*/437, 12,  4,  1),
@@ -10788,7 +10125,6 @@ static u32 JpegDecGetExifInfo(JpegDecContainer * p_dec_data, void *info,
                               u32 *len, u32 *thumbnail);
 
 static void JpegSetOutBufferAsUsed(const JpegDecContainer *dec_cont, const JpegDecOutput *p_dec_out);
-static void JpegPrepareDec400Data(const JpegDecContainer *dec_cont, JpegDecOutput *p_dec_out);
 static void JpegSetPpOutBuffer(const JpegDecContainer *dec_cont, JpegDecOutput *p_dec_out);
 static void JpegSetPpOutInfo(const JpegDecContainer *dec_cont, u32 image_type, JpegDecOutput *p_dec_out);
 static void JpegSetExternalBufferInfo(JpegDecInst dec_inst);
@@ -12493,7 +11829,6 @@ enum DecRet JpegDecDecode(JpegDecInst dec_inst, JpegDecInput * p_dec_in,
           /* output set */
           JpegSetPpOutBuffer(dec_cont, p_dec_out);
           JpegSetPpOutInfo(dec_cont, p_dec_in->dec_image_type, p_dec_out);
-          JpegPrepareDec400Data(dec_cont, p_dec_out);
 
           //p_dec_out->crc = dec_cont->crc;
           SwGetCrcLast(&dec_cont->crc, &p_dec_out->crc);
@@ -12542,7 +11877,6 @@ enum DecRet JpegDecDecode(JpegDecInst dec_inst, JpegDecInput * p_dec_in,
             /* output set */
             JpegSetPpOutBuffer(dec_cont, p_dec_out);
             JpegSetPpOutInfo(dec_cont, p_dec_in->dec_image_type, p_dec_out);
-            JpegPrepareDec400Data(dec_cont, p_dec_out);
 
             ret_code = DEC_STRM_PROCESSED;
             goto end;
@@ -12638,7 +11972,6 @@ enum DecRet JpegDecDecode(JpegDecInst dec_inst, JpegDecInput * p_dec_in,
 
           // if(dec_cont->pp_enabled)
           JpegSetPpOutInfo(dec_cont, p_dec_in->dec_image_type, p_dec_out);
-          JpegPrepareDec400Data(dec_cont, p_dec_out);
           //p_dec_out->crc = dec_cont->crc;
           SwGetCrcLast(&dec_cont->crc, &p_dec_out->crc);
           JpegMarkOutputPicInfo(dec_cont, p_dec_out);
@@ -13585,26 +12918,6 @@ void JpegSetOutBufferAsUsed(const JpegDecContainer *dec_cont, const JpegDecOutpu
   InputQueueSetBufAsUsed(dec_cont->pp_buffer_queue, output_pic_addr[0], dec_cont->cur_out_ext_buf_index);
 }
 
-void JpegPrepareDec400Data(const JpegDecContainer *dec_cont, JpegDecOutput *p_dec_out) {
-  PpUnitIntConfig *ppu_cfg = (PpUnitIntConfig *)dec_cont->ppu_cfg;
-  u32 i;
-  struct DWLDecBuffers dec_buffers = JpegPrepareCurDecBuffers(dec_cont, dec_cont->info.out_pp_luma,
-                                       dec_cont->info.out_pp_chroma, dec_cont->info.out_pp_chroma2);
-  u32 pp_out_ctrl = 0;
-  if (!dec_cont->ppu_cfg[0].sbi_en)
-    pp_out_ctrl = InputQueueGetPPOutCtrl(dec_cont->pp_buffer_queue, &dec_buffers.dec_buffer[0][0]);
-
-  for (i = 0; i < DEC_MAX_PPU_COUNT; i++, ppu_cfg++) {
-    if (!ppu_cfg->enabled || !ppu_cfg->dec400_enabled || !PP_CHANNEL_OUT_ENABLE(pp_out_ctrl, i)) continue;
-    PpFillDec400TblInfo(ppu_cfg,
-                        dec_cont->info.out_pp_luma[0].virtual_address,
-                        dec_cont->info.out_pp_luma[0].bus_address,
-                        &p_dec_out->pictures[i].dec400_luma_table,
-                        &p_dec_out->pictures[i].dec400_chroma_table);
-    p_dec_out->pictures[i].dec400_conformance_test_en = dec_cont->ppu_cfg[i].dec400_conformance_test_en;
-  }
-}
-
 av_unused static void JpegConvertStruct_1(const JpegDecContainer *dec_cont, struct DWLDecBuffers *out_buf) {
   u32 i;
 
@@ -13734,7 +13047,6 @@ void JpegSetPpOutInfo(const JpegDecContainer *dec_cont, u32 image_type, JpegDecO
       p_dec_out->pictures[i].pic_stride_ch = ppu_cfg->cstride;
       p_dec_out->pictures[i].output_format = TransUnitConfig2Format((PpUnitIntConfig *)ppu_cfg);
     }
-    p_dec_out->pictures[i].pp_fbc_tile_enable = ppu_cfg->pp_fbc_tile_enable;
   }
 }
 
@@ -18571,11 +17883,7 @@ enum DecRet PngDecSetInfo(PngDecInst dec_inst, struct PngDecConfig *dec_cfg) {
     dec_cfg->ppu_config[i].align = dec_cfg->align;
     dec_cfg->ppu_config[i].chroma_format = PP_CHROMA_400;
     if ((u32)dec_cfg->ppu_config[i].align < shaper_alignment) {
-      if (dec_cfg->ppu_config[i].comp_enabled && (dec_cont->cur_hw_feature->pp_comp_support[i] == 2)) { /*enable dec400c*/
-        dec_cfg->ppu_config[i].align = shaper_alignment;
-      } else {
-        dec_cfg->ppu_config[i].shaper_no_pad = 0;
-      }
+      dec_cfg->ppu_config[i].shaper_no_pad = 0;
     } else {
       if(dec_cont->cur_hw_feature->shaper_enabled[i]) {
         dec_cfg->ppu_config[i].shaper_no_pad = 0;
@@ -18773,12 +18081,6 @@ void PngFillPictureStruct(PngDecContainer * dec_cont, PngDecOutput *p_dec_out) {
       p_dec_out->pictures[i].pic_stride = dec_cont->ppu_cfg[i].ystride;
       p_dec_out->pictures[i].pic_stride_ch = dec_cont->ppu_cfg[i].cstride;
       p_dec_out->pictures[i].output_format = TransUnitConfig2Format(ppu_cfg);
-      if (ppu_cfg->dec400_enabled)
-        PpFillDec400TblInfo(ppu_cfg,
-                            dec_cont->asic_buff.pp_luma_buffer->virtual_address,
-                            dec_cont->asic_buff.pp_luma_buffer->bus_address,
-                            &p_dec_out->pictures[i].dec400_luma_table,
-                            &p_dec_out->pictures[i].dec400_chroma_table);
   }
 
   PngSetPpOutBuffer(dec_cont, p_dec_out);

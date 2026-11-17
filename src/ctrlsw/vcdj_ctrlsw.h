@@ -640,15 +640,6 @@ extern "C" {
  * \ingroup common_group */
 #define PACKED422_TILED8x8 8
 
-/** \brief The PVFBC 8x8 tiled output mode.
- * \ingroup common_group */
-#define PVFBC_TILED8x8 1
-/** \brief The PVFBC 16x4 tiled output mode.
- * \ingroup common_group */
-#define PVFBC_TILED16x4 2
-/** */
-// #define PVFBC_TILED32x2 3 /* Not supported */
-
 /** \brief The round-down algorithm for center-point selection.
  *  \ingroup common_group */
 #define DOWN_ROUND 0
@@ -3303,11 +3294,6 @@ typedef struct _PpUnitConfig {
    *  \n - <tt>0</tt>: Disable.
    *  \n - <tt>1</tt>: Enable. */
   u32 shaper_tile_edge_pad;
-  /** \brief The alignment for DEC400 compression.
-   *  \n Valid values: <tt> \ref DEC_ALIGN_32B</tt> and <tt> \ref DEC_ALIGN_64B</tt>. */
-  DecPicAlignment dec400_align;
-  /** \brief Whether to enable DEC400 compression conformance test. */
-  u8 dec400_conformance_test_en;
   /** \brief The alignment of the post-processing output. */
   DecPicAlignment align;
   /** \brief The height alignment of the post-processing output. */
@@ -3437,31 +3423,6 @@ typedef struct _PpUnitConfig {
   u32 x_filter_param;
   /** \brief The vertical window for the Lanczos algorithm. */
   u32 y_filter_param;
-  /** \brief Whether to enable compression.
-   *  \n Valid values:
-   *  \n - <tt>0</tt>: Disable.
-   *  \n - <tt>1</tt>: Enable. */
-  u32 comp_enabled;
-  /** \brief The constant luma value 0 for VFBC. */
-  u32 pp_pvfbc_lu_const0;
-  /** \brief The constant luma value 1 for VFBC. */
-  u32 pp_pvfbc_lu_const1;
-  /** \brief The constant chroma value 0 for VFBC. */
-  u32 pp_pvfbc_ch_const0;
-  /** \brief The constant chroma value 1 for VFBC. */
-  u32 pp_pvfbc_ch_const1;
-  /** \brief The PVFBC tile type. */
-  u8  pp_pvfbc_tile_type;
-  /** \brief Whether to bypass PVFBC compression for tiled 32x8 or tiled 64x4 output.
-   *  \n Valid values:
-   *  \n - <tt>0</tt>: Disable.
-   *  \n - <tt>1</tt>: Enable. */
-  u8  pp_pvfbc_bypass;
-  /** \brief Whether to enable FBC tiled header mode.
-   *  \n Valid values:
-   *  \n - <tt>0</tt>: Disable.
-   *  \n - <tt>1</tt>: Enable. */
-  u32 pp_fbc_tile_enable;
   /** \brief The algorithm used to select the center point for scaling.
    *  \n Valid values: <tt> \ref DOWN_ROUND</tt>, <tt> \ref NO_ROUND</tt>, and
    *  <tt> \ref UP_ROUND</tt>.
@@ -6872,16 +6833,6 @@ struct DecPicture {
    *  \n - <tt>0</tt>: Disable.
    *  \n - <tt>1</tt>: Enable. */
   u8 hist_e;
-  /** \brief Whether to enable DEC400 compression conformance test.
-   *  \n Valid values:
-   *  \n - <tt>0</tt>: Disable.
-   *  \n - <tt>1</tt>: Enable. */
-  u8 dec400_conformance_test_en;
-  /** \brief Whether to enable FBC tile mode.
-   *  \n Valid values:
-   *  \n - <tt>0</tt>: Disable.
-   *  \n - <tt>1</tt>: Enable. */
-  u8 pp_fbc_tile_enable;
 };
 
 /** \brief Contains decoded pictures for each decoder output channel.
@@ -7472,20 +7423,11 @@ typedef struct _PpUnitIntConfig {
   u64 chroma_size_2;
   u64 luma_size_3;
   u64 chroma_size_3;
-  u32 header_offset;   /* FBC header offset of current PPU to pp buffer start addres */
-  u32 payload_offset;  /* FBC payload offset of current PPU to pp buffer start addres */
-  u64 plane0_offset;   /* PVFBC plane0 offset of current PPU to pp buffer start addres */
-  u64 plane1_offset;  /* PVFBC plane1 offset of current PPU to pp buffer start addres */
   u32 pixel_width;   /* pixel bit depth store in external memory */
   u32 stream_pixel_width; /* pixel bit depth in stream header */
   u32 shaper_enabled;
   u32 shaper_no_pad; /*disable frame right edge shaper padding*/
   u32 shaper_tile_edge_pad; /*enable tile edge shaper padding*/
-  u32 dec400_enabled; /* --sw don't confige, 1--sw confige */
-  DecPicAlignment dec400_align; /**dec400 compression align, 32bytes or 64 bytes*/
-  u32 dec400_pln0_tile_status_offset;   /* DEC400 pln0 tile status offset of current PPU to pp buffer start addres */
-  u32 dec400_pln1_tile_status_offset;  /* DEC400 pln1 tile status offset of current PPU to pp buffer start addres */
-  u8  dec400_conformance_test_en;
   u32 align_pixel_w; /* width align in pixel,set by user */
   DecPicAlignment align;    /* alignment for current PPU */
   DecPicAlignment align_h;    /* height alignment for current PPU */
@@ -7574,18 +7516,6 @@ typedef struct _PpUnitIntConfig {
   u32 x_filter_param;
   u32 y_filter_param;
   u32 antialias;
-  u32 pp_comp;
-  u32 pp_fbc_tile_enable;
-  u32 pp_pvfbc;
-  u32 pvfbc_plane0_headr_size;
-  u32 pvfbc_plane1_headr_size;
-  //char *in_lib_name;
-  u32 pp_pvfbc_lu_const0;
-  u32 pp_pvfbc_lu_const1;
-  u32 pp_pvfbc_ch_const0;
-  u32 pp_pvfbc_ch_const1;
-  u8  pp_pvfbc_tile_type;
-  u8  pp_pvfbc_bypass;
   u32 vir_left;
   u32 vir_right;
   u32 vir_top;
@@ -7604,14 +7534,12 @@ typedef struct _PpUnitIntConfig {
   u32 lc_int_enabled;
 
   struct DWLLinearMem lanczos_table;
-  struct DWLLinearMem fbc_tile;
   addr_t reorder_buf_bus[MAX_ASIC_CORES];
   u32 reorder_size;
   addr_t scale_buf_bus[MAX_ASIC_CORES];
   u32 scale_size;
   addr_t scale_out_buf_bus[MAX_ASIC_CORES];
   u32 scale_out_size;
-  u32 fbc_tile_offset;
   u32 out_yuyv;
   u32 out_uyvy;
   u32 buf_off_set_by_user; // used in heif format with grid
@@ -7620,8 +7548,6 @@ typedef struct _PpUnitIntConfig {
   enum StrideUnit unit;
   struct DecSliceTextInfo slice_text;
   const void *dwl;
-  struct DWLLinearMem dec400_luma_table;
-  struct DWLLinearMem dec400_chroma_table;
   u32 pp_in_org_width;
   u32 pp_in_org_height;
   /* hist */
@@ -7690,15 +7616,6 @@ struct PpParams {
   u8  interlace;
 };
 
-#define DEC400_TILE_SIZE        (256)
-#define DEC400_TBL_ALIGN_FACTOR (256)
-#define DEC400_IN_HEADER_SIZE   (128)
-void PpFillDec400TblInfo(PpUnitIntConfig *ppu_cfg,
-                         const u32 *pp_start_vir_addr,
-                         addr_t pp_start_bus_addr,
-                         struct DWLLinearMem *luma_tbl,
-                         struct DWLLinearMem *chroma_tbl);
-
 u32 CheckPpUnitConfig(const struct DecHwFeatures *hw_feature,
                       u32 in_width,
                       u32 in_height,
@@ -7709,9 +7626,6 @@ u32 CheckPpUnitConfig(const struct DecHwFeatures *hw_feature,
 u64 CalcPpUnitBufferSize(const struct DecHwFeatures *hw_feature, PpUnitIntConfig *ppu_cfg, u32 mono_chrome, u32 use_separated_pp);
 void CalcOnePpUnitLumaSize(PpUnitIntConfig *ppu_cfg, u64* size_array);
 void CalcOnePpUnitChromaSize(PpUnitIntConfig *ppu_cfg, u32 mono_chrome, u64* size_array);
-u64 CalcOnePpUnitDec400TblSize(const struct DecHwFeatures *hw_feature, PpUnitIntConfig *ppu_cfg, u64 luma_size, u64 chroma_size, u32 i);
-u64 CalcOnePpUnitPVFBCPlane0Size(PpUnitIntConfig *ppu_cfg);
-u64 CalcOnePpUnitPVFBCPlane1Size(PpUnitIntConfig *ppu_cfg, u32 mono_chrome);
 
 void calSecondUpScaleRatio(const struct DecHwFeatures *hw_feature, PpUnitIntConfig *ppu_cfg, u32 interlace);
 
@@ -8836,10 +8750,6 @@ typedef struct {
     u32 pic_stride;
     u32 pic_stride_ch;
     enum DecPictureFormat output_format;
-    struct DWLLinearMem dec400_luma_table;           /**< Buffer properties *//*sunny add for tile status address*/
-    struct DWLLinearMem dec400_chroma_table;/**< Buffer properties *//*sunny add for tile status address*/
-    u8 dec400_conformance_test_en;/**< enable dec400 conformance test*/
-    u8 pp_fbc_tile_enable;/**< enable FBC tile header mode*/
   } pictures[DEC_MAX_OUT_COUNT];
   enum DecErrorInfo error_info;
   u32 error_ratio;
@@ -9000,8 +8910,6 @@ typedef struct {
     u32 pic_stride;
     u32 pic_stride_ch;
     enum DecPictureFormat output_format;
-    struct DWLLinearMem dec400_luma_table;           /**< Buffer properties *//*sunny add for tile status address*/
-    struct DWLLinearMem dec400_chroma_table;
   } pictures[DEC_MAX_OUT_COUNT];
 } PngDecOutput;
 

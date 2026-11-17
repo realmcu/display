@@ -618,6 +618,48 @@ def delete_line(rule, doc, which):
         del doc['origin'][top:i + 1]
 
 
+def delete_macro(rule, doc, which):
+    """Delete `#define <name>` together with its continuation lines.
+
+    With `comment_above`, the comment lines directly above it go too.
+    """
+    lines = doc['lines']
+    code = code_lines(lines)
+    lo, = code_hits(code, r'^\s*#\s*define\s+%s\b' % re.escape(rule['name']), 1, which)
+    hi = lo
+    while hi + 1 < len(lines) and lines[hi].rstrip().endswith('\\'):
+        hi += 1
+    top = comment_top(lines, code, lo) if rule.get('comment_above') else lo
+    top, hi = widen_blank(lines, top, hi)
+    del lines[top:hi + 1]
+    del doc['origin'][top:hi + 1]
+
+
+def delete_comment(rule, doc, which):
+    """Delete the one comment block whose first line matches `match`.
+
+    For a comment that described code the rules above removed. The block must
+    sit on lines of its own.
+    """
+    lines = doc['lines']
+    code = code_lines(lines)
+    pat = re.compile(rule['match'])
+    hits = [i for i, l in enumerate(lines) if pat.search(l) and not code[i].strip()]
+    if len(hits) != 1:
+        raise PruneError('%s: comment %r matches %d lines, the rule needs exactly one'
+                         % (which, rule['match'], len(hits)))
+    lo = hi = hits[0]
+    while hi + 1 < len(lines) and lines[hi].strip() and not code[hi].strip() \
+            and '*/' not in lines[hi]:
+        hi += 1
+    if '*/' not in lines[hi] or code[hi].strip():
+        raise PruneError('%s: line %d: the comment does not end on a line of its own'
+                         % (which, lo + 1))
+    lo, hi = widen_blank(lines, lo, hi)
+    del lines[lo:hi + 1]
+    del doc['origin'][lo:hi + 1]
+
+
 def delete_member(rule, doc, which):
     """Delete member `member` of `struct <struct> {`, with the comment above it.
 
@@ -1120,6 +1162,8 @@ ACTIONS = {
     'substitute': (substitute, None),
     'delete_line': (delete_line, None),
     'delete_member': (delete_member, None),
+    'delete_macro': (delete_macro, None),
+    'delete_comment': (delete_comment, None),
     'replace_line': (replace_line, None),
     'merge_license': (merge_license, None),
     'prune_reg_enum': (None, None),
@@ -1148,6 +1192,10 @@ def apply_rules(h, c, rules):
             # The struct lives in one file and its users in both.
             for which, doc in docs.items():
                 check_no_member_references(rule, doc, which)
+        if action == 'delete_macro':
+            # A macro in the header expands in the .c too.
+            for which, doc in docs.items():
+                check_no_code_references(rule, doc, which)
         if action in NAMED:
             delete_declaration(rule, docs['vcdj_ctrlsw.h'])
             verify(rule, docs['vcdj_ctrlsw.h'], 'vcdj_ctrlsw.h')
