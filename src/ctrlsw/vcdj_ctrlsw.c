@@ -7551,57 +7551,6 @@ u32 SwCountLeadingZeros(u32 value, u32 length);
 u32 SwNumBits(u32 value);
 u8* SwTurnAround(const u8 * strm, const u8* buf, u8* tmp_buf, u32 buf_size, u32 num_bits, struct strmInfo *stream_info);
 
-/* utils for u(v) */
-static inline int floorLog2(u32 x) {
-  if (x == 0)
-  {
-    // note: ceilLog2() expects -1 as return value
-    return -1;
-  }
-#ifdef __GNUC__
-  return 31 - __builtin_clz(x);
-#else
-#ifdef _MSC_VER
-  unsigned long r = 0;
-  _BitScanReverse(&r, x);
-  return r;
-#else
-  int result = 0;
-  if (x & 0xffff0000)
-  {
-    x >>= 16;
-    result += 16;
-  }
-  if (x & 0xff00)
-  {
-    x >>= 8;
-    result += 8;
-  }
-  if (x & 0xf0)
-  {
-    x >>= 4;
-    result += 4;
-  }
-  if (x & 0xc)
-  {
-    x >>= 2;
-    result += 2;
-  }
-  if (x & 0x2)
-  {
-    x >>= 1;
-    result += 1;
-  }
-  return result;
-#endif
-#endif
-}
-
-static inline int ceilLog2(u32 x)
-{
-  return (x==0) ? -1 : floorLog2(x - 1) + 1;
-}
-
 #define READ_CODE(stream, n, syntax, str) do { \
   u32 ucode = SwGetBits(stream, (n)); \
   if (ucode == END_OF_STREAM) return(HANTRO_NOK); \

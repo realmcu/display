@@ -1498,6 +1498,11 @@
       "why": "C01/C02: the output flags in struct DecPicture and JpegDecOutput, never set now"
     },
     {
+      "action": "delete_unused_inline",
+      "keep": {"vcdj_ctrlsw.h": 27, "vcdj_ctrlsw.c": 0},
+      "why": "format and math helpers the rules above left without a caller; keep this rule after every other deletion and before prune_reg_enum"
+    },
+    {
       "action": "prune_reg_enum",
       "enum": "HwIfName",
       "table": "hw_dec_reg_spec",

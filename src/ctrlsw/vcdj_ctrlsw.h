@@ -1844,38 +1844,6 @@ static inline u32 IS_PIC_PACKED_RGB(enum DecPictureFormat fmt)
     (fmt) == DEC_OUT_FRM_DEC400_B10G10R10A2_TILED64X64 || \
     (fmt) == DEC_OUT_FRM_DEC400_R10G10B10A2_TILED64X64);
 }
-/** \brief A function that checks whether the given format is a packed RGB super tile with dec400 compression format,
- *  in which all components are packed together in the same plane.
- *  \ingroup common_group */
-static inline u32 IS_PIC_DEC400_SUPER_TILE(enum DecPictureFormat fmt)
-{
-  return (
-    (fmt) == DEC_OUT_FRM_DEC400_ABGR888_TILED64X64 || \
-    (fmt) == DEC_OUT_FRM_DEC400_ARGB888_TILED64X64 || \
-    (fmt) == DEC_OUT_FRM_DEC400_A2B10G10R10_TILED64X64 || \
-    (fmt) == DEC_OUT_FRM_DEC400_A2R10G10B10_TILED64X64 || \
-    (fmt) == DEC_OUT_FRM_DEC400_X2B10G10R10_TILED64X64 || \
-    (fmt) == DEC_OUT_FRM_DEC400_X2R10G10B10_TILED64X64 || \
-    (fmt) == DEC_OUT_FRM_DEC400_XBGR888_TILED64X64 || \
-    (fmt) == DEC_OUT_FRM_DEC400_XRGB888_TILED64X64 || \
-    (fmt) == DEC_OUT_FRM_DEC400_BGRA888_TILED64X64 || \
-    (fmt) == DEC_OUT_FRM_DEC400_RGBA888_TILED64X64 || \
-    (fmt) == DEC_OUT_FRM_DEC400_B10G10R10A2_TILED64X64 || \
-    (fmt) == DEC_OUT_FRM_DEC400_R10G10B10A2_TILED64X64);
-}
-
-/** \brief A function that checks whether the component of each plane is stored in 8x8 tiles.
- *  \ingroup common_group */
-static inline u32 IS_PIC_DEC400_TILE8x8(enum DecPictureFormat fmt)
-{
-  return (
-    (fmt) == DEC_OUT_FRM_DEC400_400TILED8x8 || \
-    (fmt) == DEC_OUT_FRM_DEC400_400TILED8x8_P010 || \
-    (fmt) == DEC_OUT_FRM_DEC400_420TILED8x8 || \
-    (fmt) == DEC_OUT_FRM_DEC400_NV21TILED8x8 || \
-    (fmt) == DEC_OUT_FRM_DEC400_420TILED8x8_P010 || \
-    (fmt) == DEC_OUT_FRM_DEC400_NV21TILED8x8_P010);
-}
 /** \brief A function that checks whether the given format is a planar RGB format, in which R, G,
  *  and B components are stored in three separate planes.
  *  \ingroup common_group */
@@ -1954,66 +1922,6 @@ static inline u32 IS_PIC_RGB(enum DecPictureFormat fmt)
     (fmt) == DEC_OUT_FRM_DEC400_RGBA888_TILED64X64 || \
     (fmt) == DEC_OUT_FRM_DEC400_B10G10R10A2_TILED64X64 || \
     (fmt) == DEC_OUT_FRM_DEC400_R10G10B10A2_TILED64X64);
-}
-
-/** \brief A function that checks whether the given format includes an alpha component.
- *  \ingroup common_group */
-static inline u32 IS_PIC_ALPHA_FORMAT(enum DecPictureFormat fmt)
-{
-  return ((fmt) == DEC_OUT_FRM_ARGB888 || \
-    (fmt) == DEC_OUT_FRM_ABGR888 || \
-    (fmt) == DEC_OUT_FRM_A2R10G10B10 || \
-    (fmt) == DEC_OUT_FRM_A2B10G10R10 || \
-    (fmt) == DEC_OUT_FRM_RGBA888 || \
-    (fmt) == DEC_OUT_FRM_BGRA888 || \
-    (fmt) == DEC_OUT_FRM_R10G10B10A2 || \
-    (fmt) == DEC_OUT_FRM_B10G10R10A2 || \
-    (fmt) == DEC_OUT_FRM_ABGR888_TILED64X64 || \
-    (fmt) == DEC_OUT_FRM_ARGB888_TILED64X64 || \
-    (fmt) == DEC_OUT_FRM_A2B10G10R10_TILED64X64 || \
-    (fmt) == DEC_OUT_FRM_A2R10G10B10_TILED64X64 ||\
-    (fmt) == DEC_OUT_FRM_BGRA888_TILED64X64 || \
-    (fmt) == DEC_OUT_FRM_RGBA888_TILED64X64 || \
-    (fmt) == DEC_OUT_FRM_B10G10R10A2_TILED64X64 || \
-    (fmt) == DEC_OUT_FRM_R10G10B10A2_TILED64X64 || \
-    (fmt) == DEC_OUT_FRM_DEC400_ABGR888 || \
-    (fmt) == DEC_OUT_FRM_DEC400_ARGB888 || \
-    (fmt) == DEC_OUT_FRM_DEC400_A2B10G10R10 || \
-    (fmt) == DEC_OUT_FRM_DEC400_A2R10G10B10 || \
-    (fmt) == DEC_OUT_FRM_DEC400_BGRA888 || \
-    (fmt) == DEC_OUT_FRM_DEC400_RGBA888 || \
-    (fmt) == DEC_OUT_FRM_DEC400_B10G10R10A2 || \
-    (fmt) == DEC_OUT_FRM_DEC400_R10G10B10A2 || \
-    (fmt) == DEC_OUT_FRM_DEC400_ABGR888_TILED64X64 || \
-    (fmt) == DEC_OUT_FRM_DEC400_ARGB888_TILED64X64 || \
-    (fmt) == DEC_OUT_FRM_DEC400_A2B10G10R10_TILED64X64 || \
-    (fmt) == DEC_OUT_FRM_DEC400_A2R10G10B10_TILED64X64 || \
-    (fmt) == DEC_OUT_FRM_DEC400_BGRA888_TILED64X64 || \
-    (fmt) == DEC_OUT_FRM_DEC400_RGBA888_TILED64X64 || \
-    (fmt) == DEC_OUT_FRM_DEC400_B10G10R10A2_TILED64X64 || \
-    (fmt) == DEC_OUT_FRM_DEC400_R10G10B10A2_TILED64X64);
-}
-
-/** \brief A function that checks whether the given format is an RGB format with an X component.
- *  \ingroup common_group */
-static inline u32 IS_PIC_XRGB_FORMAT(enum DecPictureFormat fmt)
-{
-  return ((fmt) == DEC_OUT_FRM_XRGB888 || \
-    (fmt) == DEC_OUT_FRM_XBGR888 || \
-    (fmt) == DEC_OUT_FRM_X2R10G10B10 || \
-    (fmt) == DEC_OUT_FRM_X2B10G10R10 || \
-    (fmt) == DEC_OUT_FRM_XBGR888_TILED64X64 || \
-    (fmt) == DEC_OUT_FRM_XRGB888_TILED64X64 || \
-    (fmt) == DEC_OUT_FRM_X2B10G10R10_TILED64X64 || \
-    (fmt) == DEC_OUT_FRM_X2R10G10B10_TILED64X64 || \
-    (fmt) == DEC_OUT_FRM_DEC400_XBGR888 || \
-    (fmt) == DEC_OUT_FRM_DEC400_XRGB888 || \
-    (fmt) == DEC_OUT_FRM_DEC400_X2B10G10R10 || \
-    (fmt) == DEC_OUT_FRM_DEC400_X2R10G10B10 || \
-    (fmt) == DEC_OUT_FRM_DEC400_X2B10G10R10_TILED64X64 || \
-    (fmt) == DEC_OUT_FRM_DEC400_X2R10G10B10_TILED64X64 || \
-    (fmt) == DEC_OUT_FRM_DEC400_XBGR888_TILED64X64 || \
-    (fmt) == DEC_OUT_FRM_DEC400_XRGB888_TILED64X64);
 }
 
 /** \brief A function that checks whether the given format is a monochroma format, which includes
@@ -2152,17 +2060,6 @@ static inline u32 IS_PIC_PLANAR(enum DecPictureFormat fmt)
     IS_PIC_PLANAR_RGB(fmt));
 }
 
-/** \brief A function that checks whether the given field format is a planar YUV format, in which
- *  each component is stored in a separate buffer.
- *  \ingroup common_group */
-static inline u32 IS_PIC_FIELD_PLANAR(enum DecPictureFormat fmt)
-{
-  return ((fmt) == DEC_OUT_FRM_PLANAR_420 || \
-    (fmt) == DEC_OUT_FRM_YUV420P || \
-    (fmt) == DEC_OUT_FRM_YUV420P_P010 || \
-    (fmt) == DEC_OUT_FRM_YUV420P_I010 );
-}
-
 /** \brief A function that checks whether the given format is a 1010 format, in which the three
  *  10-bit components of a pixel are stored in 32 bits with 2 bits pending.
  *  \ingroup common_group */
@@ -2174,56 +2071,6 @@ static inline u32 IS_PIC_1010(enum DecPictureFormat fmt)
    (fmt) == DEC_OUT_FRM_YUV420SP_1010 || \
    (fmt) == DEC_OUT_FRM_YUV422SP_1010 || \
    (fmt) == DEC_OUT_FRM_422_NV21SP_1010);
-}
-
-/** \brief A function that checks whether the given format is an NV21 format, in which the U and V
- *  components of a pixel are stored in VU interleaved mode, like V0U0V1U1V2U2...
- *  \ingroup common_group */
-static inline u32 IS_PIC_NV21(enum DecPictureFormat fmt)
-{
-  return ((fmt) == DEC_OUT_FRM_NV21TILE || \
-    (fmt) == DEC_OUT_FRM_NV21TILE_PACK10 || \
-    (fmt) == DEC_OUT_FRM_NV21TILE_P010 || \
-    (fmt) == DEC_OUT_FRM_NV21TILE_I010 || \
-    (fmt) == DEC_OUT_FRM_NV21TILE_L010 || \
-    (fmt) == DEC_OUT_FRM_NV21TILE_P012 || \
-    (fmt) == DEC_OUT_FRM_NV21TILE_I012 || \
-    (fmt) == DEC_OUT_FRM_NV21SP || \
-    (fmt) == DEC_OUT_FRM_NV21SP_PACK10 || \
-    (fmt) == DEC_OUT_FRM_NV21SP_P010 || \
-    (fmt) == DEC_OUT_FRM_NV21SP_I010 || \
-    (fmt) == DEC_OUT_FRM_NV21SP_L010 || \
-    (fmt) == DEC_OUT_FRM_NV21SP_P012 || \
-    (fmt) == DEC_OUT_FRM_NV21SP_I012 || \
-    (fmt) == DEC_OUT_FRM_NV21P || \
-    (fmt) == DEC_OUT_FRM_NV21P_PACK10 || \
-    (fmt) == DEC_OUT_FRM_NV21P_P010 || \
-    (fmt) == DEC_OUT_FRM_NV21P_I010 || \
-    (fmt) == DEC_OUT_FRM_NV21P_P012 || \
-    (fmt) == DEC_OUT_FRM_NV21P_I012 || \
-    (fmt) == DEC_OUT_FRM_NV21P_L010 );
-}
-
-/** \brief A function that checks whether the given format is a semi-planar format, in which the U
- *  and V components of a pixel are stored in interleaved mode, like V0U0V1U1V2U2... or U0V0U1V1U2V2...
- *  \ingroup common_group */
-static inline u32 IS_PIC_SEMIPLANAR(enum DecPictureFormat fmt)/*no using*/
-{
-  return ((fmt) == DEC_OUT_FRM_YUV420SP || \
-    (fmt) == DEC_OUT_FRM_YUV420SP_PACK10 || \
-    (fmt) == DEC_OUT_FRM_YUV420SP_P010 || \
-    (fmt) == DEC_OUT_FRM_YUV420SP_I010 || \
-    (fmt) == DEC_OUT_FRM_YUV420SP_L010 || \
-    (fmt) == DEC_OUT_FRM_YUV420SP_P012 || \
-    (fmt) == DEC_OUT_FRM_YUV420SP_I012 || \
-    (fmt) == DEC_OUT_FRM_NV21SP || \
-    (fmt) == DEC_OUT_FRM_NV21SP_PACK10 || \
-    (fmt) == DEC_OUT_FRM_NV21SP_P010 || \
-    (fmt) == DEC_OUT_FRM_NV21SP_I010 || \
-    (fmt) == DEC_OUT_FRM_NV21SP_L010 || \
-    (fmt) == DEC_OUT_FRM_NV21SP_P012 || \
-    (fmt) == DEC_OUT_FRM_NV21SP_I012 || \
-    (fmt) == DEC_OUT_FRM_RASTER_SCAN);
 }
 
 /** \brief A function that checks whether the component of each pixel is of 8 bits.
@@ -2322,125 +2169,6 @@ static inline u32 IS_PIC_10BIT(enum DecPictureFormat fmt)
     (fmt) == DEC_OUT_FRM_TILED_64X64_PACK10);
 }
 
-/** \brief A function that checks whether the component of each pixel is of 12 bits.
- *  \ingroup common_group */
-static inline u32 IS_PIC_12BIT(enum DecPictureFormat fmt)
-{
-  return ((fmt) == DEC_OUT_FRM_YUV420SP_PACK12 || \
-    (fmt) == DEC_OUT_FRM_YUV400_PACK12 || \
-    (fmt) == DEC_OUT_FRM_YUV420P_PACK12 || \
-    (fmt) == DEC_OUT_FRM_NV21SP_PACK12 || \
-    (fmt) == DEC_OUT_FRM_NV21P_PACK12  || \
-    (fmt) == DEC_OUT_FRM_YUV422SP_PACK12 || \
-    (fmt) == DEC_OUT_FRM_YUV422P_PACK12 || \
-    (fmt) == DEC_OUT_FRM_422_NV21SP_PACK12 || \
-    (fmt) == DEC_OUT_FRM_422_NV21P_PACK12  || \
-    (fmt) == DEC_OUT_FRM_YUV444SP_PACK12 || \
-    (fmt) == DEC_OUT_FRM_YUV444P_PACK12 || \
-    (fmt) == DEC_OUT_FRM_444_NV21SP_PACK12 || \
-    (fmt) == DEC_OUT_FRM_444_NV21P_PACK12 || \
-    (fmt) == DEC_OUT_FRM_YUV420TILE8x8_PACK12);
-}
-
-/** \brief A function that checks whether the component of each pixel is of 16 bits.
- *  \ingroup common_group */
-static inline u32 IS_PIC_16BIT(enum DecPictureFormat fmt)
-{
-  return (
-    (fmt) == DEC_OUT_FRM_YUV420TILE_P010 || \
-    (fmt) == DEC_OUT_FRM_YUV420SP_P010 || \
-    (fmt) == DEC_OUT_FRM_YUV420P_P010 || \
-    (fmt) == DEC_OUT_FRM_YUV420TILE_P012 || \
-    (fmt) == DEC_OUT_FRM_YUV420SP_P012 || \
-    (fmt) == DEC_OUT_FRM_YUV420P_P012 || \
-    (fmt) == DEC_OUT_FRM_YUV420TILE_I010 || \
-    (fmt) == DEC_OUT_FRM_YUV420SP_I010 || \
-    (fmt) == DEC_OUT_FRM_YUV420P_I010 || \
-    (fmt) == DEC_OUT_FRM_YUV420TILE_I012 || \
-    (fmt) == DEC_OUT_FRM_YUV420SP_I012 || \
-    (fmt) == DEC_OUT_FRM_YUV420P_I012 || \
-    (fmt) == DEC_OUT_FRM_YUV420TILE_L010 || \
-    (fmt) == DEC_OUT_FRM_YUV420SP_L010 || \
-    (fmt) == DEC_OUT_FRM_YUV420P_L010 || \
-    (fmt) == DEC_OUT_FRM_YUV422SP_P010 || \
-    (fmt) == DEC_OUT_FRM_YUV422P_P010 || \
-    (fmt) == DEC_OUT_FRM_YUV422SP_P012 || \
-    (fmt) == DEC_OUT_FRM_YUV422P_P012 || \
-    (fmt) == DEC_OUT_FRM_YUV422SP_I010 || \
-    (fmt) == DEC_OUT_FRM_YUV422P_I010 || \
-    (fmt) == DEC_OUT_FRM_YUV422SP_I012 || \
-    (fmt) == DEC_OUT_FRM_YUV422P_I012 || \
-    (fmt) == DEC_OUT_FRM_YUV422SP_L010 || \
-    (fmt) == DEC_OUT_FRM_YUV422P_L010 || \
-    (fmt) == DEC_OUT_FRM_YUV444SP_P010 || \
-    (fmt) == DEC_OUT_FRM_YUV444P_P010 || \
-    (fmt) == DEC_OUT_FRM_YUV444SP_P012 || \
-    (fmt) == DEC_OUT_FRM_YUV444P_P012 || \
-    (fmt) == DEC_OUT_FRM_YUV444SP_I010 || \
-    (fmt) == DEC_OUT_FRM_YUV444P_I010 || \
-    (fmt) == DEC_OUT_FRM_YUV444SP_I012 || \
-    (fmt) == DEC_OUT_FRM_YUV444P_I012 || \
-    (fmt) == DEC_OUT_FRM_YUV444SP_L010 || \
-    (fmt) == DEC_OUT_FRM_YUV444P_L010 || \
-    (fmt) == DEC_OUT_FRM_YUV400TILE_P010 || \
-    (fmt) == DEC_OUT_FRM_YUV400_P010 || \
-    (fmt) == DEC_OUT_FRM_YUV400TILE_P012 || \
-    (fmt) == DEC_OUT_FRM_YUV400_P012 || \
-    (fmt) == DEC_OUT_FRM_YUV400TILE_I010 || \
-    (fmt) == DEC_OUT_FRM_YUV400_I010 || \
-    (fmt) == DEC_OUT_FRM_YUV400TILE_I012 || \
-    (fmt) == DEC_OUT_FRM_YUV400_I012 || \
-    (fmt) == DEC_OUT_FRM_YUV400TILE_L010 || \
-    (fmt) == DEC_OUT_FRM_YUV400_L010 || \
-    (fmt) == DEC_OUT_FRM_NV21TILE_P010 || \
-    (fmt) == DEC_OUT_FRM_NV21SP_P010 || \
-    (fmt) == DEC_OUT_FRM_NV21P_P010 || \
-    (fmt) == DEC_OUT_FRM_NV21TILE_P012 || \
-    (fmt) == DEC_OUT_FRM_NV21SP_P012 || \
-    (fmt) == DEC_OUT_FRM_NV21P_P012 || \
-    (fmt) == DEC_OUT_FRM_NV21TILE_I010 || \
-    (fmt) == DEC_OUT_FRM_NV21SP_I010 || \
-    (fmt) == DEC_OUT_FRM_NV21P_I010 || \
-    (fmt) == DEC_OUT_FRM_NV21SP_I012 || \
-    (fmt) == DEC_OUT_FRM_NV21P_I012 || \
-    (fmt) == DEC_OUT_FRM_NV21TILE_L010 || \
-    (fmt) == DEC_OUT_FRM_NV21SP_L010 || \
-    (fmt) == DEC_OUT_FRM_NV21P_L010 || \
-    (fmt) == DEC_OUT_FRM_422_NV21SP_P010 || \
-    (fmt) == DEC_OUT_FRM_422_NV21P_P010 || \
-    (fmt) == DEC_OUT_FRM_422_NV21SP_P012 || \
-    (fmt) == DEC_OUT_FRM_422_NV21P_P012 || \
-    (fmt) == DEC_OUT_FRM_422_NV21SP_I010 || \
-    (fmt) == DEC_OUT_FRM_422_NV21P_I010 || \
-    (fmt) == DEC_OUT_FRM_422_NV21SP_I012 || \
-    (fmt) == DEC_OUT_FRM_422_NV21P_I012 || \
-    (fmt) == DEC_OUT_FRM_422_NV21SP_L010 || \
-    (fmt) == DEC_OUT_FRM_422_NV21P_L010 || \
-    (fmt) == DEC_OUT_FRM_444_NV21SP_P010 || \
-    (fmt) == DEC_OUT_FRM_444_NV21P_P010 || \
-    (fmt) == DEC_OUT_FRM_444_NV21SP_P012 || \
-    (fmt) == DEC_OUT_FRM_444_NV21P_P012 || \
-    (fmt) == DEC_OUT_FRM_444_NV21SP_I010 || \
-    (fmt) == DEC_OUT_FRM_444_NV21P_I010 || \
-    (fmt) == DEC_OUT_FRM_444_NV21SP_I012 || \
-    (fmt) == DEC_OUT_FRM_444_NV21P_I012 || \
-    (fmt) == DEC_OUT_FRM_444_NV21SP_L010 || \
-    (fmt) == DEC_OUT_FRM_444_NV21P_L010 || \
-    (fmt) == DEC_OUT_FRM_R16G16B16_P || \
-    (fmt) == DEC_OUT_FRM_B16G16R16_P || \
-    (fmt) == DEC_OUT_FRM_R16G16B16 || \
-    (fmt) == DEC_OUT_FRM_B16G16R16 || \
-    (fmt) == DEC_OUT_FRM_RGB565 || \
-    (fmt) == DEC_OUT_FRM_BGR565 || \
-    (fmt) == DEC_OUT_FRM_YUV400_WITH_ALPHA || \
-    (fmt) == DEC_OUT_FRM_YUV400TILE_128X2_P010 || \
-    (fmt) == DEC_OUT_FRM_YUV420TILE_128X2_P010 || \
-    (fmt) == DEC_OUT_FRM_PVFBC_TILED16X4_420SP_P010 || \
-    (fmt) == DEC_OUT_FRM_PVFBC_TILED8X8_420SP_P010  || \
-    (fmt) == DEC_OUT_FRM_PVFBC_BYPASS_TILED16X4_420SP_P010 || \
-    (fmt) == DEC_OUT_FRM_PVFBC_BYPASS_TILED8X8_420SP_P010);
-}
-
 /** \brief A function that checks whether the three RGB components of each pixel are stored in
  *  packed 24 bits.
  *  \ingroup common_group */
@@ -2517,70 +2245,6 @@ static inline u32 IS_PIC_48BIT(enum DecPictureFormat fmt)
     (fmt) == DEC_OUT_FRM_B16G16R16);
 }
 
-/** \brief A function that checks whether the component of each plane is stored in tiles.
- *  \ingroup common_group */
-static inline u32 IS_PIC_TILE(enum DecPictureFormat fmt)
-{
-  return ((fmt) == DEC_OUT_FRM_TILED_4X4 || \
-  (fmt) == DEC_OUT_FRM_TILED_8X4 || \
-  (fmt) == DEC_OUT_FRM_YUV420TILE || \
-  (fmt) == DEC_OUT_FRM_YUV420TILE_P010 || \
-  (fmt) == DEC_OUT_FRM_YUV420TILE_I010 || \
-  (fmt) == DEC_OUT_FRM_YUV420TILE_L010 || \
-  (fmt) == DEC_OUT_FRM_YUV420TILE_P012 || \
-  (fmt) == DEC_OUT_FRM_YUV420TILE_I012 || \
-  (fmt) == DEC_OUT_FRM_YUV420TILE_PACK10 || \
-  (fmt) == DEC_OUT_FRM_YUV400TILE || \
-  (fmt) == DEC_OUT_FRM_YUV400TILE_P010 || \
-  (fmt) == DEC_OUT_FRM_YUV400TILE_I010 || \
-  (fmt) == DEC_OUT_FRM_YUV400TILE_L010 || \
-  (fmt) == DEC_OUT_FRM_YUV400TILE_P012 || \
-  (fmt) == DEC_OUT_FRM_YUV400TILE_I012 || \
-  (fmt) == DEC_OUT_FRM_YUV400TILE_PACK10 || \
-  (fmt) == DEC_OUT_FRM_NV21TILE || \
-  (fmt) == DEC_OUT_FRM_NV21TILE_PACK10 || \
-  (fmt) == DEC_OUT_FRM_NV21TILE_P010 || \
-  (fmt) == DEC_OUT_FRM_NV21TILE_I010 || \
-  (fmt) == DEC_OUT_FRM_NV21TILE_L010 || \
-  (fmt) == DEC_OUT_FRM_NV21TILE_P012 || \
-  (fmt) == DEC_OUT_FRM_NV21TILE_I012 || \
-  (fmt) == DEC_OUT_FRM_DEC400_400TILE || \
-  (fmt) == DEC_OUT_FRM_DEC400_420TILE || \
-  (fmt) == DEC_OUT_FRM_YUV400TILE8x8_PACK10 || \
-  (fmt) == DEC_OUT_FRM_YUV400TILE8x8_P010 || \
-  (fmt) == DEC_OUT_FRM_YUV400TILE8x8 || \
-  (fmt) == DEC_OUT_FRM_YUV420TILE8x8 || \
-  (fmt) == DEC_OUT_FRM_YUV420RECONTILE8X8 || \
-  (fmt) == DEC_OUT_FRM_YUV420RECONTILE8X8_P010 || \
-  (fmt) == DEC_OUT_FRM_YUV420RECONTILE8X8_PACK10 || \
-  (fmt) == DEC_OUT_FRM_DEC400_400TILED8x8 || \
-  (fmt) == DEC_OUT_FRM_DEC400_400TILED8x8_P010 || \
-  (fmt) == DEC_OUT_FRM_DEC400_420TILED8x8 || \
-  (fmt) == DEC_OUT_FRM_DEC400_420TILED8x8_P010 || \
-  (fmt) == DEC_OUT_FRM_DEC400_NV21TILED8x8 || \
-  (fmt) == DEC_OUT_FRM_DEC400_NV21TILED8x8_P010 || \
-  (fmt) == DEC_OUT_FRM_DEC400_ABGR888_TILED64X64 || \
-  (fmt) == DEC_OUT_FRM_DEC400_ARGB888_TILED64X64 || \
-  (fmt) == DEC_OUT_FRM_DEC400_A2B10G10R10_TILED64X64 || \
-  (fmt) == DEC_OUT_FRM_DEC400_A2R10G10B10_TILED64X64 || \
-  (fmt) == DEC_OUT_FRM_DEC400_X2B10G10R10_TILED64X64 || \
-  (fmt) == DEC_OUT_FRM_DEC400_X2R10G10B10_TILED64X64 || \
-  (fmt) == DEC_OUT_FRM_DEC400_XBGR888_TILED64X64 || \
-  (fmt) == DEC_OUT_FRM_DEC400_XRGB888_TILED64X64 || \
-  (fmt) == DEC_OUT_FRM_DEC400_BGRA888_TILED64X64 || \
-  (fmt) == DEC_OUT_FRM_DEC400_RGBA888_TILED64X64 || \
-  (fmt) == DEC_OUT_FRM_DEC400_B10G10R10A2_TILED64X64 || \
-  (fmt) == DEC_OUT_FRM_DEC400_R10G10B10A2_TILED64X64);
-}
-
-/** \brief A function that checks whether the component of each plane is stored in an RFC
- *  compressed format.
- *  \ingroup common_group */
-static inline u32 IS_PIC_RFC(enum DecPictureFormat fmt)
-{
-  return ((fmt) == DEC_OUT_FRM_RFC);
-}
-
 /** \brief A function that checks whether the component of each plane is stored in a DEC400
  *  compressed format.
  *  \ingroup common_group */
@@ -2630,19 +2294,6 @@ static inline u32 IS_PIC_DEC400(enum DecPictureFormat fmt)
     (fmt) == DEC_OUT_FRM_DEC400_R10G10B10A2_TILED64X64 || \
     (fmt) == DEC_OUT_FRM_DEC400_YUV422_YUYV || \
     (fmt) == DEC_OUT_FRM_DEC400_YUV422_UYVY);
-}
-
-/** \brief A function that checks whether the component of each plane is stored in a DECNano
- *  compressed format.
- *  \ingroup common_group */
-static inline u32 IS_PIC_DECNANO(enum DecPictureFormat fmt)
-{
-  return ((fmt) == DEC_OUT_FRM_DECNANO_MODE0_YUV422_YUYV_TILED2X4 || \
-      (fmt) == DEC_OUT_FRM_DECNANO_MODE0_YUV422_UYVY_TILED2X4 || \
-      (fmt) == DEC_OUT_FRM_DECNANO_MODE0_RGB888_TILED4X4 || \
-      (fmt) == DEC_OUT_FRM_DECNANO_MODE0_ARGB888_TILED4X4 || \
-      (fmt) == DEC_OUT_FRM_DECNANO_MODE0_RGB565_TILED4X4 || \
-      (fmt) == DEC_OUT_FRM_DECNANO_MODE0_ARGB8565_TILED4X4);
 }
 
 /** \brief A function that checks whether the component of each plane is stored in a PVFBC
@@ -2696,23 +2347,6 @@ static inline u32 IS_PIC_TILED4x4(enum DecPictureFormat fmt)
     (fmt) == DEC_OUT_FRM_ARGB565_TILED4X4);
 }
 
-/** \brief A function that checks whether the component of each plane is stored in RGB packed with 4x4 tiles.
- *  \ingroup common_group */
-static inline u32 IS_PIC_RGBPACKED_TILED4x4(enum DecPictureFormat fmt)
-{
-  return ((fmt) == DEC_OUT_FRM_RGB888_TILED4X4|| \
-    (fmt) == DEC_OUT_FRM_DECNANO_MODE0_RGB888_TILED4X4);
-}
-
-/** \brief A function that checks whether the component of each plane is stored in ARGB packed with 4x4 tiles.
- *  \ingroup common_group */
-static inline u32 IS_PIC_ARGBPACKED_TILED4x4(enum DecPictureFormat fmt)
-{
-  return ((fmt) == DEC_OUT_FRM_ARGB888_TILED4X4|| \
-    (fmt) == DEC_OUT_FRM_ARGB565_TILED4X4 || \
-    (fmt) == DEC_OUT_FRM_DECNANO_MODE0_ARGB888_TILED4X4);
-}
-
 /** \brief A function that checks whether the component of each plane in the refernce buffer is
  *  stored in 8x8 tiles.
  *  \ingroup common_group */
@@ -2759,22 +2393,6 @@ static inline u32 IS_PIC_TILED16x16(enum DecPictureFormat fmt)
   return ((fmt) == DEC_OUT_FRM_TILED_16X16 || (fmt) == DEC_OUT_FRM_TILED_16X16_P010);
 }
 
-/** \brief A function that checks whether the component of each plane is stored in third-party
- *  compressed 16x16 tiles.
- *  \ingroup common_group */
-static inline u32 IS_PIC_TILED16x16_COMP(enum DecPictureFormat fmt)
-{
-  return ((fmt) == DEC_OUT_FRM_TILED_16X16_COMP || (fmt) == DEC_OUT_FRM_TILED_16X16_P010_COMP);
-}
-
-/** \brief A function that checks whether the component of each plane is stored in third-party
- *  compressed 32x8 tiles.
- * \ingroup common_group */
-static inline u32 IS_PIC_TILED32x8_COMP(enum DecPictureFormat fmt)
-{
-  return ((fmt) == DEC_OUT_FRM_TILED_32X8_COMP || (fmt) == DEC_OUT_FRM_TILED_32X8_P010_COMP);
-}
-
 /** \brief A function that checks whether the three components are stored in a packed YUV422
  *  format, either in YUYV or UYVY mode, or in a DEC400 compressed format.
  *  \ingroup common_group */
@@ -2790,24 +2408,6 @@ static inline u32 IS_PIC_422PACKED(enum DecPictureFormat fmt)
     (fmt) == DEC_OUT_FRM_YUV422_UYVY_TILED8X8 || \
     (fmt) == DEC_OUT_FRM_DEC400_YUV422_YUYV || \
     (fmt) == DEC_OUT_FRM_DEC400_YUV422_UYVY);
-}
-
-/** \brief A function that checks whether the three components are stored in a packed YUV422 with tile2x4
- *  format, either in YUYV or UYVY mode.
- *  \ingroup common_group */
-static inline u32 IS_PIC_422PACKED_TILED2X4(enum DecPictureFormat fmt)
-{
-  return ((fmt) == DEC_OUT_FRM_YUV422_YUYV_TILED2X4 || \
-    (fmt) == DEC_OUT_FRM_YUV422_UYVY_TILED2X4);
-}
-
-/** \brief A function that checks whether the three components are stored in a packed YUV422 with tile8x8
- *  format, either in YUYV or UYVY mode.
- *  \ingroup common_group */
-static inline u32 IS_PIC_422PACKED_TILED8x8(enum DecPictureFormat fmt)
-{
-  return ((fmt) == DEC_OUT_FRM_YUV422_YUYV_TILED8X8 || \
-    (fmt) == DEC_OUT_FRM_YUV422_UYVY_TILED8X8);
 }
 
 /** \brief A function that checks whether the components of each plane are stored in 128x2 tiles.
@@ -2859,47 +2459,6 @@ static inline u32 IS_PIC_RGB_TILED64x64(enum DecPictureFormat fmt)
     (fmt) == DEC_OUT_FRM_DEC400_R10G10B10A2_TILED64X64);
 }
 
-/** \brief A function that checks whether the components are stored in the HIST format.
- *  \ingroup common_group */
-static inline u32 IS_PIC_HIST(enum DecPictureFormat fmt)
-{
-  return ((fmt) == DEC_OUT_FRM_HIST);
-}
-
-/** \brief A function that checks whether each component of a standalone input buffer is stored in
- *  the 16-bit P010 format.
- *  \ingroup common_group */
-static inline u32 IS_PP_IN_P010(enum DecPictureFormat fmt)
-{
-  return ((fmt == PP_IN_400_P010) || \
-  	(fmt == PP_IN_NV12_P010) || \
-  	(fmt == PP_IN_NV21_P010) || \
-  	(fmt == PP_IN_420P_P010) || \
-  	(fmt == PP_IN_422_NV16_P010) || \
-  	(fmt == PP_IN_422_NV61_P010) || \
-  	(fmt == PP_IN_444P_P010) || \
-  	(fmt == PP_IN_TILED4x4_P010));
-}
-
-/** \brief A function that checks whether each component of a standalone input buffer is stored in
- *  a planar YUV format.
- *  \ingroup common_group */
-static inline u32 IS_PP_IN_YUV_PLANAR(enum DecPictureFormat fmt)
-{
-  return ((fmt == PP_IN_420P_8BIT) || \
-  	(fmt == PP_IN_420P_P010) || \
-  	(fmt == PP_IN_444P_8BIT) || \
-  	(fmt == PP_IN_444P_P010));
-}
-
-/** \brief A function that checks whether each component of a standalone input buffer is stored in
- *  4x4 tiles.
- *  \ingroup common_group */
-static inline u32 IS_PP_IN_TILED4x4(enum DecPictureFormat fmt)
-{
-  return ((fmt == PP_IN_TILED4x4) || (fmt == PP_IN_TILED4x4_P010));
-}
-
 /** \brief A function that checks whether data in a standalone input buffer is stored in 4x4 tiled
  *  packed RGB format.
  *  \ingroup common_group */
@@ -2925,65 +2484,6 @@ static inline u32 IS_PP_IN_RGB(enum DecPictureFormat fmt)
 	   (fmt == PP_IN_B16G16R16_P));
 }
 
-/** \brief A function that checks whether data in a standalone input buffer is stored in a packed
- *  ARGB or XRGB format.
- *  \ingroup common_group */
-static inline u32 IS_PP_IN_ALPHA_X_FROMAT_RGB(enum DecPictureFormat fmt)
-{
-  return ((fmt == PP_IN_ARGB888) || \
-    (fmt == PP_IN_ABGR888) || \
-    (fmt == PP_IN_XRGB888) || \
-    (fmt == PP_IN_XBGR888) || \
-    (fmt == PP_IN_RGBA888) || \
-    (fmt == PP_IN_BGRA888) || \
-    (fmt == PP_IN_A2R10G10B10) || \
-    (fmt == PP_IN_A2B10G10R10) || \
-    (fmt == PP_IN_X2R10G10B10) || \
-    (fmt == PP_IN_X2B10G10R10) || \
-    (fmt == PP_IN_R10G10B10A2) || \
-    (fmt == PP_IN_B10G10R10A2));
-}
-
-/** \brief A function that checks whether data in a standalone input buffer is stored in a planar
- *  RGB format.
- *  \ingroup common_group */
-static inline u32 IS_PP_IN_RGB_PLANAR(enum DecPictureFormat fmt)
-{
-  return ((fmt == PP_IN_RGB888_P) || \
-	   (fmt == PP_IN_BGR888_P) || \
-	   (fmt == PP_IN_R16G16B16_P) || \
-	   (fmt == PP_IN_B16G16R16_P));
-}
-
-/** \brief A function that checks whether each component of a standalone input buffer is of 8
- *  valid bits.
- *  \ingroup common_group */
-static inline u32 IS_PP_IN_8BIT(enum DecPictureFormat fmt)
-{
-  return ((fmt == PP_IN_400_8BIT) || \
-     (fmt == PP_IN_NV12_8BIT) || \
-     (fmt == PP_IN_NV21_8BIT) || \
-     (fmt == PP_IN_420P_8BIT) || \
-     (fmt == PP_IN_422_NV16_8BIT) || \
-     (fmt == PP_IN_422_NV61_8BIT) || \
-     (fmt == PP_IN_422_YUYV_8BIT) || \
-     (fmt == PP_IN_422_YVYU_8BIT) || \
-     (fmt == PP_IN_422_UYVY_8BIT) || \
-     (fmt == PP_IN_422_VYUY_8BIT) || \
-     (fmt == PP_IN_444P_8BIT) || \
-     (fmt == PP_IN_TILED4x4) || \
-     (fmt == PP_IN_RGB888) || \
-     (fmt == PP_IN_BGR888) || \
-     (fmt == PP_IN_ARGB888) || \
-     (fmt == PP_IN_ABGR888) || \
-     (fmt == PP_IN_XRGB888) || \
-     (fmt == PP_IN_XBGR888) || \
-     (fmt == PP_IN_RGBA888) || \
-     (fmt == PP_IN_BGRA888) || \
-     (fmt == PP_IN_RGB888_P) || \
-     (fmt == PP_IN_RECON_TILED8x8));
-}
-
 /** \brief A function that checks whether each component of a standalone input buffer is of 10
  *  valid bits.
  *  \ingroup common_group */
@@ -3006,77 +2506,6 @@ static inline u32 IS_PP_IN_10BIT(enum DecPictureFormat fmt)
 	   (fmt == PP_IN_R16G16B16_P) || \
 	   (fmt == PP_IN_B16G16R16_P) || \
      (fmt == PP_IN_RECON_TILED8x8_PACK10));
-}
-
-/** \brief A function that checks whether data in a standalone input buffer is stored in a packed
- *  YUV422 format.
- *  \ingroup common_group */
-static inline u32 IS_PP_IN_422PACKED(enum DecPictureFormat fmt)
-{
-  return ((fmt == PP_IN_422_YUYV_8BIT) || \
-	   (fmt == PP_IN_422_YVYU_8BIT) || \
-	   (fmt == PP_IN_422_UYVY_8BIT) || \
-	   (fmt == PP_IN_422_VYUY_8BIT));
-}
-
-/** \brief A function that checks whether data in a standalone input buffer is stored in a
- *  semi-planar YUV format.
- *  \ingroup common_group */
-static inline u32 IS_PP_IN_YUV_SEMIPLANAR(enum DecPictureFormat fmt)
-{
-  return ((fmt == PP_IN_NV12_8BIT) || \
-	   (fmt == PP_IN_NV21_8BIT) || \
-	   (fmt == PP_IN_NV12_P010) || \
-	   (fmt == PP_IN_NV21_P010) || \
-	   (fmt == PP_IN_422_NV16_8BIT) || \
-	   (fmt == PP_IN_422_NV16_P010) || \
-	   (fmt == PP_IN_422_NV61_8BIT) || \
-	   (fmt == PP_IN_422_NV61_P010));
-}
-
-/** \brief A function that checks whether data in a standalone input buffer is stored in a YUV420
- *  format.
- *  \ingroup common_group */
-static inline u32 IS_PP_IN_YUV420(enum DecPictureFormat fmt)
-{
-  return ((fmt == PP_IN_NV12_8BIT) || \
-	   (fmt == PP_IN_NV21_8BIT) || \
-	   (fmt == PP_IN_NV12_P010) || \
-	   (fmt == PP_IN_NV21_P010) || \
-	   (fmt == PP_IN_420P_8BIT) || \
-     (fmt == PP_IN_420P_P010) || \
-     (fmt == PP_IN_RECON_TILED8x8) || \
-     (fmt == PP_IN_RECON_TILED8x8_PACK10));
-}
-
-/** \brief A function that checks whether data in a standalone input buffer is stored in a YUV422
- *  format.
- *  \ingroup common_group */
-static inline u32 IS_PP_IN_YUV422(enum DecPictureFormat fmt)
-{
-  return ((fmt == PP_IN_422_NV16_8BIT) || \
-	   (fmt == PP_IN_422_NV16_P010) || \
-	   (fmt == PP_IN_422_NV61_8BIT) || \
-	   (fmt == PP_IN_422_NV61_P010) || \
-	   (fmt == PP_IN_422_YUYV_8BIT) || \
-	   (fmt == PP_IN_422_YVYU_8BIT) || \
-	   (fmt == PP_IN_422_UYVY_8BIT) || \
-	   (fmt == PP_IN_422_VYUY_8BIT));
-}
-
-/** \brief A function that checks whether data in a standalone input buffer is stored in a YUV444
- *  format.
- *  \ingroup common_group */
-static inline u32 IS_PP_IN_YUV444(enum DecPictureFormat fmt)
-{
-  return ((fmt == PP_IN_444P_8BIT) || (fmt == PP_IN_444P_P010));
-}
-
-/** \brief A function that checks whether data in a standalone input buffer is RFC compressed.
- *  \ingroup common_group */
-static inline u32 IS_PP_IN_RFC(enum DecPictureFormat fmt)
-{
-   return (fmt == PP_IN_RFC);
 }
 
 /**@}*/
@@ -8013,54 +7442,6 @@ void SwRecycleBuf(struct DWLLinearMem *info, struct DWLLinearMem *buffer_infos, 
 #define SW_S_CMD_PRIORITY(a, b) (a |= (b << SW_CMD_PRIORITY_BIT))
 #define SW_G_CMD_PRIORITY(a)    (((a) >> SW_CMD_PRIORITY_BIT) & 1)
 
-static inline int FloorLog2(u32 x) {
-  if (x == 0)
-  {
-    // note: ceilLog2() expects -1 as return value
-    return -1;
-  }
-#ifdef __GNUC__
-  return 31 - __builtin_clz(x);
-#else
-#ifdef _MSC_VER
-  unsigned long r = 0;
-  _BitScanReverse(&r, x);
-  return r;
-#else
-  int result = 0;
-  if (x & 0xffff0000)
-  {
-    x >>= 16;
-    result += 16;
-  }
-  if (x & 0xff00)
-  {
-    x >>= 8;
-    result += 8;
-  }
-  if (x & 0xf0)
-  {
-    x >>= 4;
-    result += 4;
-  }
-  if (x & 0xc)
-  {
-    x >>= 2;
-    result += 2;
-  }
-  if (x & 0x2)
-  {
-    x >>= 1;
-    result += 1;
-  }
-  return result;
-#endif
-#endif
-}
-
-static inline int CeilLog2(u32 x) {
-  return (x==0) ? -1 : FloorLog2(x - 1) + 1;
-}
 u32 SwGetCores(u32 core_mask);
 #ifdef STACK_STAT
 void StackStatInit();

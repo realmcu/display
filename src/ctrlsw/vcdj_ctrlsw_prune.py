@@ -810,6 +810,63 @@ def check_no_code_references(rule, doc, which):
                          'would leave a dangling use' % (which, name, left[:5]))
 
 
+INLINE_DEF = re.compile(r'^static\s+inline\b[\w \t\*]*?\b(\w+)\s*\(')
+
+
+def delete_unused_inline(rule, docs):
+    """Delete every file-scope `static inline` function no live code calls.
+
+    A function counts as used when its name appears in code of either file
+    outside its own body; an `#if 0` block does not count, a macro does. The
+    pass repeats until nothing changes, so a helper that only deleted helpers
+    called goes too. Code outside the two files is not consulted: a helper it
+    still needs fails that build.
+
+    `keep` is {file: n}, how many stay in each file. An earlier rule or a vendor
+    drop that changes it stops the rule until the numbers follow.
+    """
+    files = list(rule['keep'])
+
+    def inlines(which, code):
+        out = []
+        for i, l in enumerate(code):
+            if not re.match(r'^static\s+inline\b', l):
+                continue
+            m = INLINE_DEF.match(l)
+            if not m:
+                raise PruneError('%s: line %d: a static inline this rule cannot read: %s'
+                                 % (which, i + 1, l.strip()))
+            start, open_line = find_definition(code, m.group(1), which)
+            out.append((m.group(1), start, match_brace(code, open_line)))
+        return out
+
+    word = re.compile(r'\b[A-Za-z_]\w*')
+    while True:
+        code = {w: code_lines(d['lines']) for w, d in docs.items()}
+        seen = {}
+        for c in code.values():
+            dead = dead_regions(c)
+            for k, l in enumerate(c):
+                if k not in dead:
+                    for t in word.findall(l):
+                        seen[t] = seen.get(t, 0) + 1
+        gone = []
+        for w in files:
+            for name, lo, hi in inlines(w, code[w]):
+                own = sum(word.findall(l).count(name) for l in code[w][lo:hi + 1])
+                if seen.get(name, 0) == own:
+                    gone.append((w, name))
+        if not gone:
+            break
+        for w, name in gone:
+            delete_function({'name': name}, docs[w], w)
+    for w in files:
+        n = len(inlines(w, code_lines(docs[w]['lines'])))
+        if n != rule['keep'][w]:
+            raise PruneError('%s: %d static inline functions stay, the rule expects %d; '
+                             'see what changed, then update "keep"' % (w, n, rule['keep'][w]))
+
+
 def _reg_enum(rule, lines, which):
     """Enum span, members, aliases, table span and rows of a prune_reg_enum rule.
 
@@ -1166,6 +1223,7 @@ ACTIONS = {
     'delete_comment': (delete_comment, None),
     'replace_line': (replace_line, None),
     'merge_license': (merge_license, None),
+    'delete_unused_inline': (None, None),
     'prune_reg_enum': (None, None),
 }
 # Actions that name a function or type, whose declaration in the header goes too.
@@ -1183,6 +1241,10 @@ def apply_rules(h, c, rules):
         if action == 'prune_reg_enum':
             # The enum and its users are in the .c; macros in the .h expand there.
             prune_reg_enum(rule, docs['vcdj_ctrlsw.c'], docs['vcdj_ctrlsw.h'])
+            continue
+        if action == 'delete_unused_inline':
+            # A header helper is called from the .c, so both files decide.
+            delete_unused_inline(rule, docs)
             continue
         for which in rule.get('files') or ['vcdj_ctrlsw.c']:
             fn(rule, docs[which], which)

@@ -199,6 +199,14 @@ error, and so is a deletion that would leave a live reference behind; a referenc
 `#if 0` block with no `#else` does not count. `vcdj_ctrlsw_gen.py --check` forwards to stage 2,
 because the files on disk carry the pruned result.
 
+### The unused inline rule
+
+The vendor headers define format checks (`IS_PIC_*`, `IS_PP_IN_*`) and helpers as `static inline`,
+so the compiler accepts them uncalled and the rules that delete their callers cannot reach them. The
+`delete_unused_inline` rule deletes every one of them no live code in the two files calls, repeating
+until nothing changes, and pins the count left in each file in `"keep"`. It goes after every other
+deleting rule and before `prune_reg_enum`; a new rule that frees a helper only moves the count.
+
 ### The register enum rule
 
 `enum HwIfName` lists the register fields of every codec the vendor supports, and member k indexes
