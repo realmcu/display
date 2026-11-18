@@ -38,6 +38,7 @@
 
 #define LCD_PANEL_ID_ST77916              0x003F7F4FU
 #define LCD_PANEL_ID_GC9B71               0x004D387FU
+#define LCD_PANEL_ID_GC9B71_COMPAT        0x0044187FU
 
 #define BIT_CMD_CH(x)           (((x) & 0x00000003) << 20)
 #define BIT_DATA_CH(x)          (((x) & 0x00000003) << 18)
@@ -582,7 +583,8 @@ void rtk_lcd_hal_init(void)
     {
         ST77916_INIT_CODE();
     }
-    else if (lcd_id == LCD_PANEL_ID_GC9B71)
+    else if (lcd_id == LCD_PANEL_ID_GC9B71 ||
+             lcd_id == LCD_PANEL_ID_GC9B71_COMPAT)
     {
         GC9B71_INIT_CODE();
     }
