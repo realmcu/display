@@ -8,26 +8,1919 @@
  *                        Header Files
  *============================================================================*/
 /*
- * HAL FACADE: everything the layers above this driver call.
+ * THE VCDJ DRIVER: everything between the public API in rtl_vcdj.h and the
+ * platform layer in src/device/<soc>/rtl_vcdj_port.c. Three parts, bottom up:
  *
- * Responsibilities:
- *   - dispatch JPEG and PNG to the vendor decode APIs
- *   - translate `enum DecRet` into the stable \ref vcdj_error_t space, so no
- *     vendor type ever escapes through rtl_vcdj.h
- *   - drive the vendor external-buffer negotiation protocol
+ *   1. CORE  bounded-wait state machine, register access, cache/DMA and
+ *            allocator injection; reaches hardware only via vcdj_platform_ops
+ *   2. DWL   the vendor-facing contracts: DWL (memory, registers, core
+ *            scheduling, hardware identification, VCMD stubs), the 13 dwl_os
+ *            Mutex/Event/Semaphore functions, osal_usleep() and JpegDecTrace()
+ *   3. HAL   JPEG/PNG dispatch, `enum DecRet` to \ref vcdj_error_t mapping,
+ *            external-buffer negotiation and picture release tokens
  *
- * The bring-up self test is NOT here: it lives in src/test/vcdj_selftest.c and
- * reaches this file only through the `vcdj_internal_*()` contract, so this
- * facade holds nothing a product feature cannot reach.
+ * NO OS header may be included here, directly or indirectly. The vendor headers
+ * redefine EINVAL/EBUSY/EFAULT/ENOTTY with values that differ from newlib's, and
+ * whichever header comes last wins without a warning. Platform services come
+ * exclusively from rtl_vcdj_internal.h, which is plain <stdint.h>.
  *
- * VENDOR FACING TRANSLATION UNIT: no OS header may be included here, without
- * exception. See rtl_vcdj_dwl.c for the rationale.
+ * All three parts see the vendor macros, including `up`, `open`, `close` and
+ * `printk`: do not reuse those names for local identifiers.
  */
+#include <limits.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <string.h>
 
 #include "rtl_vcdj_internal.h"
 #include "rtl_vcdj_ctrlsw.h"
+
+/*============================================================================*
+ *                        PART 1 - CORE
+ *============================================================================*/
+
+/*============================================================================*
+ *                        Local Definitions
+ *============================================================================*/
+/*
+ * Decoder interrupt / enable register. Taken from the vendor register
+ * description tables (`software/source/common/8170table.h`, entries
+ * HWIF_DEC_E .. HWIF_DEC_TIMEOUT), all of which live in swreg 1:
+ *
+ *   bit  0  DEC_E           core enable
+ *   bit  2  DEC_BUS_INT_DIS
+ *   bit  3  DEC_TIMEOUT_SOURCE
+ *   bit  4  DEC_IRQ_DIS
+ *   bit  8  DEC_IRQ         interrupt asserted
+ *   bit 11  DEC_ABORT_INT
+ *   bit 12  DEC_RDY_INT     decoding finished
+ *   bit 13  DEC_BUS_INT     bus error
+ *   bit 16  DEC_ERROR_INT   stream error detected
+ *   bit 18  DEC_TIMEOUT     hardware watchdog
+ *
+ * This is software-side register layout knowledge from the vendor package, not
+ * SoC integration data; the MMIO base itself is still a placeholder.
+ */
+#define VCDJ_SWREG_IRQ_OFFSET           0x04U
+#define VCDJ_IRQ_BIT_DEC_E              (1U << 0)
+#define VCDJ_IRQ_BIT_IRQ_DIS            (1U << 4)
+#define VCDJ_IRQ_BIT_ABORT_E            (1U << 5)
+#define VCDJ_IRQ_BIT_DEC_IRQ            (1U << 8)
+#define VCDJ_IRQ_BIT_ABORT_INT          (1U << 11)
+#define VCDJ_IRQ_BIT_RDY_INT            (1U << 12)
+#define VCDJ_IRQ_BIT_BUS_INT            (1U << 13)
+#define VCDJ_IRQ_BIT_ERROR_INT          (1U << 16)
+#define VCDJ_IRQ_BIT_TIMEOUT            (1U << 18)
+
+/*
+ * Every terminating condition, not just success; CtrlSW classifies the status.
+ * DEC_ERROR_INT is listed even though DEC_IRQ usually comes with it: relying on
+ * that pairing would turn a stream error into a full timeout wait.
+ */
+#define VCDJ_IRQ_DONE_MASK              (VCDJ_IRQ_BIT_DEC_IRQ | \
+                                         VCDJ_IRQ_BIT_ABORT_INT | \
+                                         VCDJ_IRQ_BIT_RDY_INT | \
+                                         VCDJ_IRQ_BIT_BUS_INT | \
+                                         VCDJ_IRQ_BIT_ERROR_INT | \
+                                         VCDJ_IRQ_BIT_TIMEOUT)
+
+/** Interval between two status reads while polling. */
+#define VCDJ_POLL_INTERVAL_US           50U
+
+/** Fallback bound applied when the platform config leaves `hw_timeout_ms` at 0. */
+#define VCDJ_DEFAULT_TIMEOUT_MS         2000U
+
+/** Upper bound for an abort request to clear DEC_E. */
+#define VCDJ_ABORT_TIMEOUT_MS           10U
+
+/*============================================================================*
+ *                        Local Variables
+ *============================================================================*/
+static const struct vcdj_platform_config *vcdj_cfg;
+static uint8_t vcdj_core_up;
+static uint8_t vcdj_core_busy;
+static uint32_t vcdj_wait_failures;
+
+/*
+ * Allocator injection.
+ *
+ * The driver never calls libc malloc() on its own: the integrator injects the
+ * allocator, so the same driver can be fed gui_malloc/gui_free, an os_mem
+ * wrapper, or a dedicated DMA pool once the hardware contract tells us
+ * which memory region the decoder core can actually reach.
+ */
+static void *(*vcdj_alloc_fn)(size_t);
+static void (*vcdj_free_fn)(void *);
+
+/* Register write trace, see vcdj_core_trace_start(). */
+static uint8_t vcdj_trace_on;
+static uint32_t vcdj_trace_crc;
+static uint32_t vcdj_trace_count;
+
+/* CRC-32 (IEEE, reflected 0xEDB88320), one entry per nibble. */
+static const uint32_t vcdj_crc32_nibble[16] =
+{
+    0x00000000U, 0x1DB71064U, 0x3B6E20C8U, 0x26D930ACU,
+    0x76DC4190U, 0x6B6B51F4U, 0x4DB26158U, 0x5005713CU,
+    0xEDB88320U, 0xF00F9344U, 0xD6D6A3E8U, 0xCB61B38CU,
+    0x9B64C2B0U, 0x86D3D2D4U, 0xA00AE278U, 0xBDBDF21CU,
+};
+
+/*============================================================================*
+ *                        Local Functions
+ *============================================================================*/
+static uint32_t vcdj_clamp_timeout(uint32_t timeout_ms)
+{
+    uint32_t bound = VCDJ_DEFAULT_TIMEOUT_MS;
+
+    if ((vcdj_cfg != NULL) && (vcdj_cfg->hw_timeout_ms != 0U))
+    {
+        bound = vcdj_cfg->hw_timeout_ms;
+    }
+
+    /* VCDJ_TIMEOUT_FOREVER reaches us because the vendor code passes
+     * (u32)DEC_X170_TIMEOUT_LENGTH, which defaults to -1. An unbounded wait is
+     * exactly what must not happen here, so it is clamped like any other
+     * oversized request. */
+    if ((timeout_ms == 0U) || (timeout_ms > bound))
+    {
+        return bound;
+    }
+
+    return timeout_ms;
+}
+
+static uint32_t vcdj_core_reg_offset(int core_id, uint32_t offset)
+{
+    uint32_t core_base = 0U;
+
+    if ((vcdj_cfg != NULL) && (core_id > 0))
+    {
+        core_base = (uint32_t)core_id * vcdj_cfg->reg_window_size;
+    }
+
+    return core_base + offset;
+}
+
+/*
+ * Fields that differ between two runs of the same decode, cleared before the CRC.
+ * swreg327[15:0] is HWIF_UNIQUE_ID, which CtrlSW fills with rand() per picture.
+ */
+static uint32_t vcdj_trace_mask(uint32_t offset, uint32_t value)
+{
+    if (offset == 327U * 4U)
+    {
+        value &= 0xFFFF0000U;
+    }
+
+    return value;
+}
+
+static uint32_t vcdj_crc32_word(uint32_t crc, uint32_t word)
+{
+    uint32_t i;
+
+    for (i = 0U; i < 8U; i++)
+    {
+        crc = (crc >> 4) ^ vcdj_crc32_nibble[(crc ^ word) & 0xFU];
+        word >>= 4;
+    }
+
+    return crc;
+}
+
+/*
+ * Stop a core whose wait expired with DEC_E still set; left running, every
+ * later decode times out too. Same request as the vendor ResetAsic() abort.
+ *
+ * \return 0 when the core is stopped, -1 when DEC_E outlived the abort.
+ */
+static int vcdj_core_abort(int core_id)
+{
+    uint32_t start;
+
+    if ((vcdj_core_read_reg(core_id, VCDJ_SWREG_IRQ_OFFSET) & VCDJ_IRQ_BIT_DEC_E) == 0U)
+    {
+        return 0;
+    }
+
+    vcdj_core_write_reg(core_id, VCDJ_SWREG_IRQ_OFFSET,
+                        VCDJ_IRQ_BIT_ABORT_E | VCDJ_IRQ_BIT_IRQ_DIS);
+
+    start = vcdj_cfg->ops->get_time_ms(vcdj_cfg->ctx);
+    while ((vcdj_core_read_reg(core_id, VCDJ_SWREG_IRQ_OFFSET) & VCDJ_IRQ_BIT_DEC_E) != 0U)
+    {
+        if ((vcdj_cfg->ops->get_time_ms(vcdj_cfg->ctx) - start) >= VCDJ_ABORT_TIMEOUT_MS)
+        {
+            return -1;
+        }
+
+        vcdj_cfg->ops->delay_us(vcdj_cfg->ctx, VCDJ_POLL_INTERVAL_US);
+    }
+
+    vcdj_core_write_reg(core_id, VCDJ_SWREG_IRQ_OFFSET, 0U);
+    return 0;
+}
+
+/*============================================================================*
+ *                        Allocator injection
+ *============================================================================*/
+void vcdj_mem_set_allocator(void *(*alloc_fn)(size_t), void (*free_fn)(void *))
+{
+    if ((alloc_fn == NULL) || (free_fn == NULL))
+    {
+        vcdj_alloc_fn = NULL;
+        vcdj_free_fn = NULL;
+        return;
+    }
+
+    vcdj_alloc_fn = alloc_fn;
+    vcdj_free_fn = free_fn;
+}
+
+int vcdj_mem_allocator_ready(void)
+{
+    return (vcdj_alloc_fn != NULL) && (vcdj_free_fn != NULL);
+}
+
+void *vcdj_mem_alloc(size_t size)
+{
+    if ((vcdj_alloc_fn == NULL) || (size == 0U))
+    {
+        return NULL;
+    }
+
+    return vcdj_alloc_fn(size);
+}
+
+void vcdj_mem_free(void *ptr)
+{
+    if ((vcdj_free_fn == NULL) || (ptr == NULL))
+    {
+        return;
+    }
+
+    vcdj_free_fn(ptr);
+}
+
+/*============================================================================*
+ *                        Core life cycle
+ *============================================================================*/
+int vcdj_core_init(void)
+{
+    const struct vcdj_platform_config *cfg;
+
+    if (vcdj_core_up)
+    {
+        return 0;
+    }
+
+    cfg = vcdj_platform_get_config();
+    if ((cfg == NULL) || (cfg->ops == NULL))
+    {
+        return -1;
+    }
+
+    if ((cfg->ops->reg_read32 == NULL) || (cfg->ops->reg_write32 == NULL) ||
+        (cfg->ops->dma_alloc == NULL) || (cfg->ops->dma_free == NULL) ||
+        (cfg->ops->get_time_ms == NULL) || (cfg->ops->delay_us == NULL))
+    {
+        return -1;
+    }
+
+    vcdj_cfg = cfg;
+
+    if (cfg->ops->clock_enable != NULL)
+    {
+        if (cfg->ops->clock_enable(cfg->ctx) != 0)
+        {
+            vcdj_cfg = NULL;
+            return -1;
+        }
+    }
+
+    if (cfg->ops->reset != NULL)
+    {
+        (void)cfg->ops->reset(cfg->ctx);
+    }
+
+    vcdj_core_busy = 0U;
+    vcdj_core_up = 1U;
+
+    return 0;
+}
+
+void vcdj_core_deinit(void)
+{
+    const struct vcdj_platform_config *cfg = vcdj_cfg;
+
+    if (!vcdj_core_up)
+    {
+        return;
+    }
+
+    if ((cfg != NULL) && (cfg->ops != NULL) && (cfg->ops->clock_disable != NULL))
+    {
+        cfg->ops->clock_disable(cfg->ctx);
+    }
+
+    vcdj_core_up = 0U;
+    vcdj_core_busy = 0U;
+    vcdj_cfg = NULL;
+}
+
+int vcdj_core_ready(void)
+{
+    return (int)vcdj_core_up;
+}
+
+const struct vcdj_platform_config *vcdj_core_config(void)
+{
+    return vcdj_cfg;
+}
+
+/*============================================================================*
+ *                        Register access
+ *============================================================================*/
+uint32_t vcdj_core_read_reg(int core_id, uint32_t offset)
+{
+    if (!vcdj_core_up)
+    {
+        return 0U;
+    }
+
+    return vcdj_cfg->ops->reg_read32(vcdj_cfg->ctx, vcdj_core_reg_offset(core_id, offset));
+}
+
+void vcdj_core_write_reg(int core_id, uint32_t offset, uint32_t value)
+{
+    if (!vcdj_core_up)
+    {
+        return;
+    }
+
+    offset = vcdj_core_reg_offset(core_id, offset);
+    if (vcdj_trace_on)
+    {
+        vcdj_trace_crc = vcdj_crc32_word(vcdj_crc32_word(vcdj_trace_crc, offset),
+                                         vcdj_trace_mask(offset, value));
+        vcdj_trace_count++;
+    }
+
+    vcdj_cfg->ops->reg_write32(vcdj_cfg->ctx, offset, value);
+}
+
+void vcdj_core_trace_start(void)
+{
+    vcdj_trace_crc = 0xFFFFFFFFU;
+    vcdj_trace_count = 0U;
+    vcdj_trace_on = 1U;
+}
+
+void vcdj_core_trace_stop(uint32_t *crc, uint32_t *count)
+{
+    vcdj_trace_on = 0U;
+    *crc = vcdj_trace_crc ^ 0xFFFFFFFFU;
+    *count = vcdj_trace_count;
+}
+
+/*============================================================================*
+ *                        Core scheduling and completion
+ *============================================================================*/
+int vcdj_core_reserve(int *core_id, uint32_t timeout_ms)
+{
+    if ((core_id == NULL) || !vcdj_core_up)
+    {
+        return -1;
+    }
+
+    if (vcdj_cfg->ops->lock != NULL)
+    {
+        if (vcdj_cfg->ops->lock(vcdj_cfg->ctx, vcdj_clamp_timeout(timeout_ms)) != 0)
+        {
+            return -1;
+        }
+    }
+    else if (vcdj_core_busy)
+    {
+        /* No OS mutex available and the core is taken: fail instead of spinning. */
+        return -1;
+    }
+
+    vcdj_core_busy = 1U;
+    *core_id = 0;
+
+    return 0;
+}
+
+void vcdj_core_release(int core_id)
+{
+    (void)core_id;
+
+    if (!vcdj_core_up)
+    {
+        return;
+    }
+
+    vcdj_core_busy = 0U;
+
+    if (vcdj_cfg->ops->unlock != NULL)
+    {
+        vcdj_cfg->ops->unlock(vcdj_cfg->ctx);
+    }
+}
+
+void vcdj_core_enable(int core_id, uint32_t offset, uint32_t value)
+{
+    if (!vcdj_core_up)
+    {
+        return;
+    }
+
+    if (vcdj_cfg->ops->wait_reset != NULL)
+    {
+        vcdj_cfg->ops->wait_reset(vcdj_cfg->ctx);
+    }
+
+    if (vcdj_cfg->ops->memory_barrier != NULL)
+    {
+        vcdj_cfg->ops->memory_barrier(vcdj_cfg->ctx);
+    }
+
+    vcdj_core_write_reg(core_id, offset, value);
+}
+
+void vcdj_core_disable(int core_id, uint32_t offset, uint32_t value)
+{
+    /* The PNG timeout path passes back a swreg1 snapshot with DEC_E still set;
+     * written as-is it would restart the core that was just aborted. */
+    if (offset == VCDJ_SWREG_IRQ_OFFSET)
+    {
+        value &= ~VCDJ_IRQ_BIT_DEC_E;
+    }
+
+    vcdj_core_write_reg(core_id, offset, value);
+}
+
+static int vcdj_core_wait(int core_id, uint32_t timeout_ms)
+{
+    uint32_t bound;
+    uint32_t start;
+    uint32_t irq_stat;
+
+    if (!vcdj_core_up)
+    {
+        return VCDJ_CORE_WAIT_ERROR;
+    }
+
+    /* There is no register mapping yet. Waiting here would only burn two seconds
+     * before returning the same result, and a busy wait can also trip the board's
+     * watchdog. Preserve the declared hardware boundary explicitly. */
+    if (vcdj_cfg->reg_base == 0U)
+    {
+        return VCDJ_CORE_WAIT_TIMEOUT;
+    }
+
+    bound = vcdj_clamp_timeout(timeout_ms);
+
+#if defined(VCDJ_USE_IRQ)
+    if (vcdj_cfg->ops->wait_done != NULL)
+    {
+        int ret = vcdj_cfg->ops->wait_done(vcdj_cfg->ctx, bound);
+
+        if (ret == 0)
+        {
+            return VCDJ_CORE_WAIT_OK;
+        }
+
+        if (ret != VCDJ_PLAT_ENOTSUP)
+        {
+            /* Genuine expiry. One more status read first: a completion that
+             * raced the semaphore must not be reported as a timeout. */
+            irq_stat = vcdj_core_read_reg(core_id, VCDJ_SWREG_IRQ_OFFSET);
+            if ((irq_stat & VCDJ_IRQ_DONE_MASK) != 0U)
+            {
+                return VCDJ_CORE_WAIT_OK;
+            }
+
+            return (vcdj_core_abort(core_id) == 0) ? VCDJ_CORE_WAIT_TIMEOUT
+                   : VCDJ_CORE_WAIT_ERROR;
+        }
+
+        /* VCDJ_PLAT_ENOTSUP: this build has no interrupt wired, so
+         * fall through to the polling path below rather than failing. */
+    }
+#endif
+
+    /* Polling path: bounded by wall clock, never by an iteration count. */
+    start = vcdj_cfg->ops->get_time_ms(vcdj_cfg->ctx);
+
+    for (;;)
+    {
+        irq_stat = vcdj_core_read_reg(core_id, VCDJ_SWREG_IRQ_OFFSET);
+
+        if ((irq_stat & VCDJ_IRQ_DONE_MASK) != 0U)
+        {
+            return VCDJ_CORE_WAIT_OK;
+        }
+
+        if ((vcdj_cfg->ops->get_time_ms(vcdj_cfg->ctx) - start) >= bound)
+        {
+            return (vcdj_core_abort(core_id) == 0) ? VCDJ_CORE_WAIT_TIMEOUT
+                   : VCDJ_CORE_WAIT_ERROR;
+        }
+
+        vcdj_cfg->ops->delay_us(vcdj_cfg->ctx, VCDJ_POLL_INTERVAL_US);
+    }
+}
+
+int vcdj_core_wait_done(int core_id, uint32_t timeout_ms)
+{
+    int ret = vcdj_core_wait(core_id, timeout_ms);
+
+    if (ret != VCDJ_CORE_WAIT_OK)
+    {
+        vcdj_wait_failures++;
+    }
+
+    return ret;
+}
+
+uint32_t vcdj_core_wait_failures(void)
+{
+    return vcdj_wait_failures;
+}
+
+/*============================================================================*
+ *                        Cache maintenance and DMA memory
+ *============================================================================*/
+void vcdj_core_cache_clean(void *addr, size_t size)
+{
+    if (vcdj_core_up && (vcdj_cfg->ops->cache_clean != NULL))
+    {
+        vcdj_cfg->ops->cache_clean(vcdj_cfg->ctx, addr, size);
+    }
+}
+
+void vcdj_core_cache_invalidate(void *addr, size_t size)
+{
+    if (vcdj_core_up && (vcdj_cfg->ops->cache_invalidate != NULL))
+    {
+        vcdj_cfg->ops->cache_invalidate(vcdj_cfg->ctx, addr, size);
+    }
+}
+
+int vcdj_core_dma_alloc(size_t size, size_t align, void **cpu_addr, uintptr_t *bus_addr)
+{
+    const struct vcdj_platform_config *cfg = vcdj_cfg;
+
+    if ((cpu_addr == NULL) || (bus_addr == NULL))
+    {
+        return -1;
+    }
+
+    *cpu_addr = NULL;
+    *bus_addr = 0U;
+
+    if (cfg == NULL)
+    {
+        /* Buffers may be requested before vcdj_init(); fall back to the
+         * statically known configuration so allocation still works. */
+        cfg = vcdj_platform_get_config();
+        if ((cfg == NULL) || (cfg->ops == NULL) || (cfg->ops->dma_alloc == NULL))
+        {
+            return -1;
+        }
+    }
+
+    return cfg->ops->dma_alloc(cfg->ctx, size, align, cpu_addr, bus_addr);
+}
+
+void vcdj_core_dma_free(void *cpu_addr, uintptr_t bus_addr, size_t size)
+{
+    const struct vcdj_platform_config *cfg = vcdj_cfg;
+
+    if (cfg == NULL)
+    {
+        cfg = vcdj_platform_get_config();
+    }
+
+    if ((cfg != NULL) && (cfg->ops != NULL) && (cfg->ops->dma_free != NULL))
+    {
+        cfg->ops->dma_free(cfg->ctx, cpu_addr, bus_addr, size);
+    }
+}
+
+/*============================================================================*
+ *                        PART 2 - DWL
+ *============================================================================*/
+
+/*============================================================================*
+ *                        Local Definitions
+ *============================================================================*/
+/** ASIC ID register: swreg 0. */
+#define VCDJ_REG_ASIC_ID_OFFSET         0x00U
+
+/**
+ * Hardware build ID register: swreg 309.
+ *
+ * Same index the vendor kernel driver reads
+ * (`software/linux/dwl/dwl_linux_hw.c`: `dev->hw_build_id[i] = *(reg_mem_vir + 309)`).
+ */
+#define VCDJ_REG_HW_BUILD_ID_OFFSET     (309U * 4U)
+
+/** Maximum number of cores this first version tracks. */
+#define VCDJ_MAX_CORES                  1
+
+/**
+ * Shadow register file depth, in 32-bit words.
+ *
+ * Like the vendor DWL, DWLWriteReg()/DWLReadReg() only touch this shadow;
+ * DWLEnableHw() pushes it in one sweep and DWLWaitHwReady() pulls it back.
+ * Writing registers one by one would set DEC_E (swreg1) before the rest of the
+ * configuration lands. Pushes and pulls are bounded by reg_window_size.
+ */
+#define VCDJ_SHADOW_REG_COUNT           896U
+
+/*
+ * pthread_cond_wait() blocks forever. With NON_PTHREAD_H the vendor code also
+ * turns pthread_create() into a no-op, so nothing else is running to signal the
+ * condition variable, and a genuine forever-wait would simply hang the caller.
+ *
+ * Every vendor call site re-checks its predicate in a `while` loop, so returning
+ * from the wait early is safe: it degrades into a slow poll instead of a deadlock.
+ * That is strictly preferable to hanging, and it keeps the "no unbounded wait
+ * anywhere in this driver" property.
+ */
+#ifndef VCDJ_COND_WAIT_TIMEOUT_MS
+#define VCDJ_COND_WAIT_TIMEOUT_MS   1000U
+#endif
+
+/** Vendor convention (pthread): 0 means success, non-zero means failure. */
+#define VCDJ_OS_OK      0
+#define VCDJ_OS_FAIL    (-1)
+
+/*============================================================================*
+ *                        Local Types
+ *============================================================================*/
+struct vcdj_dwl_inst
+{
+    u32 in_use;
+    enum DWLClientType client_type;
+    void *priv;
+    u32 n_cores;
+    i32 reserved_core;
+
+    /** Shadow register file, see VCDJ_SHADOW_REG_COUNT. */
+    u32 shadow_regs[VCDJ_MAX_CORES][VCDJ_SHADOW_REG_COUNT];
+};
+
+/*============================================================================*
+ *                        Local Variables
+ *============================================================================*/
+/*
+ * One static instance. This SoC has a single decoder core and limited RAM
+ * headroom, so a dynamically grown instance table would buy nothing.
+ */
+static struct vcdj_dwl_inst vcdj_dwl_instance;
+
+/*============================================================================*
+ *                        Local Functions
+ *============================================================================*/
+static struct vcdj_dwl_inst *vcdj_dwl_of(const void *instance)
+{
+    struct vcdj_dwl_inst *inst = (struct vcdj_dwl_inst *)instance;
+
+    if ((inst == NULL) || (inst->in_use == 0U))
+    {
+        return NULL;
+    }
+
+    return inst;
+}
+
+/**
+ * \brief Shadow slot for one register, or NULL if the access is out of range.
+ *
+ * \param inst    DWL instance.
+ * \param core_id Core index.
+ * \param offset  Byte offset of the register inside the core window.
+ */
+static u32 *vcdj_shadow_slot(struct vcdj_dwl_inst *inst, i32 core_id, u32 offset)
+{
+    u32 index = offset / 4U;
+
+    if ((core_id < 0) || ((u32)core_id >= inst->n_cores) ||
+        (index >= VCDJ_SHADOW_REG_COUNT))
+    {
+        return NULL;
+    }
+
+    return &inst->shadow_regs[core_id][index];
+}
+
+/**
+ * \brief Number of registers the hardware window actually decodes.
+ *
+ * Hard limit for every push and pull: accessing past the decoded range hangs
+ * the bus until the FPGA bitfile is reloaded.
+ */
+static u32 vcdj_shadow_hw_count(void)
+{
+    const struct vcdj_platform_config *cfg = vcdj_core_config();
+    u32 count;
+
+    if (cfg == NULL)
+    {
+        return 0U;
+    }
+
+    count = cfg->reg_window_size / 4U;
+
+    return (count > VCDJ_SHADOW_REG_COUNT) ? VCDJ_SHADOW_REG_COUNT : count;
+}
+
+/**
+ * \brief Push the shadow register file to the hardware.
+ *
+ * swreg1 carries DEC_E and is written last, after a barrier.
+ */
+static void vcdj_shadow_push(struct vcdj_dwl_inst *inst, i32 core_id)
+{
+    const u32 *regs;
+    u32 count = vcdj_shadow_hw_count();
+    u32 i;
+
+    if ((count == 0U) || (vcdj_shadow_slot(inst, core_id, 0U) == NULL))
+    {
+        return;
+    }
+
+    regs = inst->shadow_regs[core_id];
+
+    for (i = 0U; i < count; i++)
+    {
+        if (i != 1U)
+        {
+            vcdj_core_write_reg(core_id, i * 4U, regs[i]);
+        }
+    }
+
+    if (count > 1U)
+    {
+        vcdj_core_enable(core_id, 1U * 4U, regs[1]);
+    }
+}
+
+/**
+ * \brief Pull every hardware register into the shadow file.
+ *
+ * Called once when the wait ends. CtrlSW reads status and counters from this
+ * snapshot; its error path clears swreg1, so a later live read returns zero.
+ */
+static void vcdj_shadow_pull(struct vcdj_dwl_inst *inst, i32 core_id)
+{
+    u32 *regs;
+    u32 count = vcdj_shadow_hw_count();
+    u32 i;
+
+    if ((count == 0U) || (vcdj_shadow_slot(inst, core_id, 0U) == NULL))
+    {
+        return;
+    }
+
+    regs = inst->shadow_regs[core_id];
+
+    for (i = 0U; i < count; i++)
+    {
+        regs[i] = vcdj_core_read_reg(core_id, i * 4U);
+    }
+}
+
+/*============================================================================*
+ *                        DWL: instance life cycle
+ *============================================================================*/
+const void *DWLInit(struct DWLInitParam *param)
+{
+    struct vcdj_dwl_inst *inst = &vcdj_dwl_instance;
+
+    if (param == NULL)
+    {
+        return NULL;
+    }
+
+    if (inst->in_use != 0U)
+    {
+        /* Single instance only in this version; the multi-instance decision is
+         * still open. */
+        return NULL;
+    }
+
+    if (vcdj_core_init() != 0)
+    {
+        return NULL;
+    }
+
+    memset(inst, 0, sizeof(*inst));
+    inst->in_use = 1U;
+    inst->client_type = param->client_type;
+    inst->priv = param->priv;
+    inst->n_cores = VCDJ_MAX_CORES;
+    inst->reserved_core = -1;
+
+    return (const void *)inst;
+}
+
+enum DWLRet DWLRelease(const void *instance)
+{
+    struct vcdj_dwl_inst *inst = vcdj_dwl_of(instance);
+
+    if (inst == NULL)
+    {
+        return DWL_ERROR;
+    }
+
+    if (inst->reserved_core >= 0)
+    {
+        vcdj_core_release(inst->reserved_core);
+        inst->reserved_core = -1;
+    }
+
+    memset(inst, 0, sizeof(*inst));
+    vcdj_core_deinit();
+
+    return DWL_OK;
+}
+
+/*============================================================================*
+ *                        DWL: plain heap helpers
+ *============================================================================*/
+void *DWLmalloc(size_t n)
+{
+    return vcdj_mem_alloc(n);
+}
+
+void *DWLcalloc(size_t n, size_t s)
+{
+    size_t total = n * s;
+    void *p;
+
+    if ((n != 0U) && ((total / n) != s))
+    {
+        return NULL;    /* multiplication overflow */
+    }
+
+    p = vcdj_mem_alloc(total);
+    if (p != NULL)
+    {
+        memset(p, 0, total);
+    }
+
+    return p;
+}
+
+void DWLfree(void *p)
+{
+    vcdj_mem_free(p);
+}
+
+void *DWLmemcpy(void *d, const void *s, size_t n)
+{
+    return memcpy(d, s, n);
+}
+
+void *DWLmemset(void *d, i32 c, size_t n)
+{
+    return memset(d, (int)c, n);
+}
+
+/*============================================================================*
+ *                        DWL: linear (DMA capable) memory
+ *============================================================================*/
+enum DWLRet DWLMallocLinear(const void *instance, u64 size, struct DWLLinearMem *info)
+{
+    void *cpu_addr = NULL;
+    uintptr_t bus_addr = 0U;
+    size_t alloc_size;
+
+    (void)instance;
+
+    if ((info == NULL) || (size == 0U))
+    {
+        return DWL_ERROR;
+    }
+
+    /* size is u64 in the vendor API but this SoC is a 32-bit target. */
+    if (size > (u64)(size_t) - 1)
+    {
+        return DWL_ERROR;
+    }
+
+    alloc_size = (size_t)size;
+
+    if (vcdj_core_dma_alloc(alloc_size, VCDJ_DMA_ALIGN, &cpu_addr, &bus_addr) != 0)
+    {
+        return DWL_ERROR;
+    }
+
+    info->virtual_address = (u32 *)cpu_addr;
+    info->bus_address = (addr_t)bus_addr;
+    info->alloc_virtual_addr = (u32 *)cpu_addr;
+    info->alloc_bus_addr = (addr_t)bus_addr;
+    info->size = size;
+    info->logical_size = size;
+    info->id = 0U;
+    info->priv = NULL;
+
+    return DWL_OK;
+}
+
+void DWLFreeLinear(const void *instance, struct DWLLinearMem *info)
+{
+    (void)instance;
+
+    if ((info == NULL) || (info->virtual_address == NULL))
+    {
+        return;
+    }
+
+    vcdj_core_dma_free((void *)info->virtual_address,
+                       (uintptr_t)info->bus_address,
+                       (size_t)info->size);
+
+    info->virtual_address = NULL;
+    info->bus_address = 0U;
+    info->alloc_virtual_addr = NULL;
+    info->alloc_bus_addr = 0U;
+    info->size = 0U;
+    info->logical_size = 0U;
+}
+
+enum DWLRet DWLMallocRefFrm(const void *instance, u64 size, struct DWLLinearMem *info)
+{
+    return DWLMallocLinear(instance, size, info);
+}
+
+void DWLFreeRefFrm(const void *instance, struct DWLLinearMem *info)
+{
+    DWLFreeLinear(instance, info);
+}
+
+void *DWLLinearMemcpy(const void *instance, addr_t device_bus_addr, const void *s, size_t n)
+{
+    void *dst;
+
+    (void)instance;
+
+    /*
+     * TODO (hardware-contract): a real bus-to-CPU translation is needed once the address
+     * map is known. Until then the platform layer hands out an identity mapping, so
+     * the bus address can be dereferenced directly on this 32-bit SoC.
+     */
+    dst = (void *)(uintptr_t)device_bus_addr;
+
+    if ((dst == NULL) || (s == NULL) || (n == 0U))
+    {
+        return dst;
+    }
+
+    (void)memcpy(dst, s, n);
+    vcdj_core_cache_clean(dst, n);
+
+    return dst;
+}
+
+void *DWLLinearMemset(const void *instance, struct DWLLinearMem *mem, i32 offset, i32 c, size_t n)
+{
+    u8 *dst;
+
+    (void)instance;
+
+    if ((mem == NULL) || (mem->virtual_address == NULL) || (n == 0U))
+    {
+        return NULL;
+    }
+
+    if (((u64)offset + (u64)n) > mem->size)
+    {
+        return NULL;
+    }
+
+    dst = (u8 *)mem->virtual_address + offset;
+    (void)memset(dst, (int)c, n);
+    vcdj_core_cache_clean(dst, n);
+
+    return dst;
+}
+
+/*============================================================================*
+ *                        DWL: register access
+ *============================================================================*/
+/* These accessors serve the shadow, see VCDJ_SHADOW_REG_COUNT. */
+void DWLWriteReg(const void *instance, i32 core_id, u32 offset, u32 value)
+{
+    struct vcdj_dwl_inst *inst = vcdj_dwl_of(instance);
+    u32 *slot;
+
+    if (inst == NULL)
+    {
+        return;
+    }
+
+    slot = vcdj_shadow_slot(inst, core_id, offset);
+    if (slot != NULL)
+    {
+        *slot = value;
+    }
+}
+
+u32 DWLReadReg(const void *instance, i32 core_id, u32 offset)
+{
+    struct vcdj_dwl_inst *inst = vcdj_dwl_of(instance);
+    const u32 *slot;
+
+    if (inst == NULL)
+    {
+        return 0U;
+    }
+
+    slot = vcdj_shadow_slot(inst, core_id, offset);
+
+    return (slot != NULL) ? *slot : 0U;
+}
+
+void DWLWriteRegs(const void *instance, i32 core_id, u32 offset, u32 *from,
+                  u32 num_regs, u32 print_flag)
+{
+    struct vcdj_dwl_inst *inst = vcdj_dwl_of(instance);
+    u32 i;
+
+    (void)print_flag;
+
+    if ((inst == NULL) || (from == NULL))
+    {
+        return;
+    }
+
+    for (i = 0U; i < num_regs; i++)
+    {
+        u32 *slot = vcdj_shadow_slot(inst, core_id, offset + (i * 4U));
+
+        if (slot == NULL)
+        {
+            return;
+        }
+
+        *slot = from[i];
+    }
+}
+
+void DWLReadRegs(const void *instance, i32 core_id, u32 offset, u32 *dest, u32 num)
+{
+    struct vcdj_dwl_inst *inst = vcdj_dwl_of(instance);
+    u32 i;
+
+    if ((inst == NULL) || (dest == NULL))
+    {
+        return;
+    }
+
+    for (i = 0U; i < num; i++)
+    {
+        const u32 *slot = vcdj_shadow_slot(inst, core_id, offset + (i * 4U));
+
+        if (slot == NULL)
+        {
+            return;
+        }
+
+        dest[i] = *slot;
+    }
+}
+
+/* Live hardware access; the shadow is kept in step. */
+void DWLWriteRegToHw(const void *instance, i32 core_id, u32 offset, u32 value)
+{
+    struct vcdj_dwl_inst *inst = vcdj_dwl_of(instance);
+
+    if (inst == NULL)
+    {
+        return;
+    }
+
+    DWLWriteReg(instance, core_id, offset, value);
+    vcdj_core_write_reg(core_id, offset, value);
+}
+
+u32 DWLReadRegFromHw(const void *instance, i32 core_id, u32 offset)
+{
+    struct vcdj_dwl_inst *inst = vcdj_dwl_of(instance);
+    u32 *slot;
+    u32 value;
+
+    if (inst == NULL)
+    {
+        return 0U;
+    }
+
+    value = vcdj_core_read_reg(core_id, offset);
+
+    slot = vcdj_shadow_slot(inst, core_id, offset);
+    if (slot != NULL)
+    {
+        *slot = value;
+    }
+
+    return value;
+}
+
+/*============================================================================*
+ *                        DWL: core scheduling and completion
+ *============================================================================*/
+enum DWLRet DWLReserveHw(const void *instance, struct DWLReqInfo *info, i32 *core_id)
+{
+    struct vcdj_dwl_inst *inst = vcdj_dwl_of(instance);
+    int reserved = -1;
+
+    (void)info;
+
+    if ((inst == NULL) || (core_id == NULL))
+    {
+        return DWL_ERROR;
+    }
+
+    if (vcdj_core_reserve(&reserved, VCDJ_TIMEOUT_FOREVER) != 0)
+    {
+        return DWL_ERROR;
+    }
+
+    inst->reserved_core = reserved;
+    *core_id = (i32)reserved;
+
+    return DWL_OK;
+}
+
+void DWLEnableHw(const void *instance, i32 core_id, u32 offset, u32 value)
+{
+    struct vcdj_dwl_inst *inst = vcdj_dwl_of(instance);
+
+    if (inst == NULL)
+    {
+        return;
+    }
+
+    DWLWriteReg(instance, core_id, offset, value);
+
+    /* Per-job cache/shaper setup, at the same point as the vendor Linux DWL. */
+    SwSetCacheShaperReg(inst->shadow_regs[core_id], 0);
+
+    vcdj_shadow_push(inst, core_id);
+}
+
+void DWLDisableHw(const void *instance, i32 core_id, u32 offset, u32 value)
+{
+    struct vcdj_dwl_inst *inst = vcdj_dwl_of(instance);
+
+    if (inst == NULL)
+    {
+        return;
+    }
+
+    DWLWriteReg(instance, core_id, offset, value);
+    vcdj_core_disable(core_id, offset, value);
+}
+
+enum DWLRet DWLWaitHwReady(const void *instance, i32 core_id, u32 timeout)
+{
+    int ret;
+
+    if (vcdj_dwl_of(instance) == NULL)
+    {
+        return DWL_HW_WAIT_ERROR;
+    }
+
+    /*
+     * The vendor call sites pass (u32)DEC_X170_TIMEOUT_LENGTH, whose default is
+     * -1 == 0xFFFFFFFF, i.e. "wait forever". vcdj_core_wait_done() clamps that
+     * to the platform bound on purpose: an unbounded poll like the one in the
+     * existing Realtek JPU driver would hang the caller when the core is absent
+     * or wedged.
+     */
+    ret = vcdj_core_wait_done(core_id, timeout);
+
+    vcdj_shadow_pull(vcdj_dwl_of(instance), core_id);
+
+    switch (ret)
+    {
+    case VCDJ_CORE_WAIT_OK:
+        return DWL_HW_WAIT_OK;
+    case VCDJ_CORE_WAIT_TIMEOUT:
+        return DWL_HW_WAIT_TIMEOUT;
+    default:
+        return DWL_HW_WAIT_ERROR;
+    }
+}
+
+enum DWLRet DWLReleaseHw(const void *instance, i32 core_id)
+{
+    struct vcdj_dwl_inst *inst = vcdj_dwl_of(instance);
+
+    if (inst == NULL)
+    {
+        return DWL_ERROR;
+    }
+
+    vcdj_core_release(core_id);
+    inst->reserved_core = -1;
+
+    return DWL_OK;
+}
+
+/*============================================================================*
+ *                        DWL: multicore - single core on 0x2070
+ *============================================================================*/
+/*
+ * The vendor code calls these only with multicore decoding enabled, which the
+ * HAL never requests. The merged CtrlSW has those paths pruned; split and unity
+ * still link against them. Decoding is synchronous, so nothing waits or calls back.
+ */
+#if !defined(VCDJ_CTRLSW_MERGED)
+void DWLWaitOwnerDone(const void *instance, const void *owner)
+{
+    (void)instance;
+    (void)owner;
+}
+
+void DWLSetIRQCallback(const void *instance, i32 core_id,
+                       DWLIRQCallbackFn *callback_fn, void *arg)
+{
+    (void)instance;
+    (void)core_id;
+    (void)callback_fn;
+    (void)arg;
+}
+#endif /* !VCDJ_CTRLSW_MERGED */
+
+/*============================================================================*
+ *                        DWL: hardware identification
+ *============================================================================*/
+u32 DWLReadAsicID(const void *instance, enum DWLClientType client_type)
+{
+    (void)client_type;
+
+    if (vcdj_dwl_of(instance) == NULL)
+    {
+        return 0U;
+    }
+
+    return vcdj_core_read_reg(0, VCDJ_REG_ASIC_ID_OFFSET);
+}
+
+u32 DWLReadCoreHwBuildID(const void *instance, u32 core_id)
+{
+    u32 id;
+
+    if (vcdj_dwl_of(instance) == NULL)
+    {
+        return 0U;
+    }
+
+    id = vcdj_core_read_reg((i32)core_id, VCDJ_REG_HW_BUILD_ID_OFFSET);
+
+        /*
+     * Never substitute a default here. The vendor feature lookup below masks
+     * this value, so a fabricated ID would silently select a feature profile
+     * the silicon was not measured against; an unmapped or dead core has to
+     * reach the caller as 0 / all ones instead.
+         */
+    return id;
+}
+
+const void *DWLGetHwFeaturesByID(const void *instance, u32 core_id)
+{
+    const struct DecHwFeatures *hw_feature = NULL;
+
+    GetReleaseHwFeaturesByID(DWLReadCoreHwBuildID(instance, core_id), &hw_feature);
+
+    return (const void *)hw_feature;
+}
+
+const void *DWLGetHwFeaturesByClientType(const void *instance,
+                                         enum DWLClientType client_type,
+                                         u32 *core_mask)
+{
+    (void)client_type;
+
+    if (core_mask != NULL)
+    {
+        *core_mask = 1U;    /* single core */
+    }
+
+    return DWLGetHwFeaturesByID(instance, 0U);
+}
+
+u32 DWLReadAsicCoreCount(const void *instance)
+{
+    struct vcdj_dwl_inst *inst = vcdj_dwl_of(instance);
+
+    if (inst == NULL)
+    {
+        return 0U;
+    }
+
+    return inst->n_cores;
+}
+
+/*============================================================================*
+ *                        Checksum buffer queue
+ *============================================================================*/
+/*
+ * SwGetCrcMem() / SwGetCrcLast() / SwSetCrcUnused() / SwClearCrcFlag() /
+ * SwFreeCrcMem() are DECLARED in software/source/common/sw_util.h, which is part
+ * of the compiled subset, but IMPLEMENTED in the DWL layer
+ * (software/linux/dwl/dwl_pc.c, dwl_linux_hw.c). They are therefore part of the
+ * porting surface even though their names do not start with DWL, and
+ * jpegdecapi.c / pnghwd_asic.c reference them unconditionally.
+ *
+ * Behaviour mirrors the vendor reference implementation: a singly linked list of
+ * CrcData nodes with `used` and `last` flags, grown on demand.
+ */
+static void vcdj_crc_set_used(CrcData *crc)
+{
+    if (crc != NULL)
+    {
+        crc->used = 1U;
+    }
+}
+
+static void vcdj_crc_set_last(CrcData **crc, CrcData **cur)
+{
+    CrcData *tmp = *crc;
+
+    while (tmp != NULL)
+    {
+        tmp->last = 0U;
+        tmp = tmp->next;
+    }
+
+    (*cur)->last = 1U;
+}
+
+void SwSetCrcUnused(CrcData *crc)
+{
+    if (crc != NULL)
+    {
+        crc->used = 0U;
+    }
+}
+
+void SwGetCrcMem(CrcData **crc, CrcData **cur)
+{
+    if ((crc == NULL) || (cur == NULL))
+    {
+        return;
+    }
+
+    *cur = *crc;
+
+    if (*cur == NULL)
+    {
+        *cur = *crc = (CrcData *)DWLcalloc(sizeof(CrcData), 1U);
+    }
+    else
+    {
+        while (*cur != NULL)
+        {
+            if ((*cur)->used == 0U)
+            {
+                break;
+            }
+            *cur = (*cur)->next;
+        }
+
+        if (*cur == NULL)
+        {
+            *cur = (CrcData *)DWLcalloc(sizeof(CrcData), 1U);
+            if ((*cur != NULL) && ((*crc)->next != NULL))
+            {
+                (*cur)->next = (*crc)->next;
+            }
+            (*crc)->next = *cur;
+        }
+    }
+
+    if (*cur != NULL)
+    {
+        vcdj_crc_set_used(*cur);
+        vcdj_crc_set_last(crc, cur);
+    }
+}
+
+void SwGetCrcLast(CrcData **crc, CrcData **cur)
+{
+    CrcData *tmp;
+
+    if ((crc == NULL) || (cur == NULL))
+    {
+        return;
+    }
+
+    tmp = *crc;
+
+    while (tmp != NULL)
+    {
+        if (tmp->last != 0U)
+        {
+            *cur = tmp;
+            break;
+        }
+        tmp = tmp->next;
+    }
+}
+
+void SwClearCrcFlag(CrcData **crc)
+{
+    CrcData *tmp;
+
+    if (crc == NULL)
+    {
+        return;
+    }
+
+    tmp = *crc;
+
+    while (tmp != NULL)
+    {
+        tmp->used = 0U;
+        tmp->last = 0U;
+        tmp = tmp->next;
+    }
+}
+
+void SwFreeCrcMem(CrcData **crc)
+{
+    CrcData *tmp;
+
+    if (crc == NULL)
+    {
+        return;
+    }
+
+    tmp = *crc;
+
+    while (tmp != NULL)
+    {
+        *crc = tmp->next;
+        DWLfree(tmp);
+        tmp = *crc;
+    }
+}
+
+/*============================================================================*
+ *                        DWL: VCMD - not present on 0x2070
+ *============================================================================*/
+/*
+ * 0x2070 has no VCMD, so every entry point below reports "not available" and the
+ * vendor code takes its direct register branch. The merged CtrlSW has those
+ * branches pruned and calls none of these; split and unity compile the vendor
+ * files as shipped and still link against them.
+ */
+#if !defined(VCDJ_CTRLSW_MERGED)
+u32 DWLVcmdIsUsed(const void *instance)
+{
+    (void)instance;
+    return 0U;
+}
+
+u32 DWLReadVcmdHwID(const void *instance)
+{
+    (void)instance;
+    return 0U;
+}
+
+u32 DWLCheckVcmdM2M(const void *instance)
+{
+    (void)instance;
+    return 0U;
+}
+
+enum DWLRet DWLReserveCmdBuf(const void *instance, struct DWLReqInfo *info, u32 *cmd_buf_id)
+{
+    (void)instance;
+    (void)info;
+    (void)cmd_buf_id;
+    return DWL_ERROR;
+}
+
+enum DWLRet DWLFlushRegister(const void *instance, u32 cmd_buf_id, u32 *dec_regs,
+                             u32 *mc_fresh_regs, u32 mc_buf_id)
+{
+    (void)instance;
+    (void)cmd_buf_id;
+    (void)dec_regs;
+    (void)mc_fresh_regs;
+    (void)mc_buf_id;
+    return DWL_ERROR;
+}
+
+enum DWLRet DWLPrepareCmds(const void *instance, u32 cmd_buf_id)
+{
+    (void)instance;
+    (void)cmd_buf_id;
+    return DWL_ERROR;
+}
+
+enum DWLRet DWLEnableCmdBuf(const void *instance, u32 cmd_buf_id)
+{
+    (void)instance;
+    (void)cmd_buf_id;
+    return DWL_ERROR;
+}
+
+enum DWLRet DWLWaitCmdBufReady(const void *instance, u16 cmd_buf_id)
+{
+    (void)instance;
+    (void)cmd_buf_id;
+    return DWL_ERROR;
+}
+
+enum DWLRet DWLRefreshRegister(const void *instance, u32 cmd_buf_id, u32 *dec_regs)
+{
+    (void)instance;
+    (void)cmd_buf_id;
+    (void)dec_regs;
+    return DWL_ERROR;
+}
+
+enum DWLRet DWLReleaseCmdBuf(const void *instance, u32 cmd_buf_id)
+{
+    (void)instance;
+    (void)cmd_buf_id;
+    return DWL_ERROR;
+}
+
+enum DWLRet DWLWaitCmdbufsDone(const void *instance, const void *owner)
+{
+    (void)instance;
+    (void)owner;
+    return DWL_OK;
+}
+
+u32 DWLGetCmdBufExeStatus(const void *instance, u16 cmd_buf_id)
+{
+    (void)instance;
+    (void)cmd_buf_id;
+    return 0U;
+}
+
+enum DWLRet DWLParseCmdBufExeStatus(const void *instance, u32 exe_status)
+{
+    (void)instance;
+    (void)exe_status;
+    return DWL_ERROR;
+}
+
+void DWLCmdM2MSendData(const void *instance, struct CDF_INFO *head_data,
+                       struct CDF_INFO *tail_data, u32 cmdbuf_id)
+{
+    (void)instance;
+    (void)head_data;
+    (void)tail_data;
+    (void)cmdbuf_id;
+}
+
+void DWLCmdMsetSendData(const void *instance, struct MSET_INFO *before_data,
+                        struct MSET_INFO *after_data, u32 cmdbuf_id)
+{
+    (void)instance;
+    (void)before_data;
+    (void)after_data;
+    (void)cmdbuf_id;
+}
+
+void DWLCmdM2MPSendData(const void *instance, struct M2MP_INFO *before_data,
+                        struct M2MP_INFO *after_data, u32 cmdbuf_id)
+{
+    (void)instance;
+    (void)before_data;
+    (void)after_data;
+    (void)cmdbuf_id;
+}
+
+enum DWLRet DWLRefreshCrcResult(const void *instance, CrcData **crc, u32 cmdbuf_id)
+{
+    (void)instance;
+    (void)cmdbuf_id;
+
+    if (crc != NULL)
+    {
+        *crc = NULL;
+    }
+
+    return DWL_ERROR;
+}
+
+enum DWLRet DWLMCRefreshCrcResult(const void *instance, CrcData **crc, u32 cmdbuf_id)
+{
+    return DWLRefreshCrcResult(instance, crc, cmdbuf_id);
+}
+
+enum DWLRet DWLVcmdMCRefreshStatusRegs(const void *instance, u32 *dec_regs, u32 cmdbuf_id)
+{
+    (void)instance;
+    (void)dec_regs;
+    (void)cmdbuf_id;
+    return DWL_ERROR;
+}
+
+enum DWLRet DWLCmdPushSliceRegs(const void *instance, u32 cmd_buf_id, u32 *regs)
+{
+    (void)instance;
+    (void)cmd_buf_id;
+    (void)regs;
+    return DWL_ERROR;
+}
+
+void DWLAbortCmdbuf(const void *instance, u16 cmd_buf_id)
+{
+    (void)instance;
+    (void)cmd_buf_id;
+}
+
+void DWLDropCmdbufs(const void *instance, const void *owner)
+{
+    (void)instance;
+    (void)owner;
+}
+
+void DWLSetCmdBufIntCtrl(const void *instance, u16 cmd_buf_id, u64 interrupt_ctrl)
+{
+    (void)instance;
+    (void)cmd_buf_id;
+    (void)interrupt_ctrl;
+}
+
+i32 DWLGetVcmdMCVirtualCoreId(const void *instance, u32 cmdbuf_id)
+{
+    (void)instance;
+    (void)cmdbuf_id;
+    return -1;
+}
+#endif /* !VCDJ_CTRLSW_MERGED */
+
+/*============================================================================*
+ *                        dwl_os: Mutex
+ *============================================================================*/
+/*
+ * The 13 `dwl_os` functions that `dwlthread.h` declares when NON_PTHREAD_H is
+ * defined. That header redirects all 139 `pthread_*` and 41 `sem_*` uses in the
+ * Control Software onto these functions, so no vendor source file has to be
+ * touched.
+ *
+ * The actual OS objects live in src/device/<soc>/rtl_vcdj_port.c and are reached
+ * through the plain-<stdint.h> `vcdj_os_*()` contract.
+ */
+int MutexInit(PMutex m, PAttribute a)
+{
+    vcdj_os_handle_t handle;
+
+    (void)a;
+
+    if (m == NULL)
+    {
+        return VCDJ_OS_FAIL;
+    }
+
+    if (vcdj_os_mutex_create(&handle) != 0)
+    {
+        m->locked = (dwl_bool)VCDJ_OS_HANDLE_INVALID;
+        return VCDJ_OS_FAIL;
+    }
+
+    /* `locked` is the only storage the vendor Mutex offers; it carries the
+     * bridge handle, not a boolean. Nothing in the compiled vendor subset reads
+     * the field directly. */
+    m->locked = (dwl_bool)handle;
+    m->attrib.a = 0;
+
+    return VCDJ_OS_OK;
+}
+
+int MutexDestroy(PMutex m)
+{
+    if (m == NULL)
+    {
+        return VCDJ_OS_FAIL;
+    }
+
+    if (vcdj_os_mutex_destroy((vcdj_os_handle_t)m->locked) != 0)
+    {
+        return VCDJ_OS_FAIL;
+    }
+
+    m->locked = (dwl_bool)VCDJ_OS_HANDLE_INVALID;
+
+    return VCDJ_OS_OK;
+}
+
+int MutexLock(PMutex m)
+{
+    if (m == NULL)
+    {
+        return VCDJ_OS_FAIL;
+    }
+
+    return (vcdj_os_mutex_lock((vcdj_os_handle_t)m->locked, VCDJ_OS_WAIT_FOREVER) == 0)
+           ? VCDJ_OS_OK : VCDJ_OS_FAIL;
+}
+
+int MutexUnlock(PMutex m)
+{
+    if (m == NULL)
+    {
+        return VCDJ_OS_FAIL;
+    }
+
+    return (vcdj_os_mutex_unlock((vcdj_os_handle_t)m->locked) == 0)
+           ? VCDJ_OS_OK : VCDJ_OS_FAIL;
+}
+
+/*============================================================================*
+ *                        dwl_os: Event (condition variable)
+ *============================================================================*/
+int EventInit(PEvent e, PAttribute a)
+{
+    vcdj_os_handle_t handle;
+
+    (void)a;
+
+    if (e == NULL)
+    {
+        return VCDJ_OS_FAIL;
+    }
+
+    if (vcdj_os_cond_create(&handle) != 0)
+    {
+        e->singaled = (dwl_bool)VCDJ_OS_HANDLE_INVALID;
+        return VCDJ_OS_FAIL;
+    }
+
+    e->singaled = (dwl_bool)handle;
+    e->attrib.a = 0;
+
+    return VCDJ_OS_OK;
+}
+
+int EventDestroy(PEvent e)
+{
+    if (e == NULL)
+    {
+        return VCDJ_OS_FAIL;
+    }
+
+    if (vcdj_os_cond_destroy((vcdj_os_handle_t)e->singaled) != 0)
+    {
+        return VCDJ_OS_FAIL;
+    }
+
+    e->singaled = (dwl_bool)VCDJ_OS_HANDLE_INVALID;
+
+    return VCDJ_OS_OK;
+}
+
+int EventWait(PEvent e, PMutex m)
+{
+    if ((e == NULL) || (m == NULL))
+    {
+        return VCDJ_OS_FAIL;
+    }
+
+    return (vcdj_os_cond_wait((vcdj_os_handle_t)e->singaled,
+                              (vcdj_os_handle_t)m->locked,
+                              VCDJ_COND_WAIT_TIMEOUT_MS) == 0)
+           ? VCDJ_OS_OK : VCDJ_OS_FAIL;
+}
+
+int EventSignal(PEvent e)
+{
+    if (e == NULL)
+    {
+        return VCDJ_OS_FAIL;
+    }
+
+    return (vcdj_os_cond_signal((vcdj_os_handle_t)e->singaled) == 0)
+           ? VCDJ_OS_OK : VCDJ_OS_FAIL;
+}
+
+/*============================================================================*
+ *                        dwl_os: Semaphore
+ *============================================================================*/
+int SemaphoreInit(PSemaphore s, u32 value)
+{
+    vcdj_os_handle_t handle;
+
+    if (s == NULL)
+    {
+        return VCDJ_OS_FAIL;
+    }
+
+    if (vcdj_os_sem_create(&handle, value) != 0)
+    {
+        s->val = (i32)VCDJ_OS_HANDLE_INVALID;
+        return VCDJ_OS_FAIL;
+    }
+
+    s->val = (i32)handle;
+
+    return VCDJ_OS_OK;
+}
+
+int SemaphoreDestroy(PSemaphore s)
+{
+    if (s == NULL)
+    {
+        return VCDJ_OS_FAIL;
+    }
+
+    if (vcdj_os_sem_destroy((vcdj_os_handle_t)s->val) != 0)
+    {
+        return VCDJ_OS_FAIL;
+    }
+
+    s->val = (i32)VCDJ_OS_HANDLE_INVALID;
+
+    return VCDJ_OS_OK;
+}
+
+int SemaphoreWait(PSemaphore s)
+{
+    if (s == NULL)
+    {
+        return VCDJ_OS_FAIL;
+    }
+
+    /* Bounded for the same reason as EventWait(): the vendor call sites re-check
+     * their predicate, so an expiry becomes a retry rather than a hang. */
+    return (vcdj_os_sem_wait((vcdj_os_handle_t)s->val, VCDJ_COND_WAIT_TIMEOUT_MS) == 0)
+           ? VCDJ_OS_OK : VCDJ_OS_FAIL;
+}
+
+int SemaphorePost(PSemaphore s)
+{
+    if (s == NULL)
+    {
+        return VCDJ_OS_FAIL;
+    }
+
+    return (vcdj_os_sem_post((vcdj_os_handle_t)s->val) == 0)
+           ? VCDJ_OS_OK : VCDJ_OS_FAIL;
+}
+
+int SemaphoreGetValue(PSemaphore s)
+{
+    int count;
+
+    if (s == NULL)
+    {
+        return 0;
+    }
+
+    count = vcdj_os_sem_count((vcdj_os_handle_t)s->val);
+
+    return (count < 0) ? 0 : count;
+}
+
+/*============================================================================*
+ *                        OSAL shims
+ *============================================================================*/
+int osal_usleep(unsigned long usec)
+{
+#if ULONG_MAX > UINT32_MAX
+    if (usec > UINT32_MAX)
+    {
+        usec = UINT32_MAX;
+    }
+#endif
+
+    vcdj_os_delay_us((uint32_t)usec);
+
+    return 0;
+}
+
+/**
+ * The vendor JPEG API declares this and states it "must be implemented by the
+ * application using the decoder API". It is only reached when the vendor trace
+ * build options are enabled, which they are not here, so it stays empty and is
+ * dropped by --gc-sections. It exists so the contract is satisfied.
+ */
+void JpegDecTrace(const char *string)
+{
+    (void)string;
+}
+
+/*============================================================================*
+ *                        PART 3 - HAL
+ *============================================================================*/
 
 /*============================================================================*
  *                        Local Definitions

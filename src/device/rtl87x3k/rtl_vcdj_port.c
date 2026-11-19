@@ -17,7 +17,7 @@
  *      registers, DMA memory, cache, locking, clock/reset, time
  *   2. `vcdj_os_*()`
  *      the mutex / condvar / semaphore primitives the vendor OS bridge in
- *      src/common/rtl_vcdj_dwl.c needs
+ *      src/common/rtl_vcdj.c needs
  *
  * This file MUST NOT include any vendor Control Software header. `dwlthread.h`
  * redefines `EFAULT`/`EINVAL`/`EBUSY`/`ENOTTY` and defines `atomic_t`, `open`,

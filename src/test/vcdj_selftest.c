@@ -12,12 +12,11 @@
  *
  * It lives outside src/common/ because nothing in the product calls it - it
  * exists to prove the vendor call path is reachable during bring-up. Keeping it
- * here means the three driver translation units contain only code a product
- * feature can reach, and this file can be dropped from a build without touching
- * them.
+ * here means src/common/rtl_vcdj.c contains only code a product feature can
+ * reach, and this file can be dropped from a build without touching it.
  *
- * VENDOR FACING TRANSLATION UNIT. Like the three in src/common/ it includes no OS
- * header (see rtl_vcdj_dwl.c for the rationale): every step is reported through
+ * VENDOR FACING TRANSLATION UNIT. Like src/common/rtl_vcdj.c it includes no OS
+ * header (see that file for the rationale): every step is reported through
  * vcdj_plat_log(), which the platform layer implements on top of whatever console
  * the OS offers. This file is that seam's only caller.
  *

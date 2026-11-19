@@ -38,7 +38,7 @@
 /*
  * Bring-up self test: fixed ON.
  *
- * Defined here so the driver 4 TUs always build it regardless of build system
+ * Defined here so every driver TU always builds it regardless of build system
  * (CMake / Keil). The Keil project equally carries it in the target-level
  * <Define> for Basic/src/ap/app_task.c, which does NOT go through this
  * force-included header; the #ifndef guard makes the two coexist without a
@@ -148,7 +148,7 @@ extern "C" {
  * build does not satisfy. `jpegdecapi.c` and `pngdecapi.c` do call `usleep()`, so
  * without this prototype the compiler emits -Wimplicit-function-declaration.
  *
- * Implemented in src/common/rtl_vcdj_dwl.c.
+ * Implemented in src/common/rtl_vcdj.c.
  */
 int osal_usleep(unsigned long usec);
 

@@ -32,9 +32,7 @@ if(CONFIG_REALTEK_DISPLAY_ENABLE_VCDJ)
     )
 
     target_sources(${HW_DISPLAY_TARGET_NAME} PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/common/rtl_vcdj_hal.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/common/rtl_vcdj_dwl.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/common/rtl_vcdj_core.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/common/rtl_vcdj.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/device/rtl87x3k/rtl_vcdj_port.c
     )
 

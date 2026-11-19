@@ -26,8 +26,8 @@ extern "C" {
  *                        Scope of this header
  *============================================================================*/
 /**
- * Driver internal contracts. NOT part of the exported interface: only the four
- * translation units of this driver include it.
+ * Driver internal contracts. NOT part of the exported interface: only
+ * src/common/rtl_vcdj.c, the platform layer and the self test include it.
  *
  * It carries three contracts that used to live in separate headers:
  *
@@ -161,8 +161,8 @@ const struct vcdj_platform_config *vcdj_platform_get_config(void);
  * reaches DBG_DIRECT(). Must write straight to the console rather than a
  * deferred buffer, because a message has to survive a fault right after it.
  *
- * Only `src/test/vcdj_selftest.c` calls this; the three driver translation units
- * in src/common/ emit no log at all.
+ * Only `src/test/vcdj_selftest.c` calls this; src/common/rtl_vcdj.c emits no log
+ * at all.
  */
 void vcdj_plat_log(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 
@@ -172,7 +172,7 @@ void vcdj_plat_log(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 /**
  * \brief Inject the allocator used for every DMA capable buffer.
  *
- * Implemented in `src/common/rtl_vcdj_core.c`, consumed by the platform layer's
+ * Implemented in `src/common/rtl_vcdj.c`, consumed by the platform layer's
  * `dma_alloc`/`dma_free`. Passing NULL for either argument restores the
  * "no allocator" state, after which allocation fails with
  * \ref VCDJ_ERR_NO_MEM instead of falling back to libc.
@@ -274,7 +274,7 @@ int vcdj_core_wait_done(int core_id, uint32_t timeout_ms);
  *        completion since \ref vcdj_core_init; wraps.
  *
  * Lets the caller see a timeout the vendor code swallowed (see
- * vcdj_vendor_decode_checked() in rtl_vcdj_hal.c).
+ * vcdj_vendor_decode_checked() in rtl_vcdj.c).
  */
 uint32_t vcdj_core_wait_failures(void);
 
@@ -295,7 +295,7 @@ void vcdj_core_dma_free(void *cpu_addr, uintptr_t bus_addr, size_t size);
  *============================================================================*/
 /**
  * Narrow OS primitive contract used by the vendor OS bridge in
- * `src/common/rtl_vcdj_dwl.c` and implemented in
+ * `src/common/rtl_vcdj.c` and implemented in
  * `src/device/<soc>/rtl_vcdj_port.c`.
  *
  * Handles are small integers rather than pointers on purpose: the vendor objects
@@ -341,7 +341,7 @@ void vcdj_os_delay_us(uint32_t us);
  *                        Cross-file driver internals
  *============================================================================*/
 /**
- * Shared between `rtl_vcdj_hal.c` and the bring-up self test in
+ * Shared between `rtl_vcdj.c` and the bring-up self test in
  * `src/test/vcdj_selftest.c`. Deliberately uses `void *` rather than a vendor
  * type so this header stays vendor-header-free - which is also what lets the
  * self test live in its own translation unit without duplicating any of the
@@ -351,7 +351,7 @@ void vcdj_os_delay_us(uint32_t us);
 /*
  * Upper bound on the output buffers one decode registers with the vendor.
  *
- * Here rather than in rtl_vcdj_hal.c because it is the `capacity` argument of
+ * Here rather than in rtl_vcdj.c because it is the `capacity` argument of
  * vcdj_internal_add_jpeg_buffers() / vcdj_internal_add_png_buffers() below: both
  * callers size their `buffers[]` array with it, so a copy per file could drift
  * and overflow the array the helper writes into.

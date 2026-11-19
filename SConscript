@@ -48,9 +48,7 @@ ctrlsw_defines = ['VCDJ_CTRLSW_MERGED'] if VCDJ_CTRLSW == 'merged' else []
 VENDOR_PREINCLUDE = ' -include ' + cwd + '/inc/rtl_vcdj_vendor.h'
 
 src = [
-    'src/common/rtl_vcdj_hal.c',
-    'src/common/rtl_vcdj_dwl.c',
-    'src/common/rtl_vcdj_core.c',
+    'src/common/rtl_vcdj.c',
     PLATFORM + '/rtl_vcdj_port.c',
     'src/test/vcdj_test_stream.c',
     'src/test/vcdj_selftest.c',
