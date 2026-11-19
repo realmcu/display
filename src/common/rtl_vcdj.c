@@ -14,8 +14,9 @@
  *   1. CORE  bounded-wait state machine, register access, cache/DMA and
  *            allocator injection; reaches hardware only via vcdj_platform_ops
  *   2. DWL   the vendor-facing contracts: DWL (memory, registers, core
- *            scheduling, hardware identification, VCMD stubs), the 13 dwl_os
- *            Mutex/Event/Semaphore functions, osal_usleep() and JpegDecTrace()
+ *            scheduling, hardware identification), the 13 dwl_os
+ *            Mutex/Event/Semaphore functions and osal_usleep(). Only what the
+ *            merged CtrlSW references is implemented.
  *   3. HAL   JPEG/PNG dispatch, `enum DecRet` to \ref vcdj_error_t mapping,
  *            external-buffer negotiation and picture release tokens
  *
@@ -92,6 +93,27 @@
 
 /** Upper bound for an abort request to clear DEC_E. */
 #define VCDJ_ABORT_TIMEOUT_MS           10U
+
+/** Timeout value meaning "wait forever"; vcdj_clamp_timeout() bounds it. */
+#define VCDJ_TIMEOUT_FOREVER            0xFFFFFFFFU
+
+/*
+ * Alignment of every buffer handed to the decoder core. The vendor LINMEM_ALIGN
+ * of 4096 is a Linux host convenience; the documented 128-bit minimum lets the
+ * shaper miss full-length bursts when a plane lands off a 128-byte boundary.
+ */
+#define VCDJ_DMA_ALIGN                  128U
+
+/*============================================================================*
+ *                        Local Types
+ *============================================================================*/
+/** Completion status returned by vcdj_core_wait_done(). */
+enum vcdj_core_wait
+{
+    VCDJ_CORE_WAIT_OK      = 0,   /**< Core signalled completion */
+    VCDJ_CORE_WAIT_TIMEOUT = 1,   /**< Bounded wait expired */
+    VCDJ_CORE_WAIT_ERROR   = -1,  /**< Platform layer failure */
+};
 
 /*============================================================================*
  *                        Local Variables
@@ -189,43 +211,14 @@ static uint32_t vcdj_crc32_word(uint32_t crc, uint32_t word)
     return crc;
 }
 
-/*
- * Stop a core whose wait expired with DEC_E still set; left running, every
- * later decode times out too. Same request as the vendor ResetAsic() abort.
- *
- * \return 0 when the core is stopped, -1 when DEC_E outlived the abort.
- */
-static int vcdj_core_abort(int core_id)
-{
-    uint32_t start;
-
-    if ((vcdj_core_read_reg(core_id, VCDJ_SWREG_IRQ_OFFSET) & VCDJ_IRQ_BIT_DEC_E) == 0U)
-    {
-        return 0;
-    }
-
-    vcdj_core_write_reg(core_id, VCDJ_SWREG_IRQ_OFFSET,
-                        VCDJ_IRQ_BIT_ABORT_E | VCDJ_IRQ_BIT_IRQ_DIS);
-
-    start = vcdj_cfg->ops->get_time_ms(vcdj_cfg->ctx);
-    while ((vcdj_core_read_reg(core_id, VCDJ_SWREG_IRQ_OFFSET) & VCDJ_IRQ_BIT_DEC_E) != 0U)
-    {
-        if ((vcdj_cfg->ops->get_time_ms(vcdj_cfg->ctx) - start) >= VCDJ_ABORT_TIMEOUT_MS)
-        {
-            return -1;
-        }
-
-        vcdj_cfg->ops->delay_us(vcdj_cfg->ctx, VCDJ_POLL_INTERVAL_US);
-    }
-
-    vcdj_core_write_reg(core_id, VCDJ_SWREG_IRQ_OFFSET, 0U);
-    return 0;
-}
-
 /*============================================================================*
  *                        Allocator injection
  *============================================================================*/
-void vcdj_mem_set_allocator(void *(*alloc_fn)(size_t), void (*free_fn)(void *))
+/*
+ * Passing NULL for either argument restores the "no allocator" state, after
+ * which allocation fails with VCDJ_ERR_NO_MEM instead of falling back to libc.
+ */
+static void vcdj_mem_set_allocator(void *(*alloc_fn)(size_t), void (*free_fn)(void *))
 {
     if ((alloc_fn == NULL) || (free_fn == NULL))
     {
@@ -238,7 +231,7 @@ void vcdj_mem_set_allocator(void *(*alloc_fn)(size_t), void (*free_fn)(void *))
     vcdj_free_fn = free_fn;
 }
 
-int vcdj_mem_allocator_ready(void)
+static int vcdj_mem_allocator_ready(void)
 {
     return (vcdj_alloc_fn != NULL) && (vcdj_free_fn != NULL);
 }
@@ -266,7 +259,8 @@ void vcdj_mem_free(void *ptr)
 /*============================================================================*
  *                        Core life cycle
  *============================================================================*/
-int vcdj_core_init(void)
+/* Bind the platform ops, enable the clock and release reset. */
+static int vcdj_core_init(void)
 {
     const struct vcdj_platform_config *cfg;
 
@@ -310,7 +304,7 @@ int vcdj_core_init(void)
     return 0;
 }
 
-void vcdj_core_deinit(void)
+static void vcdj_core_deinit(void)
 {
     const struct vcdj_platform_config *cfg = vcdj_cfg;
 
@@ -329,12 +323,8 @@ void vcdj_core_deinit(void)
     vcdj_cfg = NULL;
 }
 
-int vcdj_core_ready(void)
-{
-    return (int)vcdj_core_up;
-}
-
-const struct vcdj_platform_config *vcdj_core_config(void)
+/* Active platform configuration, or NULL before vcdj_core_init(). */
+static const struct vcdj_platform_config *vcdj_core_config(void)
 {
     return vcdj_cfg;
 }
@@ -342,7 +332,7 @@ const struct vcdj_platform_config *vcdj_core_config(void)
 /*============================================================================*
  *                        Register access
  *============================================================================*/
-uint32_t vcdj_core_read_reg(int core_id, uint32_t offset)
+static uint32_t vcdj_core_read_reg(int core_id, uint32_t offset)
 {
     if (!vcdj_core_up)
     {
@@ -352,7 +342,7 @@ uint32_t vcdj_core_read_reg(int core_id, uint32_t offset)
     return vcdj_cfg->ops->reg_read32(vcdj_cfg->ctx, vcdj_core_reg_offset(core_id, offset));
 }
 
-void vcdj_core_write_reg(int core_id, uint32_t offset, uint32_t value)
+static void vcdj_core_write_reg(int core_id, uint32_t offset, uint32_t value)
 {
     if (!vcdj_core_up)
     {
@@ -387,7 +377,11 @@ void vcdj_core_trace_stop(uint32_t *crc, uint32_t *count)
 /*============================================================================*
  *                        Core scheduling and completion
  *============================================================================*/
-int vcdj_core_reserve(int *core_id, uint32_t timeout_ms)
+/*
+ * Take exclusive ownership of the core. VCDJ_TIMEOUT_FOREVER is clamped to the
+ * platform's `hw_timeout_ms`. \return 0 on success, negative on failure.
+ */
+static int vcdj_core_reserve(int *core_id, uint32_t timeout_ms)
 {
     if ((core_id == NULL) || !vcdj_core_up)
     {
@@ -413,7 +407,7 @@ int vcdj_core_reserve(int *core_id, uint32_t timeout_ms)
     return 0;
 }
 
-void vcdj_core_release(int core_id)
+static void vcdj_core_release(int core_id)
 {
     (void)core_id;
 
@@ -430,7 +424,8 @@ void vcdj_core_release(int core_id)
     }
 }
 
-void vcdj_core_enable(int core_id, uint32_t offset, uint32_t value)
+/* Arm the completion object, then start the core by writing \p value. */
+static void vcdj_core_enable(int core_id, uint32_t offset, uint32_t value)
 {
     if (!vcdj_core_up)
     {
@@ -450,7 +445,7 @@ void vcdj_core_enable(int core_id, uint32_t offset, uint32_t value)
     vcdj_core_write_reg(core_id, offset, value);
 }
 
-void vcdj_core_disable(int core_id, uint32_t offset, uint32_t value)
+static void vcdj_core_disable(int core_id, uint32_t offset, uint32_t value)
 {
     /* The PNG timeout path passes back a swreg1 snapshot with DEC_E still set;
      * written as-is it would restart the core that was just aborted. */
@@ -460,6 +455,39 @@ void vcdj_core_disable(int core_id, uint32_t offset, uint32_t value)
     }
 
     vcdj_core_write_reg(core_id, offset, value);
+}
+
+/*
+ * Stop a core whose wait expired with DEC_E still set; left running, every
+ * later decode times out too. Same request as the vendor ResetAsic() abort.
+ *
+ * \return 0 when the core is stopped, -1 when DEC_E outlived the abort.
+ */
+static int vcdj_core_abort(int core_id)
+{
+    uint32_t start;
+
+    if ((vcdj_core_read_reg(core_id, VCDJ_SWREG_IRQ_OFFSET) & VCDJ_IRQ_BIT_DEC_E) == 0U)
+    {
+        return 0;
+    }
+
+    vcdj_core_write_reg(core_id, VCDJ_SWREG_IRQ_OFFSET,
+                        VCDJ_IRQ_BIT_ABORT_E | VCDJ_IRQ_BIT_IRQ_DIS);
+
+    start = vcdj_cfg->ops->get_time_ms(vcdj_cfg->ctx);
+    while ((vcdj_core_read_reg(core_id, VCDJ_SWREG_IRQ_OFFSET) & VCDJ_IRQ_BIT_DEC_E) != 0U)
+    {
+        if ((vcdj_cfg->ops->get_time_ms(vcdj_cfg->ctx) - start) >= VCDJ_ABORT_TIMEOUT_MS)
+        {
+            return -1;
+        }
+
+        vcdj_cfg->ops->delay_us(vcdj_cfg->ctx, VCDJ_POLL_INTERVAL_US);
+    }
+
+    vcdj_core_write_reg(core_id, VCDJ_SWREG_IRQ_OFFSET, 0U);
+    return 0;
 }
 
 static int vcdj_core_wait(int core_id, uint32_t timeout_ms)
@@ -483,7 +511,6 @@ static int vcdj_core_wait(int core_id, uint32_t timeout_ms)
 
     bound = vcdj_clamp_timeout(timeout_ms);
 
-#if defined(VCDJ_USE_IRQ)
     if (vcdj_cfg->ops->wait_done != NULL)
     {
         int ret = vcdj_cfg->ops->wait_done(vcdj_cfg->ctx, bound);
@@ -510,7 +537,6 @@ static int vcdj_core_wait(int core_id, uint32_t timeout_ms)
         /* VCDJ_PLAT_ENOTSUP: this build has no interrupt wired, so
          * fall through to the polling path below rather than failing. */
     }
-#endif
 
     /* Polling path: bounded by wall clock, never by an iteration count. */
     start = vcdj_cfg->ops->get_time_ms(vcdj_cfg->ctx);
@@ -534,7 +560,13 @@ static int vcdj_core_wait(int core_id, uint32_t timeout_ms)
     }
 }
 
-int vcdj_core_wait_done(int core_id, uint32_t timeout_ms)
+/*
+ * Wait for the core to finish. Never spins forever: \p timeout_ms is clamped to
+ * the platform's `hw_timeout_ms`, and a core still running at expiry is aborted
+ * so the next job starts idle. \return one of enum vcdj_core_wait;
+ * VCDJ_CORE_WAIT_ERROR when the core could not be stopped after the timeout.
+ */
+static int vcdj_core_wait_done(int core_id, uint32_t timeout_ms)
 {
     int ret = vcdj_core_wait(core_id, timeout_ms);
 
@@ -546,7 +578,11 @@ int vcdj_core_wait_done(int core_id, uint32_t timeout_ms)
     return ret;
 }
 
-uint32_t vcdj_core_wait_failures(void)
+/*
+ * Waits that did not end in completion since vcdj_core_init(); wraps. Lets the
+ * HAL see a timeout the vendor code swallowed, see vcdj_vendor_decode_checked().
+ */
+static uint32_t vcdj_core_wait_failures(void)
 {
     return vcdj_wait_failures;
 }
@@ -562,7 +598,7 @@ void vcdj_core_cache_clean(void *addr, size_t size)
     }
 }
 
-void vcdj_core_cache_invalidate(void *addr, size_t size)
+static void vcdj_core_cache_invalidate(void *addr, size_t size)
 {
     if (vcdj_core_up && (vcdj_cfg->ops->cache_invalidate != NULL))
     {
@@ -570,7 +606,7 @@ void vcdj_core_cache_invalidate(void *addr, size_t size)
     }
 }
 
-int vcdj_core_dma_alloc(size_t size, size_t align, void **cpu_addr, uintptr_t *bus_addr)
+static int vcdj_core_dma_alloc(size_t size, size_t align, void **cpu_addr, uintptr_t *bus_addr)
 {
     const struct vcdj_platform_config *cfg = vcdj_cfg;
 
@@ -596,7 +632,7 @@ int vcdj_core_dma_alloc(size_t size, size_t align, void **cpu_addr, uintptr_t *b
     return cfg->ops->dma_alloc(cfg->ctx, size, align, cpu_addr, bus_addr);
 }
 
-void vcdj_core_dma_free(void *cpu_addr, uintptr_t bus_addr, size_t size)
+static void vcdj_core_dma_free(void *cpu_addr, uintptr_t bus_addr, size_t size)
 {
     const struct vcdj_platform_config *cfg = vcdj_cfg;
 
@@ -855,11 +891,6 @@ enum DWLRet DWLRelease(const void *instance)
 /*============================================================================*
  *                        DWL: plain heap helpers
  *============================================================================*/
-void *DWLmalloc(size_t n)
-{
-    return vcdj_mem_alloc(n);
-}
-
 void *DWLcalloc(size_t n, size_t s)
 {
     size_t total = n * s;
@@ -966,30 +997,6 @@ void DWLFreeRefFrm(const void *instance, struct DWLLinearMem *info)
     DWLFreeLinear(instance, info);
 }
 
-void *DWLLinearMemcpy(const void *instance, addr_t device_bus_addr, const void *s, size_t n)
-{
-    void *dst;
-
-    (void)instance;
-
-    /*
-     * TODO (hardware-contract): a real bus-to-CPU translation is needed once the address
-     * map is known. Until then the platform layer hands out an identity mapping, so
-     * the bus address can be dereferenced directly on this 32-bit SoC.
-     */
-    dst = (void *)(uintptr_t)device_bus_addr;
-
-    if ((dst == NULL) || (s == NULL) || (n == 0U))
-    {
-        return dst;
-    }
-
-    (void)memcpy(dst, s, n);
-    vcdj_core_cache_clean(dst, n);
-
-    return dst;
-}
-
 void *DWLLinearMemset(const void *instance, struct DWLLinearMem *mem, i32 offset, i32 c, size_t n)
 {
     u8 *dst;
@@ -1049,32 +1056,6 @@ u32 DWLReadReg(const void *instance, i32 core_id, u32 offset)
     return (slot != NULL) ? *slot : 0U;
 }
 
-void DWLWriteRegs(const void *instance, i32 core_id, u32 offset, u32 *from,
-                  u32 num_regs, u32 print_flag)
-{
-    struct vcdj_dwl_inst *inst = vcdj_dwl_of(instance);
-    u32 i;
-
-    (void)print_flag;
-
-    if ((inst == NULL) || (from == NULL))
-    {
-        return;
-    }
-
-    for (i = 0U; i < num_regs; i++)
-    {
-        u32 *slot = vcdj_shadow_slot(inst, core_id, offset + (i * 4U));
-
-        if (slot == NULL)
-        {
-            return;
-        }
-
-        *slot = from[i];
-    }
-}
-
 void DWLReadRegs(const void *instance, i32 core_id, u32 offset, u32 *dest, u32 num)
 {
     struct vcdj_dwl_inst *inst = vcdj_dwl_of(instance);
@@ -1098,20 +1079,7 @@ void DWLReadRegs(const void *instance, i32 core_id, u32 offset, u32 *dest, u32 n
     }
 }
 
-/* Live hardware access; the shadow is kept in step. */
-void DWLWriteRegToHw(const void *instance, i32 core_id, u32 offset, u32 value)
-{
-    struct vcdj_dwl_inst *inst = vcdj_dwl_of(instance);
-
-    if (inst == NULL)
-    {
-        return;
-    }
-
-    DWLWriteReg(instance, core_id, offset, value);
-    vcdj_core_write_reg(core_id, offset, value);
-}
-
+/* Live hardware read; the shadow is kept in step. */
 u32 DWLReadRegFromHw(const void *instance, i32 core_id, u32 offset)
 {
     struct vcdj_dwl_inst *inst = vcdj_dwl_of(instance);
@@ -1237,31 +1205,6 @@ enum DWLRet DWLReleaseHw(const void *instance, i32 core_id)
 }
 
 /*============================================================================*
- *                        DWL: multicore - single core on 0x2070
- *============================================================================*/
-/*
- * The vendor code calls these only with multicore decoding enabled, which the
- * HAL never requests. The merged CtrlSW has those paths pruned; split and unity
- * still link against them. Decoding is synchronous, so nothing waits or calls back.
- */
-#if !defined(VCDJ_CTRLSW_MERGED)
-void DWLWaitOwnerDone(const void *instance, const void *owner)
-{
-    (void)instance;
-    (void)owner;
-}
-
-void DWLSetIRQCallback(const void *instance, i32 core_id,
-                       DWLIRQCallbackFn *callback_fn, void *arg)
-{
-    (void)instance;
-    (void)core_id;
-    (void)callback_fn;
-    (void)arg;
-}
-#endif /* !VCDJ_CTRLSW_MERGED */
-
-/*============================================================================*
  *                        DWL: hardware identification
  *============================================================================*/
 u32 DWLReadAsicID(const void *instance, enum DWLClientType client_type)
@@ -1335,8 +1278,7 @@ u32 DWLReadAsicCoreCount(const void *instance)
  *                        Checksum buffer queue
  *============================================================================*/
 /*
- * SwGetCrcMem() / SwGetCrcLast() / SwSetCrcUnused() / SwClearCrcFlag() /
- * SwFreeCrcMem() are DECLARED in software/source/common/sw_util.h, which is part
+ * SwGetCrcMem() / SwGetCrcLast() / SwSetCrcUnused() / SwFreeCrcMem() are DECLARED in software/source/common/sw_util.h, which is part
  * of the compiled subset, but IMPLEMENTED in the DWL layer
  * (software/linux/dwl/dwl_pc.c, dwl_linux_hw.c). They are therefore part of the
  * porting surface even though their names do not start with DWL, and
@@ -1438,25 +1380,6 @@ void SwGetCrcLast(CrcData **crc, CrcData **cur)
     }
 }
 
-void SwClearCrcFlag(CrcData **crc)
-{
-    CrcData *tmp;
-
-    if (crc == NULL)
-    {
-        return;
-    }
-
-    tmp = *crc;
-
-    while (tmp != NULL)
-    {
-        tmp->used = 0U;
-        tmp->last = 0U;
-        tmp = tmp->next;
-    }
-}
-
 void SwFreeCrcMem(CrcData **crc)
 {
     CrcData *tmp;
@@ -1475,198 +1398,6 @@ void SwFreeCrcMem(CrcData **crc)
         tmp = *crc;
     }
 }
-
-/*============================================================================*
- *                        DWL: VCMD - not present on 0x2070
- *============================================================================*/
-/*
- * 0x2070 has no VCMD, so every entry point below reports "not available" and the
- * vendor code takes its direct register branch. The merged CtrlSW has those
- * branches pruned and calls none of these; split and unity compile the vendor
- * files as shipped and still link against them.
- */
-#if !defined(VCDJ_CTRLSW_MERGED)
-u32 DWLVcmdIsUsed(const void *instance)
-{
-    (void)instance;
-    return 0U;
-}
-
-u32 DWLReadVcmdHwID(const void *instance)
-{
-    (void)instance;
-    return 0U;
-}
-
-u32 DWLCheckVcmdM2M(const void *instance)
-{
-    (void)instance;
-    return 0U;
-}
-
-enum DWLRet DWLReserveCmdBuf(const void *instance, struct DWLReqInfo *info, u32 *cmd_buf_id)
-{
-    (void)instance;
-    (void)info;
-    (void)cmd_buf_id;
-    return DWL_ERROR;
-}
-
-enum DWLRet DWLFlushRegister(const void *instance, u32 cmd_buf_id, u32 *dec_regs,
-                             u32 *mc_fresh_regs, u32 mc_buf_id)
-{
-    (void)instance;
-    (void)cmd_buf_id;
-    (void)dec_regs;
-    (void)mc_fresh_regs;
-    (void)mc_buf_id;
-    return DWL_ERROR;
-}
-
-enum DWLRet DWLPrepareCmds(const void *instance, u32 cmd_buf_id)
-{
-    (void)instance;
-    (void)cmd_buf_id;
-    return DWL_ERROR;
-}
-
-enum DWLRet DWLEnableCmdBuf(const void *instance, u32 cmd_buf_id)
-{
-    (void)instance;
-    (void)cmd_buf_id;
-    return DWL_ERROR;
-}
-
-enum DWLRet DWLWaitCmdBufReady(const void *instance, u16 cmd_buf_id)
-{
-    (void)instance;
-    (void)cmd_buf_id;
-    return DWL_ERROR;
-}
-
-enum DWLRet DWLRefreshRegister(const void *instance, u32 cmd_buf_id, u32 *dec_regs)
-{
-    (void)instance;
-    (void)cmd_buf_id;
-    (void)dec_regs;
-    return DWL_ERROR;
-}
-
-enum DWLRet DWLReleaseCmdBuf(const void *instance, u32 cmd_buf_id)
-{
-    (void)instance;
-    (void)cmd_buf_id;
-    return DWL_ERROR;
-}
-
-enum DWLRet DWLWaitCmdbufsDone(const void *instance, const void *owner)
-{
-    (void)instance;
-    (void)owner;
-    return DWL_OK;
-}
-
-u32 DWLGetCmdBufExeStatus(const void *instance, u16 cmd_buf_id)
-{
-    (void)instance;
-    (void)cmd_buf_id;
-    return 0U;
-}
-
-enum DWLRet DWLParseCmdBufExeStatus(const void *instance, u32 exe_status)
-{
-    (void)instance;
-    (void)exe_status;
-    return DWL_ERROR;
-}
-
-void DWLCmdM2MSendData(const void *instance, struct CDF_INFO *head_data,
-                       struct CDF_INFO *tail_data, u32 cmdbuf_id)
-{
-    (void)instance;
-    (void)head_data;
-    (void)tail_data;
-    (void)cmdbuf_id;
-}
-
-void DWLCmdMsetSendData(const void *instance, struct MSET_INFO *before_data,
-                        struct MSET_INFO *after_data, u32 cmdbuf_id)
-{
-    (void)instance;
-    (void)before_data;
-    (void)after_data;
-    (void)cmdbuf_id;
-}
-
-void DWLCmdM2MPSendData(const void *instance, struct M2MP_INFO *before_data,
-                        struct M2MP_INFO *after_data, u32 cmdbuf_id)
-{
-    (void)instance;
-    (void)before_data;
-    (void)after_data;
-    (void)cmdbuf_id;
-}
-
-enum DWLRet DWLRefreshCrcResult(const void *instance, CrcData **crc, u32 cmdbuf_id)
-{
-    (void)instance;
-    (void)cmdbuf_id;
-
-    if (crc != NULL)
-    {
-        *crc = NULL;
-    }
-
-    return DWL_ERROR;
-}
-
-enum DWLRet DWLMCRefreshCrcResult(const void *instance, CrcData **crc, u32 cmdbuf_id)
-{
-    return DWLRefreshCrcResult(instance, crc, cmdbuf_id);
-}
-
-enum DWLRet DWLVcmdMCRefreshStatusRegs(const void *instance, u32 *dec_regs, u32 cmdbuf_id)
-{
-    (void)instance;
-    (void)dec_regs;
-    (void)cmdbuf_id;
-    return DWL_ERROR;
-}
-
-enum DWLRet DWLCmdPushSliceRegs(const void *instance, u32 cmd_buf_id, u32 *regs)
-{
-    (void)instance;
-    (void)cmd_buf_id;
-    (void)regs;
-    return DWL_ERROR;
-}
-
-void DWLAbortCmdbuf(const void *instance, u16 cmd_buf_id)
-{
-    (void)instance;
-    (void)cmd_buf_id;
-}
-
-void DWLDropCmdbufs(const void *instance, const void *owner)
-{
-    (void)instance;
-    (void)owner;
-}
-
-void DWLSetCmdBufIntCtrl(const void *instance, u16 cmd_buf_id, u64 interrupt_ctrl)
-{
-    (void)instance;
-    (void)cmd_buf_id;
-    (void)interrupt_ctrl;
-}
-
-i32 DWLGetVcmdMCVirtualCoreId(const void *instance, u32 cmdbuf_id)
-{
-    (void)instance;
-    (void)cmdbuf_id;
-    return -1;
-}
-#endif /* !VCDJ_CTRLSW_MERGED */
 
 /*============================================================================*
  *                        dwl_os: Mutex
@@ -1905,17 +1636,6 @@ int osal_usleep(unsigned long usec)
     vcdj_os_delay_us((uint32_t)usec);
 
     return 0;
-}
-
-/**
- * The vendor JPEG API declares this and states it "must be implemented by the
- * application using the decoder API". It is only reached when the vendor trace
- * build options are enabled, which they are not here, so it stays empty and is
- * dropped by --gc-sections. It exists so the contract is satisfied.
- */
-void JpegDecTrace(const char *string)
-{
-    (void)string;
 }
 
 /*============================================================================*
@@ -2720,6 +2440,8 @@ static vcdj_error_t vcdj_prepare_input(const void *dwl, const vcdj_dec_param_t *
 /*
  * Header parsing is CPU only and never writes the stream, so it reads the
  * caller's buffer in place. Never pass the result to vcdj_release_input().
+ * bus_address only satisfies the vendor's non-NULL check: it is the CPU pointer,
+ * not a DMA address, so a decode must use vcdj_prepare_input() instead.
  */
 static void vcdj_borrow_input(const vcdj_dec_param_t *param, struct DWLLinearMem *mem)
 {
@@ -3056,6 +2778,18 @@ static vcdj_error_t vcdj_publish_picture(void **buffers, unsigned int *count,
     return VCDJ_SUCCESS;
 }
 
+/* PNG counterpart of vcdj_internal_add_jpeg_buffers(); the self test is JPEG only. */
+static int vcdj_add_png_buffers(void *inst, void **buffers,
+                                unsigned int capacity,
+                                unsigned int *count,
+                                struct vcdj_buffer_layout *layout)
+{
+    return vcdj_add_external_buffers(vcdj_dwl_handle, inst,
+                                     (enum DecRet(*)(void *, struct DecBufferInfo *))PngDecGetBufferInfo,
+                                     (enum DecRet(*)(void *, struct DWLLinearMem *))PngDecAddBuffer,
+                                     buffers, capacity, count, layout);
+}
+
 /*============================================================================*
  *                        Cross-file driver internals
  *============================================================================*/
@@ -3074,17 +2808,6 @@ int vcdj_internal_add_jpeg_buffers(void *inst, void **buffers,
     return vcdj_add_external_buffers(vcdj_dwl_handle, inst,
                                      (enum DecRet(*)(void *, struct DecBufferInfo *))JpegDecGetBufferInfo,
                                      (enum DecRet(*)(void *, struct DWLLinearMem *))JpegDecAddBuffer,
-                                     buffers, capacity, count, layout);
-}
-
-int vcdj_internal_add_png_buffers(void *inst, void **buffers,
-                                  unsigned int capacity,
-                                  unsigned int *count,
-                                  struct vcdj_buffer_layout *layout)
-{
-    return vcdj_add_external_buffers(vcdj_dwl_handle, inst,
-                                     (enum DecRet(*)(void *, struct DecBufferInfo *))PngDecGetBufferInfo,
-                                     (enum DecRet(*)(void *, struct DWLLinearMem *))PngDecAddBuffer,
                                      buffers, capacity, count, layout);
 }
 
@@ -3594,9 +3317,9 @@ static vcdj_error_t vcdj_png_decode(const vcdj_dec_param_t *param,
     while ((ret == DEC_WAITING_FOR_BUFFER) &&
            (negotiations < VCDJ_MAX_BUFFER_NEGOTIATIONS))
     {
-        ret = (enum DecRet)vcdj_internal_add_png_buffers(inst, external_buffers,
-                                                         VCDJ_MAX_EXTERNAL_BUFFERS,
-                                                         &external_count, &layout);
+        ret = (enum DecRet)vcdj_add_png_buffers(inst, external_buffers,
+                                                VCDJ_MAX_EXTERNAL_BUFFERS,
+                                                &external_count, &layout);
         if (ret != DEC_OK)
         {
             err = vcdj_map_dec_ret(ret);

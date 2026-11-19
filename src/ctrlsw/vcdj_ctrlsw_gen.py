@@ -4,7 +4,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 #
-"""Generate vcdj_ctrlsw.c / vcdj_ctrlsw.h for SConscript VCDJ_CTRLSW = 'merged'.
+"""Generate vcdj_ctrlsw.c / vcdj_ctrlsw.h, the vendor code SConscript compiles.
 
     python vcdj_ctrlsw_gen.py              write both files next to this script
     python vcdj_ctrlsw_gen.py --check      exit 1 if the files on disk are stale

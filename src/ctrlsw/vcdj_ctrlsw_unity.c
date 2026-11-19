@@ -5,9 +5,9 @@
  */
 
 /*
- * Unity build of the vendor Control Software: SConscript VCDJ_CTRLSW = 'unity'.
- * The #include list must match the SConscript source list in content and order;
- * SConscript checks this in every mode.
+ * The 24 vendor sources as one translation unit. Not compiled by the build:
+ * vcdj_ctrlsw_gen.py takes the source order from it. The #include list must
+ * match the SConscript source list in content and order; SConscript checks this.
  *
  * Each source's file-scope macros are #undef'd before the next source, as they
  * would be at the end of a separate translation unit. Exception: macros that are

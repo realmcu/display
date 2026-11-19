@@ -18,30 +18,19 @@ CTRLSW = 'src/ctrlsw/software/source'
 #   rtl87x3k_rtt  RT-Thread, built here (also supplies a trace.h stand-in)
 PLATFORM = 'src/device/rtl87x3k_rtt'
 
-# How the vendor Control Software is compiled:
-#   split   the 24 vendor .c files one by one
-#   unity   one TU, src/ctrlsw/vcdj_ctrlsw_unity.c, that #includes all 24
-#   merged  src/ctrlsw/vcdj_ctrlsw.c/.h from vcdj_ctrlsw_gen.py; no vendor
-#           include path
-VCDJ_CTRLSW = 'merged'
-
+# The vendor Control Software is compiled as the generated, pruned
+# src/ctrlsw/vcdj_ctrlsw.c/.h (src/ctrlsw/README.md section 8), with no vendor
+# include path. The DWL in src/common/rtl_vcdj.c implements only what that
+# pruned code references, so the vendor files cannot be compiled directly.
 include_path = [
     cwd + '/inc',
     cwd + '/src/common',
     cwd + '/src/test',
     cwd + '/' + PLATFORM,
 ]
-if VCDJ_CTRLSW != 'merged':
-    include_path += [
-        cwd + '/' + CTRLSW + '/inc',
-        cwd + '/' + CTRLSW + '/config',
-        cwd + '/' + CTRLSW + '/common',
-        cwd + '/' + CTRLSW + '/jpeg',
-        cwd + '/' + CTRLSW + '/png',
-    ]
 
 # Selects vcdj_ctrlsw.h in rtl_vcdj_vendor.h and src/common/rtl_vcdj_ctrlsw.h.
-ctrlsw_defines = ['VCDJ_CTRLSW_MERGED'] if VCDJ_CTRLSW == 'merged' else []
+ctrlsw_defines = ['VCDJ_CTRLSW_MERGED']
 
 # Vendor compile contract. Must stay in step with CMake's
 # target_compile_options(-include ...) and Keil's --preinclude.
@@ -63,8 +52,9 @@ group = DefineGroup(
     LOCAL_CPPDEFINES = ctrlsw_defines,
 )
 
-# Explicit, not globbed, and mirrors src/ctrlsw/CMakeLists.txt one for one, so a
-# vendor upgrade that adds or renames a file fails loudly.
+# Not compiled: the generator's input, checked here so a vendor upgrade that
+# adds or renames a file fails loudly. Explicit, not globbed, and mirrors
+# src/ctrlsw/CMakeLists.txt one for one.
 ctrlsw_common_src = [
     CTRLSW + '/common/case_info.c',
     CTRLSW + '/common/commonconfig.c',
@@ -106,7 +96,7 @@ for vcdj_src in ctrlsw_src:
             '[VCDJ] vendor source %s is missing. The tree under src/ctrlsw/software/ '
             'must hold the release archive files; see src/ctrlsw/README.md.' % vcdj_src)
 
-# Checked in every mode so the unity list cannot drift while split is in use.
+# vcdj_ctrlsw_gen.py reads the source order from the unity wrapper.
 CTRLSW_UNITY = 'src/ctrlsw/vcdj_ctrlsw_unity.c'
 with open(os.path.join(cwd, CTRLSW_UNITY)) as f:
     unity_src = ['src/ctrlsw/' + m.group(1) for m in
@@ -116,14 +106,7 @@ if unity_src != ctrlsw_src:
         '[VCDJ] the #include list in %s differs from ctrlsw_src (content or '
         'order).' % CTRLSW_UNITY)
 
-if VCDJ_CTRLSW == 'split':
-    ctrlsw_build_src = ctrlsw_src
-elif VCDJ_CTRLSW == 'unity':
-    ctrlsw_build_src = [CTRLSW_UNITY]
-elif VCDJ_CTRLSW == 'merged':
-    ctrlsw_build_src = ['src/ctrlsw/vcdj_ctrlsw.c']
-else:
-    raise RuntimeError('[VCDJ] unknown VCDJ_CTRLSW %r' % VCDJ_CTRLSW)
+ctrlsw_build_src = ['src/ctrlsw/vcdj_ctrlsw.c']
 
 # Vendor code only; the warnings come from the vendor sources.
 CTRLSW_CCFLAGS = (' -Wno-format -Wno-format-security'

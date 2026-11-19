@@ -29,12 +29,12 @@ extern "C" {
  * Driver internal contracts. NOT part of the exported interface: only
  * src/common/rtl_vcdj.c, the platform layer and the self test include it.
  *
- * It carries three contracts that used to live in separate headers:
+ * It carries three contracts:
  *
  *   1. \ref vcdj_platform_ops / \ref vcdj_platform_config
  *      what the platform layer (src/device/<soc>/) provides.
- *   2. `vcdj_core_*()`
- *      the platform independent core resource manager.
+ *   2. `vcdj_mem_*()` / `vcdj_core_*()`
+ *      the few driver services the platform layer and the tests call back into.
  *   3. `vcdj_os_*()`
  *      OS primitives the vendor OS bridge needs.
  *
@@ -45,22 +45,16 @@ extern "C" {
  * Linux-kernel-ism macros) and by the platform layer (which pulls in OSIF and
  * CMSIS headers).
  *
- * On this platform those two sets do NOT collide: all 124 identifiers that
- * `dwlthread.h` defines under NON_PTHREAD_H were checked against the OSIF and
- * CMSIS headers and the only match was the English word "up" inside a comment,
- * which the preprocessor strips before `#define up(a)` can matter. That is why
- * a single internal header and a single platform translation unit are possible
- * here. Zephyr is a different story - `dwlthread.h` redefines `atomic_t` and
- * `EINVAL`, both of which collide with `<zephyr/kernel.h>` - so a Zephyr port
- * would have to split the OS primitives back out into their own file.
+ * The two sets DO collide: the vendor headers define EINVAL/EBUSY/EFAULT/ENOTTY
+ * with values that differ from newlib's <errno.h>, which RT-Thread pulls in,
+ * and Zephyr adds `atomic_t`. Whichever header comes last wins silently, so a
+ * vendor facing file and an OS facing file must never be the same translation
+ * unit; this header is the only thing they share.
  */
 
 /*============================================================================*
  *                        Platform contract
  *============================================================================*/
-/** \brief Timeout value meaning "wait forever". The core layer clamps it. */
-#define VCDJ_TIMEOUT_FOREVER            0xFFFFFFFFU
-
 /**
  * \brief Returned by an operation the platform cannot provide in this build.
  *
@@ -69,14 +63,6 @@ extern "C" {
  * "there is no interrupt here, poll instead".
  */
 #define VCDJ_PLAT_ENOTSUP               (-2)
-
-/** \brief Alignment required for every buffer handed to the decoder core.
-  *
-  * The vendor `LINMEM_ALIGN` page assumption of 4096 is a Linux host convenience.
-  * The documented minimum of 128 bits lets the shaper miss full-length bursts
-  * whenever the allocator lands a plane off a 128-byte boundary.
-  */
-#define VCDJ_DMA_ALIGN                  128U
 
 /**
  * \brief Narrow set of platform services the platform independent layer needs.
@@ -167,63 +153,24 @@ const struct vcdj_platform_config *vcdj_platform_get_config(void);
 void vcdj_plat_log(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 
 /*============================================================================*
- *                        Allocator injection
+ *                        Driver services
  *============================================================================*/
 /**
- * \brief Inject the allocator used for every DMA capable buffer.
+ * \brief Allocate through the allocator injected by vcdj_mem_init().
  *
- * Implemented in `src/common/rtl_vcdj.c`, consumed by the platform layer's
- * `dma_alloc`/`dma_free`. Passing NULL for either argument restores the
- * "no allocator" state, after which allocation fails with
- * \ref VCDJ_ERR_NO_MEM instead of falling back to libc.
+ * The platform layer's `dma_alloc`/`dma_free` build on this pair. Returns NULL
+ * when no allocator is set; never falls back to libc.
  */
-void vcdj_mem_set_allocator(void *(*alloc_fn)(size_t), void (*free_fn)(void *));
-
-/** \brief Allocate through the injected allocator. Returns NULL if none is set. */
 void *vcdj_mem_alloc(size_t size);
 
 /** \brief Release memory obtained from \ref vcdj_mem_alloc. */
 void vcdj_mem_free(void *ptr);
 
-/** \brief 1 when an allocator has been injected. */
-int vcdj_mem_allocator_ready(void);
-
-/*============================================================================*
- *                        Core resource manager
- *============================================================================*/
-/**
- * Internal single core resource manager. Platform independent: it only talks to
- * \ref vcdj_platform_ops.
- */
-
-/** \brief Completion status returned by \ref vcdj_core_wait_done. */
-enum vcdj_core_wait
-{
-    VCDJ_CORE_WAIT_OK      = 0,   /**< Core signalled completion */
-    VCDJ_CORE_WAIT_TIMEOUT = 1,   /**< Bounded wait expired */
-    VCDJ_CORE_WAIT_ERROR   = -1,  /**< Platform layer failure */
-};
-
-/** \brief Bring the platform layer up: bind ops, enable clock, release reset. */
-int vcdj_core_init(void);
-
-/** \brief Tear the platform layer down. */
-void vcdj_core_deinit(void);
-
-/** \brief 1 once \ref vcdj_core_init has succeeded. */
-int vcdj_core_ready(void);
-
-/** \brief Active platform configuration, or NULL before \ref vcdj_core_init. */
-const struct vcdj_platform_config *vcdj_core_config(void);
-
-/** \brief Read one 32-bit register of \p core_id. */
-uint32_t vcdj_core_read_reg(int core_id, uint32_t offset);
-
-/** \brief Write one 32-bit register of \p core_id. */
-void vcdj_core_write_reg(int core_id, uint32_t offset, uint32_t value);
+/** \brief Flush CPU writes so the core sees the buffer contents. */
+void vcdj_core_cache_clean(void *addr, size_t size);
 
 /**
- * \brief Start folding every \ref vcdj_core_write_reg into a CRC-32.
+ * \brief Start folding every register write into a CRC-32.
  *
  * Covers (window offset, value) of each write in order, so two builds that
  * program the core differently disagree even when their pixels match.
@@ -233,62 +180,6 @@ void vcdj_core_trace_start(void);
 
 /** \brief Stop the trace; \p crc and \p count receive the CRC and write count. */
 void vcdj_core_trace_stop(uint32_t *crc, uint32_t *count);
-
-/**
- * \brief Take exclusive ownership of a decoder core.
- *
- * \param[out] core_id      Receives the reserved core index.
- * \param[in]  timeout_ms   Upper bound; \ref VCDJ_TIMEOUT_FOREVER is clamped to
- *                          the platform's `hw_timeout_ms`.
- * \return 0 on success, negative on failure.
- */
-int vcdj_core_reserve(int *core_id, uint32_t timeout_ms);
-
-/** \brief Give a reserved core back. */
-void vcdj_core_release(int core_id);
-
-/** \brief Arm the completion object, then start the core by writing \p value. */
-void vcdj_core_enable(int core_id, uint32_t offset, uint32_t value);
-
-/** \brief Stop the core by writing \p value. */
-void vcdj_core_disable(int core_id, uint32_t offset, uint32_t value);
-
-/**
- * \brief Wait, with a hard upper bound, for the core to finish.
- *
- * Never spins forever: \p timeout_ms is clamped to the platform's
- * `hw_timeout_ms` so a stuck or absent core cannot hang the caller. This is the
- * deliberate difference from the existing Realtek JPU driver, which polls its
- * status bits in an unbounded loop.
- *
- * On expiry a core that is still running is aborted before returning, so the
- * next job starts on an idle core.
- *
- * \return one of \ref vcdj_core_wait; \ref VCDJ_CORE_WAIT_ERROR when the core
- *         could not be stopped after the timeout.
- */
-int vcdj_core_wait_done(int core_id, uint32_t timeout_ms);
-
-/**
- * \brief Number of \ref vcdj_core_wait_done calls that did not end in
- *        completion since \ref vcdj_core_init; wraps.
- *
- * Lets the caller see a timeout the vendor code swallowed (see
- * vcdj_vendor_decode_checked() in rtl_vcdj.c).
- */
-uint32_t vcdj_core_wait_failures(void);
-
-/** \brief Flush CPU writes so the core sees the buffer contents. */
-void vcdj_core_cache_clean(void *addr, size_t size);
-
-/** \brief Drop stale CPU lines before reading what the core produced. */
-void vcdj_core_cache_invalidate(void *addr, size_t size);
-
-/** \brief Allocate a DMA capable buffer, returning both address views. */
-int vcdj_core_dma_alloc(size_t size, size_t align, void **cpu_addr, uintptr_t *bus_addr);
-
-/** \brief Release a buffer obtained from \ref vcdj_core_dma_alloc. */
-void vcdj_core_dma_free(void *cpu_addr, uintptr_t bus_addr, size_t size);
 
 /*============================================================================*
  *                        OS primitive contract
@@ -352,9 +243,9 @@ void vcdj_os_delay_us(uint32_t us);
  * Upper bound on the output buffers one decode registers with the vendor.
  *
  * Here rather than in rtl_vcdj.c because it is the `capacity` argument of
- * vcdj_internal_add_jpeg_buffers() / vcdj_internal_add_png_buffers() below: both
- * callers size their `buffers[]` array with it, so a copy per file could drift
- * and overflow the array the helper writes into.
+ * vcdj_internal_add_jpeg_buffers() below: both callers size their `buffers[]`
+ * array with it, so a copy per file could drift and overflow the array the
+ * helper writes into.
  *
  * NOT a guess: both codecs hardcode a single output buffer -
  * `JpegSetExternalBufferInfo()` and `PngSetExternalBufferInfo()` each open with
@@ -426,12 +317,6 @@ int vcdj_internal_add_jpeg_buffers(void *inst, void **buffers,
                                    unsigned int capacity,
                                    unsigned int *count,
                                    struct vcdj_buffer_layout *layout);
-
-/** \brief PNG counterpart of vcdj_internal_add_jpeg_buffers(). */
-int vcdj_internal_add_png_buffers(void *inst, void **buffers,
-                                  unsigned int capacity,
-                                  unsigned int *count,
-                                  struct vcdj_buffer_layout *layout);
 
 /** \brief Release buffers allocated by either external-buffer helper. */
 void vcdj_internal_free_external_buffers(void **buffers, unsigned int count);

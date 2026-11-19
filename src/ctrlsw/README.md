@@ -68,10 +68,10 @@ These files at the root of this directory are **not** part of the vendor release
 - `README.md` (this file)
 - `SHA256SUMS` — per-file digests of the vendor files as imported
 - `CMakeLists.txt` — Zephyr/CMake build glue that selects the sources to compile
-- `vcdj_ctrlsw_unity.c` — single-TU wrapper that `#include`s the 24 vendor `.c` files
-  (SCons `VCDJ_CTRLSW = 'unity'`)
+- `vcdj_ctrlsw_unity.c` — single-TU wrapper that `#include`s the 24 vendor `.c` files;
+  not compiled, `vcdj_ctrlsw_gen.py` reads the source order from it
 - `vcdj_ctrlsw_gen.py`, and the `vcdj_ctrlsw.c` / `vcdj_ctrlsw.h` it generates from the vendor
-  files (SCons `VCDJ_CTRLSW = 'merged'`, section 8). The generated files are vendor code under the
+  files (the only way the build compiles the vendor code, section 8). The generated files are vendor code under the
   vendor licenses, not Realtek code.
 - `vcdj_ctrlsw_prune.py` / `vcdj_ctrlsw_prune.json`, and `vcdj_ctrlsw_regenum.py`, the census
   that backs the register enum rule (section 8)
@@ -172,7 +172,7 @@ license, the fix belongs in the Jenkins-side configuration, not in these files.
 
 ## 8. The merged build
 
-`VCDJ_CTRLSW = 'merged'` in the SCons script compiles `vcdj_ctrlsw.c` and gives the driver's own
+The SCons script compiles `vcdj_ctrlsw.c` and gives the driver's own
 files `vcdj_ctrlsw.h` (through `src/common/rtl_vcdj_ctrlsw.h`), with no vendor include path. Both
 files are generated; never edit them by hand, edit the vendor file and regenerate:
 

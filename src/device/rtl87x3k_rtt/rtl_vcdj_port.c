@@ -157,10 +157,9 @@ static uint32_t vcdj_sem_used;
  * \brief Convert a millisecond timeout from the driver contract into RT-Thread
  *        ticks.
  *
- * The driver contract uses 0xFFFFFFFF for "wait forever"
- * (\ref VCDJ_OS_WAIT_FOREVER, and \ref VCDJ_TIMEOUT_FOREVER has the same value),
- * while RT-Thread spells it RT_WAITING_FOREVER (-1). This is the single place
- * that mapping happens.
+ * The driver contract uses 0xFFFFFFFF (\ref VCDJ_OS_WAIT_FOREVER) for "wait
+ * forever", while RT-Thread spells it RT_WAITING_FOREVER (-1). This is the
+ * single place that mapping happens.
  *
  * A non-zero millisecond value must never round down to 0 ticks: 0 is
  * RT_WAITING_NO in RT-Thread, which turns a short bounded wait into a
