@@ -105,35 +105,24 @@
 
 #define REGDRV_H
 
-#define DEC_8190_ALIGN_MASK 0x07
 #define DEC_HW_ALIGN_MASK 0x0F
-#define DEC_IRQ_DISABLE 0x10
-#define DEC_ABORT 0x20
 
 #define DEC_HW_IRQ_ABORT 0x01
 #define DEC_HW_IRQ_RDY 0x02
 #define DEC_HW_IRQ_BUS 0x04
 #define DEC_HW_IRQ_BUFFER 0x08
-#define DEC_HW_IRQ_ASO 0x10
 #define DEC_HW_IRQ_ERROR 0x20
-#define DEC_HW_IRQ_SLICE 0x40
 #define DEC_HW_IRQ_TIMEOUT 0x80
-#define DEC_HW_IRQ_EXT_TIMEOUT 0x400
-#define DEC_HW_IRQ_SCAN_RDY 0x4000
 #define DEC_HW_IRQ_ADLER32_ERROR 0x200
 #define DEC_HW_IRQ_CRC_ERROR 0x100
 
 /* dec mode */
-#define DEC_MODE_H264      0
 #define DEC_MODE_MPEG4     1
-#define DEC_MODE_H263      2
 #define DEC_MODE_JPEG      3
 #define DEC_MODE_VC1       4
 #define DEC_MODE_MPEG2     5
-#define DEC_MODE_MPEG1     6
 #define DEC_MODE_VP6       7
 #define DEC_MODE_RV        8
-#define DEC_MODE_VP7       9
 #define DEC_MODE_VP8       10
 #define DEC_MODE_AVS       11
 #define DEC_MODE_HEVC      12
@@ -144,8 +133,6 @@
 #define DEC_MODE_VVC       18
 #define DEC_MODE_AVS3      19
 #define DEC_MODE_PNG       21
-
-#define PP_REG_START                60
 
 enum HwIfName { //cppcheck-suppress syntaxError
   /* include script-generated part */
@@ -529,75 +516,6 @@ u32 GetPpuRegister(const u32 *pp_reg_base, u32 id, int ppu_index);
     (((addr_t)GetDecRegister((reg_base), REGBASE##_MSB)) << 32)) \
     :(GetDecRegister((reg_base), REGBASE##_LSB)))
 
-#define GET_ADDR_REG2(reg_base, lsb, msb)  \
-    (sizeof(addr_t) == 8 ? \
-    (((addr_t)GetDecRegister((reg_base), (lsb))) |  \
-    (((addr_t)GetDecRegister((reg_base), (msb))) << 32)) \
-    : (GetDecRegister((reg_base), (lsb))))
-
-#define GET_PP_ADDR_REG(reg_base, REGBASE)  \
-    (sizeof(addr_t) == 8 ? \
-    (((addr_t)GetPpRegister((reg_base), REGBASE)) |  \
-    (((addr_t)GetPpRegister((reg_base), REGBASE##_MSB)) << 32)) \
-    : (GetDecRegister((reg_base), REGBASE)))
-
-#define GET_PP_ADDR64_REG(reg_base, REGBASE, i)  \
-      (sizeof(addr_t) == 8 ? \
-      (((addr_t)GetPpuRegister((reg_base), REGBASE##_LSB, (i))) |  \
-      (((addr_t)GetPpuRegister((reg_base), REGBASE##_MSB, (i))) << 32)) \
-      :(GetPpuRegister((reg_base), REGBASE##_LSB, (i))))
-
-#define GET_PP_ADDR_REG2(reg_base, lsb, msb, i)  \
-    (sizeof(addr_t) == 8 ? \
-    (((addr_t)GetPpuRegister((reg_base), (lsb), (i))) |  \
-    (((addr_t)GetPpuRegister((reg_base), (msb), (i))) << 32)) \
-    :(GetPpuRegister((reg_base), (lsb), (i))))
-
-#define GET_ADDR64_REG(reg_base, REGBASE)  \
-  (sizeof(addr_t) == 8 ? \
-  (((addr_t)GetDecRegister((reg_base), REGBASE##_LSB)) |  \
-  (((addr_t)GetDecRegister((reg_base), REGBASE##_MSB)) << 32)) \
-  :(GetDecRegister((reg_base), REGBASE##_LSB)))
-
-/* below only used in cmodel*/
-
-#define PTR_TO_ADDR(ptr) (addr_t)(size_t)(ptr)
-
-// GET_ADDR_REG
-#define ADDR_REG_TO_PTR(reg_base, REGBASE)  \
-    (sizeof(size_t) == 8 ? \
-    (((size_t)GetDecRegister((reg_base), REGBASE##_LSB)) |  \
-    (((size_t)GetDecRegister((reg_base), REGBASE##_MSB)) << 32)) \
-    :((size_t)GetDecRegister((reg_base), REGBASE##_LSB)))
-
-// GET_ADDR_REG2
-#define ADDR_REG_TO_PTR2(reg_base, lsb, msb)  \
-    (sizeof(size_t) == 8 ? \
-    (((size_t)GetDecRegister((reg_base), (lsb))) |  \
-    (((size_t)GetDecRegister((reg_base), (msb))) << 32)) \
-    : ((size_t)GetDecRegister((reg_base), (lsb))))
-
-// GET_PP_ADDR64_REG
-#define PP_ADDR64_REG_TO_PTR(reg_base, REGBASE, i)  \
-      (sizeof(size_t) == 8 ? \
-      (((size_t)GetPpuRegister((reg_base), REGBASE##_LSB, (i))) |  \
-      (((size_t)GetPpuRegister((reg_base), REGBASE##_MSB, (i))) << 32)) \
-      :((size_t)GetPpuRegister((reg_base), REGBASE##_LSB, (i))))
-
-// GET_PP_ADDR_REG2
-#define PP_ADDR_REG_TO_PTR2(reg_base, lsb, msb, i)  \
-    (sizeof(size_t) == 8 ? \
-    (((size_t)GetPpuRegister((reg_base), (lsb), (i))) |  \
-    (((size_t)GetPpuRegister((reg_base), (msb), (i))) << 32)) \
-    :((size_t)GetPpuRegister((reg_base), (lsb), (i))))
-
-// GET_ADDR64_REG
-#define ADDR64_REG_TO_PTR(reg_base, REGBASE)  \
-  (sizeof(size_t) == 8 ? \
-  (((size_t)GetDecRegister((reg_base), REGBASE##_LSB)) |  \
-  (((size_t)GetDecRegister((reg_base), REGBASE##_MSB)) << 32)) \
-  :((size_t)GetDecRegister((reg_base), REGBASE##_LSB)))
-
 typedef struct {
   u32 codec;
   u32 format;
@@ -903,22 +821,10 @@ void VCDecInfoCollect(CaseInfo* case_info){
 /*============================================================================*
  * software/source/common/commonconfig.c
  *============================================================================*/
-#define CONFIG_H_DEFINED
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-/* tile border coefficients of filter */
-#define ASIC_VERT_FILTER_RAM_SIZE 8 /* bytes per pixel row */
-#define ASIC_VERT_FILTER_RAM_SIZE_422_444 12 /* bytes per pixel row */
-#define ASIC_VERT_FILTER_RAM_SIZE_VP9 20 /* bytes per pixel row */
-
-#define ASIC_RFC_RAM_SIZE 128
-/* BSD control data of current picture at tile border
- * 128 bits per 4x4 tile = 128/(8*4) bytes per row */
-#define ASIC_BSD_CTRL_RAM_SIZE 4 /* bytes per pixel row */
-#define ASIC_BSD_CTRL_RAM_SIZE_VP9 8 * 4 /* bytes per pixel row */
 
 /* Common config for PP max/min size supported */
 #define PP_CROP_MIN_WIDTH           48
@@ -931,38 +837,25 @@ extern "C" {
 #define PP_SCALE_OUT_MAX_HEIGHT     2304
 void SetCommonConfigRegs(u32 *regs);
 
-#define TILE_WIDTH 8
 #define TILE_HEIGHT 8
 
 #ifdef __cplusplus
 }
 #endif
-#define __DEC_X170_CFG_H__
 
 /* predefined values of HW system parameters. DO NOT ALTER! */
 #define DEC_X170_LITTLE_ENDIAN 1
 #define DEC_X170_BIG_ENDIAN 0
 
-#define DEC_X170_BUS_BURST_LENGTH_UNDEFINED 0
-#define DEC_X170_BUS_BURST_LENGTH_4 4
-#define DEC_X170_BUS_BURST_LENGTH_8 8
 #define DEC_X170_BUS_BURST_LENGTH_16 16
 
 #define DEC_X170_ASIC_SERVICE_PRIORITY_DEFAULT 0
-#define DEC_X170_ASIC_SERVICE_PRIORITY_WR_1 1
-#define DEC_X170_ASIC_SERVICE_PRIORITY_WR_2 2
-#define DEC_X170_ASIC_SERVICE_PRIORITY_RD_1 3
-#define DEC_X170_ASIC_SERVICE_PRIORITY_RD_2 4
 
-#define DEC_X170_BUS_WIDTH_32 0
-#define DEC_X170_BUS_WIDTH_64 1
 #define DEC_X170_BUS_WIDTH_128 2
-#define DEC_X170_BUS_WIDTH_256 3
 
 #define HANTRODEC_STREAM_SWAP_8 1
 #define HANTRODEC_STREAM_SWAP_16 2
 #define HANTRODEC_STREAM_SWAP_32 4
-#define HANTRODEC_STREAM_SWAP_64 8
 
 #define HANTRODEC_DOUBLE_BUFFER_ENABLE 0
 
@@ -990,9 +883,6 @@ void SetCommonConfigRegs(u32 *regs);
  * operate akin to 9190 and earlier products. */
 #define DEC_X170_APF_DISABLE 0
 #endif
-
-/* Enable advanced prefetch single PU mode (will disable "normal" APF) */
-#define DEC_X170_APF_SINGLE_PU_MODE 0
 
 #ifndef DEC_X170_BUS_BURST_LENGTH
 /* how long are the hardware data bursts; better left unchanged    */
@@ -1165,22 +1055,10 @@ void SetCommonConfigRegs(u32 *regs);
 #define TOTAL_X170_ORIGIN_REGS      119
 /* Expanded registers for 64-bit MSB. */
 #define TOTAL_X170_EXPAND_REGS      36
-/* Expanded registers for unified PP. */
-#define TOTAL_X170_EXPAND_PP_REGS   9
-/* Starting register for unified PP. */
-#define PP_START_REGS               (TOTAL_X170_ORIGIN_REGS + TOTAL_X170_EXPAND_REGS)
-/*starting register for error conceal */
-#define ERROR_CONCEAL_START_REGS    315
-#define TOTAL_ERROR_CONCEAL_REGS    2
-/* Starting register of unified PP. */
-#define PP_START_UNIFIED_REGS       320
 
 #define TOTAL_X170_REGISTERS        (PP0_START_REG+PPU_REG_RANGE*DEC_MAX_PPU_COUNT)
-#define DEC_X170_EXPAND_REGS        27
 
 /* Max amount of stream */
-#define DEC_X170_MAX_STREAM         ((1 << 24) - 1)   /* G1 */
-#define DEC_X170_MAX_STREAM_G2      ((1 << 30) - 1) /* G2 */
 #define DEC_X170_MAX_STREAM_VCD     ((1 << 30) - 1) /* VCD */
 
 /* Timeout value for the DWLWaitHwReady() call. */
@@ -1189,12 +1067,7 @@ void SetCommonConfigRegs(u32 *regs);
 #define DEC_X170_TIMEOUT_LENGTH -1
 #endif
 
-/* Enable HW internal watchdog timeout IRQ */
-#define DEC_X170_HW_TIMEOUT_INT_ENA 1
-
 /* Memory wait states for reference buffer */
-#define DEC_X170_REFBU_WIDTH 64
-#define DEC_X170_REFBU_LATENCY 20
 #define DEC_X170_REFBU_NONSEQ 1
 #define DEC_X170_REFBU_SEQ 1
 
@@ -1204,22 +1077,9 @@ void SetCommonConfigRegs(u32 *regs);
 #define X170_CHECK_VIRTUAL_ADDRESS(d) (((void*)(d) < (void*)64) ? 1 : 0)
 #define X170_CHECK_BUS_ADDRESS_AGLINED(d) (((d) < 64 || ((d) & (DEC_X170_BUS_BURST_LENGTH - 1))) ? 1 : 0)
 
-/* Max number of macroblock rows to memset/memcpy in partial freeze error
- * concealment */
-#define DEC_X170_MAX_EC_COPY_ROWS 8
-
-/* Default amount of clock cycles before triggering timeout interrupt */
-#define DEC_X170_TIMEOUT_CYCLES 0xFFFFFF
-
 /* Deafult maximum threshold of AXI read/write outstanding transactions */
 #define DEC_X170_MAX_RD_OUTSTANDING_THRESHOLD 64
 #define DEC_X170_MAX_WR_OUTSTANDING_THRESHOLD 64
-
-/* Default PP output swap */
-#define DEC_X170_PP_OUTPUT_SWAP 0
-
-/* Default linear buffer alignment */
-#define DEC_X170_BUS_ADDR_ALIGNMENT 4096 //2048 align to pci to diff easily
 
 /* Default HW build ID, which can be overriden by $DEF_HWBUILD_ID when building. */
 #ifndef DEC_HW_BUILD_ID
@@ -1227,13 +1087,7 @@ void SetCommonConfigRegs(u32 *regs);
 #endif
 
 #define X170_DEC_SYSTEM_TIMEOUT         0x00FFU
-#define X170_DEC_STREAM_ERROR           0x04FFU /* av1 */
-#define X170_DEC_ASYNC_MODE             0xF000U /* vp8 */
 #define X170_DEC_SYSTEM_ERROR           0x0FFFU
-#define X170_DEC_HW_RESERVED            0xFFFFU
-#define X170_DEC_FATAL_SYSTEM_ERROR     0xFFFFFU
-#define X170_DEC_SLICE_DECODING_SUSPEND 0x1FFFFFU
-#define X170_DEC_SLICE_DECODING_ABORTED 0x2FFFFFU
 
 #define DEC_MODE_HEVC 12
 #define DEC_MODE_VP9  13
@@ -1395,8 +1249,6 @@ static const u32 ref_ybase_msb[16] = {
 #define CBS_ONE_ROW_PREFTECH_PIXELS 4096 // one cbs row prefetching covers 4096 pixels
 #define CBS_ONE_ROW_PREFTECH_BYTES_Y (CBS_ONE_ROW_PREFTECH_PIXELS/LUM_CBS_WIDTH)
 #define CBS_ONE_ROW_PREFTECH_BYTES_C (CBS_ONE_ROW_PREFTECH_PIXELS/CH_CBS_WIDTH)
-#define TILE_EXTRA_PIXELS 128
-#define MAX_RFC_TABLE_LINES 63
 
 #define UP_ALIGN(x, b) (((x) + (b) - 1)& ~((b)-1))
 #define DOWN_ALIGN(x, b) ((x)& ~((b)-1))
@@ -1531,8 +1383,6 @@ void SwGetSubsampling(u32 chroma_format_idc, u32 *subsampling_x, u32 *subsamplin
 #undef CBS_ONE_ROW_PREFTECH_PIXELS
 #undef CBS_ONE_ROW_PREFTECH_BYTES_Y
 #undef CBS_ONE_ROW_PREFTECH_BYTES_C
-#undef TILE_EXTRA_PIXELS
-#undef MAX_RFC_TABLE_LINES
 #undef UP_ALIGN
 #undef DOWN_ALIGN
 
@@ -1547,7 +1397,6 @@ void SwGetSubsampling(u32 chroma_format_idc, u32 *subsampling_x, u32 *subsamplin
 /*============================================================================*
  * software/source/common/delogo.c
  *============================================================================*/
-#define __DELOGO_U__
 
 u32 CheckDelogo(DelogoConfig *delogo_cfg, u32 luma_bit_depth, u32 chroma_bit_depth);
 void DelogoSetRegs(u32 *pp_regs,
@@ -1611,22 +1460,14 @@ void DelogoSetRegs(u32 *pp_regs,
 /*============================================================================*
  * software/source/common/errorhandling.c
  *============================================================================*/
-#define ERRORHANDLING_H_DEFINED
 
 //#include "decapicommon.h"
-
-/* VP9: SB_size = 64x64, MB_size = 16x16 */
-#define MB_NUM_IN_SB 16
 
 // #define EC_MAX_TILE_COLS 20
 // #define EC_MAX_TILE_ROWS 22
 
-/* indicates unavailable value */
-#define EC_INVALID_IDX -1
 /* Avoid decimal arithmetic */
 #define EC_ROUND_COEFF 10000
-/* Reference frame error ratio threshold, default 10%. */
-#define EC_RATIO_THRESHOLD 10 * 100
 
 /* Similar to TileInfo structure in HEVC. */
 /* TODO(min): use one structure as TileInfo instead. */
@@ -1949,11 +1790,6 @@ void FifoClearAbort(FifoInst inst) {
 #include <string.h>
 
 //#define BUFFER_QUEUE_PRINT_STATUS
-#ifdef BUFFER_QUEUE_PRINT_STATUS
-#define PRINT_COUNTS(x) PrintCounts(x)
-#else
-#define PRINT_COUNTS(x)
-#endif /* BUFFER_QUEUE_PRINT_STATUS */
 
 static void DecreaseInputQueueCntById(InputQueue queue, u32 id);
 static void IncreaseInputQueueCntById(InputQueue queue, u32 id);
@@ -2631,7 +2467,6 @@ void InputQueueBufferClear(const void *dwl, InputQueue queue) {
   }
 }
 
-#undef PRINT_COUNTS
 
 /*============================================================================*
  * software/source/common/low_latency.c
@@ -2726,15 +2561,6 @@ void SwUpdateTileInfoCtrl(struct LLTileInfo *lltileinfo) {
 /*============================================================================*
  * software/source/common/ppu.c
  *============================================================================*/
-#define ParseDecPictureFormat(output_format) (NULL)
-#define ParseDecRet(rv) (NULL)
-#define ParseDWLMemType(i) (NULL)
-#define ParseDecInitConfig(cfg)
-#define ParseDecSequenceInfo(seq)
-#define ParseDecPicAlignment(i) (NULL)
-#define ParseDecConfig(config)
-#define ParseDecInputParameters(param)
-#define ParseDecBufferInfo(buf_info)
 #define ParseFeatureList(cfg)
 
 #if 0
@@ -2748,7 +2574,6 @@ void SwUpdateTileInfoCtrl(struct LLTileInfo *lltileinfo) {
 #define RETURN_LOG()
 #define RETURN_LOG_1()
 #endif
-#define _USE_MATH_DEFINES
 #include <math.h>
 #define PP_MAX_STRIDE 65536
 #define DOWN_SCALE_SIZE(w, ds,interlace) (interlace) ? ((((w)/2/(ds)) & ~0x1)<<1) : (((w)/(ds)) & ~0x1)
@@ -2757,9 +2582,7 @@ void SwUpdateTileInfoCtrl(struct LLTileInfo *lltileinfo) {
 #define ABS(a) (((a) < 0) ? -(a) : (a))
 #define JPEG 3
 #define COEFF_WIDTH 3
-#define ALIGN_UP_TO_8(num) ((num >> 3) + 1) << 3
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
-#define MAX4(a, b, c, d) MAX(MAX(a, b), MAX(c, d))
 
 // do not change the order in coeff
 static const u32 coeff[10][5] = {{16384,22970,11700,5638,29032}, // BT601, full yuv -> full rgb
@@ -6558,15 +6381,12 @@ u32 CheckPpStride(PpUnitIntConfig *ppu_cfg) {
   return 0;
 }
 
-#undef _USE_MATH_DEFINES
 #undef PP_MAX_STRIDE
 #undef DOWN_SCALE_SIZE
 #undef TOFIX
 #undef FDIVI
 #undef JPEG
 #undef COEFF_WIDTH
-#undef ALIGN_UP_TO_8
-#undef MAX4
 #undef ROUNDED_DIV
 #undef PrintPpunitConfig
 #undef SET_PP_SLICE_PARAMS
@@ -8828,15 +8648,6 @@ void SwRecycleBuf(struct DWLLinearMem *info, struct DWLLinearMem *mem_infos, u32
  * software/source/common/vpufeature.c
  *============================================================================*/
 /* inc/parselogmsg.h again: it has no include guard */
-#define ParseDecPictureFormat(output_format) (NULL)
-#define ParseDecRet(rv) (NULL)
-#define ParseDWLMemType(i) (NULL)
-#define ParseDecInitConfig(cfg)
-#define ParseDecSequenceInfo(seq)
-#define ParseDecPicAlignment(i) (NULL)
-#define ParseDecConfig(config)
-#define ParseDecInputParameters(param)
-#define ParseDecBufferInfo(buf_info)
 #define ParseFeatureList(cfg)
 
 #if 0

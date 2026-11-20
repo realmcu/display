@@ -10,6 +10,9 @@
     python vcdj_ctrlsw_prune.py --check      exit 1 if the files on disk differ
     python vcdj_ctrlsw_prune.py --map FILE   also write an output line -> vendor
                                              file:line map of the pruned files
+    python vcdj_ctrlsw_prune.py --try RULES [--out DIR]
+                                             apply extra rules to the files on
+                                             disk, write nothing unless --out
 
 This runs after vcdj_ctrlsw_gen.py: the generator reproduces the vendor build
 and stays checkable, and everything deleted from it lives in
@@ -899,7 +902,7 @@ def check_no_code_references(rule, doc, which):
 INLINE_DEF = re.compile(r'^static\s+inline\b[\w \t\*]*?\b(\w+)\s*\(')
 
 
-def delete_unused_inline(rule, docs):
+def delete_unused_inline(rule, docs, check=True):
     """Delete every file-scope `static inline` function no live code calls.
 
     A function counts as used when its name appears in code of either file
@@ -909,7 +912,8 @@ def delete_unused_inline(rule, docs):
     still needs fails that build.
 
     `keep` is {file: n}, how many stay in each file. An earlier rule or a vendor
-    drop that changes it stops the rule until the numbers follow.
+    drop that changes it stops the rule until the numbers follow; `check=False`
+    skips that comparison. Returns the {file: n} found.
     """
     files = list(rule['keep'])
 
@@ -946,11 +950,12 @@ def delete_unused_inline(rule, docs):
             break
         for w, name in gone:
             delete_function({'name': name}, docs[w], w)
+    left = {w: len(inlines(w, code_lines(docs[w]['lines']))) for w in files}
     for w in files:
-        n = len(inlines(w, code_lines(docs[w]['lines'])))
-        if n != rule['keep'][w]:
+        if check and left[w] != rule['keep'][w]:
             raise PruneError('%s: %d static inline functions stay, the rule expects %d; '
-                             'see what changed, then update "keep"' % (w, n, rule['keep'][w]))
+                             'see what changed, then update "keep"' % (w, left[w], rule['keep'][w]))
+    return left
 
 
 def _reg_enum(rule, lines, which):
@@ -1014,7 +1019,7 @@ def ifdef_branches(code, macros):
     return out
 
 
-def prune_reg_enum(rule, doc, header):
+def prune_reg_enum(rule, doc, header, check=True):
     """Drop the members of `enum <enum>` that no code names, with their table rows.
 
     Member k indexes row k of `<table>[]`, so a member and its row go together,
@@ -1102,7 +1107,8 @@ def prune_reg_enum(rule, doc, header):
     keep = named | {alias[a][0] for a in keep_alias}
     kept = [n for n in names if n in keep]
     want = rule['keep']
-    if len(kept) != want['members'] or len(keep_alias) != want['aliases']:
+    found = {'members': len(kept), 'aliases': len(keep_alias)}
+    if check and found != {'members': want['members'], 'aliases': want['aliases']}:
         raise PruneError('%s: enum %s keeps %d members and %d aliases, the rule '
                          'expects %d and %d; see what changed, then update "keep"'
                          % (which, rule['enum'], len(kept), len(keep_alias),
@@ -1132,6 +1138,7 @@ def prune_reg_enum(rule, doc, header):
             or set(alias) != keep_alias):
         raise PruneError('%s: enum %s: the result differs from what was kept'
                          % (which, rule['enum']))
+    return found
 
 
 def _orphan_comments(lines, code, lo, hi, gone):
@@ -1352,11 +1359,71 @@ def apply_rules(h, c, rules):
             list(zip(docs['vcdj_ctrlsw.c']['lines'], docs['vcdj_ctrlsw.c']['origin'])))
 
 
+def try_rules(path, out):
+    """Apply the rules in `path` to the files on disk, then the two tail rules.
+
+    The files on disk already carry vcdj_ctrlsw_prune.json, so this is a full
+    run minus the generator, in seconds instead of minutes. It holds only while
+    the new rules do not touch code the tail rules removed; the full run before
+    a commit settles that. Each new rule is applied on its own, so an error
+    names it, and the tail rules report the keep counts they find instead of
+    failing on them. With `out`, the result is written there.
+    """
+    with open(path, encoding='utf-8') as f:
+        extra = json.load(f)
+    if isinstance(extra, dict):
+        extra = extra['rules']
+    tail = {r['action']: r for r in json.loads(read(RULES))['rules']
+            if r['action'] in ('delete_unused_inline', 'prune_reg_enum')}
+    if any(r.get('action') in tail for r in extra):
+        raise PruneError('%s: leave the tail rules to vcdj_ctrlsw_prune.json' % path)
+    docs = {}
+    for p in (OUT_H, OUT_C):
+        lines = read(p).split('\n')
+        if lines and lines[-1] == '':
+            lines.pop()
+        docs[os.path.basename(p)] = [(l, None) for l in lines]
+    h, c = docs['vcdj_ctrlsw.h'], docs['vcdj_ctrlsw.c']
+    before = (len(h), len(c))
+    for n, rule in enumerate(extra, 1):
+        try:
+            h, c = apply_rules(h, c, [rule])
+        except PruneError as e:
+            what = next((rule[k] for k in ('name', 'member', 'match', 'pattern') if k in rule), '')
+            raise PruneError('rule %d (%s %s): %s' % (n, rule.get('action'), what, e))
+    docs = {'vcdj_ctrlsw.h': {'lines': [l for l, _ in h], 'origin': [None] * len(h)},
+            'vcdj_ctrlsw.c': {'lines': [l for l, _ in c], 'origin': [None] * len(c)}}
+    inl = delete_unused_inline(tail['delete_unused_inline'], docs, check=False)
+    reg = prune_reg_enum(tail['prune_reg_enum'], docs['vcdj_ctrlsw.c'], docs['vcdj_ctrlsw.h'],
+                         check=False)
+    print('%d rules apply' % len(extra))
+    for w, b in zip(('vcdj_ctrlsw.h', 'vcdj_ctrlsw.c'), before):
+        print('%s: %d -> %d lines' % (w, b, len(docs[w]['lines'])))
+    for name, got in (('delete_unused_inline', inl), ('prune_reg_enum', reg)):
+        want = tail[name]['keep']
+        print('%s keep: %s%s' % (name, json.dumps(got),
+                                 '' if got == want else '  (json has %s)' % json.dumps(want)))
+    if out:
+        os.makedirs(out, exist_ok=True)
+        for w, d in docs.items():
+            with open(os.path.join(out, w), 'wb') as f:
+                f.write(''.join(l + '\n' for l in d['lines']).encode('latin-1'))
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split('\n')[0])
     ap.add_argument('--check', action='store_true', help='fail if the files on disk differ')
     ap.add_argument('--map', metavar='FILE', help='write the pruned output line -> vendor line map')
+    ap.add_argument('--try', dest='try_', metavar='RULES',
+                    help='apply extra rules to the files on disk without writing them')
+    ap.add_argument('--out', metavar='DIR', help='with --try, write the result to DIR')
     a = ap.parse_args()
+    if a.try_:
+        try:
+            try_rules(a.try_, a.out)
+        except (PruneError, ValueError, KeyError) as e:
+            sys.exit('vcdj_ctrlsw_prune: error: %s' % e)
+        return
     try:
         h, c, _ = gen.generate()
         rules = json.loads(read(RULES))['rules']

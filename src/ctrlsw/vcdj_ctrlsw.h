@@ -205,27 +205,12 @@ int VCDecLogDestory(void);
 #define APITRACEERR(...) fprintf(stderr, __VA_ARGS__)
 #define APITRACE(...)
 #define APITRACEDEBUG(...)
-#define APITRACEDEBUG_NP(...)
-#define CONFIGTRACE_I(...)
-#define CONFIGTRACE_E(...)
 #define CONFIGTRACE_W(...) fprintf(stderr, __VA_ARGS__)
-#define STREAMTRACE_W(...)
 #define STREAMTRACE_I(...)
 #define STREAMTRACE_E(...)
-#define STREAMTRACE_D(...)
-#define STREAMTRACE_D_NP(...)
-#define DPB_TRACE_NP(...)
 
 #define DPB_TRACE_E(...) fprintf(stderr, __VA_ARGS__)
-#define DPB_TRACE(...)
-#define HLS_CHECK(...)
 #define DTRACE_E(...) fprintf(stderr, __VA_ARGS__)
-#define DTRACE_I(...)
-#define DTRACE_D(...)
-#define REGTRACE_I(...)
-#define IRQTRACE_I(...)
-#define MEMTRACE_I(...)
-#define VCMDTRACE_I(...)
 #define PERFTRACE_I(...)
 
 #define LOG_MEM_SECURE(flag, name, attr)
@@ -361,163 +346,12 @@ typedef u64 ptr_t;
 }
 #endif
 
-#define __DWL_H__
-
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 #define DECAPICOMMON_H
 
-#ifdef ENABLE_PROFILE_LEVEL_CHECK
-#define MAIN_HEVC_PROFILE(profile_idc, profile_space, profile_compat_flag) \
-        ((((profile_idc) == 1) || ((profile_compat_flag) & 0x02)) && ((profile_space) == 0))
-#define MAIN10_HEVC_PROFILE(profile_idc, profile_space, profile_compat_flag) \
-        ((((profile_idc) == 2) || ((profile_compat_flag) & 0x04)) && ((profile_space) == 0))
-#define MAIN_HEVC_STILL_PROFILE(profile_idc, profile_space, profile_compat_flag) \
-        (((profile_idc) == 3 || ((profile_compat_flag) & 0x08)) && ((profile_space) == 0))
-#define MONOCHROME_420_HEVC_EXT_PROFILE(profile_idc, profile_space, profile_compat_flag, chroma_format_idc, extension_present_flag, hevc_support) \
-        (((profile_idc) == 4 || ((profile_compat_flag) & 0x10)) && ((profile_space) == 0) && \
-         (chroma_format_idc == 0 || chroma_format_idc == 1) && (extension_present_flag == 1) && (hevc_support == 3))
-#define MONOCHROME_420_HEVC_PROFILE(profile_idc, profile_space, profile_compat_flag, chroma_format_idc, extension_present_flag, hevc_support, range_extension_flag, \
-                                    transform_skip_rotation_enabled_flag, transform_skip_context_enabled_flag, \
-                                    persistent_rice_adaptation_enabled_flag, explicit_rdpcm_enabled_flag, \
-                                    implicit_rdpcm_enabled_flag, intra_smoothing_disabled_flag, \
-                                    chroma_qp_offset_list_enabled_flag) \
-        (((profile_idc) == 4 || ((profile_compat_flag) & 0x10)) && ((profile_space) == 0) && \
-          (chroma_format_idc == 0 || chroma_format_idc == 1) && (hevc_support >= 1) &&  ((extension_present_flag == 0) || \
-           (extension_present_flag == 1 && range_extension_flag == 1 && \
-            transform_skip_rotation_enabled_flag == 0 && transform_skip_context_enabled_flag == 0 && \
-            persistent_rice_adaptation_enabled_flag == 0 && explicit_rdpcm_enabled_flag == 0 && \
-            implicit_rdpcm_enabled_flag == 0 && intra_smoothing_disabled_flag == 0 && \
-            chroma_qp_offset_list_enabled_flag == 0)))
-#define HEVC_422_PROFILE(profile_idc, profile_space, profile_compat_flag, chroma_format_idc, hevc_support) \
-        (((profile_idc) == 4 || ((profile_compat_flag) & 0x10)) && ((profile_space) == 0) && \
-          (chroma_format_idc == 2) && (hevc_support >= 2))
-#define HEVC_444_PROFILE(profile_idc, profile_space, profile_compat_flag, chroma_format_idc, hevc_support) \
-        (((profile_idc) == 4 || ((profile_compat_flag) & 0x10)) && ((profile_space) == 0) && \
-          (chroma_format_idc == 3) && (hevc_support == 3))
-#define DCODEDABLE_PROFILE0(profile_idc, profile_space, extension_present_flag, profile_compat_flag) \
-        ((((profile_idc) == 0) && ((profile_space) == 0) && (extension_present_flag == 0)) || \
-         (((profile_space) > 0) && ((profile_idc) == 2) && ((profile_compat_flag) == 0)))
-
-#define IS_SUPPORT_PROFILE_LEVEL_HEVC(profile_idc, profile_space, profile_compat_flag, chroma_format_idc, extension_present_flag, range_extension_flag, hevc_support,\
-                                      transform_skip_rotation_enabled_flag, transform_skip_context_enabled_flag, \
-                                      persistent_rice_adaptation_enabled_flag, explicit_rdpcm_enabled_flag, \
-                                      implicit_rdpcm_enabled_flag, intra_smoothing_disabled_flag, \
-                                      chroma_qp_offset_list_enabled_flag) \
-        (MAIN_HEVC_PROFILE(profile_idc, profile_space, profile_compat_flag) || \
-         MAIN10_HEVC_PROFILE(profile_idc, profile_space, profile_compat_flag) || \
-         MAIN_HEVC_STILL_PROFILE(profile_idc, profile_space, profile_compat_flag) || \
-         MONOCHROME_420_HEVC_PROFILE(profile_idc, profile_space, profile_compat_flag, chroma_format_idc, extension_present_flag, hevc_support, range_extension_flag, \
-                                     transform_skip_rotation_enabled_flag, transform_skip_context_enabled_flag, \
-                                     persistent_rice_adaptation_enabled_flag, explicit_rdpcm_enabled_flag, \
-                                     implicit_rdpcm_enabled_flag, intra_smoothing_disabled_flag, \
-                                     chroma_qp_offset_list_enabled_flag) || \
-         DCODEDABLE_PROFILE0(profile_idc, profile_space, extension_present_flag, profile_compat_flag) || \
-         MONOCHROME_420_HEVC_EXT_PROFILE(profile_idc, profile_space, profile_compat_flag, chroma_format_idc, extension_present_flag, hevc_support) || \
-         HEVC_422_PROFILE(profile_idc, profile_space, profile_compat_flag, chroma_format_idc, hevc_support) || \
-         HEVC_444_PROFILE(profile_idc, profile_space, profile_compat_flag, chroma_format_idc, hevc_support))
-
-#define STERRO_HIGH_MVC_PROFILE(profile) \
-        ((profile) == 118 || (profile) == 77 || \
-         (profile) == 100 || (profile) == 128)
-#define SVC_PROFILE(profile) ((profile) == 83 || (profile) == 86)
-#define BASELINE_H264_PROFILE(profile) ((profile) == 66)
-#define MAIN_H264_PROFILE(profile) ((profile) == 77)
-#define MONOCHROME_420_H264_PROFILE(chroma_format_idc) ((chroma_format_idc) == 0 || (chroma_format_idc) == 1)
-#define HIGH_H264_PROFILE(profile) ((profile) == 100)
-#define HIGH10_H264_PROFILE(profile) ((profile) == 110)
-#define H264_422_PROFILE(profile, h264_support) (((profile) == 122) && (h264_support >= 2))
-#define H264_444_PROFILE(profile, h264_support) (((profile) == 244 || (profile) == 44) && (h264_support == 3))
-#define IS_SUPPORT_PROFILE_LEVEL_H264(profile, chroma_format_idc, h264_support) \
-        (STERRO_HIGH_MVC_PROFILE(profile) || SVC_PROFILE(profile) || BASELINE_H264_PROFILE(profile) || \
-         MONOCHROME_420_H264_PROFILE(chroma_format_idc) || MAIN_H264_PROFILE(profile) || HIGH_H264_PROFILE(profile) || \
-         HIGH10_H264_PROFILE(profile) || H264_422_PROFILE(profile, h264_support) || H264_444_PROFILE(profile, h264_support))
-
-#define VP9_420_PROFILE(profile) (((profile) == 0) || ((profile) == 2))
-#define IS_SUPPORT_PROFILE_LEVEL_VP9(profile) (VP9_420_PROFILE(profile))
-#define AV1_420_PROFILE(profile) ((profile) == 0)
-#define AV1_444_PROFILE(profile, av1_support) (((profile) == 1) && (av1_support == 3))
-#define AV1_422_PROFILE(profile, av1_support) (((profile) == 2) && (av1_support >= 2))
-#define IS_SUPPORT_PROFILE_LEVEL_AV1(profile, av1_support) \
-  (AV1_420_PROFILE(profile) || AV1_422_PROFILE(profile, av1_support) || AV1_444_PROFILE(profile, av1_support))
-#define IS_SUPPORT_PROFILE_LEVEL_AVS2(profile) \
-  ((profile) == 0x20 || (profile) == 0x22)
-#define VVC_MAIN10_PROFILE(profile) ((profile) == 1)
-#define VVC_MAIN10_STILL_PROFILE(profile) ((profile) == 65)
-#define IS_SUPPORT_PROFILE_LEVEL_VVC(profile) \
-  (VVC_MAIN10_PROFILE(profile) || VVC_MAIN10_STILL_PROFILE(profile))
-#define AVS3_MAIN_PROFILE(profile) ((profile) == 0x20)
-#define AVS3_MAIN10_PROFILE(profile) ((profile) == 0x22)
-#define AVS3_HIGH_PROFILE(profile) ((profile) == 0x30)
-#define AVS3_HIGH10_PROFILE(profile) ((profile) == 0x32)
-#define IS_SUPPORT_PROFILE_LEVEL_AVS3(profile) \
-  (AVS3_MAIN_PROFILE(profile) || AVS3_MAIN10_PROFILE(profile) || AVS3_HIGH_PROFILE(profile) || AVS3_HIGH10_PROFILE(profile))
-#define IS_SUPPORT_PROFILE_LEVEL_VC1(profile) \
-  ((profile) == VC1_SIMPLE_PROFILE || (profile) == VC1_MAIN_PROFILE || (profile) == VC1_ADVANCED_PROFILE)
-
-#define IS_SUPPORT_PROFILE_LEVEL_MPEG4(profile_type, profile_level) \
-  (((profile_type) == 1 || \
-    (profile_type) == 4 || \
-    (profile_type) == 17) || \
-   ((profile_level) == 8 || \
-    (profile_level) == 1 || \
-    (profile_level) == 2 || \
-    (profile_level) == 3 || \
-    (profile_level) == 16 || \
-    (profile_level) == 17 || \
-    (profile_level) == 18 || \
-    (profile_level) == 50 || \
-    (profile_level) == 51 || \
-    (profile_level) == 52 || \
-    (profile_level) == 240 || \
-    (profile_level) == 241 || \
-    (profile_level) == 242 || \
-    (profile_level) == 243 || \
-    (profile_level) == 244 || \
-    (profile_level) == 245))
-
-#define IS_SUPPORT_VERSION_DIVX(version) \
-  ((version) == 3 || \
-   (version) == 4 || \
-   (version) == 5)
-
-#define IS_SUPPORT_PROFILE_LEVEL_MPEG2_MPEG1(is_mpeg2_stream, profile) \
-  ((is_mpeg2_stream == 0) || \
-   ((profile) == 5 || (profile) == 4))
-
-#define IS_SUPPORT_PROFILE_LEVEL_VP8_VP7(version) \
-  ((version) == 0 || \
-   (version) == 1 || \
-   (version) == 2 || \
-   (version) == 3)
-
-#define IS_SUPPORT_PROFILE_LEVEL_VP6(version, profile) \
-  (((version) == 6 || (version) == 7 || (version) == 8) && (((profile) == 0) || (profile) == 3))
-
-#define IS_SUPPORT_PROFILE_LEVEL_AVS(profile) \
-  ((profile) == 0x20 || (profile) == 0x48)
-#else
-#define IS_SUPPORT_PROFILE_LEVEL_HEVC(profile_idc, profile_space, profile_compat_flag, chroma_format_idc, extension_present_flag, range_extension_flag, hevc_support,\
-                                      transform_skip_rotation_enabled_flag, transform_skip_context_enabled_flag, \
-                                      persistent_rice_adaptation_enabled_flag, explicit_rdpcm_enabled_flag, \
-                                      implicit_rdpcm_enabled_flag, intra_smoothing_disabled_flag, \
-                                      chroma_qp_offset_list_enabled_flag) 1
-#define IS_SUPPORT_PROFILE_LEVEL_H264(profile, chroma_format_idc, h264_support) 1
-#define IS_SUPPORT_PROFILE_LEVEL_AV1(profile, av1_support) 1
-#define IS_SUPPORT_PROFILE_LEVEL_VP9(profile) 1
-#define IS_SUPPORT_PROFILE_LEVEL_AVS3(profile) 1
-#define IS_SUPPORT_PROFILE_LEVEL_VVC(profile) 1
-#define IS_SUPPORT_PROFILE_LEVEL_AVS2(profile) 1
-#define IS_SUPPORT_PROFILE_LEVEL_VC1(profile) 1
-#define IS_SUPPORT_PROFILE_LEVEL_MPEG4(profile_type, profile_level) 1
-#define IS_SUPPORT_PROFILE_LEVEL_MPEG2_MPEG1(is_mpeg2_stream, profile) 1
-#define IS_SUPPORT_PROFILE_LEVEL_VP8_VP7(version) 1
-#define IS_SUPPORT_PROFILE_LEVEL_VP6(version, profile) 1
-#define IS_SUPPORT_PROFILE_LEVEL_AVS(profile) 1
-#define IS_SUPPORT_VERSION_DIVX(version) 1
-#endif
 
 /**< \brief The maximum number of client types. */
 #define MAX_CLIENT_TYPE 21
@@ -541,11 +375,6 @@ extern "C" {
  */
 /**@}*/
 
-/** \brief The maximum IDs of AV1 temporal layers and spatial layers for identifying frames to be decoded.
- * \n Bits 0 to 3 indicate the maximum temporal layer ID, which ranges from 0 to 7.
- * \n Bits 4 to 7 indicate the maximum spatial layer ID, which ranges from 0 to 3.
- *  \ingroup common_group */
-#define MAX_SVC_POINT_LAYER  0x37
 /** \brief The maximum number of output channels from \c VCDecNextPicture().
  *  \ingroup common_group */
 #define MAX_PPU_COUNT 1
@@ -612,33 +441,15 @@ extern "C" {
  *  \ingroup common_group */
 #define AREA 9
 
-/** \brief The 4x4 tiled output mode.
- * \ingroup common_group */
-#define TILED4x4 0
 /** \brief The 8x8 tiled output mode.
  * \ingroup common_group */
 #define TILED8x8 1
 /** \brief The 16x16 tiled output mode.
  * \ingroup common_group */
 #define TILED16x16 2
-/** \brief The 32x8 tiled output mode.
- * \ingroup common_group */
-#define TILED32x8 3
 /** \brief The 128x2 tiled output mode.
  * \ingroup common_group */
 #define TILED128x2 4
-/** \brief The YUYV or UYVY 2x4 tiled output mode.
- * \ingroup common_group */
-#define TILED2x4 5
-/** \brief The RECON8x8 tiled mode.
- * \ingroup common_group */
-#define RECONTILED8x8 6
-/** \brief The 64x64 tiled output mode.
- * \ingroup common_group */
-#define TILED64x64 7
-/** \brief The YUYV or UYVY 8x8 tiled output mode.
- * \ingroup common_group */
-#define PACKED422_TILED8x8 8
 
 /** \brief The round-down algorithm for center-point selection.
  *  \ingroup common_group */
@@ -687,22 +498,6 @@ enum VC1Profile {
 /**  \brief The maximum number of output planes. */
 #define MAX_OUTPUT_PLANE 3
 #define PLANE_ALIGNMENT 1
-
-/** \brief The 4x4 tiled input mode for standalone post-processing core without decoder pipeline.
- *  \ingroup common_group */
-#define IN_TILED4x4 0
-/** \brief The 8x8 tiled input mode for standalone post-processing core without decoder pipeline.
- *  \ingroup common_group */
-#define IN_TILED8x8 1
-/** \brief The 64x64 tiled input mode for standalone post-processing core without decoder pipeline.
- *  \ingroup common_group */
-#define IN_TILED64x64 2
-/** \brief The input 8x8 tiled mode.
- *  \ingroup common_group */
-#define IN_RECON_TILED8x8 3
-/** \brief The input 8x8 tiled mode.
- *  \ingroup common_group */
-#define IN_RECON_TILED8x8_PACK10 4
 
 /** Specifies the YUV-to-RGB conversion type.
  * \ingroup common_group
@@ -885,9 +680,6 @@ enum ColorConversionTYpe{
 #define PP_IN_444_NV24_8BIT 41 /*< semi planar YUV 4:4:4, 24bpp, 1 plane for Y and 1 plane for the UV components, which are interleaved (first byte U and the following byte V)*/
 #define PP_IN_444_NV42_8BIT 42 /*as above, but U and V bytes are swapped*/
 
-#define PP_IN_422P_P010     50   /*< planar YUV 4:2:2*/
-#define PP_IN_444_NV24_P010 51
-#define PP_IN_444_NV42_P010 52
 #endif
 
 /** \brief The minimum picture width supported by advanced decoder hardware for codec standards except AVS2.
@@ -1113,8 +905,6 @@ enum DelogoMode {
   /** \brief Enables the delogo filter in interpolation mode. */
   PIXEL_INTERPOLATION = 2
 };
-/* DEPRECATED!!! do not use in new applications! */
-#define DEC_DPB_DEFAULT DEC_DPB_FRAME
 
 /** Defines output picture formats.
  *
@@ -2465,15 +2255,8 @@ extern "C" {
 
 #endif /* defined(__FREERTOS__) || defined(__linux__) || defined(_WIN32) */
 
-#define gettimeofday                osal_gettimeofday
 #define usleep                      osal_usleep
-#define open_memstream              osal_open_memstream
 
-#ifdef __linux__
-#define OSAL_STRM_POS(A) (A).__pos
-#else
-#define OSAL_STRM_POS(A) (A)
-#endif
 
 #ifdef __cplusplus
 }
@@ -2514,11 +2297,6 @@ typedef struct tagSemaphore
 
 #define sem_t Semaphore
 
-#define __u8 u8
-#define __i8 i8
-#define __u32 u32
-#define __i32 i32
-
 /*=========================================================*/
 /*======  Declaration of dwl_os APIs ===============================*/
 /*=========================================================*/
@@ -2550,62 +2328,21 @@ int SemaphoreGetValue(PSemaphore s);
 #define pthread_mutex_lock(m) MutexLock(m)
 #define pthread_mutex_unlock(m) MutexUnlock(m)
 
-#define pthread_attr_init(a)
-#define pthread_attr_destroy(a)
-#define pthread_attr_setdetachstate(a,f)
-#define pthread_create(l,a,f,p) ((void)0)
-#define pthread_yield()
 #define sched_yield()
-#define pthread_join(t, r) ((void)0)
 
-#define sema_init(s,v) SemaphoreInit(s,v)
 #define sem_init(s,p,v) SemaphoreInit(s,v)
 #define sem_wait(s) SemaphoreWait(s)
 #define sem_post(s) SemaphorePost(s)
 #define sem_destroy(s) SemaphoreDestroy(s)
 #define sem_getvalue(s,v) ((*v) = SemaphoreGetValue(s))
 
-#define  DWL_PLACEHOLDER_VALUE 0
-
 typedef void * DWL_OS_OBJECT_PTR;
 /*
 #define pthread_mutex_t Mutex */
 #define pthread_cond_t Event
 
-#define pthread_t DWL_OS_OBJECT_PTR
-#define pthread_attr_t DWL_OS_OBJECT_PTR
-#define pthread_condattr_t DWL_OS_OBJECT_PTR
-#define pthread_mutexattr_t DWL_OS_OBJECT_PTR
-
 /*--------------------------------*/
 /* IO */
-#undef  O_RDONLY
-#define O_RDONLY (1)
-#undef  O_WRONLY
-#define O_WRONLY (1 << 1)
-#undef  O_RDWR
-#define O_RDWR (O_RDONLY | O_WRONLY)
-#undef  O_SYNC
-#define O_SYNC (1 << 2)
-#undef MAP_FAILED
-#define MAP_FAILED NULL
-
-#define getpagesize() (1)
-#define ioremap_nocache(addr,size) (addr)
-#define iounmap(addr)
-#define mmap(va, size, access, flag, fd, pa) (pa)
-#define munmap(pRegs, size)
-
-#define open(name,flag) g1_sim_open(name,flag)
-#define ioctl(fd,cmd,arg) g1_sim_ioctl(fd,cmd,(unsigned long)arg)
-#define close(fd) g1_sim_close(fd)
-#define printk(a,...)
-#define access_ok(a,b,c) (1)
-#define __init
-#define __exit
-#define KERN_INFO
-#define KERN_ERR
-#define KERN_WARNING
 
 /*
  * Let any architecture override either of the following before
@@ -2619,18 +2356,6 @@ typedef void * DWL_OS_OBJECT_PTR;
 #ifndef _IOC_DIRBITS
 # define _IOC_DIRBITS   2
 #endif
-#define _IOC_NRBITS     8
-#define _IOC_TYPEBITS   8
-
-#define _IOC_NRMASK     ((1 << _IOC_NRBITS)-1)
-#define _IOC_TYPEMASK   ((1 << _IOC_TYPEBITS)-1)
-#define _IOC_SIZEMASK   ((1 << _IOC_SIZEBITS)-1)
-#define _IOC_DIRMASK    ((1 << _IOC_DIRBITS)-1)
-
-#define _IOC_NRSHIFT    0
-#define _IOC_TYPESHIFT  (_IOC_NRSHIFT+_IOC_NRBITS)
-#define _IOC_SIZESHIFT  (_IOC_TYPESHIFT+_IOC_TYPEBITS)
-#define _IOC_DIRSHIFT   (_IOC_SIZESHIFT+_IOC_SIZEBITS)
 
 /*
  * Direction bits, which any architecture can choose to override
@@ -2648,89 +2373,9 @@ typedef void * DWL_OS_OBJECT_PTR;
 # define _IOC_READ      2U
 #endif
 
-#define _IOC(dir,type,nr,size) \
-        (((dir)  << _IOC_DIRSHIFT) | \
-         ((type) << _IOC_TYPESHIFT) | \
-         ((nr)   << _IOC_NRSHIFT) | \
-         ((size) << _IOC_SIZESHIFT))
-
-#define _IOC_TYPECHECK(t) (sizeof(t))
-
-/* used to create numbers */
-#define _IO(type,nr)            _IOC(_IOC_NONE,(type),(nr),0)
-#define _IOR(type,nr,size)      _IOC(_IOC_READ,(type),(nr),(_IOC_TYPECHECK(size)))
-#define _IOW(type,nr,size)      _IOC(_IOC_WRITE,(type),(nr),(_IOC_TYPECHECK(size)))
-#define _IOWR(type,nr,size)     _IOC(_IOC_READ|_IOC_WRITE,(type),(nr),(_IOC_TYPECHECK(size)))
-#define _IOR_BAD(type,nr,size)  _IOC(_IOC_READ,(type),(nr),sizeof(size))
-#define _IOW_BAD(type,nr,size)  _IOC(_IOC_WRITE,(type),(nr),sizeof(size))
-
-/* used to decode ioctl numbers.. */
-#define _IOC_DIR(nr)            (((nr) >> _IOC_DIRSHIFT) & _IOC_DIRMASK)
-#define _IOC_TYPE(nr)           (((nr) >> _IOC_TYPESHIFT) & _IOC_TYPEMASK)
-#define _IOC_NR(nr)             (((nr) >> _IOC_NRSHIFT) & _IOC_NRMASK)
-#define _IOC_SIZE(nr)           (((nr) >> _IOC_SIZESHIFT) & _IOC_SIZEMASK)
-
-/* ...and for the drivers/sound files... */
-#define IOC_IN          (_IOC_WRITE << _IOC_DIRSHIFT)
-#define IOC_OUT         (_IOC_READ << _IOC_DIRSHIFT)
-#define IOC_INOUT       ((_IOC_WRITE|_IOC_READ) << _IOC_DIRSHIFT)
-#define IOCSIZE_MASK    (_IOC_SIZEMASK << _IOC_SIZESHIFT)
-#define IOCSIZE_SHIFT   (_IOC_SIZESHIFT)
-
-#define DECLARE_WAIT_QUEUE_HEAD(a)
-
-/* Kernel/User space */
-#define copy_from_user(des,src,size) (memcpy(des,src,size),0)
-#define copy_to_user(des,src,size) (memcpy(des,src,size),0)
-#define __put_user(val,user) (*(user) = (val))
-#define __get_user(val,user) ((val) = *user)
-
-/* Interrupt */
-#define request_irq(i,isr,flag,name,data) RegisterIRQ(i, isr, flag, name, data)
-#define disable_irq(i) IntDisableIRQ(i)
-#define enable_irq(i) IntEnableIRQ(i)
-#define free_irq(i,data)
-#define irqreturn_t int
-#define down_interruptible(a) SemaphoreWait(a)
-#define up(a) SemaphorePost(a)
-#define wait_event_interruptible(a,b) (!(b))
-#define wake_up_interruptible_all(a)
-#define IRQ_RETVAL(a) (a)
-#define IRQ_HANDLED 1
-#define IRQ_NONE 0
-#define register_chrdev(m,name,op) (0)
-#define unregister_chrdev(m,name)
-#define IRQF_SHARED 1
-#define IRQF_DISABLED 0x00000020
-#define request_mem_region(addr,size,name) (1)
-#define release_mem_region(addr,size)
-#define kill_fasync(queue,sig,flag)
-
-#define ERR_OS_FAIL (0xffff)
-#define ERESTARTSYS ERR_OS_FAIL
-#undef EFAULT
-#define EFAULT ERR_OS_FAIL
-#undef ENOTTY
-#define ENOTTY ERR_OS_FAIL
-#undef EINVAL
-#define EINVAL ERR_OS_FAIL
-#undef EBUSY
-#define EBUSY ERR_OS_FAIL
-
-/* kernel sync objects */
-#define atomic_t i32
-#define ATOMIC_INIT(a) a
-#define atomic_inc(a) ((*(a))++)
-#define atomic_read(a) (a)
 typedef int sig_atomic_t;
 //typedef int sigset_t;
-#define sigemptyset(set)
-#define sigaddset(set, sig)
-#define sigsuspend(set)
-#define sigwait(set, signo)
 
-#define spin_lock_irqsave(a,b)
-#define spin_unlock_irqrestore(a,b)
 /*=========================================================*/
 
 #ifdef __cplusplus
@@ -2742,9 +2387,6 @@ typedef int sig_atomic_t;
 #else
 #define MAX_PIC_BUFFERS 34
 #endif
-
-#define MAX_DEC_DEV_NODES 1
-#define MAX_MEM_DEV_NODES 1
 
 /**
  * Defines the data transfer directions for DWL.
@@ -2809,26 +2451,10 @@ enum DWLClientType {
   DWL_CLIENT_TYPE_MAX = MAX_CLIENT_TYPE /**< \brief The maximum number of client types. */
 };
 
-/** \brief The page size and alignment for linear memory chunks. */
-#define LINMEM_ALIGN 4096
-/** \brief The nearest aligned linear memory address before the input address x. */
-#define NEXT_ALIGNED(x) \
-  ((((size_t)(x)) + LINMEM_ALIGN - 1) / LINMEM_ALIGN * LINMEM_ALIGN)
-
 /** \brief The macro that signals a maximum of 20 MSET buffers.
   * \ingroup common_group */
 #define MAX_VCMD_M2MP_NUM  20
 
-/**
- * \brief The memory buffer used only by the CPU. It is a non-secure CMA memory buffer.
- * \ingroup common_group
-*/
-#define DWL_MEM_TYPE_CPU                 0x0000U
-/**
- * \brief The memory buffer that can be read by the video processing unit (VPU) and written by the CAAM.
- * \ingroup common_group
-*/
-#define DWL_MEM_TYPE_SLICE               0x0001U
 /**
  * \brief The memory buffer that can be read and written by the VPU, and can be read by the render.
  * \ingroup common_group
@@ -2839,12 +2465,6 @@ enum DWLClientType {
  * \ingroup common_group
 */
 #define DWL_MEM_TYPE_VPU_WORKING         0x0003U
-/**
- * \brief The memory buffer that can be read and written by the CPU and can be written by the VPU. It is used only for the
-VP9 counter context table.
- * \ingroup common_group
-*/
-#define DWL_MEM_TYPE_VPU_WORKING_SPECIAL 0x0004U
 /**
  * \brief The memory buffer that can be read and written only by the VPU.
  * \ingroup common_group
@@ -2870,14 +2490,7 @@ VP9 counter context table.
  * \ingroup common_group
 */
 #define DWL_MEM_TYPE_SYNC_DEVICE_TO_HOST  0x0300U
-/**
- * \brief The memory buffer that requires bidirectional data transfer between the host and device.
- * \ingroup common_group
-*/
-#define DWL_MEM_TYPE_SYNC_HOST_AND_DEVICE 0x0400U
 
-/** \brief bit 22:16 is used to indicate the usage hint of the buffer */
-#define DWL_MEM_USAGE_HINT_MASK  0x7F0000U
 /** \brief The least significant bit (LSB) of memory usage hint bits in memory attribute words. */
 #define DWL_MEM_USAGE_HINT_SHIFT 16
 /** \brief bit 23 is used to indicate the mem attribute(META/CORE) */
@@ -2972,14 +2585,6 @@ enum DWLMemAttrHint {
       LOG_MEM_SECURE((1), STR(usage), USAGE_ATTR(usage)); \
   } while(0)
 
-#define DWLGetMemHint(mem_type) (((mem_type)&DWL_MEM_USAGE_HINT_MASK)>>DWL_MEM_USAGE_HINT_SHIFT)
-/** \brief The macro that signals whether the memory is secure by parsing the memory attribute flag. \n
- * Valid values: \n
- * <tt>1</tt>: This memory is secure because it is only accessible to the device. \n
- * <tt>0</tt>: This memory is non-secure because it is accessible to both the host and device.
- *  \ingroup common_group */
-#define DWLGetMemAttribute(mem_type) ((mem_type>>DWL_MEM_ATTR_SHIFT)&0x1)
-
 /**
  * \brief Contains the information about a linear memory buffer.
  */
@@ -3060,10 +2665,8 @@ struct DWLDecBuffers {
   struct DWLLinearMem dec_buffer[DEC_MAX_OUT_COUNT][MAX_OUTPUT_PLANE];
 };
 
-#define DWL_SECURE_MODE_BIT         31
 #define DWL_CMD_PRIORITY_BIT        30
 #define DWL_S_CMD_PRIORITY(a, b)    (a |= (b << DWL_CMD_PRIORITY_BIT))
-#define DWL_G_CMD_PRIORITY(a)       ((a >> DWL_CMD_PRIORITY_BIT) & 1)
 /**
  * \brief Contains the information that is used to determine the resources to be reserved.
  * \ingroup common_group
@@ -3262,10 +2865,7 @@ void *DWLLinearMemcpy(const void *instance, addr_t device_bus_addr, const void *
 void *DWLLinearMemset(const void *instance, struct DWLLinearMem *mem, i32 offset, i32 c, size_t n);
 
 #define DWLSyncMemData(inst, mem, offset, length, dir)
-#define DWLSyncMemData2(inst, ba, va, length, dir)
 #define DWLSyncMemDataExt(inst, ba, va, length, dir)
-#define DWLSyncMemAllocHostBuffer(inst, size, alignment, buff) (DWL_MEM_SYNC_NOT_SUPPORT)
-#define DWLSyncMemFreeHostBuffer(inst, buff) (DWL_MEM_SYNC_NOT_SUPPORT)
 
 /**
  * Writes a 32-bit value to a specified hardware register for a DWL instance. \n
@@ -3444,9 +3044,6 @@ u32 DWLReadBw(const void *instance, u32 core_id, u32 num);
 void DWLPerfInfoCollect(const void *instance, i32 core_id, struct DWLPerfInfo *perf_info);
 #endif
 
-#define DWLMALLOC_LINEAR_MEM2 DWLMallocLinear
-#define DWLFREE_LINEAR_MEM2 DWLFreeLinear
-
 #ifdef __cplusplus
 }
 #endif
@@ -3459,23 +3056,11 @@ void DWLPerfInfoCollect(const void *instance, i32 core_id, struct DWLPerfInfo *p
 extern "C" {
 #endif
 
-#define MAX_DPB_SIZE 16
 #define MAX_CPB_CNT 32
 #define HEVC_MAX_NUM_SEQ_PARAM_SETS 16
 #define MAX_PAYLOAD_NUM 64 /**< This limit will easily cover all sane streams. */
-#define RESET_SEI_COUNTER(counter) do{ \
-                                     if (*counter == MAX_PAYLOAD_NUM) { \
-                                       *counter = 0; \
-                                     } \
-                                   }while(0)
 #define MAX_SLICE_SEGMENTS 600
-#define PAYLOAD_BYTE_SIZE 1024
 #define INI_MAX 2147483647 /**< maximum (signed) int value */
-
-#define SEI_PENDING_BUFFERS (2)
-#define SEI_EXTRA_BUFFERS   (SEI_PENDING_BUFFERS) + (MAX_DPB_SIZE)/* for batch size*/
-#define SEI_MAX_BUFFERS     (MAX_DPB_SIZE + 1 + SEI_EXTRA_BUFFERS)
-#define H264_SEI_MAX_BUFFERS     ((MAX_DPB_SIZE + 1 + SEI_EXTRA_BUFFERS) * 2)
 
 /**
  * it's SEI_param status.
@@ -3928,10 +3513,6 @@ struct DecSEIParameters {
 /** \brief The output data format using normalized 8-bit unsined integer precision.
  *  \ingroup common_group */
 #define NORM_OUT_UINT8 4
-
-#define HIST_LOCAL 0
-#define HIST_GLOBAL 1
-#define HIST_HSV 2
 
 /** Defines decoder types.
  *  \ingroup common_group */
@@ -5357,8 +4938,6 @@ enum PfcTileMode{
   TILED_32X8_COMP = 2
 };
 
-#define IS_EXTERNAL_BUFFER(config, type) (((config) >> (type)) & 1)
-
 #define SW_UTIL_H_
 
 #ifdef __cplusplus
@@ -5413,11 +4992,6 @@ extern "C" {
 #define ERROR_PRINT_WARN(msg)
 #endif
 
-#define __PPU__
-
-#define __VPU_FEATURES__
-
-#define __VPU_FEATURES_STRUCT_H__
 struct DecHwFeatures {
   u32 id;
   u32 id_mask;
@@ -5620,11 +5194,9 @@ u32 InputQueueGetBufferCnt(InputQueue queue);
 void InputQueueBufferClear(const void *dwl, InputQueue queue);
 
 #define PP_OUT_FMT_YUV420PACKED10 0
-#define PP_OUT_FMT_YUV420_P010 1
 #define PP_OUT_FMT_YUV420_BIGE 2
 #define PP_OUT_FMT_YUV420_8BIT 3
 #define PP_OUT_FMT_YUV400 4       /* A.k.a., Monochrome/luma only*/
-#define PP_OUT_FMT_YUV400_P010 5
 #define PP_OUT_FMT_YUV400_8BIT 6
 #define PP_OUT_FMT_IYUVPACKED10_420 7
 #define PP_OUT_FMT_IYUV_420_P010 8
@@ -5633,10 +5205,8 @@ void InputQueueBufferClear(const void *dwl, InputQueue queue);
 #define PP_OUT_FMT_RGB       11
 #define PP_OUT_FMT_YUV422_10 12
 #define PP_OUT_FMT_YUV422_8BIT 13
-#define PP_OUT_FMT_YUV422_P010 14
 #define PP_OUT_FMT_YUV422_P012 15
 #define PP_OUT_FMT_IYUV_422_8BIT 16
-#define PP_OUT_FMT_IYUV_422_P010 17
 #define PP_OUT_FMT_IYUV_422_P012 18
 #define PP_OUT_FMT_YUV422_YUYV_8BIT 19
 #define PP_OUT_FMT_YUV422_UYVY_8BIT 20
@@ -5644,13 +5214,10 @@ void InputQueueBufferClear(const void *dwl, InputQueue queue);
 #define PP_OUT_FMT_YUV420_P012 22
 #define PP_OUT_FMT_IYUV_420_P012 23
 #define PP_OUT_FMT_IYUV_444_8BIT 24
-#define PP_OUT_FMT_IYUV_444_P010 25
 #define PP_OUT_FMT_IYUV_444_P012 26
 #define PP_OUT_FMT_YUV400_WITH_ALPHA 27
 #define PP_OUT_FMT_YUV422_YUYV_P010 28
 #define PP_OUT_FMT_YUV422_UYVY_P010 29
-#define PP_OUT_FMT_PVFBC_YUV420_8BIT 30
-#define PP_OUT_FMT_PVFBC_YUV420_P010 31
 
 #define IS_PP_OUT_PACKED10(fmt) \
   ((fmt) == PP_OUT_FMT_YUV420PACKED10 || (fmt) == PP_OUT_FMT_IYUVPACKED10_420)
@@ -6214,18 +5781,8 @@ void SwUpdateTileInfoCtrl(struct LLTileInfo *lltileinfo);
 #define MEMORY_ALLOCATION_ERROR2 0xFFFFFFFF
 #define PARAM_SET_ERROR 0xFFF0
 
-#define SYNC_WORD_SIZE_TILE   (64)
-#define SYNC_WORD_SIZE_FRAME  (32)
-#define SYNC_WORD_SIZE_FIELD  (16)
-
 /* value to be returned by GetBits if stream buffer is empty */
 #define END_OF_STREAM 0xFFFFFFFEU
-
-#define OUT_IDR (3U)
-#define EXT_DEC_RECON_NUM       1
-#define EXT_OUT_NUM             1
-#define EXT_DPB_NUM             2
-#define EXT_DV_MC_DPB_NUM       10
 
 /* macro to get smaller of two values */
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
@@ -6310,15 +5867,6 @@ void SwUpdateTileInfoCtrl(struct LLTileInfo *lltileinfo);
   tmp |= (value) << (start_bits); \
   p[id] = tmp; \
 } while(0)
-
-/* RFC table overflow */
-/* All the CBS size except the last group may exceeds 1<<16 bytes, which may result in
-   offset of the last CBS group overflows the 16-bit range. */
-#ifdef RFC_WORD_ALIGN
-#define RFC_MAY_OVERFLOW(w,bd) (1)
-#else
-#define RFC_MAY_OVERFLOW(w,bd) (NEXT_MULTIPLE((w)-128, 128)*bd >= (1<<16))
-#endif
 
 #define MAJOR_VERSION(hw_id) (((hw_id) & 0xF000) >> 12)
 #define MINOR_VERSION(hw_id) (((hw_id) & 0x0FF0) >> 4)
@@ -6503,14 +6051,6 @@ enum FEATURE {
                                         (client_type == DWL_CLIENT_TYPE_VP6_DEC)   || \
                                         (client_type == DWL_CLIENT_TYPE_VP8_DEC)
 
-#define RFC_CLIENT_TYPE(client_type)    (client_type == DWL_CLIENT_TYPE_VP9_DEC)  || \
-                                        (client_type == DWL_CLIENT_TYPE_HEVC_DEC) || \
-                                        (client_type == DWL_CLIENT_TYPE_H264_DEC) || \
-                                        (client_type == DWL_CLIENT_TYPE_AVS2_DEC) || \
-                                        (client_type == DWL_CLIENT_TYPE_AV1_DEC)  || \
-                                        (client_type == DWL_CLIENT_TYPE_VVC_DEC)  || \
-                                        (client_type == DWL_CLIENT_TYPE_AVS3_DEC)
-
 u32 SwGetCoreMaskByFeature(const void *dwl_inst, enum FEATURE feature);
 const struct DecHwFeatures *SwGetHwFeature(const void *dwl_inst, u32 core_mask,
                                            enum DWLClientType client_type);
@@ -6668,7 +6208,6 @@ void SwSetCacheShaperReg(u32 *regs, u32 sim_mc);
 #ifdef __cplusplus
 }
 #endif
-#define __JPEGDECAPI_H__
 
 #ifdef __cplusplus
 extern "C"
@@ -6694,8 +6233,6 @@ extern "C"
    other than APIs. */
 
 #define COMMON_FUNCTION_H
-
-#define __FIFO_H__
 
 #ifdef __cplusplus
 extern "C" {
@@ -7185,8 +6722,6 @@ void JpegDecGetThumbnailJpeg(JpegDecInput * p_dec_in, JpegDecImageInfo * p_image
 #ifdef __cplusplus
 }
 #endif
-
-#define __PNGDECAPI_H__
 
 #ifdef __cplusplus
 extern "C"

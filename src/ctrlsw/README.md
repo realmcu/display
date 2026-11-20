@@ -199,6 +199,22 @@ error, and so is a deletion that would leave a live reference behind; a referenc
 `#if 0` block with no `#else` does not count. `vcdj_ctrlsw_gen.py --check` forwards to stage 2,
 because the files on disk carry the pruned result.
 
+### Trying rules without a full run
+
+A full run takes minutes because it regenerates from the vendor files. While writing rules, apply
+them to the files on disk instead:
+
+```sh
+python src/ctrlsw/vcdj_ctrlsw_prune.py --try new_rules.json [--out DIR]
+```
+
+`new_rules.json` is a list of rules (or an object with a `rules` list). Each one is applied on its
+own, so an error names the rule; then the two tail rules below run and print the `keep` numbers
+they find instead of failing on them. Nothing is written unless `--out` is given. The result holds
+only as long as the new rules do not touch code the tail rules removed, so move the rules into
+`vcdj_ctrlsw_prune.json` (before `delete_unused_inline`), update `keep`, and do the full run and
+`--check` before a commit.
+
 ### The unused inline rule
 
 The vendor headers define format checks (`IS_PIC_*`, `IS_PP_IN_*`) and helpers as `static inline`,
