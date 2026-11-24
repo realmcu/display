@@ -98,7 +98,13 @@ config REALTEK_LCD_ST7801N_466_466_QSPI
 	default n
 	help
 		This config for realtek display lcd device driver
-		
+
+config REALTEK_LCD_ST7801N_390_450_QSPI
+	bool "Enable Realtek LCD Device Driver ST7801N 390 450"
+	default n
+	help
+		This config for realtek display lcd device driver ST7801N
+
 config REALTEK_LCD_ST7265_800_480_RGB
 	bool "Enable Realtek LCD Device Driver ST7265 800 480"
 	default n

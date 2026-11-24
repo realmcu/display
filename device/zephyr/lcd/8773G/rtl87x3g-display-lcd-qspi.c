@@ -26,6 +26,9 @@
 #ifdef CONFIG_REALTEK_LCD_ST7801N_466_466_QSPI
 #include "lcd_st7801n_466_466_qspi.h"
 #endif
+#ifdef CONFIG_REALTEK_LCD_ST7801N_390_450_QSPI
+#include "lcd_st7801n_390_450_qspi.h"
+#endif
 #endif /* CONFIG_REALTEK_LCD_AUTO_360_360_QSPI */
 
 #define DT_DRV_COMPAT realtek_rtl87x3g_display_lcd
