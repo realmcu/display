@@ -590,6 +590,7 @@ void rtk_lcd_hal_init(void)
     }
     else
     {
+        GC9B71_INIT_CODE();
         printk("[LCD] no init sequence for id: %06X\n", lcd_id);
     }
 
